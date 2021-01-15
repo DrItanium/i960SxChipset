@@ -66,8 +66,8 @@ using HoldPinLow = PinToggler<pinId, LOW, HIGH>;
 
 // the setup routine runs once when you press reset:
 void setup() {
-	pinMode(resetGPIO, OUTPUT);
-	pinMode(reset960, OUTPUT);
+	Serial.begin(9600);
+	setupPins(OUTPUT, resetGPIO, reset960);
 	HoldPinLow<reset960> holdi960InReset;
 	HoldPinLow<resetGPIO> gpioReset;
 	setupPins(OUTPUT, led, hold);
@@ -75,7 +75,6 @@ void setup() {
 	setupPins(OUTPUT, readyPin, gpioSelect, _lock, _int3, _int0, led, hold, int2, int1);
 	digitalWriteBlock(HIGH, readyPin, gpioSelect, _lock, _int3, _int0);
 	setupPins(INPUT, ale, _as, _blast, dt_r, _den, w_r, hlda, _be0, _be1, _a1, _a2, _a3);
-	Serial.begin(9600);
 	SPI.begin();
 }
 
