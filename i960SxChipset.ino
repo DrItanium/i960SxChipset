@@ -12,9 +12,9 @@
 // Pin 13 has the LED on Teensy 3.0
 // give it a name:
 constexpr auto led = 0 ; // technically unused
-constexpr auto reset960 = 1;
-constexpr auto resetGPIO = 2;
-constexpr auto readyPin = 3;
+constexpr auto reset960 = 1; // output
+constexpr auto resetGPIO = 2; // output
+constexpr auto readyPin = 3; // output
 constexpr auto gpioSelect = 4; // data capture spi
 constexpr auto mosi = 5;       // data capture spi
 constexpr auto miso = 6;	   // spi
@@ -47,16 +47,44 @@ constexpr auto unused1 = 31; // unused
 
 // the setup routine runs once when you press reset:
 void setup() {
+	pinMode(led, OUTPUT);
+	digitalWrite(led, LOW);
 	Serial.begin(9600);
 	pinMode(reset960, OUTPUT);
 	digitalWrite(reset960, LOW);
+
 	pinMode(resetGPIO, OUTPUT);
 	digitalWrite(resetGPIO, LOW);
 	SPI.begin();
 	digitalWrite(resetGPIO, HIGH);
-	pinMode(led, OUTPUT);
 	pinMode(readyPin, OUTPUT);
+	digitalWrite(readyPin, HIGH);
 	pinMode(gpioSelect, OUTPUT);
+	digitalWrite(gpioSelect, HIGH);
+	pinMode(ale, INPUT);
+	pinMode(_as, INPUT);
+	pinMode(_lock, OUTPUT);
+	digitalWrite(_lock, HIGH);
+	pinMode(_blast, INPUT);
+	pinMode(dt_r, INPUT);
+	pinMode(_den, INPUT);
+	pinMode(w_r, INPUT);
+	pinMode(hold, OUTPUT);
+	digitalWrite(hold, LOW);
+	pinMode(hlda, INPUT);
+	pinMode(_int3, OUTPUT);
+	digitalWrite(_int3, HIGH);
+	pinMode(int2, OUTPUT);
+	digitalWrite(int2, LOW);
+	pinMode(int1, OUTPUT);
+	digitalWrite(int1, LOW);
+	pinMode(_int0, OUTPUT);
+	digitalWrite(_int0, HIGH);
+	pinMode(_be0, INPUT);
+	pinMode(_be1, INPUT);
+	pinMode(_a1, INPUT);
+	pinMode(_a2, INPUT);
+	pinMode(_a3, INPUT);
 	digitalWrite(reset960, HIGH);
 }
 
