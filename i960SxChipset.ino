@@ -44,48 +44,39 @@ constexpr auto _a3 = 29; // input
 constexpr auto unused0 = 30; // unused
 constexpr auto unused1 = 31; // unused
 
+template<typename ... Pins>
+void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
+	(pinMode(pins, direction), ...);
+}
+
+template<typename ... Pins>
+void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
+	(digitalWrite(pins, value), ...);
+}
+
+template<int pinId, decltype(HIGH) onConstruction, decltype(LOW) onDestruction>
+class PinToggler {
+	public:
+		PinToggler() { digitalWrite(pinId, onConstruction); }
+		~PinToggler() { digitalWrite(pinId, onDestruction); }
+};
+
+template<int pinId>
+using HoldPinLow = PinToggler<pinId, LOW, HIGH>;
 
 // the setup routine runs once when you press reset:
 void setup() {
-	pinMode(led, OUTPUT);
-	digitalWrite(led, LOW);
-	Serial.begin(9600);
-	pinMode(reset960, OUTPUT);
-	digitalWrite(reset960, LOW);
-
 	pinMode(resetGPIO, OUTPUT);
-	digitalWrite(resetGPIO, LOW);
+	pinMode(reset960, OUTPUT);
+	HoldPinLow<reset960> holdi960InReset;
+	HoldPinLow<resetGPIO> gpioReset;
+	setupPins(OUTPUT, led, hold);
+	digitalWriteBlock(LOW, led, hold);
+	setupPins(OUTPUT, readyPin, gpioSelect, _lock, _int3, _int0, led, hold, int2, int1);
+	digitalWriteBlock(HIGH, readyPin, gpioSelect, _lock, _int3, _int0);
+	setupPins(INPUT, ale, _as, _blast, dt_r, _den, w_r, hlda, _be0, _be1, _a1, _a2, _a3);
+	Serial.begin(9600);
 	SPI.begin();
-	digitalWrite(resetGPIO, HIGH);
-	pinMode(readyPin, OUTPUT);
-	digitalWrite(readyPin, HIGH);
-	pinMode(gpioSelect, OUTPUT);
-	digitalWrite(gpioSelect, HIGH);
-	pinMode(ale, INPUT);
-	pinMode(_as, INPUT);
-	pinMode(_lock, OUTPUT);
-	digitalWrite(_lock, HIGH);
-	pinMode(_blast, INPUT);
-	pinMode(dt_r, INPUT);
-	pinMode(_den, INPUT);
-	pinMode(w_r, INPUT);
-	pinMode(hold, OUTPUT);
-	digitalWrite(hold, LOW);
-	pinMode(hlda, INPUT);
-	pinMode(_int3, OUTPUT);
-	digitalWrite(_int3, HIGH);
-	pinMode(int2, OUTPUT);
-	digitalWrite(int2, LOW);
-	pinMode(int1, OUTPUT);
-	digitalWrite(int1, LOW);
-	pinMode(_int0, OUTPUT);
-	digitalWrite(_int0, HIGH);
-	pinMode(_be0, INPUT);
-	pinMode(_be1, INPUT);
-	pinMode(_a1, INPUT);
-	pinMode(_a2, INPUT);
-	pinMode(_a3, INPUT);
-	digitalWrite(reset960, HIGH);
 }
 
 // the loop routine runs over and over again forever:
