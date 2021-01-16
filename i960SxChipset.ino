@@ -6,16 +6,17 @@
  */
 #include <SPI.h>
 #include <Wire.h>
+#include <libbonuspin.h>
 // Pin 13 has an LED connected on most Arduino boards.
 // Pin 11 has the LED on Teensy 2.0
 // Pin 6  has the LED on Teensy++ 2.0
 // Pin 13 has the LED on Teensy 3.0
 // give it a name:
 enum class i960Pinout : decltype(A0) {
-	Reset960 = 0, // output
+	Led = 0, 	  // output
+	Reset960, // output
 	ResetGPIO,    // output
 	Ready,		  // output
-	Unused0, 	  // unused
 	GPIOSelect,   // output
 	MOSI,		  // reserved
 	MISO,		  // reserved
@@ -42,12 +43,21 @@ enum class i960Pinout : decltype(A0) {
 	BurstAddress1, // input
 	BurstAddress2, // input
 	BurstAddress3, // input
+	Unused0, 	   // unused
 	Unused1, 	   // unused
-	Unused2, 	   // unused
 	Count,		   // special
-	Led = 0,
 };
+enum class IOExpanderAddress : byte {
+	DataLines = 0b000,
+	Lower16Lines,
+	Upper16Lines,
+};
+
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) == 32);
+template<IOExpanderAddress addr>
+using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr),
+	  static_cast<int>(i960Pinout::GPIOSelect),
+	  static_cast<int>(i960Pinout::ResetGPIO)>;
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
 	digitalWrite(static_cast<int>(ip), value);
@@ -79,9 +89,14 @@ using HoldPinLow = PinToggler<pinId, LOW, HIGH>;
 template<i960Pinout pinId>
 using HoldPinHigh = PinToggler<pinId, HIGH, LOW>;
 
+IOExpander<IOExpanderAddress::DataLines> dataLines;
+IOExpander<IOExpanderAddress::Lower16Lines> lower16;
+IOExpander<IOExpanderAddress::Upper16Lines> upper16;
+
 // the setup routine runs once when you press reset:
 void setup() {
 	Serial.begin(9600);
+	Serial.println("80960Sx Chipset Starting up...");
 	setupPins(OUTPUT, 
 			i960Pinout::ResetGPIO, 
 			i960Pinout::Reset960);
@@ -117,6 +132,14 @@ void setup() {
 			i960Pinout::BurstAddress2,
 			i960Pinout::BurstAddress3);
 	SPI.begin();
+	dataLines.begin();
+	lower16.begin();
+	upper16.begin();
+	dataLines.reset();
+	lower16.reset();
+	upper16.reset();
+	/// wait two seconds to ensure that reset is successful
+	delay(2000);
 }
 
 // the loop routine runs over and over again forever:
