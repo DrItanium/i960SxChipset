@@ -7,7 +7,11 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <libbonuspin.h>
-#include <SD.h>
+#include <Adafruit_SI5351.h>
+#include <PCF8523.h>
+Adafruit_SI5351 clockgen;
+volatile bool clockgenActive = false;
+PCF8523 rtc;
 // Pin 13 has an LED connected on most Arduino boards.
 // Pin 11 has the LED on Teensy 2.0
 // Pin 6  has the LED on Teensy++ 2.0
@@ -17,7 +21,7 @@ enum class i960Pinout : decltype(A0) {
 // PORT B
 	Led = 0, 	  // output
 	Reset960,     // output
-	Unused2, 	  // AVR Interrupt  INT2
+	AVR_INT2, 	  // AVR Interrupt  INT2
 	Ready,		  // output
 	GPIOSelect,   // output
 	MOSI,		  // reserved
@@ -26,8 +30,8 @@ enum class i960Pinout : decltype(A0) {
 // PORT D
 	RX0, 		  // reserved
 	TX0, 		  // reserved
-	Unused3,	  // AVR Interrupt INT0
-	Unused4,	  // AVR Interrupt INT1
+	AVR_INT0,	  // AVR Interrupt INT0
+	AVR_INT1,	  // AVR Interrupt INT1
 	PWM0,		  // unused
 	PWM1, 		  // unused
 	PWM2, 		  // unused
@@ -145,17 +149,7 @@ uint8_t getBurstAddress() noexcept {
 bool isBurstLast() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b100000);
 }
-	
-// the setup routine runs once when you press reset:
-void setup() {
-	Serial.begin(115200);
-	Serial.println("80960Sx Chipset Starting up...");
-	setupPins(OUTPUT, 
-			i960Pinout::ResetGPIO, 
-			i960Pinout::Reset960,
-			i960Pinout::Led);
-	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
-	HoldPinLow<i960Pinout::ResetGPIO> gpioReset;
+void setupCPUInterface() {
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
@@ -175,7 +169,8 @@ void setup() {
 			i960Pinout::DEN_,
 			i960Pinout::W_R,
 			i960Pinout::HLDA);
-	SPI.begin();
+}
+void setupIOExpanders() {
 	dataLines.begin();
 	lower16.begin();
 	upper16.begin();
@@ -187,6 +182,30 @@ void setup() {
 	lower16.writeGPIOsDirection(0);
 	upper16.writeGPIOsDirection(0);
 	extraMemoryCommit.writeGPIOsDirection(0);
+}
+void setupClockGenerator() {
+	if (clockgen.begin() != ERROR_NONE) {
+		Serial.println("Ooops, no Si5351 detected ... skipping!");
+		clockgenActive = false;
+		return;
+	}
+	Serial.println("Si5351 was detected successfully!");
+	clockgenActive = true;
+}
+	
+// the setup routine runs once when you press reset:
+void setup() {
+	Serial.begin(115200);
+	Serial.println("80960Sx Chipset Starting up...");
+	setupPins(OUTPUT, 
+			i960Pinout::ResetGPIO, 
+			i960Pinout::Reset960,
+			i960Pinout::Led);
+	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
+	HoldPinLow<i960Pinout::ResetGPIO> gpioReset;
+	setupCPUInterface();
+	SPI.begin();
+	setupIOExpanders();
 	/// wait two seconds to ensure that reset is successful
 	delay(2000);
 }
