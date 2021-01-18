@@ -12,6 +12,7 @@
 #include <Arduino_JSON.h>
 #include <SD.h>
 #include <OPL3Duo.h>
+#include <Adafruit_BLE.h>
 Adafruit_SI5351 clockgen;
 volatile bool clockgenActive = false;
 PCF8523 rtc;
