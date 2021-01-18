@@ -19,6 +19,16 @@ PCF8523 rtc;
 volatile bool rtcActive = false;
 OPL3Duo opl3;
 volatile bool opl3Active = false;
+template<typename T>
+class TreatAs final {
+	public:
+		using ReturnType = T;
+};
+using Address = uint32_t;
+using TreatAsByte = TreatAs<uint8_t>;
+using TreatAsShort = TreatAs<uint16_t>;
+using TreatAsWord = TreatAs<uint32_t>;
+
 enum class i960Pinout : decltype(A0) {
 // PORT B
 	Led = 0, 	  // output
@@ -151,6 +161,14 @@ uint8_t getBurstAddress() noexcept {
 bool isBurstLast() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b100000);
 }
+uint8_t 
+load(Address address, TreatAsByte) noexcept {
+	return 0;
+}
+uint16_t
+load(Address address, TreatAsShort) noexcept {
+	return 0;
+}
 void setupCPUInterface() {
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
@@ -208,6 +226,7 @@ void setup() {
 	setupCPUInterface();
 	SPI.begin();
 	setupIOExpanders();
+	setupClockGenerator();
 	/// wait two seconds to ensure that reset is successful
 	delay(2000);
 }
