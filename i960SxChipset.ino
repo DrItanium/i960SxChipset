@@ -7,6 +7,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <libbonuspin.h>
+#include <SD.h>
 // Pin 13 has an LED connected on most Arduino boards.
 // Pin 11 has the LED on Teensy 2.0
 // Pin 6  has the LED on Teensy++ 2.0
@@ -15,7 +16,7 @@
 enum class i960Pinout : decltype(A0) {
 	Led = 0, 	  // output
 	Reset960,     // output
-	Int2, 		  // output
+	Unused2, 	  // AVR Interrupt  INT2
 	Ready,		  // output
 	GPIOSelect,   // output
 	MOSI,		  // reserved
@@ -23,10 +24,10 @@ enum class i960Pinout : decltype(A0) {
 	SCK, 		  // reserved
 	RX0, 		  // reserved
 	TX0, 		  // reserved
-	Int0_,		  // output
-	Int1,		  // output
+	Unused3,		  // AVR Interrupt INT0
+	Unused4,		  // AVR Interrupt INT1
 	Lock_,		  // bidirectional but default to output
-	Blast_,		  // input
+	Unused0,	  // unused
 	DT_R, 		  // input
 	DEN_, 		  // input
 	SCL,		  // reserved
@@ -34,7 +35,7 @@ enum class i960Pinout : decltype(A0) {
 	W_R, 		  // input
 	Hold,		  // output
 	HLDA,         // input
-	Int3_,        // output
+	Unused5,      // output
 	ResetGPIO,    // output
 	AS_, 		  // input
 	ALE,		  // input
@@ -43,7 +44,7 @@ enum class i960Pinout : decltype(A0) {
 	BurstAddress1, // input
 	BurstAddress2, // input
 	BurstAddress3, // input
-	Unused0, 	   // unused
+	Blast_, 	   // input
 	Unused1, 	   // unused
 	Count,		   // special
 };
@@ -54,11 +55,11 @@ enum class IOExpanderAddress : byte {
 	DataLines = 0b000,
 	Lower16Lines,
 	Upper16Lines,
+	DataCaptureLines,
 	OtherDevice0,
 	OtherDevice1,
 	OtherDevice2,
 	OtherDevice3,
-	OtherDevice4,
 };
 
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) == 32);
@@ -105,6 +106,7 @@ using HoldPinHigh = PinToggler<pinId, HIGH, LOW>;
 IOExpander<IOExpanderAddress::DataLines> dataLines;
 IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 IOExpander<IOExpanderAddress::Upper16Lines> upper16;
+IOExpander<IOExpanderAddress::DataCaptureLines> extraIOs;
 
 // upper five are actually unused but could be through these devices
 // this would give us 80 pins to work with for other purposes
@@ -112,7 +114,6 @@ IOExpander<IOExpanderAddress::OtherDevice0> dev0;
 IOExpander<IOExpanderAddress::OtherDevice1> dev1;
 IOExpander<IOExpanderAddress::OtherDevice2> dev2;
 IOExpander<IOExpanderAddress::OtherDevice3> dev3;
-IOExpander<IOExpanderAddress::OtherDevice4> dev4;
 
 uint32_t
 getAddress() noexcept {
@@ -120,7 +121,6 @@ getAddress() noexcept {
 	auto upper16Addr = static_cast<uint32_t>(upper16.readGPIOs()) << 16;
 	return lower16Addr | upper16Addr;
 }
-
 uint16_t
 getDataBits() noexcept {
 	dataLines.writeGPIOsDirection(0);
@@ -139,7 +139,8 @@ void setup() {
 	Serial.println("80960Sx Chipset Starting up...");
 	setupPins(OUTPUT, 
 			i960Pinout::ResetGPIO, 
-			i960Pinout::Reset960);
+			i960Pinout::Reset960,
+			i960Pinout::Led);
 	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 	HoldPinLow<i960Pinout::ResetGPIO> gpioReset;
 	setupPins(OUTPUT,
