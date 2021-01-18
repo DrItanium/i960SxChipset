@@ -14,6 +14,7 @@
 // Pin 13 has the LED on Teensy 3.0
 // give it a name:
 enum class i960Pinout : decltype(A0) {
+// PORT B
 	Led = 0, 	  // output
 	Reset960,     // output
 	Unused2, 	  // AVR Interrupt  INT2
@@ -22,6 +23,7 @@ enum class i960Pinout : decltype(A0) {
 	MOSI,		  // reserved
 	MISO,		  // reserved
 	SCK, 		  // reserved
+// PORT D
 	RX0, 		  // reserved
 	TX0, 		  // reserved
 	Unused3,	  // AVR Interrupt INT0
@@ -30,21 +32,23 @@ enum class i960Pinout : decltype(A0) {
 	Int0_,	      // output 
 	DT_R, 		  // input
 	DEN_, 		  // input
+// PORT C
 	SCL,		  // reserved
 	SDA, 		  // reserved
 	W_R, 		  // input
 	Hold,		  // output
 	HLDA,         // input
-	Unused5,      // output
+	ALE,          // input
 	ResetGPIO,    // output
 	AS_, 		  // input
-	ALE,		  // input
-	ByteEnable0_, // input
-	ByteEnable1_, // input
-	BurstAddress1, // input
-	BurstAddress2, // input
-	BurstAddress3, // input
-	Blast_, 	   // input
+// PORT A
+	Unused12,		  // input
+	Unused6, // input
+	Unused7, // input
+	Unused8, // input
+	Unused9, // input
+	Unused10, // input
+	Unused11, 	   // input
 	Unused1, 	   // unused
 	Count,		   // special
 };
@@ -167,7 +171,6 @@ void setup() {
 	setupPins(INPUT,
 			i960Pinout::ALE,
 			i960Pinout::AS_,
-			i960Pinout::Blast_,
 			i960Pinout::DT_R,
 			i960Pinout::DEN_,
 			i960Pinout::W_R,
