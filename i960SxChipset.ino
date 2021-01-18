@@ -9,14 +9,15 @@
 #include <libbonuspin.h>
 #include <Adafruit_SI5351.h>
 #include <PCF8523.h>
+#include <Arduino_JSON.h>
+#include <SD.h>
+#include <OPL3Duo.h>
 Adafruit_SI5351 clockgen;
 volatile bool clockgenActive = false;
 PCF8523 rtc;
-// Pin 13 has an LED connected on most Arduino boards.
-// Pin 11 has the LED on Teensy 2.0
-// Pin 6  has the LED on Teensy++ 2.0
-// Pin 13 has the LED on Teensy 3.0
-// give it a name:
+volatile bool rtcActive = false;
+OPL3Duo opl3;
+volatile bool opl3Active = false;
 enum class i960Pinout : decltype(A0) {
 // PORT B
 	Led = 0, 	  // output
@@ -50,10 +51,10 @@ enum class i960Pinout : decltype(A0) {
 	Int0_,	      // output 
 	DT_R, 		  // input
 	DEN_, 		  // input
-	Unused9, 		  // unused
-	Unused10,         // unused
-	Unused11, 	   // unused
-	Unused1, 	   // unused
+	NC0, 		  // unused
+	NC1,         // unused
+	NC2, 	   // unused
+	NC3, 	   // unused
 	Count,		   // special
 };
 enum class IOExpanderAddress : byte {
@@ -67,7 +68,7 @@ enum class IOExpanderAddress : byte {
 	OtherDevice3,
 };
 
-static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) == 32);
+static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 
 template<IOExpanderAddress addr>
 using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr),
