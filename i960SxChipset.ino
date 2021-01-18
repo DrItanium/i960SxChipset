@@ -52,7 +52,7 @@ enum class IOExpanderAddress : byte {
 	DataLines = 0b000,
 	Lower16Lines,
 	Upper16Lines,
-	DataCaptureLines,
+	MemoryCommitExtras,
 	OtherDevice0,
 	OtherDevice1,
 	OtherDevice2,
@@ -103,7 +103,7 @@ using HoldPinHigh = PinToggler<pinId, HIGH, LOW>;
 IOExpander<IOExpanderAddress::DataLines> dataLines;
 IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 IOExpander<IOExpanderAddress::Upper16Lines> upper16;
-IOExpander<IOExpanderAddress::DataCaptureLines> extraIOs;
+IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
 
 // upper five are actually unused but could be through these devices
 // this would give us 80 pins to work with for other purposes
@@ -128,6 +128,18 @@ void
 setDataBits(uint16_t value) noexcept {
 	dataLines.writeGPIOsDirection(0xFFFF);
 	dataLines.writeGPIOs(value);
+}
+
+uint8_t getByteEnableBits() noexcept {
+	return (extraMemoryCommit.readGPIOs() & 0b11);
+}
+
+uint8_t getBurstAddress() noexcept {
+	return (extraMemoryCommit.readGPIOs() & 0b11100) >> 2;
+}
+
+bool isBurstLast() noexcept {
+	return (extraMemoryCommit.readGPIOs() & 0b100000);
 }
 	
 // the setup routine runs once when you press reset:
@@ -159,21 +171,19 @@ void setup() {
 			i960Pinout::DT_R,
 			i960Pinout::DEN_,
 			i960Pinout::W_R,
-			i960Pinout::HLDA,
-			i960Pinout::ByteEnable0_,
-			i960Pinout::ByteEnable1_,
-			i960Pinout::BurstAddress1,
-			i960Pinout::BurstAddress2,
-			i960Pinout::BurstAddress3);
+			i960Pinout::HLDA);
 	SPI.begin();
 	dataLines.begin();
 	lower16.begin();
 	upper16.begin();
+	extraMemoryCommit.begin();
 	dataLines.reset();
 	lower16.reset();
 	upper16.reset();
+	extraMemoryCommit.reset();
 	lower16.writeGPIOsDirection(0);
 	upper16.writeGPIOsDirection(0);
+	extraMemoryCommit.writeGPIOsDirection(0);
 	/// wait two seconds to ensure that reset is successful
 	delay(2000);
 }
