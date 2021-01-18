@@ -24,10 +24,10 @@ enum class i960Pinout : decltype(A0) {
 	SCK, 		  // reserved
 	RX0, 		  // reserved
 	TX0, 		  // reserved
-	Unused3,		  // AVR Interrupt INT0
-	Unused4,		  // AVR Interrupt INT1
+	Unused3,	  // AVR Interrupt INT0
+	Unused4,	  // AVR Interrupt INT1
 	Lock_,		  // bidirectional but default to output
-	Unused0,	  // unused
+	Int0_,	      // output 
 	DT_R, 		  // input
 	DEN_, 		  // input
 	SCL,		  // reserved
@@ -48,9 +48,6 @@ enum class i960Pinout : decltype(A0) {
 	Unused1, 	   // unused
 	Count,		   // special
 };
-static_assert(static_cast<int>(i960Pinout::Int2) == 2);
-static_assert(static_cast<int>(i960Pinout::Int0_) == 10);
-static_assert(static_cast<int>(i960Pinout::Int1) == 11);
 enum class IOExpanderAddress : byte {
 	DataLines = 0b000,
 	Lower16Lines,
@@ -147,16 +144,12 @@ void setup() {
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
 			i960Pinout::Lock_,
-			i960Pinout::Int3_,
 			i960Pinout::Int0_,
-			i960Pinout::Hold,
-			i960Pinout::Int2,
-			i960Pinout::Int1);
+			i960Pinout::Hold);
 	digitalWriteBlock(HIGH,
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
 			i960Pinout::Lock_,
-			i960Pinout::Int3_,
 			i960Pinout::Int0_);
 	digitalWrite(i960Pinout::Hold, LOW);
 	setupPins(INPUT,
