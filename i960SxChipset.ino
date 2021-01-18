@@ -28,10 +28,10 @@ enum class i960Pinout : decltype(A0) {
 	TX0, 		  // reserved
 	Unused3,	  // AVR Interrupt INT0
 	Unused4,	  // AVR Interrupt INT1
-	Lock_,		  // bidirectional but default to output
-	Int0_,	      // output 
-	DT_R, 		  // input
-	DEN_, 		  // input
+	PWM0,		  // unused
+	PWM1, 		  // unused
+	PWM2, 		  // unused
+	PWM3, 		  // unused
 // PORT C
 	SCL,		  // reserved
 	SDA, 		  // reserved
@@ -42,13 +42,13 @@ enum class i960Pinout : decltype(A0) {
 	ResetGPIO,    // output
 	AS_, 		  // input
 // PORT A
-	Unused12,		  // input
-	Unused6, // input
-	Unused7, // input
-	Unused8, // input
-	Unused9, // input
-	Unused10, // input
-	Unused11, 	   // input
+	Lock_,		  // bidirectional but default to output
+	Int0_,	      // output 
+	DT_R, 		  // input
+	DEN_, 		  // input
+	Unused9, 		  // unused
+	Unused10,         // unused
+	Unused11, 	   // unused
 	Unused1, 	   // unused
 	Count,		   // special
 };
