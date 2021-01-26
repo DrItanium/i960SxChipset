@@ -32,6 +32,7 @@ using TreatAsWord = TreatAs<uint32_t>;
 enum class i960Pinout : decltype(A0) {
 // PORT B
 	Led = 0, 	  // output
+  CLOCK_OUT, // output, unusable
 	Reset960,     // output
 	AVR_INT2, 	  // AVR Interrupt  INT2
 	Ready,		  // output
@@ -65,7 +66,6 @@ enum class i960Pinout : decltype(A0) {
 	NC0, 		  // unused
 	NC1,         // unused
 	NC2, 	   // unused
-	NC3, 	   // unused
 	Count,		   // special
 };
 enum class IOExpanderAddress : byte {
