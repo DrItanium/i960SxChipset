@@ -1,9 +1,34 @@
 /*
-   Blink
-   Turns on an LED on for one second, then off for one second, repeatedly.
+i960SxChipset
+Copyright (c) 2020-2021, Joshua Scoggins
+All rights reserved.
 
-   This example code is in the public domain.
- */
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR 
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/// i960Sx chipset mcu, based on atmega1284p with fuses set for:
+/// - 20Mhz crystal
+/// - D1 acts as CLKO
+/// Language options:
+/// - C++17
+/// Board Platform: MightyCore
 #include <SPI.h>
 #include <Wire.h>
 #include <libbonuspin.h>
@@ -12,7 +37,7 @@
 #include <Arduino_JSON.h>
 #include <SD.h>
 #include <OPL3Duo.h>
-#include <Adafruit_BLE.h>
+#include <Adafruit_BLE.h> 
 Adafruit_SI5351 clockgen;
 volatile bool clockgenActive = false;
 PCF8523 rtc;
