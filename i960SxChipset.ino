@@ -32,8 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <Wire.h>
 #include <libbonuspin.h>
-#include <SD.h>
-#include <Arduino_JSON.h>
+#include <Timer.h>
 template<typename T>
 class TreatAs final {
 	public:
@@ -154,6 +153,7 @@ IOExpander<IOExpanderAddress::OtherDevice1> dev1;
 IOExpander<IOExpanderAddress::OtherDevice2> dev2;
 IOExpander<IOExpanderAddress::OtherDevice3> dev3;
 
+Timer t;
 Address
 getAddress() noexcept {
 	auto lower16Addr = static_cast<Address>(lower16.readGPIOs());
@@ -271,7 +271,6 @@ void setupCPUInterface() {
 	for (int i = 0; i < onBoardCacheSize; ++i) {
 		onBoardCache[i] = 0;
 	}
-		
 }
 void setupIOExpanders() {
 	dataLines.begin();
@@ -297,6 +296,7 @@ void setup() {
 			i960Pinout::Led);
 	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 	HoldPinLow<i960Pinout::ResetGPIO> gpioReset;
+	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
 	setupCPUInterface();
 	SPI.begin();
 	setupIOExpanders();
@@ -307,8 +307,9 @@ void setup() {
 
 // the loop routine runs over and over again forever:
 void loop() {
-	digitalWrite(i960Pinout::Led, HIGH);   // turn the LED on (HIGH is the voltage level)
-	delay(1000);               // wait for a second
-	digitalWrite(i960Pinout::Led, LOW);    // turn the LED off by making the voltage LOW
-	delay(1000);               // wait for a second
+	//digitalWrite(i960Pinout::Led, HIGH);   // turn the LED on (HIGH is the voltage level)
+	//delay(1000);               // wait for a second
+	//digitalWrite(i960Pinout::Led, LOW);    // turn the LED off by making the voltage LOW
+	//delay(1000);               // wait for a second
+	t.update();
 }
