@@ -74,7 +74,7 @@ enum class i960Pinout : decltype(A0) {
 	Int0_,		  // output
 	Hold,         // input
 	HLDA,         // input
-	DT_R_,        // input 
+	Unused0,      // unused
 	W_R_, 		  // input
 // PORT A
 	Reset960,		  // output
@@ -180,7 +180,7 @@ setDataBits(uint16_t value) noexcept {
 // PA4 - BE1_ - input
 // PA5 - AS_ - input
 // PA6 - ALE - input
-// PA7 - Unused
+// PA7 - DT\R_ - input 
 // PB0 - Unused
 // PB1 - Unused
 // PB2 - Unused
@@ -215,6 +215,14 @@ bool inAddressState() noexcept {
 
 bool addressLatchEnabled() noexcept {
 	return static_cast<bool>((extraMemoryCommit.readGPIOs() >> 6) & 1);
+}
+
+bool shouldPerformDataTransmit() noexcept {
+	return (extraMemoryCommit.readGPIOs() & 0b1000'0000);
+}
+
+bool shouldPerformDataReceive() noexcept {
+	return !shouldPerformDataTransmit();
 }
 
 bool isReadOperation() noexcept {
@@ -262,7 +270,7 @@ void setupCPUInterface() {
 	digitalWrite(i960Pinout::Hold, LOW);
 	setupPins(INPUT,
 			i960Pinout::BLAST_,
-			i960Pinout::DT_R_,
+			//i960Pinout::DT_R_,
 			i960Pinout::DEN_,
 			i960Pinout::W_R_,
 			i960Pinout::HLDA);
