@@ -32,17 +32,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <Wire.h>
 #include <libbonuspin.h>
+#include <SD.h>
+#include <Arduino_JSON.h>
 template<typename T>
 class TreatAs final {
 	public:
 		using ReturnType = T;
 };
 using Address = uint32_t;
-using BusDatum = uint16_t;
+using Short = uint16_t;
+using BusDatum = Short;
+using Byte = uint8_t;
 using TreatAsByte = TreatAs<uint8_t>;
 using TreatAsShort = TreatAs<uint16_t>;
 using TreatAsWord = TreatAs<uint32_t>;
-volatile BusDatum onBoardCache[8] = { 0 };
+constexpr auto onBoardCacheSize = 16 / sizeof(Short);
+volatile Short onBoardCache[onBoardCacheSize] = { 0 };
 
 enum class i960Pinout : decltype(A0) {
 // PORT B
@@ -263,7 +268,7 @@ void setupCPUInterface() {
 			i960Pinout::HLDA);
 	EIMSK |= 0b100; // enable INT2 pin
 	EICRA |= 0b100000; // trigger on falling edge
-	for (int i = 0; i < 8; ++i) {
+	for (int i = 0; i < onBoardCacheSize; ++i) {
 		onBoardCache[i] = 0;
 	}
 		
