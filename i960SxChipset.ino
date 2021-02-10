@@ -32,18 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <Wire.h>
 #include <libbonuspin.h>
-#include <Adafruit_SI5351.h>
-#include <PCF8523.h>
-#include <Arduino_JSON.h>
-#include <SD.h>
-#include <OPL3Duo.h>
-#include <Adafruit_BLE.h> 
-Adafruit_SI5351 clockgen;
-volatile bool clockgenActive = false;
-PCF8523 rtc;
-volatile bool rtcActive = false;
-OPL3Duo opl3;
-volatile bool opl3Active = false;
 template<typename T>
 class TreatAs final {
 	public:
@@ -57,11 +45,10 @@ using TreatAsWord = TreatAs<uint32_t>;
 enum class i960Pinout : decltype(A0) {
 // PORT B
 	Led = 0, 	  // output
-  CLOCK_OUT, // output, unusable
-	Reset960,     // output
-	AVR_INT2, 	  // AVR Interrupt  INT2
-	Ready,		  // output
-	GPIOSelect,   // output
+   	CLOCK_OUT, // output, unusable
+	DEN_,     // input, AVR Int2
+	PWM4, 	 // unused
+	GPIOSelect, // output
 	MOSI,		  // reserved
 	MISO,		  // reserved
 	SCK, 		  // reserved
@@ -77,20 +64,21 @@ enum class i960Pinout : decltype(A0) {
 // PORT C
 	SCL,		  // reserved
 	SDA, 		  // reserved
-	W_R, 		  // input
-	Hold,		  // output
+	Ready, 	  // output
+	Int0_,		  // output
+	Hold,         // input
 	HLDA,         // input
-	ALE,          // input
-	ResetGPIO,    // output
-	AS_, 		  // input
+	DT_R_,        // input 
+	W_R_, 		  // input
 // PORT A
-	Lock_,		  // bidirectional but default to output
-	Int0_,	      // output 
-	DT_R, 		  // input
-	DEN_, 		  // input
-	NC0, 		  // unused
-	NC1,         // unused
-	NC2, 	   // unused
+	Reset960,		  // output
+	ResetGPIO,	      // output 
+	BLAST_, 		  // input
+	Lock_, 		  // output (actually bidirectional)
+	Analog4,	  // unused
+	Analog5,	  // unused
+	Analog6,	  // unused
+	Analog7,	  // unused
 	Count,		   // special
 };
 enum class IOExpanderAddress : byte {
@@ -175,24 +163,50 @@ setDataBits(uint16_t value) noexcept {
 	dataLines.writeGPIOs(value);
 }
 
+// layout of the extra memory commit expander
+// PA0 - BurstAddress1 - input
+// PA1 - BurstAddress2 - input
+// PA2 - BurstAddress3 - input
+// PA3 - BE0_ - input
+// PA4 - BE1_ - input
+// PA5 - AS_ - input
+// PA6 - ALE - input
+// PA7 - Unused
+// PB0 - Unused
+// PB1 - Unused
+// PB2 - Unused
+// PB3 - Unused
+// PB4 - Unused
+// PB5 - Unused
+// PB6 - Unused
+// PB7 - Unused
+
 uint8_t getByteEnableBits() noexcept {
-	return (extraMemoryCommit.readGPIOs() & 0b11);
+	return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
 }
 
 uint8_t getBurstAddress() noexcept {
-	return (extraMemoryCommit.readGPIOs() & 0b11100) >> 2;
+	return (extraMemoryCommit.readGPIOs() & 0b111) << 1;
 }
 
-bool isBurstLast() noexcept {
-	return (extraMemoryCommit.readGPIOs() & 0b100000);
+bool inAddressState() noexcept {
+	return !static_cast<bool>((extraMemoryCommit.readGPIOs() >> 5) & 1);
 }
-uint8_t 
-load(Address address, TreatAsByte) noexcept {
+
+bool addressLatchEnabled() noexcept {
+	return static_cast<bool>((extraMemoryCommit.readGPIOs() >> 6) & 1);
+}
+
+
+uint8_t load(Address address, TreatAsByte) noexcept {
 	return 0;
 }
-uint16_t
-load(Address address, TreatAsShort) noexcept {
+uint16_t load(Address address, TreatAsShort) noexcept {
 	return 0;
+}
+ISR (INT2_vect) 
+{
+	// this is the DEN_ pin doing its thing
 }
 void setupCPUInterface() {
 	setupPins(OUTPUT,
@@ -208,12 +222,15 @@ void setupCPUInterface() {
 			i960Pinout::Int0_);
 	digitalWrite(i960Pinout::Hold, LOW);
 	setupPins(INPUT,
-			i960Pinout::ALE,
-			i960Pinout::AS_,
-			i960Pinout::DT_R,
+			//i960Pinout::ALE,
+			//i960Pinout::AS_,
+			i960Pinout::DT_R_,
 			i960Pinout::DEN_,
-			i960Pinout::W_R,
+			i960Pinout::W_R_,
 			i960Pinout::HLDA);
+	EIMSK |= 0b100; // enable INT2 pin
+	EICRA |= 0b100000; // trigger on falling edge
+
 }
 void setupIOExpanders() {
 	dataLines.begin();
@@ -227,15 +244,6 @@ void setupIOExpanders() {
 	lower16.writeGPIOsDirection(0);
 	upper16.writeGPIOsDirection(0);
 	extraMemoryCommit.writeGPIOsDirection(0);
-}
-void setupClockGenerator() {
-	if (clockgen.begin() != ERROR_NONE) {
-		Serial.println("Ooops, no Si5351 detected ... skipping!");
-		clockgenActive = false;
-		return;
-	}
-	Serial.println("Si5351 was detected successfully!");
-	clockgenActive = true;
 }
 	
 // the setup routine runs once when you press reset:
@@ -251,9 +259,9 @@ void setup() {
 	setupCPUInterface();
 	SPI.begin();
 	setupIOExpanders();
-	setupClockGenerator();
 	/// wait two seconds to ensure that reset is successful
 	delay(2000);
+	sei();
 }
 
 // the loop routine runs over and over again forever:
