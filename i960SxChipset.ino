@@ -38,9 +38,11 @@ class TreatAs final {
 		using ReturnType = T;
 };
 using Address = uint32_t;
+using BusDatum = uint16_t;
 using TreatAsByte = TreatAs<uint8_t>;
 using TreatAsShort = TreatAs<uint16_t>;
 using TreatAsWord = TreatAs<uint32_t>;
+volatile BusDatum onBoardCache[8] = { 0 };
 
 enum class i960Pinout : decltype(A0) {
 // PORT B
@@ -124,7 +126,9 @@ class PinToggler {
 		~PinToggler() { digitalWrite(pinId, onDestruction); }
 };
 
-
+inline auto digitalRead(i960Pinout ip) {
+	return digitalRead(static_cast<int>(ip));
+}
 template<i960Pinout pinId>
 using HoldPinLow = PinToggler<pinId, LOW, HIGH>;
 
@@ -145,10 +149,10 @@ IOExpander<IOExpanderAddress::OtherDevice1> dev1;
 IOExpander<IOExpanderAddress::OtherDevice2> dev2;
 IOExpander<IOExpanderAddress::OtherDevice3> dev3;
 
-uint32_t
+Address
 getAddress() noexcept {
-	auto lower16Addr = static_cast<uint32_t>(lower16.readGPIOs());
-	auto upper16Addr = static_cast<uint32_t>(upper16.readGPIOs()) << 16;
+	auto lower16Addr = static_cast<Address>(lower16.readGPIOs());
+	auto upper16Addr = static_cast<Address>(upper16.readGPIOs()) << 16;
 	return lower16Addr | upper16Addr;
 }
 uint16_t
@@ -185,8 +189,19 @@ uint8_t getByteEnableBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
 }
 
-uint8_t getBurstAddress() noexcept {
+bool getByteEnable0() noexcept {
+	return getByteEnableBits() & 1;
+}
+bool getByteEnable1() noexcept {
+	return getByteEnableBits() & 0b10;
+}
+
+uint8_t getBurstAddressBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b111) << 1;
+}
+
+Address getBurstAddress() noexcept {
+	return (getAddress() & (~0b1110)) | static_cast<Address>(getBurstAddressBits());
 }
 
 bool inAddressState() noexcept {
@@ -197,15 +212,34 @@ bool addressLatchEnabled() noexcept {
 	return static_cast<bool>((extraMemoryCommit.readGPIOs() >> 6) & 1);
 }
 
+bool isReadOperation() noexcept {
+	return digitalRead(i960Pinout::W_R_) == LOW;
+}
+bool isWriteOperation() noexcept {
+	return digitalRead(i960Pinout::W_R_) == HIGH;
+}
 
+bool isLastBurstTransaction() noexcept {
+	return digitalRead(i960Pinout::BLAST_) == LOW;
+}
+
+void signalReady() noexcept {
+	HoldPinLow<i960Pinout::Ready> holdItLow;
+	delayMicroseconds(500);
+}
+
+/// @todo add the FAIL pin based off of the diagrams I have (requires external
+// circuitry.
 uint8_t load(Address address, TreatAsByte) noexcept {
 	return 0;
 }
 uint16_t load(Address address, TreatAsShort) noexcept {
 	return 0;
 }
+volatile bool dataEnabled = false;
 ISR (INT2_vect) 
 {
+	dataEnabled = true;
 	// this is the DEN_ pin doing its thing
 }
 void setupCPUInterface() {
@@ -222,15 +256,17 @@ void setupCPUInterface() {
 			i960Pinout::Int0_);
 	digitalWrite(i960Pinout::Hold, LOW);
 	setupPins(INPUT,
-			//i960Pinout::ALE,
-			//i960Pinout::AS_,
+			i960Pinout::BLAST_,
 			i960Pinout::DT_R_,
 			i960Pinout::DEN_,
 			i960Pinout::W_R_,
 			i960Pinout::HLDA);
 	EIMSK |= 0b100; // enable INT2 pin
 	EICRA |= 0b100000; // trigger on falling edge
-
+	for (int i = 0; i < 8; ++i) {
+		onBoardCache[i] = 0;
+	}
+		
 }
 void setupIOExpanders() {
 	dataLines.begin();
