@@ -33,6 +33,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Wire.h>
 #include <libbonuspin.h>
 #include <Timer.h>
+#include <SD.h>
+#include <Arduino_JSON.h>
+#include <Adafruit_GFX.h>
 template<typename T>
 class TreatAs final {
 	public:
@@ -79,14 +82,16 @@ enum class i960Pinout : decltype(A0) {
 // PORT A
 	BLAST_, 		  // input
 	Lock_, 		  // output (actually bidirectional)
-	Analog2,
-	Analog3,
+	Analog2, 	  // unused
+	Analog3, 	  // unused
 	Analog4,	  // unused
 	Analog5,	  // unused
 	Analog6,	  // unused
 	Analog7,	  // unused
 	Count,		   // special
 };
+static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
+
 enum class IOExpanderAddress : byte {
 	DataLines = 0b000,
 	Lower16Lines,
@@ -98,7 +103,6 @@ enum class IOExpanderAddress : byte {
 	OtherDevice3,
 };
 
-static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 
 template<IOExpanderAddress addr>
 using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr),
@@ -181,7 +185,7 @@ setDataBits(uint16_t value) noexcept {
 // PA5 - AS_ - input
 // PA6 - ALE - input
 // PA7 - DT\R_ - input 
-// PB0 - Unused
+// PB0 - FAIL - input
 // PB1 - Unused
 // PB2 - Unused
 // PB3 - Unused
@@ -249,6 +253,9 @@ uint8_t load(Address address, TreatAsByte) noexcept {
 uint16_t load(Address address, TreatAsShort) noexcept {
 	return 0;
 }
+uint32_t load(Address address, TreatAsWord) noexcept {
+	return 0;
+}
 volatile bool dataEnabled = false;
 ISR (INT2_vect) 
 {
@@ -256,6 +263,7 @@ ISR (INT2_vect)
 	// this is the DEN_ pin doing its thing
 }
 void setupCPUInterface() {
+	Serial.print("Setting up cpu interface pins...");
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
@@ -276,9 +284,12 @@ void setupCPUInterface() {
 			i960Pinout::HLDA);
 	EIMSK |= 0b100; // enable INT2 pin
 	EICRA |= 0b100000; // trigger on falling edge
+	Serial.println("Done!");
+	Serial.print("Setting up on-board cache...");
 	for (int i = 0; i < onBoardCacheSize; ++i) {
 		onBoardCache[i] = 0;
 	}
+	Serial.println("Done!");
 }
 void setupIOExpanders() {
 	dataLines.begin();
