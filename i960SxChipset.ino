@@ -176,6 +176,7 @@ setDataBits(uint16_t value) noexcept {
 	dataLines.writeGPIOs(value);
 }
 
+
 // layout of the extra memory commit expander
 // PA0 - BurstAddress1 - input
 // PA1 - BurstAddress2 - input
@@ -235,14 +236,28 @@ bool isReadOperation() noexcept {
 bool isWriteOperation() noexcept {
 	return digitalRead(i960Pinout::W_R_) == HIGH;
 }
-
+bool getBlastPin() noexcept {
+	return digitalRead(i960Pinout::BLAST_) == HIGH;
+}
 bool isLastBurstTransaction() noexcept {
-	return digitalRead(i960Pinout::BLAST_) == LOW;
+	return !getBlastPin();
 }
 
 void signalReady() noexcept {
 	HoldPinLow<i960Pinout::Ready> holdItLow;
 	delayMicroseconds(500);
+}
+
+/**
+ * FAIL Circuit as defined in the i960 docs but in software instead of
+ * hardware.
+ */
+constexpr bool failureOnBootup(bool be0, bool be1, bool blast) noexcept {
+	return (!blast) && (be0 && be1);
+}
+
+bool failureOnBootup() noexcept {
+	return failureOnBootup(getByteEnable0(), getByteEnable1(), getBlastPin());
 }
 
 /// @todo add the FAIL pin based off of the diagrams I have (requires external
