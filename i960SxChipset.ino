@@ -186,7 +186,7 @@ setDataBits(uint16_t value) noexcept {
 // PA5 - AS_ - input
 // PA6 - ALE - input
 // PA7 - DT\R_ - input 
-// PB0 - FAIL - input
+// PB0 - Unused - input
 // PB1 - Unused
 // PB2 - Unused
 // PB3 - Unused
