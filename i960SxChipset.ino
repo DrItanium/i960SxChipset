@@ -299,6 +299,10 @@ void setupIOExpanders() {
 	dataLines.begin(); 
 	// set IOCON.HAEN on all chips
 	dataLines.enableHardwareAddressPins();
+	// now we have to refresh our on mcu flags for each io expander
+	lower16.refreshIOCon();
+	upper16.refreshIOCon();
+	extraMemoryCommit.refreshIOCon();
 	// now all devices tied to this ~CS pin have separate addresses
 	// make each of these inputs
 	lower16.writeGPIOsDirection(0xFFFF);
@@ -332,7 +336,6 @@ void setup() {
 
 void processingLoop() {
 	Serial.print(extraMemoryCommit.readGPIOs(), BIN);
-#if 0
 	emitCharState(digitalRead(i960Pinout::DEN_) == LOW, '0', '1');
 	emitCharState(getBlastPin() == LOW, '0', '1');
 	emitCharState(getByteEnable0() == HIGH, '1', '0');
@@ -351,7 +354,6 @@ void processingLoop() {
 		}
 		signalReady();
 	}
-#endif
 	Serial.println();
 	delay(100);
 }
