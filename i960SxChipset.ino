@@ -336,10 +336,13 @@ void setup() {
 
 void processingLoop() {
 	Serial.print(extraMemoryCommit.readGPIOs(), BIN);
+	Serial.print(" ");
 	emitCharState(digitalRead(i960Pinout::DEN_) == LOW, '0', '1');
 	emitCharState(getBlastPin() == LOW, '0', '1');
 	emitCharState(getByteEnable0() == HIGH, '1', '0');
 	emitCharState(getByteEnable1() == HIGH, '1', '0');
+	auto failed = failureOnBootup();
+	emitCharState(failed, 'F', 'T');
 	if (digitalRead(i960Pinout::DEN_) == LOW) {
 		auto isWriting = isWriteOperation();
 		auto isReading = isReadOperation();
