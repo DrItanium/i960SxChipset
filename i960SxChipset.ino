@@ -166,13 +166,13 @@ getAddress() noexcept {
 }
 uint16_t
 getDataBits() noexcept {
-	dataLines.writeGPIOsDirection(0);
+	dataLines.writeGPIOsDirection(0xFFFF);
 	return static_cast<uint16_t>(dataLines.readGPIOs());
 }
 
 void
 setDataBits(uint16_t value) noexcept {
-	dataLines.writeGPIOsDirection(0xFFFF);
+	dataLines.writeGPIOsDirection(0);
 	dataLines.writeGPIOs(value);
 }
 
@@ -199,11 +199,11 @@ uint8_t getByteEnableBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
 }
 
-bool getByteEnable0() noexcept {
-	return getByteEnableBits() & 1;
+auto getByteEnable0() noexcept {
+	return (getByteEnableBits() & 1) == 0 ? LOW : HIGH;
 }
-bool getByteEnable1() noexcept {
-	return getByteEnableBits() & 0b10;
+auto getByteEnable1() noexcept {
+	return (getByteEnableBits() & 0b10) == 0 ? LOW : HIGH;
 }
 
 uint8_t getBurstAddressBits() noexcept {
@@ -214,8 +214,8 @@ Address getBurstAddress() noexcept {
 	return (getAddress() & (~0b1110)) | static_cast<Address>(getBurstAddressBits());
 }
 
-bool inAddressState() noexcept {
-	return !static_cast<bool>((extraMemoryCommit.readGPIOs() >> 5) & 1);
+auto getAddressState() noexcept {
+	return (extraMemoryCommit.readGPIOs() & 0b100000) == 0 ? LOW : HIGH;
 }
 
 bool addressLatchEnabled() noexcept {
@@ -236,28 +236,26 @@ bool isReadOperation() noexcept {
 bool isWriteOperation() noexcept {
 	return digitalRead(i960Pinout::W_R_) == HIGH;
 }
-bool getBlastPin() noexcept {
-	return digitalRead(i960Pinout::BLAST_) == HIGH;
+auto getBlastPin() noexcept {
+	return digitalRead(i960Pinout::BLAST_);
 }
 bool isLastBurstTransaction() noexcept {
 	return !getBlastPin();
 }
 
 void signalReady() noexcept {
-	HoldPinLow<i960Pinout::Ready> holdItLow;
-	delayMicroseconds(500);
+	digitalWrite(i960Pinout::Ready, LOW);
+	digitalWrite(i960Pinout::Ready, HIGH);
 }
 
 /**
  * FAIL Circuit as defined in the i960 docs but in software instead of
  * hardware.
  */
-constexpr bool failureOnBootup(bool be0, bool be1, bool blast) noexcept {
-	return (!blast) && (be0 && be1);
-}
 
 bool failureOnBootup() noexcept {
-	return failureOnBootup(getByteEnable0(), getByteEnable1(), getBlastPin());
+	return (getBlastPin() == LOW) && (getByteEnable0() == HIGH &&
+									  getByteEnable1() == HIGH);
 }
 
 /// @todo add the FAIL pin based off of the diagrams I have (requires external
@@ -306,13 +304,14 @@ void setupIOExpanders() {
 	lower16.begin();
 	upper16.begin();
 	extraMemoryCommit.begin();
-	dataLines.reset();
-	lower16.reset();
-	upper16.reset();
-	extraMemoryCommit.reset();
-	lower16.writeGPIOsDirection(0);
-	upper16.writeGPIOsDirection(0);
-	extraMemoryCommit.writeGPIOsDirection(0);
+	digitalWrite(i960Pinout::ResetGPIO, LOW);
+	delayMicroseconds(2);
+	digitalWrite(i960Pinout::ResetGPIO, HIGH);
+	// make these inputs
+	lower16.writeGPIOsDirection(0xFFFF);
+	upper16.writeGPIOsDirection(0xFFFF);
+	extraMemoryCommit.writeGPIOsDirection(0xFFFF);
+	dataLines.writeGPIOsDirection(0xFFFF);
 }
 
 void emitCharState(bool condition, char onTrue, char onFalse) noexcept {
@@ -328,7 +327,6 @@ void setup() {
 			i960Pinout::Reset960,
 			i960Pinout::Led);
 	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
-	HoldPinLow<i960Pinout::ResetGPIO> gpioReset;
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
 	setupCPUInterface();
 	SPI.begin();
@@ -341,17 +339,14 @@ void setup() {
 }
 
 void processingLoop() {
-	auto inAddrState = inAddressState();
-	auto inDatState = !inAddrState;
-	emitCharState(inAddressState, 'A', 'D');
-	auto failed = failureOnBootup();
-	emitCharState(failed, 'F', 'P');
-	Serial.print(getBurstAddressBits(), BIN);
-	emitCharState(getByteEnable0(), '1', '0');
-	emitCharState(getByteEnable1(), '1', '0');
-	if (!failed && inDatState) {
+	Serial.print(extraMemoryCommit.readGPIOs(), BIN);
+	emitCharState(digitalRead(i960Pinout::DEN_) == LOW, '0', '1');
+	emitCharState(getBlastPin() == LOW, '0', '1');
+	emitCharState(getByteEnable0() == HIGH, '1', '0');
+	emitCharState(getByteEnable1() == HIGH, '1', '0');
+	if (digitalRead(i960Pinout::DEN_) == LOW) {
 		auto isWriting = isWriteOperation();
-		auto isReading = !isWriting;
+		auto isReading = isReadOperation();
 		emitCharState(isWriting, 'W', 'R');
 		auto address = getAddress();
 		Serial.print(" 0x");
@@ -362,10 +357,9 @@ void processingLoop() {
 			store(address, getDataBits());
 		}
 		signalReady();
-		dataLines.writeGPIOsDirection(0xFFFF);
 	}
 	Serial.println();
-	delay(1000);
+	delay(100);
 }
 // the loop routine runs over and over again forever:
 void loop() {
