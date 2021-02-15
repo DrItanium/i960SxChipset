@@ -56,7 +56,7 @@ enum class i960Pinout : decltype(A0) {
 	Led = 0, 	  // output
    	CLOCK_OUT, // output, unusable
 	DEN_,     // input, AVR Int2
-	ResetGPIO,	      // output 
+	EN2,	    // Unused 
 	GPIOSelect, // output
 	MOSI,		  // reserved
 	MISO,		  // reserved
@@ -104,10 +104,8 @@ enum class IOExpanderAddress : byte {
 };
 
 
-template<IOExpanderAddress addr>
-using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr),
-	  static_cast<int>(i960Pinout::GPIOSelect),
-	  static_cast<int>(i960Pinout::ResetGPIO)>;
+template<IOExpanderAddress addr, int enablePin = static_cast<int>(i960Pinout::GPIOSelect)>
+using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr), enablePin>;
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
 	digitalWrite(static_cast<int>(ip), value);
@@ -148,14 +146,10 @@ using HoldPinHigh = PinToggler<pinId, HIGH, LOW>;
 IOExpander<IOExpanderAddress::DataLines> dataLines;
 IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 IOExpander<IOExpanderAddress::Upper16Lines> upper16;
-IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
+IOExpander<IOExpanderAddress::MemoryCommitExtras, static_cast<int>(i960Pinout::EN2)> extraMemoryCommit;
 
 // upper five are actually unused but could be through these devices
 // this would give us 80 pins to work with for other purposes
-IOExpander<IOExpanderAddress::OtherDevice0> dev0;
-IOExpander<IOExpanderAddress::OtherDevice1> dev1;
-IOExpander<IOExpanderAddress::OtherDevice2> dev2;
-IOExpander<IOExpanderAddress::OtherDevice3> dev3;
 
 Timer t;
 Address
@@ -304,9 +298,6 @@ void setupIOExpanders() {
 	lower16.begin();
 	upper16.begin();
 	extraMemoryCommit.begin();
-	digitalWrite(i960Pinout::ResetGPIO, LOW);
-	delayMicroseconds(2);
-	digitalWrite(i960Pinout::ResetGPIO, HIGH);
 	// make these inputs
 	lower16.writeGPIOsDirection(0xFFFF);
 	upper16.writeGPIOsDirection(0xFFFF);
@@ -323,7 +314,6 @@ void setup() {
 	Serial.begin(115200);
 	Serial.println("80960Sx Chipset Starting up...");
 	setupPins(OUTPUT, 
-			i960Pinout::ResetGPIO, 
 			i960Pinout::Reset960,
 			i960Pinout::Led);
 	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
@@ -340,6 +330,7 @@ void setup() {
 
 void processingLoop() {
 	Serial.print(extraMemoryCommit.readGPIOs(), BIN);
+#if 0
 	emitCharState(digitalRead(i960Pinout::DEN_) == LOW, '0', '1');
 	emitCharState(getBlastPin() == LOW, '0', '1');
 	emitCharState(getByteEnable0() == HIGH, '1', '0');
@@ -358,6 +349,7 @@ void processingLoop() {
 		}
 		signalReady();
 	}
+#endif
 	Serial.println();
 	delay(100);
 }
