@@ -56,7 +56,7 @@ enum class i960Pinout : decltype(A0) {
 	Led = 0, 	  // output
    	CLOCK_OUT, // output, unusable
 	DEN_,     // input, AVR Int2
-	EN2,	    // Unused 
+	PWM4,	    // Unused 
 	GPIOSelect, // output
 	MOSI,		  // reserved
 	MISO,		  // reserved
@@ -142,16 +142,14 @@ template<i960Pinout pinId>
 using HoldPinHigh = PinToggler<pinId, HIGH, LOW>;
 
 // 8 IOExpanders to a single enable line for SPI purposes 
-// 3 of them are reserved
+// 4 of them are reserved
 IOExpander<IOExpanderAddress::DataLines> dataLines;
 IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 IOExpander<IOExpanderAddress::Upper16Lines> upper16;
-IOExpander<IOExpanderAddress::MemoryCommitExtras, static_cast<int>(i960Pinout::EN2)> extraMemoryCommit;
-
-// upper five are actually unused but could be through these devices
-// this would give us 80 pins to work with for other purposes
+IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
 
 Timer t;
+
 Address
 getAddress() noexcept {
 	auto lower16Addr = static_cast<Address>(lower16.readGPIOs());
@@ -294,11 +292,15 @@ void setupCPUInterface() {
 	Serial.println("Done!");
 }
 void setupIOExpanders() {
-	dataLines.begin();
-	lower16.begin();
-	upper16.begin();
-	extraMemoryCommit.begin();
-	// make these inputs
+	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
+	// disabled. We can send out a single IOCON.HAEN enable message and all
+	// should receive it. 
+	// so do a begin operation on all chips (0b000)
+	dataLines.begin(); 
+	// set IOCON.HAEN on all chips
+	dataLines.enableHardwareAddressPins();
+	// now all devices tied to this ~CS pin have separate addresses
+	// make each of these inputs
 	lower16.writeGPIOsDirection(0xFFFF);
 	upper16.writeGPIOsDirection(0xFFFF);
 	extraMemoryCommit.writeGPIOsDirection(0xFFFF);
