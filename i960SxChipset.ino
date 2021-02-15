@@ -262,19 +262,15 @@ bool failureOnBootup() noexcept {
 
 /// @todo add the FAIL pin based off of the diagrams I have (requires external
 // circuitry.
-uint8_t load(Address address, TreatAsByte) noexcept {
+uint16_t load(Address address) noexcept {
 	return 0;
 }
-uint16_t load(Address address, TreatAsShort) noexcept {
-	return 0;
+
+void store(Address address, uint16_t value) noexcept {
+
 }
-uint32_t load(Address address, TreatAsWord) noexcept {
-	return 0;
-}
-volatile bool dataEnabled = false;
 ISR (INT2_vect) 
 {
-	dataEnabled = true;
 	// this is the DEN_ pin doing its thing
 }
 void setupCPUInterface() {
@@ -293,7 +289,6 @@ void setupCPUInterface() {
 	digitalWrite(i960Pinout::Hold, LOW);
 	setupPins(INPUT,
 			i960Pinout::BLAST_,
-			//i960Pinout::DT_R_,
 			i960Pinout::DEN_,
 			i960Pinout::W_R_,
 			i960Pinout::HLDA);
@@ -319,6 +314,10 @@ void setupIOExpanders() {
 	upper16.writeGPIOsDirection(0);
 	extraMemoryCommit.writeGPIOsDirection(0);
 }
+
+void emitCharState(bool condition, char onTrue, char onFalse) noexcept {
+	Serial.print(condition ? onTrue : onFalse);
+}
 	
 // the setup routine runs once when you press reset:
 void setup() {
@@ -337,10 +336,40 @@ void setup() {
 	/// wait two seconds to ensure that reset is successful
 	delay(2000);
 	sei();
+	// At this point the cpu will have started up and we must check out the
+	// fail circuit during bootup.
 }
 
+void processingLoop() {
+	auto inAddrState = inAddressState();
+	auto inDatState = !inAddrState;
+	emitCharState(inAddressState, 'A', 'D');
+	auto failed = failureOnBootup();
+	emitCharState(failed, 'F', 'P');
+	Serial.print(getBurstAddressBits(), BIN);
+	emitCharState(getByteEnable0(), '1', '0');
+	emitCharState(getByteEnable1(), '1', '0');
+	if (!failed && inDatState) {
+		auto isWriting = isWriteOperation();
+		auto isReading = !isWriting;
+		emitCharState(isWriting, 'W', 'R');
+		auto address = getAddress();
+		Serial.print(" 0x");
+		Serial.print(address, HEX);
+		if (isReading) {
+			setDataBits(load(address));
+		} else /* is writing */ {
+			store(address, getDataBits());
+		}
+		signalReady();
+		dataLines.writeGPIOsDirection(0xFFFF);
+	}
+	Serial.println();
+	delay(1000);
+}
 // the loop routine runs over and over again forever:
 void loop() {
+	processingLoop();
 	//digitalWrite(i960Pinout::Led, HIGH);   // turn the LED on (HIGH is the voltage level)
 	//delay(1000);               // wait for a second
 	//digitalWrite(i960Pinout::Led, LOW);    // turn the LED off by making the voltage LOW
