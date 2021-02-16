@@ -75,7 +75,7 @@ enum class i960Pinout : decltype(A0) {
 	SDA, 		  // reserved
 	Ready, 	  // output
 	Int0_,		  // output
-	Hold,         // input
+	Hold,         // output
 	HLDA,         // input
 	W_R_, 		  // input
 	Reset960,		  // output
@@ -333,6 +333,7 @@ void setup() {
 	// At this point the cpu will have started up and we must check out the
 	// fail circuit during bootup.
 }
+volatile int failCount = 0;
 
 void processingLoop() {
 	Serial.print(extraMemoryCommit.readGPIOs(), BIN);
@@ -342,6 +343,9 @@ void processingLoop() {
 	emitCharState(getByteEnable0() == HIGH, '1', '0');
 	emitCharState(getByteEnable1() == HIGH, '1', '0');
 	auto failed = failureOnBootup();
+	if (failed) {
+		++failCount;
+	}
 	emitCharState(failed, 'F', 'T');
 	if (digitalRead(i960Pinout::DEN_) == LOW) {
 		auto isWriting = isWriteOperation();
@@ -362,7 +366,9 @@ void processingLoop() {
 }
 // the loop routine runs over and over again forever:
 void loop() {
-	processingLoop();
+	if (failCount < 2) {
+		processingLoop();
+	}
 	//digitalWrite(i960Pinout::Led, HIGH);   // turn the LED on (HIGH is the voltage level)
 	//delay(1000);               // wait for a second
 	//digitalWrite(i960Pinout::Led, LOW);    // turn the LED off by making the voltage LOW
