@@ -255,6 +255,7 @@ void setLOCKPin(decltype(LOW) value) noexcept {
 	digitalWrite(10, value, extraMemoryCommit);
 }
 
+
 /**
  * FAIL Circuit as defined in the i960 docs but in software instead of
  * hardware.
@@ -274,6 +275,20 @@ uint16_t load(Address address) noexcept {
 void store(Address address, uint16_t value) noexcept {
 
 }
+// Basic Bus States
+// Ti - Idle State (where we start)
+// Ta - Address State
+// Td - Data State
+// Tr - Recovery State
+// Tw - Wait State
+
+// READY - ~READY asserted
+// NOT READY - ~READY not asserted
+// BURST - ~BLAST not asserted
+// NO BURST - ~BLAST asserted
+// NEW REQUEST - ~AS asserted
+// NO REQUEST - ~AS not asserted when in 
+
 ISR (INT2_vect) 
 {
 	// this is the AS_ pin doing its thing
