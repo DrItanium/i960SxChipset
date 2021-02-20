@@ -16,3 +16,6 @@ PLDs, and FPGAs to act as chipset components. While I can get access to some of
 the PAL code, I do not have access to the FPGA code used. The ATMEGA1284p is
 the next best thing with all of its builtin functionality and ample resources
 to act as the intermediary. 
+
+The core of this sketch is the system bringup functionality and the bus state
+machine diagram as shown in the i960SA/SB reference manual. 
