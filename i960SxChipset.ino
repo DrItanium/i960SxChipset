@@ -250,10 +250,10 @@ bool isLastBurstTransaction() noexcept {
 }
 
 void setHOLDPin(decltype(LOW) value) noexcept {
-	digitalWrite(8, value, extraMemoryCommit);
+	digitalWrite(5, value, extraMemoryCommit);
 }
 void setLOCKPin(decltype(LOW) value) noexcept {
-	digitalWrite(10, value, extraMemoryCommit);
+	digitalWrite(7, value, extraMemoryCommit);
 }
 
 
@@ -343,7 +343,6 @@ ISR (INT2_vect)
 }
 
 void idleState() noexcept {
-	Serial.println("In Idle State");
 	if (asTriggered) {
 		fsm.trigger(NewRequest);
 	}
@@ -484,11 +483,11 @@ void setup() {
 			i960Pinout::Led);
 	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-	setupCPUInterface();
 	SPI.begin();
 	setupIOExpanders();
+	setupCPUInterface();
 	/// wait two seconds to ensure that reset is successful
-	setupBusStateMachine();
+	//setupBusStateMachine();
 	Serial.println("Finished starting up!");
 	Serial.println("Waiting 2 seconds!");
 	delay(2000);
@@ -496,7 +495,6 @@ void setup() {
 	// fail circuit during bootup.
 }
 volatile int failCount = 0;
-#if 0
 
 void processingLoop() {
 	Serial.print(extraMemoryCommit.readGPIOs(), BIN);
@@ -527,7 +525,6 @@ void processingLoop() {
 	Serial.println();
 	delay(100);
 }
-#endif
 void doMachineRun() noexcept {
 	if (failureOnBootup()) {
 		++failCount;
@@ -543,7 +540,7 @@ void doMachineRun() noexcept {
 // the loop routine runs over and over again forever:
 void loop() {
 	if (failCount < 2) {
-		doMachineRun();
+		processingLoop();
 	}
 	t.update();
 }
