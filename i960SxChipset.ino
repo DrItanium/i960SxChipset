@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SD.h>
 #include <Arduino_JSON.h>
 #include <Adafruit_GFX.h>
+#include "Fsm.h"
 template<typename T>
 class TreatAs final {
 	public:
@@ -64,7 +65,7 @@ enum class i960Pinout : decltype(A0) {
 // PORT D
 	RX0, 		  // reserved
 	TX0, 		  // reserved
-	BLAST_, 	  // AVR INT0, INPUT
+	DEN_, 	  // AVR INT0, INPUT
 	AVR_INT1,	  // AVR Interrupt INT1
 	PWM0,		  // unused
 	PWM1, 		  // unused
@@ -77,8 +78,8 @@ enum class i960Pinout : decltype(A0) {
 	Int0_,		  // output
 	W_R_, 		  // input
 	Reset960,		  // output
+	BLAST_, 	 // input
 	Unused0,	  // unused
-	Unused1,	  // unused
 // PORT A
 	Analog0,	  // unused
 	Analog1,	  // unused
@@ -184,7 +185,7 @@ setDataBits(uint16_t value) noexcept {
 // PA2 - BurstAddress3 - input
 // PA3 - BE0_ - input
 // PA4 - BE1_ - input
-// PA5 - DEN_ - input
+// PA5 - unused
 // PA6 - ALE - input
 // PA7 - DT\R_ - input 
 // PB0 - HOLD  - output
@@ -275,6 +276,8 @@ uint16_t load(Address address) noexcept {
 void store(Address address, uint16_t value) noexcept {
 
 }
+
+// State diagram based off of i960SA/SB Reference manual
 // Basic Bus States
 // Ti - Idle State (where we start)
 // Ta - Address State
@@ -289,10 +292,72 @@ void store(Address address, uint16_t value) noexcept {
 // NEW REQUEST - ~AS asserted
 // NO REQUEST - ~AS not asserted when in 
 
-ISR (INT2_vect) 
+// Ti -> Ti via no request
+// Tr -> Ti via no request
+// Tr -> Ta via request pending
+// Ti -> Ta via new request
+// on enter of Ta, set address state to false
+// on enter of Td, burst is sampled
+// Ta -> Td
+// Td -> Tr after signaling ready and no burst (blast low)
+// Td -> Td after signaling ready and burst (blast high)
+// Td -> Tw if not ready 
+// Tw -> Td if ready and burst (blast high)
+// Tw -> Tr after signaling ready and no burst (blast low)
+
+// NOTE: Tw may turn out to be synthetic
+constexpr auto NoRequest = 0;
+constexpr auto NewRequest = 1;
+constexpr auto ReadyAndBurst = 2;
+constexpr auto NotReady = 3;
+constexpr auto ReadyAndNoBurst = 4;
+constexpr auto RequestPending = 5;
+constexpr auto ToDataState = 6;
+Fsm fsm(&ti);
+volatile bool asTriggered = false;
+volatile bool blastLow = false;
+volatile bool denTriggered = false;
+volatile uint32_t baseAddress = 0;
+volatile uint32_t usedAddress = 0;
+volatile uint16_t valueStorage = 0;
+ISR (INT2_vect)
 {
+	asTriggered = true;
 	// this is the AS_ pin doing its thing
 }
+
+ISR (INT0_vect) 
+{
+	denTriggered = true;
+}
+void idleState() noexcept {
+	if (asTriggered) {
+		fsm.trigger(NewRequest);
+	}
+}
+void onAddressStateEntered() noexcept {
+	asTriggered = false;
+}
+void transitionToDataState() noexcept {
+	if (denTriggered) {
+		fsm.trigger(ToDataState);
+	}
+}
+
+void onDataStateEntered() noexcept {
+	denTriggered = false;
+}
+
+void processDataRequest() noexcept {
+
+}
+
+
+State ti(nullptr, &idleState, nullptr);
+State ta(&addressStateEntered, transitionToDataState, nullptr);
+State td(onDataStateEntered, nullptr, nullptr);
+State tr(nullptr, nullptr, nullptr);
+State tw(nullptr, nullptr, nullptr);
 void setupCPUInterface() {
 	Serial.print("Setting up cpu interface pins...");
 	setupPins(OUTPUT,
@@ -308,9 +373,10 @@ void setupCPUInterface() {
 	setupPins(INPUT,
 			i960Pinout::BLAST_,
 			i960Pinout::AS_,
-			i960Pinout::W_R_);
-	EIMSK |= 0b100; // enable INT2 pin
-	EICRA |= 0b100000; // trigger on falling edge
+			i960Pinout::W_R_,
+			i960Pinout::DEN_);
+	EIMSK |= 0b101; // enable INT0 and INT2 pin
+	EICRA |= 0b100010; // trigger on falling edge
 	Serial.println("Done!");
 	Serial.print("Setting up on-board cache...");
 	for (int i = 0; i < onBoardCacheSize; ++i) {
