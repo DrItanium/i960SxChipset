@@ -51,7 +51,7 @@ using TreatAsShort = TreatAs<uint16_t>;
 using TreatAsWord = TreatAs<uint32_t>;
 constexpr auto onBoardCacheSize = 16 / sizeof(Short);
 volatile Short onBoardCache[onBoardCacheSize] = { 0 };
-
+volatile bool displayStateTransitions = false;
 enum class i960Pinout : decltype(A0) {
 // PORT B
 	Led = 0, 	  // output
@@ -321,17 +321,16 @@ constexpr auto ToDataState = 6;
 void idleState() noexcept;
 void onAddressStateEntered() noexcept;
 void doAddressState() noexcept;
-void onEnteringDataState() noexcept;
 void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
+void enteringDataState() noexcept;
 State ti(nullptr, idleState, nullptr);
 State ta(onAddressStateEntered, doAddressState, nullptr);
-State td(onEnteringDataState, processDataRequest, nullptr);
+State td(enteringDataState, processDataRequest, nullptr);
 State tr(nullptr, doRecoveryState, nullptr);
 Fsm fsm(&ti);
 volatile bool asTriggered = false;
 volatile bool blastLow = false;
-volatile bool denTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile uint32_t usedAddress = 0;
 volatile uint16_t valueStorage = 0;
@@ -348,34 +347,39 @@ void idleState() noexcept {
 	}
 }
 void onAddressStateEntered() noexcept {
-	Serial.println("Entered Address State");
+	if (displayStateTransitions) {
+		Serial.println("Entered Address State");
+	}
 	asTriggered = false;
 }
 void doAddressState() noexcept {
-	Serial.println("Address State");
+	if (displayStateTransitions) {
+		Serial.println("Address State");
+	}
 	if (digitalRead(i960Pinout::DEN_) == LOW) {
 		fsm.trigger(ToDataState);
 	}
 }
 
-void onEnteringDataState() noexcept {
-	Serial.println("Entering Data State");
-	denTriggered = false;
-}
-
 void signalReady() noexcept {
+	if (displayStateTransitions) {
+		Serial.println("Marking Signal Ready");
+	}
 	auto blastPin = getBlastPin();
 	digitalWrite(i960Pinout::Ready, LOW);
 	digitalWrite(i960Pinout::Ready, HIGH);
 	if (blastPin == LOW) {
+		if (displayStateTransitions) {
+			Serial.println("Transitioning to next state");
+		}
 		// we not in burst mode
 		fsm.trigger(ReadyAndNoBurst);
 	} 
 }
 
 void
-addrToDataState() noexcept {
-	Serial.println("Address to Data State");
+enteringDataState() noexcept {
+	Serial.println("Entering Data State");
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
@@ -383,7 +387,9 @@ addrToDataState() noexcept {
 
 
 void processDataRequest() noexcept {
-	Serial.println("Process Data Request");
+	if (displayStateTransitions) {
+		Serial.println("Process Data Request");
+	}
 	usedAddress = getBurstAddress(baseAddress);
 	if (performingRead) {
 		setDataBits(load(usedAddress));
@@ -397,28 +403,24 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
-	Serial.println("Do Recovery State");
+	if (displayStateTransitions) {
+		Serial.println("Do Recovery State");
+	}
 	if (asTriggered) {
 		fsm.trigger(RequestPending);
 	} else {
 		fsm.trigger(NoRequest);
 	}
 }
-void transitionToAddressViaRecovery() noexcept {
-	Serial.println("Transitioning to address via recovery");
-}
-void transitionToIdleViaRecovery() noexcept {
-	Serial.println("Transitioning to idle via recovery");
-}
 
 
 void setupBusStateMachine() noexcept {
 	Serial.println("Setting up Bus State Machine");
 	fsm.add_transition(&ti, &ta, NewRequest, nullptr);
-	fsm.add_transition(&ta, &td, ToDataState, addrToDataState);
+	fsm.add_transition(&ta, &td, ToDataState, nullptr);
 	fsm.add_transition(&td, &tr, ReadyAndNoBurst, nullptr);
-	fsm.add_transition(&tr, &ta, RequestPending, transitionToAddressViaRecovery);
-	fsm.add_transition(&tr, &ti, NoRequest, transitionToIdleViaRecovery);
+	fsm.add_transition(&tr, &ta, RequestPending, nullptr);
+	fsm.add_transition(&tr, &ti, NoRequest, nullptr);
 }
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
