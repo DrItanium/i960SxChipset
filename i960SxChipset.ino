@@ -316,6 +316,16 @@ constexpr auto NotReady = 3;
 constexpr auto ReadyAndNoBurst = 4;
 constexpr auto RequestPending = 5;
 constexpr auto ToDataState = 6;
+void idleState() noexcept;
+void onAddressStateEntered() noexcept;
+void doAddressState() noexcept;
+void onEnteringDataState() noexcept;
+void processDataRequest() noexcept;
+void doRecoveryState() noexcept;
+State ti(nullptr, idleState, nullptr);
+State ta(onAddressStateEntered, doAddressState, nullptr);
+State td(onEnteringDataState, processDataRequest, nullptr);
+State tr(nullptr, doRecoveryState, nullptr);
 Fsm fsm(&ti);
 volatile bool asTriggered = false;
 volatile bool blastLow = false;
@@ -324,7 +334,6 @@ volatile uint32_t baseAddress = 0;
 volatile uint32_t usedAddress = 0;
 volatile uint16_t valueStorage = 0;
 volatile bool performingRead = false;
-volatile bool performingWrite = false; 
 ISR (INT2_vect)
 {
 	asTriggered = true;
@@ -343,7 +352,7 @@ void idleState() noexcept {
 void onAddressStateEntered() noexcept {
 	asTriggered = false;
 }
-void transitionToDataState() noexcept {
+void doAddressState() noexcept {
 	if (denTriggered) {
 		fsm.trigger(ToDataState);
 	}
@@ -369,16 +378,21 @@ addrToDataState() noexcept {
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
 	usedAddress = getBurstAddress(baseAddress);
-	isRead = isReadOperation();
-	isWrite = !isRead;
+	performingRead = isReadOperation();
 }
 
 void
 dataToDataState_Via_Burst() noexcept {
-	usedAddress = getBurstAddress(burstAddress);
+	usedAddress = getBurstAddress(baseAddress);
 }
 
 void processDataRequest() noexcept {
+	if (performingRead) {
+		setDataBits(load(usedAddress));
+	} else {
+		// perform a store
+		store(usedAddress, getDataBits());
+	}
 	// at the end of the day, signal ready on the request
 	// get the base address 
 	signalReady();
@@ -392,10 +406,15 @@ void doRecoveryState() noexcept {
 	}
 }
 
-State ti(nullptr, idleState, nullptr);
-State ta(addressStateEntered, transitionToDataState, nullptr);
-State td(onEnteringDataState, processDataRequest, nullptr);
-State tr(nullptr, doRecoveryState, nullptr);
+
+void setupBusStateMachine() noexcept {
+	fsm.add_transition(&ti, &ta, NewRequest, nullptr);
+	fsm.add_transition(&ta, &td, ToDataState, addrToDataState);
+	fsm.add_transition(&td, &td, ReadyAndBurst, dataToDataState_Via_Burst);
+	fsm.add_transition(&td, &tr, ReadyAndNoBurst, nullptr);
+	fsm.add_transition(&tr, &ta, RequestPending, nullptr);
+	fsm.add_transition(&tr, &ti, NoRequest, nullptr);
+}
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
@@ -442,7 +461,6 @@ void setupIOExpanders() {
 	upper16.writeGPIOsDirection(0b11111111'11111111);
 	dataLines.writeGPIOsDirection(0b11111111'11111111);
 	extraMemoryCommit.writeGPIOsDirection(0b11111010'11111111);
-
 }
 
 void emitCharState(bool condition, char onTrue, char onFalse) noexcept {
