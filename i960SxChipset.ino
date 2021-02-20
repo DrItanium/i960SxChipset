@@ -45,7 +45,7 @@ using Byte = uint8_t;
 using TreatAsByte = TreatAs<uint8_t>;
 using TreatAsShort = TreatAs<uint16_t>;
 using TreatAsWord = TreatAs<uint32_t>;
-volatile bool displayStateTransitions = false;
+constexpr bool displayStateTransitions = true;
 enum class i960Pinout : decltype(A0) {
 // PORT B
 	Led = 0, 	  // output
@@ -209,34 +209,14 @@ Address getBurstAddress() noexcept {
 	return getBurstAddress(getAddress());
 }
 
-
-auto getDataEnable() noexcept {
-	return (extraMemoryCommit.readGPIOs() & 0b100000) == 0 ? LOW : HIGH;
-}
-
-bool addressLatchEnabled() noexcept {
-	return static_cast<bool>((extraMemoryCommit.readGPIOs() >> 6) & 1);
-}
-
-bool shouldPerformDataTransmit() noexcept {
-	return (extraMemoryCommit.readGPIOs() & 0b1000'0000);
-}
-
-bool shouldPerformDataReceive() noexcept {
-	return !shouldPerformDataTransmit();
-}
-
 bool isReadOperation() noexcept {
 	return digitalRead(i960Pinout::W_R_) == LOW;
 }
 bool isWriteOperation() noexcept {
-	return digitalRead(i960Pinout::W_R_) == HIGH;
+	return !isReadOperation();
 }
 auto getBlastPin() noexcept {
 	return digitalRead(i960Pinout::BLAST_);
-}
-bool isLastBurstTransaction() noexcept {
-	return !getBlastPin();
 }
 
 void setHOLDPin(decltype(LOW) value) noexcept {
@@ -320,10 +300,7 @@ State td(enteringDataState, processDataRequest, nullptr);
 State tr(nullptr, doRecoveryState, nullptr);
 Fsm fsm(&ti);
 volatile bool asTriggered = false;
-volatile bool blastLow = false;
 volatile uint32_t baseAddress = 0;
-volatile uint32_t usedAddress = 0;
-volatile uint16_t valueStorage = 0;
 volatile bool performingRead = false;
 ISR (INT2_vect)
 {
@@ -337,13 +314,13 @@ void idleState() noexcept {
 	}
 }
 void onAddressStateEntered() noexcept {
-	if (displayStateTransitions) {
+	if constexpr (displayStateTransitions) {
 		Serial.println("Entered Address State");
 	}
 	asTriggered = false;
 }
 void doAddressState() noexcept {
-	if (displayStateTransitions) {
+	if constexpr (displayStateTransitions) {
 		Serial.println("Address State");
 	}
 	if (digitalRead(i960Pinout::DEN_) == LOW) {
@@ -352,7 +329,7 @@ void doAddressState() noexcept {
 }
 
 void signalReady() noexcept {
-	if (displayStateTransitions) {
+	if constexpr (displayStateTransitions) {
 		Serial.println("Marking Signal Ready");
 	}
 	auto blastPin = getBlastPin();
@@ -369,7 +346,9 @@ void signalReady() noexcept {
 
 void
 enteringDataState() noexcept {
-	Serial.println("Entering Data State");
+	if constexpr (displayStateTransitions) {
+		Serial.println("Entering Data State");
+	}
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
@@ -380,7 +359,7 @@ void processDataRequest() noexcept {
 	if (displayStateTransitions) {
 		Serial.println("Process Data Request");
 	}
-	usedAddress = getBurstAddress(baseAddress);
+	auto usedAddress = getBurstAddress(baseAddress);
 	if (performingRead) {
 		setDataBits(load(usedAddress));
 	} else {
@@ -393,7 +372,7 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
-	if (displayStateTransitions) {
+	if constexpr (displayStateTransitions) {
 		Serial.println("Do Recovery State");
 	}
 	if (asTriggered) {
@@ -484,37 +463,7 @@ void setup() {
 	// At this point the cpu will have started up and we must check out the
 	// fail circuit during bootup.
 }
-volatile int failCount = 0;
 
-void processingLoop() {
-	Serial.print(extraMemoryCommit.readGPIOs(), BIN);
-	Serial.print(" ");
-	emitCharState(digitalRead(i960Pinout::AS_) == LOW, '0', '1');
-	emitCharState(getBlastPin() == LOW, '0', '1');
-	emitCharState(getByteEnable0() == HIGH, '1', '0');
-	emitCharState(getByteEnable1() == HIGH, '1', '0');
-	auto failed = failureOnBootup();
-	if (failed) {
-		++failCount;
-	}
-	emitCharState(failed, 'F', 'T');
-	if (digitalRead(i960Pinout::AS_) == LOW) {
-		auto isWriting = isWriteOperation();
-		auto isReading = isReadOperation();
-		emitCharState(isWriting, 'W', 'R');
-		auto address = getAddress();
-		Serial.print(" 0x");
-		Serial.print(address, HEX);
-		if (isReading) {
-			setDataBits(load(address));
-		} else /* is writing */ {
-			store(address, getDataBits());
-		}
-		signalReady();
-	}
-	Serial.println();
-	delay(100);
-}
 /// @todo implement bootup fail state detection. Probably have to use a discrete circuit
 /// 
 // the loop routine runs over and over again forever:
