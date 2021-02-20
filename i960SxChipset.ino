@@ -65,7 +65,7 @@ enum class i960Pinout : decltype(A0) {
 // PORT D
 	RX0, 		  // reserved
 	TX0, 		  // reserved
-	DEN_, 	  // AVR INT0, INPUT
+	AVR_INT0,	  // AVR Interrupt INT0
 	AVR_INT1,	  // AVR Interrupt INT1
 	PWM0,		  // unused
 	PWM1, 		  // unused
@@ -79,7 +79,7 @@ enum class i960Pinout : decltype(A0) {
 	W_R_, 		  // input
 	Reset960,		  // output
 	BLAST_, 	 // input
-	Unused0,	  // unused
+	DEN_, 	     // input
 // PORT A
 	Analog0,	  // unused
 	Analog1,	  // unused
@@ -185,9 +185,6 @@ setDataBits(uint16_t value) noexcept {
 // PA2 - BurstAddress3 - input
 // PA3 - BE0_ - input
 // PA4 - BE1_ - input
-// PA5 - unused
-// PA6 - ALE - input
-// PA7 - DT\R_ - input 
 // PB0 - HOLD  - output
 // PB1 - HLDA  - input 
 // PB2 - _LOCK - output
@@ -273,11 +270,16 @@ bool failureOnBootup() noexcept {
 /// @todo add the FAIL pin based off of the diagrams I have (requires external
 // circuitry.
 uint16_t load(Address address) noexcept {
+	Serial.print("Request to load from: 0x");
+	Serial.println(address, HEX);
 	return 0;
 }
 
 void store(Address address, uint16_t value) noexcept {
-
+	Serial.print("Request to store 0x");
+	Serial.print(value, HEX);
+	Serial.print(" to 0x");
+	Serial.println(address, HEX);
 }
 
 // State diagram based off of i960SA/SB Reference manual
@@ -340,25 +342,25 @@ ISR (INT2_vect)
 	// this is the AS_ pin doing its thing
 }
 
-ISR (INT0_vect) 
-{
-	denTriggered = true;
-}
 void idleState() noexcept {
+	Serial.println("In Idle State");
 	if (asTriggered) {
 		fsm.trigger(NewRequest);
 	}
 }
 void onAddressStateEntered() noexcept {
+	Serial.println("Entered Address State");
 	asTriggered = false;
 }
 void doAddressState() noexcept {
-	if (denTriggered) {
+	Serial.println("Address State");
+	if (digitalRead(i960Pinout::DEN_) == LOW) {
 		fsm.trigger(ToDataState);
 	}
 }
 
 void onEnteringDataState() noexcept {
+	Serial.println("Entering Data State");
 	denTriggered = false;
 }
 
@@ -375,6 +377,7 @@ void signalReady() noexcept {
 
 void
 addrToDataState() noexcept {
+	Serial.println("Address to Data State");
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
 	usedAddress = getBurstAddress(baseAddress);
@@ -383,10 +386,12 @@ addrToDataState() noexcept {
 
 void
 dataToDataState_Via_Burst() noexcept {
+	Serial.println("Data To Data Via Burst");
 	usedAddress = getBurstAddress(baseAddress);
 }
 
 void processDataRequest() noexcept {
+	Serial.println("Process Data Request");
 	if (performingRead) {
 		setDataBits(load(usedAddress));
 	} else {
@@ -399,6 +404,7 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
+	Serial.println("Do Recovery State");
 	if (asTriggered) {
 		fsm.trigger(RequestPending);
 	} else {
@@ -408,6 +414,7 @@ void doRecoveryState() noexcept {
 
 
 void setupBusStateMachine() noexcept {
+	Serial.println("Setting up Bus State Machine");
 	fsm.add_transition(&ti, &ta, NewRequest, nullptr);
 	fsm.add_transition(&ta, &td, ToDataState, addrToDataState);
 	fsm.add_transition(&td, &td, ReadyAndBurst, dataToDataState_Via_Burst);
@@ -418,7 +425,8 @@ void setupBusStateMachine() noexcept {
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
-	Serial.print("Setting up cpu interface pins...");
+	Serial.println("Setting up cpu interface pins...");
+	Serial.println("Configure output pins");
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
@@ -429,19 +437,19 @@ void setupCPUInterface() {
 			i960Pinout::Int0_);
 	setHOLDPin(LOW);
 	setLOCKPin(HIGH);
+	Serial.println("Setting up inputs");
 	setupPins(INPUT,
 			i960Pinout::BLAST_,
 			i960Pinout::AS_,
 			i960Pinout::W_R_,
 			i960Pinout::DEN_);
-	EIMSK |= 0b101; // enable INT0 and INT2 pin
-	EICRA |= 0b100010; // trigger on falling edge
-	Serial.println("Done!");
-	Serial.print("Setting up on-board cache...");
+	Serial.println("Setting up interrupts on INT2");
+	EIMSK |= 0b100; // enable INT2 pin
+	EICRA |= 0b100000; // trigger on falling edge
+	Serial.println("Setting up on-board cache...");
 	for (int i = 0; i < onBoardCacheSize; ++i) {
 		onBoardCache[i] = 0;
 	}
-	Serial.println("Done!");
 }
 void setupIOExpanders() {
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
@@ -460,7 +468,7 @@ void setupIOExpanders() {
 	lower16.writeGPIOsDirection(0b11111111'11111111);
 	upper16.writeGPIOsDirection(0b11111111'11111111);
 	dataLines.writeGPIOsDirection(0b11111111'11111111);
-	extraMemoryCommit.writeGPIOsDirection(0b11111010'11111111);
+	extraMemoryCommit.writeGPIOsDirection(0b11111111'01011111);
 }
 
 void emitCharState(bool condition, char onTrue, char onFalse) noexcept {
@@ -481,8 +489,9 @@ void setup() {
 	setupIOExpanders();
 	/// wait two seconds to ensure that reset is successful
 	setupBusStateMachine();
+	Serial.println("Finished starting up!");
+	Serial.println("Waiting 2 seconds!");
 	delay(2000);
-	sei();
 	// At this point the cpu will have started up and we must check out the
 	// fail circuit during bootup.
 }
