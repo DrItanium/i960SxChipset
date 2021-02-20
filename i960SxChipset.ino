@@ -480,6 +480,7 @@ void setup() {
 	SPI.begin();
 	setupIOExpanders();
 	/// wait two seconds to ensure that reset is successful
+	setupBusStateMachine();
 	delay(2000);
 	sei();
 	// At this point the cpu will have started up and we must check out the
