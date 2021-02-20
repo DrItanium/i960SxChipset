@@ -212,9 +212,16 @@ uint8_t getBurstAddressBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b111) << 1;
 }
 
-Address getBurstAddress() noexcept {
-	return (getAddress() & (~0b1110)) | static_cast<Address>(getBurstAddressBits());
+constexpr Address getBurstAddress(Address base, Address burstBits) noexcept {
+	return (base & (~0b1110)) | burstBits;
 }
+Address getBurstAddress(Address base) noexcept {
+	return getBurstAddress(base, static_cast<Address>(getBurstAddressBits()));
+}
+Address getBurstAddress() noexcept {
+	return getBurstAddress(getAddress());
+}
+
 
 auto getDataEnable() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b100000) == 0 ? LOW : HIGH;
@@ -245,10 +252,6 @@ bool isLastBurstTransaction() noexcept {
 	return !getBlastPin();
 }
 
-void signalReady() noexcept {
-	digitalWrite(i960Pinout::Ready, LOW);
-	digitalWrite(i960Pinout::Ready, HIGH);
-}
 void setHOLDPin(decltype(LOW) value) noexcept {
 	digitalWrite(8, value, extraMemoryCommit);
 }
@@ -320,6 +323,8 @@ volatile bool denTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile uint32_t usedAddress = 0;
 volatile uint16_t valueStorage = 0;
+volatile bool performingRead = false;
+volatile bool performingWrite = false; 
 ISR (INT2_vect)
 {
 	asTriggered = true;
@@ -344,20 +349,55 @@ void transitionToDataState() noexcept {
 	}
 }
 
-void onDataStateEntered() noexcept {
+void onEnteringDataState() noexcept {
 	denTriggered = false;
 }
 
-void processDataRequest() noexcept {
-
+void signalReady() noexcept {
+	digitalWrite(i960Pinout::Ready, LOW);
+	digitalWrite(i960Pinout::Ready, HIGH);
+	if (getBlastPin() == LOW) {
+		// we not in burst mode
+		fsm.trigger(ReadyAndNoBurst);
+	} else {
+		fsm.trigger(ReadyAndBurst);
+	}
 }
 
+void
+addrToDataState() noexcept {
+	// when we do the transition, record the information we need
+	baseAddress = getAddress();
+	usedAddress = getBurstAddress(baseAddress);
+	isRead = isReadOperation();
+	isWrite = !isRead;
+}
 
-State ti(nullptr, &idleState, nullptr);
-State ta(&addressStateEntered, transitionToDataState, nullptr);
-State td(onDataStateEntered, nullptr, nullptr);
-State tr(nullptr, nullptr, nullptr);
-State tw(nullptr, nullptr, nullptr);
+void
+dataToDataState_Via_Burst() noexcept {
+	usedAddress = getBurstAddress(burstAddress);
+}
+
+void processDataRequest() noexcept {
+	// at the end of the day, signal ready on the request
+	// get the base address 
+	signalReady();
+}
+
+void doRecoveryState() noexcept {
+	if (asTriggered) {
+		fsm.trigger(RequestPending);
+	} else {
+		fsm.trigger(NoRequest);
+	}
+}
+
+State ti(nullptr, idleState, nullptr);
+State ta(addressStateEntered, transitionToDataState, nullptr);
+State td(onEnteringDataState, processDataRequest, nullptr);
+State tr(nullptr, doRecoveryState, nullptr);
+//State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
+//as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
 	Serial.print("Setting up cpu interface pins...");
 	setupPins(OUTPUT,
