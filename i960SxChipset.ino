@@ -364,14 +364,13 @@ void onEnteringDataState() noexcept {
 }
 
 void signalReady() noexcept {
+	auto blastPin = getBlastPin();
 	digitalWrite(i960Pinout::Ready, LOW);
 	digitalWrite(i960Pinout::Ready, HIGH);
-	if (getBlastPin() == LOW) {
+	if (blastPin == LOW) {
 		// we not in burst mode
 		fsm.trigger(ReadyAndNoBurst);
-	} else {
-		fsm.trigger(ReadyAndBurst);
-	}
+	} 
 }
 
 void
@@ -379,18 +378,13 @@ addrToDataState() noexcept {
 	Serial.println("Address to Data State");
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
-	usedAddress = getBurstAddress(baseAddress);
 	performingRead = isReadOperation();
 }
 
-void
-dataToDataState_Via_Burst() noexcept {
-	Serial.println("Data To Data Via Burst");
-	usedAddress = getBurstAddress(baseAddress);
-}
 
 void processDataRequest() noexcept {
 	Serial.println("Process Data Request");
+	usedAddress = getBurstAddress(baseAddress);
 	if (performingRead) {
 		setDataBits(load(usedAddress));
 	} else {
@@ -410,16 +404,21 @@ void doRecoveryState() noexcept {
 		fsm.trigger(NoRequest);
 	}
 }
+void transitionToAddressViaRecovery() noexcept {
+	Serial.println("Transitioning to address via recovery");
+}
+void transitionToIdleViaRecovery() noexcept {
+	Serial.println("Transitioning to idle via recovery");
+}
 
 
 void setupBusStateMachine() noexcept {
 	Serial.println("Setting up Bus State Machine");
 	fsm.add_transition(&ti, &ta, NewRequest, nullptr);
 	fsm.add_transition(&ta, &td, ToDataState, addrToDataState);
-	fsm.add_transition(&td, &td, ReadyAndBurst, dataToDataState_Via_Burst);
 	fsm.add_transition(&td, &tr, ReadyAndNoBurst, nullptr);
-	fsm.add_transition(&tr, &ta, RequestPending, nullptr);
-	fsm.add_transition(&tr, &ti, NoRequest, nullptr);
+	fsm.add_transition(&tr, &ta, RequestPending, transitionToAddressViaRecovery);
+	fsm.add_transition(&tr, &ti, NoRequest, transitionToIdleViaRecovery);
 }
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
