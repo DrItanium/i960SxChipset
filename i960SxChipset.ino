@@ -30,13 +30,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// - C++17
 /// Board Platform: MightyCore
 #include <SPI.h>
-#include <Wire.h>
 #include <libbonuspin.h>
 #include <Timer.h>
-#include <SD.h>
-#include <Arduino_JSON.h>
-#include <Adafruit_GFX.h>
-#include "Fsm.h"
+#include <Fsm.h>
 template<typename T>
 class TreatAs final {
 	public:
@@ -49,8 +45,6 @@ using Byte = uint8_t;
 using TreatAsByte = TreatAs<uint8_t>;
 using TreatAsShort = TreatAs<uint16_t>;
 using TreatAsWord = TreatAs<uint32_t>;
-constexpr auto onBoardCacheSize = 16 / sizeof(Short);
-volatile Short onBoardCache[onBoardCacheSize] = { 0 };
 volatile bool displayStateTransitions = false;
 enum class i960Pinout : decltype(A0) {
 // PORT B
@@ -185,14 +179,10 @@ setDataBits(uint16_t value) noexcept {
 // PA2 - BurstAddress3 - input
 // PA3 - BE0_ - input
 // PA4 - BE1_ - input
-// PB0 - HOLD  - output
-// PB1 - HLDA  - input 
-// PB2 - _LOCK - output
-// PB3 - Unused
-// PB4 - Unused
-// PB5 - Unused
-// PB6 - Unused
-// PB7 - Unused
+// PA5 - HOLD  - output
+// PA6 - HLDA  - input 
+// PA7 - _LOCK - output
+// PB0-PB7 - Unused
 
 uint8_t getByteEnableBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
@@ -446,10 +436,6 @@ void setupCPUInterface() {
 	Serial.println("Setting up interrupts on INT2");
 	EIMSK |= 0b100; // enable INT2 pin
 	EICRA |= 0b100000; // trigger on falling edge
-	Serial.println("Setting up on-board cache...");
-	for (int i = 0; i < onBoardCacheSize; ++i) {
-		onBoardCache[i] = 0;
-	}
 }
 void setupIOExpanders() {
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
