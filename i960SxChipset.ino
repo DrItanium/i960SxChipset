@@ -481,16 +481,19 @@ void setup() {
 	setupPins(OUTPUT, 
 			i960Pinout::Reset960,
 			i960Pinout::Led);
-	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
-	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-	SPI.begin();
-	setupIOExpanders();
-	setupCPUInterface();
-	/// wait two seconds to ensure that reset is successful
-	//setupBusStateMachine();
-	Serial.println("Finished starting up!");
-	Serial.println("Waiting 2 seconds!");
-	delay(2000);
+	{
+		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
+		t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
+		SPI.begin();
+		setupIOExpanders();
+		setupCPUInterface();
+		/// wait two seconds to ensure that reset is successful
+		setupBusStateMachine();
+		Serial.println("Finished starting up!");
+		Serial.println("Waiting 2 seconds!");
+		delay(2000);
+	}
+	delay(1000);
 	// At this point the cpu will have started up and we must check out the
 	// fail circuit during bootup.
 }
@@ -525,22 +528,10 @@ void processingLoop() {
 	Serial.println();
 	delay(100);
 }
-void doMachineRun() noexcept {
-	if (failureOnBootup()) {
-		++failCount;
-	}
-	if (failCount < 2) {
-		fsm.run_machine();
-	} else {
-		Serial.println("BUS FAILURE!");
-	}
-}
 /// @todo implement bootup fail state detection. Probably have to use a discrete circuit
 /// 
 // the loop routine runs over and over again forever:
 void loop() {
-	if (failCount < 2) {
-		processingLoop();
-	}
+	fsm.run_machine();
 	t.update();
 }
