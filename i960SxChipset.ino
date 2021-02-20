@@ -487,6 +487,7 @@ void setup() {
 	// fail circuit during bootup.
 }
 volatile int failCount = 0;
+#if 0
 
 void processingLoop() {
 	Serial.print(extraMemoryCommit.readGPIOs(), BIN);
@@ -517,14 +518,23 @@ void processingLoop() {
 	Serial.println();
 	delay(100);
 }
+#endif
+void doMachineRun() noexcept {
+	if (failureOnBootup()) {
+		++failCount;
+	}
+	if (failCount < 2) {
+		fsm.run_machine();
+	} else {
+		Serial.println("BUS FAILURE!");
+	}
+}
+/// @todo implement bootup fail state detection. Probably have to use a discrete circuit
+/// 
 // the loop routine runs over and over again forever:
 void loop() {
 	if (failCount < 2) {
-		processingLoop();
+		doMachineRun();
 	}
-	//digitalWrite(i960Pinout::Led, HIGH);   // turn the LED on (HIGH is the voltage level)
-	//delay(1000);               // wait for a second
-	//digitalWrite(i960Pinout::Led, LOW);    // turn the LED off by making the voltage LOW
-	//delay(1000);               // wait for a second
 	t.update();
 }
