@@ -30,6 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// - C++17
 /// Board Platform: MightyCore
 #include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
 #include <libbonuspin.h>
 #include <Timer.h>
 #include <Fsm.h>
@@ -75,16 +77,22 @@ enum class i960Pinout : decltype(A0) {
 	BLAST_, 	 // input
 	DEN_, 	     // input
 // PORT A
-	Analog0,	  // unused
-	Analog1,	  // unused
-	Analog2, 	  // unused
-	Analog3, 	  // unused
-	Analog4,	  // unused
-	Analog5,	  // unused
-	Analog6,	  // unused
-	Analog7,	  // unused
-	Count,		   // special
+	Screen_CS, 	  // output 
+	SDCS_,	  	  // output
+	ScreenReset,  // output 
+	TFTDC, 	      // output
+	MEMA0,	  	  // output
+	MEMA1,	      // output
+	MEMA2,	      // output
+	MEMEN_,	  	  // output
+	Count,		  // special
 };
+Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::Screen_CS), 
+					 static_cast<int>(i960Pinout::TFTDC),
+					 static_cast<int>(i960Pinout::MOSI),
+					 static_cast<int>(i960Pinout::SCK),
+					 static_cast<int>(i960Pinout::ScreenReset),
+					 static_cast<int>(i960Pinout::MISO));
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 
 enum class IOExpanderAddress : byte {
@@ -446,11 +454,20 @@ void setup() {
 	Serial.println("80960Sx Chipset Starting up...");
 	setupPins(OUTPUT, 
 			i960Pinout::Reset960,
-			i960Pinout::Led);
+			i960Pinout::Led,
+			i960Pinout::MEMA0,
+			i960Pinout::MEMA1,
+			i960Pinout::MEMA2,
+			i960Pinout::MEMEN_);
+	digitalWrite(i960Pinout::MEMA0, LOW);
+	digitalWrite(i960Pinout::MEMA1, LOW);
+	digitalWrite(i960Pinout::MEMA2, LOW);
+	digitalWrite(i960Pinout::MEMEN_, HIGH);
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 		t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
 		SPI.begin();
+		tft.begin();
 		setupIOExpanders();
 		setupCPUInterface();
 		/// wait two seconds to ensure that reset is successful
