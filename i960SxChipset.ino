@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libbonuspin.h>
 #include <Timer.h>
 #include <Fsm.h>
+#include <SD.h>
 template<typename T>
 class TreatAs final {
 	public:
@@ -81,10 +82,10 @@ enum class i960Pinout : decltype(A0) {
 	SDCS_,	  	  // output
 	ScreenReset,  // output 
 	TFTDC, 	      // output
-	MEMA0,	  	  // output
-	MEMA1,	      // output
-	MEMA2,	      // output
-	MEMEN_,	  	  // output
+	SPIBUS_EN_,	  	  // output
+	Analog5,
+	Analog6,
+	Analog7,
 	Count,		  // special
 };
 Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::Screen_CS), 
@@ -192,6 +193,41 @@ setDataBits(uint16_t value) noexcept {
 // PA7 - _LOCK - output
 // PB0-PB7 - Unused
 
+enum class ExtraGPIOExpanderPinout : decltype(A0) {
+	BurstAddress1,
+	BurstAddress2,
+	BurstAddress3,
+	ByteEnable0,
+	ByteEnable1,
+	HOLD,
+	HLDA,
+	LOCK_,
+	// add support for upto 255 spi devices
+	SPIAddress0,
+	SPIAddress1,
+	SPIAddress2,
+	SPIAddress3,
+	SPIAddress4,
+	SPIAddress5,
+	SPIAddress6,
+	SPIAddress7,
+	Count,
+};
+
+static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
+
+volatile uint8_t currentSPIDeviceId = 0;
+
+void selectSPIDevice(uint8_t id) noexcept {
+	if (id != currentSPIDeviceId) {
+		extraMemoryCommit.writePortB(id);
+		currentSPIDeviceId = id;
+	}
+}
+uint8_t getCurrentSPIDeviceId() noexcept {
+	return currentSPIDeviceId;
+}
+
 uint8_t getByteEnableBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
 }
@@ -228,10 +264,10 @@ auto getBlastPin() noexcept {
 }
 
 void setHOLDPin(decltype(LOW) value) noexcept {
-	digitalWrite(5, value, extraMemoryCommit);
+	digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, extraMemoryCommit);
 }
 void setLOCKPin(decltype(LOW) value) noexcept {
-	digitalWrite(7, value, extraMemoryCommit);
+	digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extraMemoryCommit);
 }
 
 
@@ -441,7 +477,13 @@ void setupIOExpanders() {
 	lower16.writeGPIOsDirection(0b11111111'11111111);
 	upper16.writeGPIOsDirection(0b11111111'11111111);
 	dataLines.writeGPIOsDirection(0b11111111'11111111);
-	extraMemoryCommit.writeGPIOsDirection(0b11111111'01011111);
+	// set lower eight to inputs and upper eight to outputs
+	extraMemoryCommit.writeGPIOsDirection(0b00000000'11111111);
+	// then indirectly mark the outputs
+	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
+	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
+	// default to device zero
+	selectSPIDevice(0);
 }
 
 void emitCharState(bool condition, char onTrue, char onFalse) noexcept {
@@ -455,17 +497,11 @@ void setup() {
 	setupPins(OUTPUT, 
 			i960Pinout::Reset960,
 			i960Pinout::Led,
-			i960Pinout::MEMA0,
-			i960Pinout::MEMA1,
-			i960Pinout::MEMA2,
-			i960Pinout::MEMEN_);
-	digitalWrite(i960Pinout::MEMA0, LOW);
-	digitalWrite(i960Pinout::MEMA1, LOW);
-	digitalWrite(i960Pinout::MEMA2, LOW);
-	digitalWrite(i960Pinout::MEMEN_, HIGH);
+			i960Pinout::SPIBUS_EN_);
+	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
+	digitalWrite(i960Pinout::SPIBUS_EN_, HIGH);
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
-		t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
 		SPI.begin();
 		tft.begin();
 		setupIOExpanders();
