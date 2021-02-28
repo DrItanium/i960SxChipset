@@ -36,6 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Timer.h>
 #include <Fsm.h>
 #include <SD.h>
+#include <Wire.h>
+#include <Adafruit_RGBLCDShield.h>
 template<typename T>
 class TreatAs final {
 	public:
@@ -88,12 +90,16 @@ enum class i960Pinout : decltype(A0) {
 	Analog7,
 	Count,		  // special
 };
+#if 0
+/// @todo Rethink how to do this since the enable pins are abstracted via the
+/// MCP23S17
 Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::Screen_CS), 
 					 static_cast<int>(i960Pinout::TFTDC),
 					 static_cast<int>(i960Pinout::MOSI),
 					 static_cast<int>(i960Pinout::SCK),
 					 static_cast<int>(i960Pinout::ScreenReset),
 					 static_cast<int>(i960Pinout::MISO));
+#endif
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 
 enum class IOExpanderAddress : byte {
@@ -213,6 +219,17 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	SPIAddress7,
 	Count,
 };
+Adafruit_RGBLCDShield lcd;
+enum BacklightColors : uint8_t {
+	Off = 0x0,
+	Red,
+	Green,
+	Yellow,
+	Blue,
+	Violet,
+	Teal,
+	White,
+};
 
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 
@@ -284,7 +301,7 @@ bool failureOnBootup() noexcept {
 /// @todo add the FAIL pin based off of the diagrams I have (requires external
 // circuitry.
 uint16_t load(Address address) noexcept {
-	Serial.print("Request to load from: 0x");
+	Serial.print("Load from 0x");
 	Serial.println(address, HEX);
 	return 0;
 }
@@ -490,20 +507,43 @@ void emitCharState(bool condition, char onTrue, char onFalse) noexcept {
 	Serial.print(condition ? onTrue : onFalse);
 }
 	
+volatile char animationList[] = {
+	'|',
+	'/',
+	'-',
+	'/',
+};
+
+volatile int animationIndex = 0;
+volatile uint8_t colorIndex = 0;
+void updateSpinner(void*) {
+	lcd.setCursor(0,0);
+	lcd.print(animationList[animationIndex]);
+	++animationIndex;
+	animationIndex &= 0b11;
+}
+void updateColor(void*) {
+	lcd.setBacklight(colorIndex);
+	++colorIndex;
+	colorIndex &= 0b111;
+}
 // the setup routine runs once when you press reset:
 void setup() {
 	Serial.begin(115200);
+	lcd.begin(16,2);
 	Serial.println("80960Sx Chipset Starting up...");
 	setupPins(OUTPUT, 
 			i960Pinout::Reset960,
 			i960Pinout::Led,
 			i960Pinout::SPIBUS_EN_);
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
+	t.every(1000 / 2, updateSpinner, nullptr);
+	t.every(10000, updateColor, nullptr);
 	digitalWrite(i960Pinout::SPIBUS_EN_, HIGH);
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 		SPI.begin();
-		tft.begin();
+		//tft.begin();
 		setupIOExpanders();
 		setupCPUInterface();
 		/// wait two seconds to ensure that reset is successful
@@ -516,7 +556,6 @@ void setup() {
 	// At this point the cpu will have started up and we must check out the
 	// fail circuit during bootup.
 }
-
 /// @todo implement bootup fail state detection. Probably have to use a discrete circuit
 /// 
 // the loop routine runs over and over again forever:
