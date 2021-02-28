@@ -202,7 +202,7 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	HOLD,
 	HLDA,
 	LOCK_,
-	// add support for upto 255 spi devices
+	// add support for upto 256 spi devices
 	SPIAddress0,
 	SPIAddress1,
 	SPIAddress2,
