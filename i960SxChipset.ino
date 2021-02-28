@@ -80,27 +80,27 @@ enum class i960Pinout : decltype(A0) {
 	BLAST_, 	 // input
 	DEN_, 	     // input
 // PORT A
-	Screen_CS, 	  // output 
-	SDCS_,	  	  // output
-	ScreenReset,  // output 
-	TFTDC, 	      // output
 	SPIBUS_EN_,	  	  // output
+	ScreenReset,  // output 
+	SD_DC, 		  // input
+	Analog3,
+	Analog4,
 	Analog5,
 	Analog6,
 	Analog7,
 	Count,		  // special
 };
-#if 0
+static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 /// @todo Rethink how to do this since the enable pins are abstracted via the
-/// MCP23S17
-Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::Screen_CS), 
-					 static_cast<int>(i960Pinout::TFTDC),
+/// MCP23S17, we can pass the overarching enable pin in this case. We just have
+/// to be careful to set the target device ahead of time before we start the
+/// spi transaction (SPIBUS_EN_)
+Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::SPIBUS_EN_), 
+					 static_cast<int>(i960Pinout::SD_DC),
 					 static_cast<int>(i960Pinout::MOSI),
 					 static_cast<int>(i960Pinout::SCK),
 					 static_cast<int>(i960Pinout::ScreenReset),
 					 static_cast<int>(i960Pinout::MISO));
-#endif
-static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 
 enum class IOExpanderAddress : byte {
 	DataLines = 0b000,
@@ -230,7 +230,69 @@ enum BacklightColors : uint8_t {
 	Teal,
 	White,
 };
+/**
+ * list of SPI devices bound to PORTB on io expander 0b011
+ */
+enum class SPIDevices : uint16_t {
+	TFT,
+	TFT_SDCard,
+	Airlift,
+	AirliftSdCard, // may not be used, unsure at this point
+	BluefruitLE,
+	SDCardStandalone0,	   // may not be used 
+	MCP2210_0, 			   // USB to SPI interface chip
+	MCP3208_0, 			   // Eight ADC Inputs
+	// This MCP23S17 is a separate set of io pins compared to the one used to
+	// interface with the i960 and act as the backbone of the system
+	MCP23S17_0,			   // Minimum of 16 GPIO Pins (can be expanded to 128)
+	Unused0,
+	Unused1,
+	Unused2,
+	Unused3,
+	Unused4,
+	Unused5,
+	Unused6,
+	// memory card blocks must start on divisible by eight boundaries
+	// note that these do not describe the _size_ of the memory card block
+	// only the id to invoke it on.
+	MemoryCard0_D0,
+	MemoryCard0_D1,
+	MemoryCard0_D2,
+	MemoryCard0_D3,
+	MemoryCard0_D4,
+	MemoryCard0_D5,
+	MemoryCard0_D6,
+	MemoryCard0_D7,
 
+	MemoryCard1_D0,
+	MemoryCard1_D1,
+	MemoryCard1_D2,
+	MemoryCard1_D3,
+	MemoryCard1_D4,
+	MemoryCard1_D5,
+	MemoryCard1_D6,
+	MemoryCard1_D7,
+
+	MemoryCard2_D0,
+	MemoryCard2_D1,
+	MemoryCard2_D2,
+	MemoryCard2_D3,
+	MemoryCard2_D4,
+	MemoryCard2_D5,
+	MemoryCard2_D6,
+	MemoryCard2_D7,
+
+	MemoryCard3_D0,
+	MemoryCard3_D1,
+	MemoryCard3_D2,
+	MemoryCard3_D3,
+	MemoryCard3_D4,
+	MemoryCard3_D5,
+	MemoryCard3_D6,
+	MemoryCard3_D7,
+	Count,
+};
+static_assert(static_cast<int>(SPIDevices::Count) <= 256);
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 
 volatile uint8_t currentSPIDeviceId = 0;
