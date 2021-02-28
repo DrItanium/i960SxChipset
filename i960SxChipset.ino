@@ -295,15 +295,15 @@ enum class SPIDevices : uint16_t {
 static_assert(static_cast<int>(SPIDevices::Count) <= 256);
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 
-volatile uint8_t currentSPIDeviceId = 0;
+volatile SPIDevices currentSPIDeviceId = 0;
 
-void selectSPIDevice(uint8_t id) noexcept {
+void selectSPIDevice(SPIDevices id) noexcept {
 	if (id != currentSPIDeviceId) {
-		extraMemoryCommit.writePortB(id);
+		extraMemoryCommit.writePortB(static_cast<uint8_t>(id));
 		currentSPIDeviceId = id;
 	}
 }
-uint8_t getCurrentSPIDeviceId() noexcept {
+auto getCurrentSPIDeviceId() noexcept {
 	return currentSPIDeviceId;
 }
 
