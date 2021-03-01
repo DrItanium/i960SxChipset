@@ -295,7 +295,7 @@ enum class SPIDevices : uint16_t {
 static_assert(static_cast<int>(SPIDevices::Count) <= 256);
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 
-volatile SPIDevices currentSPIDeviceId = 0;
+volatile SPIDevices currentSPIDeviceId = SPIDevices::TFT;
 
 void selectSPIDevice(SPIDevices id) noexcept {
 	if (id != currentSPIDeviceId) {
@@ -562,7 +562,7 @@ void setupIOExpanders() {
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
 	// default to device zero
-	selectSPIDevice(0);
+	selectSPIDevice(SPIDevices::TFT);
 }
 
 void emitCharState(bool condition, char onTrue, char onFalse) noexcept {
@@ -605,8 +605,9 @@ void setup() {
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 		SPI.begin();
-		//tft.begin();
 		setupIOExpanders();
+		selectSPIDevice(SPIDevices::TFT); 
+		//tft.begin();
 		setupCPUInterface();
 		/// wait two seconds to ensure that reset is successful
 		setupBusStateMachine();
