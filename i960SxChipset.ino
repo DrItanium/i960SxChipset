@@ -434,8 +434,6 @@ void setupIOExpanders() {
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
 }
-ISR(SPI_STC_vect) {
-}
 
 // the setup routine runs once when you press reset:
 void setup() {
@@ -450,11 +448,13 @@ void setup() {
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 		SPI.begin();
-		pinMode(i960Pinout::SS_, INPUT_PULLUP);
+		// @todo: do research into making SS_ able to trigger a new transaction
+		//pinMode(i960Pinout::SS_, INPUT_PULLUP);
+
 		setupIOExpanders();
 		setupCPUInterface();
 		setupBusStateMachine();
-		//SPI.attachInterrupt();
+
 		Serial.println("Finished starting up!");
 		Serial.println("Waiting 2 seconds!");
 		delay(2000);
