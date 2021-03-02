@@ -45,7 +45,6 @@ using Byte = uint8_t;
 using TreatAsByte = TreatAs<uint8_t>;
 using TreatAsShort = TreatAs<uint16_t>;
 using TreatAsWord = TreatAs<uint32_t>;
-constexpr bool displayStateTransitions = true;
 enum class i960Pinout : decltype(A0) {
 // PORT B
 	Led = 0, 	  // output
@@ -75,9 +74,9 @@ enum class i960Pinout : decltype(A0) {
 	BLAST_, 	 // input
 	DEN_, 	     // input
 // PORT A
-	SPIBUS_EN_,	  	  // output
-	ScreenReset,  // output 
-	SD_DC, 		  // input
+	FT232H_EN_, // output
+	Analog1,
+	Analog2,
 	Analog3,
 	Analog4,
 	Analog5,
@@ -336,31 +335,19 @@ void idleState() noexcept {
 	}
 }
 void onAddressStateEntered() noexcept {
-	if constexpr (displayStateTransitions) {
-		Serial.println("Entered Address State");
-	}
 	asTriggered = false;
 }
 void doAddressState() noexcept {
-	if constexpr (displayStateTransitions) {
-		Serial.println("Address State");
-	}
 	if (digitalRead(i960Pinout::DEN_) == LOW) {
 		fsm.trigger(ToDataState);
 	}
 }
 
 void signalReady() noexcept {
-	if constexpr (displayStateTransitions) {
-		Serial.println("Marking Signal Ready");
-	}
 	auto blastPin = getBlastPin();
 	digitalWrite(i960Pinout::Ready, LOW);
 	digitalWrite(i960Pinout::Ready, HIGH);
 	if (blastPin == LOW) {
-		if (displayStateTransitions) {
-			Serial.println("Transitioning to next state");
-		}
 		// we not in burst mode
 		fsm.trigger(ReadyAndNoBurst);
 	} 
@@ -368,9 +355,6 @@ void signalReady() noexcept {
 
 void
 enteringDataState() noexcept {
-	if constexpr (displayStateTransitions) {
-		Serial.println("Entering Data State");
-	}
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
@@ -378,9 +362,6 @@ enteringDataState() noexcept {
 
 
 void processDataRequest() noexcept {
-	if (displayStateTransitions) {
-		Serial.println("Process Data Request");
-	}
 	auto usedAddress = getBurstAddress(baseAddress);
 	if (performingRead) {
 		setDataBits(load(usedAddress));
@@ -394,9 +375,6 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
-	if constexpr (displayStateTransitions) {
-		Serial.println("Do Recovery State");
-	}
 	if (asTriggered) {
 		fsm.trigger(RequestPending);
 	} else {
@@ -406,7 +384,6 @@ void doRecoveryState() noexcept {
 
 
 void setupBusStateMachine() noexcept {
-	Serial.println("Setting up Bus State Machine");
 	fsm.add_transition(&ti, &ta, NewRequest, nullptr);
 	fsm.add_transition(&ta, &td, ToDataState, nullptr);
 	fsm.add_transition(&td, &tr, ReadyAndNoBurst, nullptr);
@@ -416,8 +393,6 @@ void setupBusStateMachine() noexcept {
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
-	Serial.println("Setting up cpu interface pins...");
-	Serial.println("Configure output pins");
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
@@ -428,13 +403,11 @@ void setupCPUInterface() {
 			i960Pinout::Int0_);
 	setHOLDPin(LOW);
 	setLOCKPin(HIGH);
-	Serial.println("Setting up inputs");
 	setupPins(INPUT,
 			i960Pinout::BLAST_,
 			i960Pinout::AS_,
 			i960Pinout::W_R_,
 			i960Pinout::DEN_);
-	Serial.println("Setting up interrupts on INT2");
 	EIMSK |= 0b100; // enable INT2 pin
 	EICRA |= 0b100000; // trigger on falling edge
 }
@@ -461,6 +434,8 @@ void setupIOExpanders() {
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
 }
+ISR(SPI_STC_vect) {
+}
 
 // the setup routine runs once when you press reset:
 void setup() {
@@ -469,12 +444,14 @@ void setup() {
 	setupPins(OUTPUT, 
 			i960Pinout::Reset960,
 			i960Pinout::Led,
-			i960Pinout::SPIBUS_EN_);
+			i960Pinout::FT232H_EN_);
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-	digitalWrite(i960Pinout::SPIBUS_EN_, HIGH);
+	digitalWrite(i960Pinout::FT232H_EN_, HIGH);
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 		SPI.begin();
+		pinMode(i960Pinout::SS_, INPUT_PULLUP);
+		SPI.attachInterrupt();
 		setupIOExpanders();
 		//tft.begin();
 		setupCPUInterface();
