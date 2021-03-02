@@ -30,14 +30,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// - C++17
 /// Board Platform: MightyCore
 #include <SPI.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_ILI9341.h>
 #include <libbonuspin.h>
 #include <Timer.h>
 #include <Fsm.h>
-#include <SD.h>
-#include <Wire.h>
-#include <Adafruit_RGBLCDShield.h>
 template<typename T>
 class TreatAs final {
 	public:
@@ -56,8 +51,8 @@ enum class i960Pinout : decltype(A0) {
 	Led = 0, 	  // output
    	CLOCK_OUT, // output, unusable
 	AS_,     // input, AVR Int2
-	PWM4,	    // Unused 
 	GPIOSelect, // output
+	SS_,		// input pullup
 	MOSI,		  // reserved
 	MISO,		  // reserved
 	SCK, 		  // reserved
@@ -91,16 +86,6 @@ enum class i960Pinout : decltype(A0) {
 	Count,		  // special
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
-/// @todo Rethink how to do this since the enable pins are abstracted via the
-/// MCP23S17, we can pass the overarching enable pin in this case. We just have
-/// to be careful to set the target device ahead of time before we start the
-/// spi transaction (SPIBUS_EN_)
-Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::SPIBUS_EN_), 
-					 static_cast<int>(i960Pinout::SD_DC),
-					 static_cast<int>(i960Pinout::MOSI),
-					 static_cast<int>(i960Pinout::SCK),
-					 static_cast<int>(i960Pinout::ScreenReset),
-					 static_cast<int>(i960Pinout::MISO));
 
 enum class IOExpanderAddress : byte {
 	DataLines = 0b000,
@@ -209,42 +194,6 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	HLDA,
 	LOCK_,
 	// add support for upto 256 spi devices
-	SPIAddress0,
-	SPIAddress1,
-	SPIAddress2,
-	SPIAddress3,
-	SPIAddress4,
-	SPIAddress5,
-	SPIAddress6,
-	SPIAddress7,
-	Count,
-};
-Adafruit_RGBLCDShield lcd;
-enum BacklightColors : uint8_t {
-	Off = 0x0,
-	Red,
-	Green,
-	Yellow,
-	Blue,
-	Violet,
-	Teal,
-	White,
-};
-/**
- * list of SPI devices bound to PORTB on io expander 0b011
- */
-enum class SPIDevices : uint16_t {
-	TFT,
-	TFT_SDCard,
-	Airlift,
-	AirliftSdCard, // may not be used, unsure at this point
-	BluefruitLE,
-	SDCardStandalone0,	   // may not be used 
-	MCP2210_0, 			   // USB to SPI interface chip
-	MCP3208_0, 			   // Eight ADC Inputs
-	// This MCP23S17 is a separate set of io pins compared to the one used to
-	// interface with the i960 and act as the backbone of the system
-	MCP23S17_0,			   // Minimum of 16 GPIO Pins (can be expanded to 128)
 	Unused0,
 	Unused1,
 	Unused2,
@@ -252,60 +201,10 @@ enum class SPIDevices : uint16_t {
 	Unused4,
 	Unused5,
 	Unused6,
-	// memory card blocks must start on divisible by eight boundaries
-	// note that these do not describe the _size_ of the memory card block
-	// only the id to invoke it on.
-	MemoryCard0_D0,
-	MemoryCard0_D1,
-	MemoryCard0_D2,
-	MemoryCard0_D3,
-	MemoryCard0_D4,
-	MemoryCard0_D5,
-	MemoryCard0_D6,
-	MemoryCard0_D7,
-
-	MemoryCard1_D0,
-	MemoryCard1_D1,
-	MemoryCard1_D2,
-	MemoryCard1_D3,
-	MemoryCard1_D4,
-	MemoryCard1_D5,
-	MemoryCard1_D6,
-	MemoryCard1_D7,
-
-	MemoryCard2_D0,
-	MemoryCard2_D1,
-	MemoryCard2_D2,
-	MemoryCard2_D3,
-	MemoryCard2_D4,
-	MemoryCard2_D5,
-	MemoryCard2_D6,
-	MemoryCard2_D7,
-
-	MemoryCard3_D0,
-	MemoryCard3_D1,
-	MemoryCard3_D2,
-	MemoryCard3_D3,
-	MemoryCard3_D4,
-	MemoryCard3_D5,
-	MemoryCard3_D6,
-	MemoryCard3_D7,
+	Unused7,
 	Count,
 };
-static_assert(static_cast<int>(SPIDevices::Count) <= 256);
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
-
-volatile SPIDevices currentSPIDeviceId = SPIDevices::TFT;
-
-void selectSPIDevice(SPIDevices id) noexcept {
-	if (id != currentSPIDeviceId) {
-		extraMemoryCommit.writePortB(static_cast<uint8_t>(id));
-		currentSPIDeviceId = id;
-	}
-}
-auto getCurrentSPIDeviceId() noexcept {
-	return currentSPIDeviceId;
-}
 
 uint8_t getByteEnableBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
@@ -561,52 +460,22 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
-	// default to device zero
-	selectSPIDevice(SPIDevices::TFT);
 }
 
-void emitCharState(bool condition, char onTrue, char onFalse) noexcept {
-	Serial.print(condition ? onTrue : onFalse);
-}
-	
-volatile char animationList[] = {
-	'|',
-	'/',
-	'-',
-	'/',
-};
-
-volatile int animationIndex = 0;
-volatile uint8_t colorIndex = 0;
-void updateSpinner(void*) {
-	lcd.setCursor(0,0);
-	lcd.print(animationList[animationIndex]);
-	++animationIndex;
-	animationIndex &= 0b11;
-}
-void updateColor(void*) {
-	lcd.setBacklight(colorIndex);
-	++colorIndex;
-	colorIndex &= 0b111;
-}
 // the setup routine runs once when you press reset:
 void setup() {
 	Serial.begin(115200);
-	lcd.begin(16,2);
 	Serial.println("80960Sx Chipset Starting up...");
 	setupPins(OUTPUT, 
 			i960Pinout::Reset960,
 			i960Pinout::Led,
 			i960Pinout::SPIBUS_EN_);
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-	t.every(1000 / 2, updateSpinner, nullptr);
-	t.every(10000, updateColor, nullptr);
 	digitalWrite(i960Pinout::SPIBUS_EN_, HIGH);
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 		SPI.begin();
 		setupIOExpanders();
-		selectSPIDevice(SPIDevices::TFT); 
 		//tft.begin();
 		setupCPUInterface();
 		/// wait two seconds to ensure that reset is successful
