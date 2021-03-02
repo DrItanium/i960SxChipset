@@ -451,12 +451,10 @@ void setup() {
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 		SPI.begin();
 		pinMode(i960Pinout::SS_, INPUT_PULLUP);
-		SPI.attachInterrupt();
 		setupIOExpanders();
-		//tft.begin();
 		setupCPUInterface();
-		/// wait two seconds to ensure that reset is successful
 		setupBusStateMachine();
+		//SPI.attachInterrupt();
 		Serial.println("Finished starting up!");
 		Serial.println("Waiting 2 seconds!");
 		delay(2000);
