@@ -272,11 +272,43 @@ void store(Address address, uint16_t value) noexcept {
 	Serial.print(" to 0x");
 	Serial.println(address, HEX);
 }
-
-void prepareMemoryRequest(Address address, uint16_t value) noexcept {
+void transfer16Bits(uint16_t value) noexcept {
+	SPI.transfer(value);
+	SPI.transfer(value >> 8);
+}
+uint16_t read16Bits() noexcept {
+	auto lower = static_cast<uint16_t>(SPI.transfer(0));
+	auto upper = static_cast<uint16_t>(SPI.transfer(0));
+	return (upper << 8) | lower;
+}
+void transfer32Bits(uint32_t value) noexcept {
+	SPI.transfer(value);
+	SPI.transfer(value >> 8);
+	SPI.transfer(value >> 16);
+	SPI.transfer(value >> 24);
+}
+void transferAddress(Address address) noexcept {
+	SPI.transfer(static_cast<uint8_t>(address >> 16));
+	SPI.transfer(static_cast<uint8_t>(address >> 8));
+	SPI.transfer(static_cast<uint8_t>(address));
+}
+void writeMemoryRequest(Address address, uint16_t value) noexcept {
 	uint16_t operation = isWriteOperation() ? 0b100 : 0b000;
 	operation |= getByteEnableBits();
+	HoldPinLow<i960Pinout::SRAM_EN_> holder;
+	SPI.transfer(0x02);
+	// we save to address zero in the sram
+	transferAddress(0);
+	transfer16Bits(operation);
+	transfer32Bits(address);
+	transfer16Bits(value);
+}
 
+uint16_t readMemoryResult() noexcept {
+	HoldPinLow<i960Pinout::SRAM_EN_> holder;
+	SPI.transfer(0x03);
+	transferAddress(0x100);
+	return read16Bits();
 }
 
 // State diagram based off of i960SA/SB Reference manual
