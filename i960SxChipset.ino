@@ -358,7 +358,6 @@ void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringIdleState() noexcept;
-void signalReady() noexcept;
 State ti([]() { digitalWrite(i960Pinout::STATE_IDLE_, LOW); }, 
 		idleState, 
 		[]() { digitalWrite(i960Pinout::STATE_IDLE_, HIGH); });
@@ -377,8 +376,8 @@ State tw([]() {
 		}, 
 		[]() {
 			if (acknowledged) {
-				fsm.trigger(ToSignalReadyState);
 				digitalWrite(i960Pinout::STATE_WAIT_, HIGH);
+				fsm.trigger(ToSignalReadyState);
 			}
 		},
 		[]() {
@@ -407,8 +406,7 @@ ISR (INT2_vect)
 	// this is the AS_ pin doing its thing
 }
 
-ISR (INT1_vect) 
-{
+ISR (INT1_vect) {
 	acknowledged = true;
 }
 
@@ -428,8 +426,6 @@ void doAddressState() noexcept {
 	}
 }
 
-void signalReady() noexcept {
-}
 
 void
 enteringDataState() noexcept {
@@ -463,9 +459,13 @@ void doRecoveryState() noexcept {
 void setupBusStateMachine() noexcept {
 	fsm.add_transition(&ti, &ta, NewRequest, nullptr);
 	fsm.add_transition(&ta, &td, ToDataState, nullptr);
-	fsm.add_transition(&td, &tr, ReadyAndNoBurst, nullptr);
+	//fsm.add_transition(&td, &tr, ReadyAndNoBurst, nullptr);
 	fsm.add_transition(&tr, &ta, RequestPending, nullptr);
 	fsm.add_transition(&tr, &ti, NoRequest, nullptr);
+	fsm.add_transition(&td, &tw, ToSignalWaitState, nullptr);
+	fsm.add_transition(&tw, &trdy, ToSignalReadyState, nullptr);
+	fsm.add_transition(&trdy, &tr, ReadyAndNoBurst, nullptr);
+	fsm.add_transition(&trdy, &td, ToDataState, nullptr);
 }
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
