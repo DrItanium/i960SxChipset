@@ -260,22 +260,6 @@ bool failureOnBootup() noexcept {
 
 /// @todo add the FAIL pin based off of the diagrams I have (requires external
 // circuitry.
-uint16_t load(Address address) noexcept {
-	Serial.print("Load from 0x");
-	Serial.println(address, HEX);
-	return 0;
-}
-
-void store(Address address, uint16_t value) noexcept {
-	Serial.print("Request to store 0x");
-	Serial.print(value, HEX);
-	Serial.print(" to 0x");
-	Serial.println(address, HEX);
-}
-void transfer16Bits(uint16_t value) noexcept {
-	SPI.transfer(value);
-	SPI.transfer(value >> 8);
-}
 // We talk to the FT232H via an external SPI SRAM of 1 Megabit (128 kbytes)
 // there are two addresses used in the design
 
@@ -283,11 +267,18 @@ constexpr auto MemoryRequestLocation = 0x00'0000;
 constexpr auto MemoryResultLocation = 0x00'0100;
 constexpr auto OpcodeWrite = 0b0000'0010;
 constexpr auto OpcodeRead = 0b0000'0011;
+
+void transfer16Bits(uint16_t value) noexcept {
+	SPI.transfer(value);
+	SPI.transfer(value >> 8);
+}
+
 uint16_t read16Bits() noexcept {
 	auto lower = static_cast<uint16_t>(SPI.transfer(0));
 	auto upper = static_cast<uint16_t>(SPI.transfer(0));
 	return (upper << 8) | lower;
 }
+
 void transfer32Bits(uint32_t value) noexcept {
 	SPI.transfer(value);
 	SPI.transfer(value >> 8);
@@ -347,6 +338,10 @@ uint16_t readMemoryResult() noexcept {
 // Tw -> Tr after signaling ready and no burst (blast low)
 
 // NOTE: Tw may turn out to be synthetic
+volatile bool asTriggered = false;
+volatile uint32_t baseAddress = 0;
+volatile bool performingRead = false;
+volatile bool acknowledged = false;
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -354,6 +349,8 @@ constexpr auto NotReady = 3;
 constexpr auto ReadyAndNoBurst = 4;
 constexpr auto RequestPending = 5;
 constexpr auto ToDataState = 6;
+constexpr auto ToSignalReadyState = 7;
+constexpr auto ToSignalWaitState = 8;
 void idleState() noexcept;
 void onAddressStateEntered() noexcept;
 void doAddressState() noexcept;
@@ -361,9 +358,11 @@ void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringIdleState() noexcept;
+void signalReady() noexcept;
 State ti([]() { digitalWrite(i960Pinout::STATE_IDLE_, LOW); }, 
 		idleState, 
 		[]() { digitalWrite(i960Pinout::STATE_IDLE_, HIGH); });
+Fsm fsm(&ti);
 State ta(onAddressStateEntered, 
 		doAddressState, 
 		[]() { digitalWrite(i960Pinout::STATE_ADDR_, HIGH); });
@@ -373,11 +372,35 @@ State td(enteringDataState,
 State tr([]() { digitalWrite(i960Pinout::STATE_RECOVER_, LOW); }, 
 		doRecoveryState, 
 		[]() { digitalWrite(i960Pinout::STATE_RECOVER_, HIGH); });
-Fsm fsm(&ti);
-volatile bool asTriggered = false;
-volatile uint32_t baseAddress = 0;
-volatile bool performingRead = false;
-volatile bool acknowledged = false;
+State tw([]() {
+			digitalWrite(i960Pinout::STATE_WAIT_, LOW);
+		}, 
+		[]() {
+			if (acknowledged) {
+				fsm.trigger(ToSignalReadyState);
+			}
+		},
+		[]() {
+			digitalWrite(i960Pinout::STATE_WAIT_, HIGH);
+			acknowledged = false;
+		});
+State trdy(nullptr, []() {
+	auto result = readMemoryResult();
+	if (performingRead) {
+		setDataBits(result);
+	} 
+	auto blastPin = getBlastPin();
+	digitalWrite(i960Pinout::Ready, LOW);
+	digitalWrite(i960Pinout::Ready, HIGH);
+	if (blastPin == LOW) {
+		// we not in burst mode
+		fsm.trigger(ReadyAndNoBurst);
+	}  else {
+		// we are in burst mode so move back to data state
+		fsm.trigger(ToDataState);
+	}
+		}, nullptr);
+
 ISR (INT2_vect)
 {
 	asTriggered = true;
@@ -406,13 +429,6 @@ void doAddressState() noexcept {
 }
 
 void signalReady() noexcept {
-	auto blastPin = getBlastPin();
-	digitalWrite(i960Pinout::Ready, LOW);
-	digitalWrite(i960Pinout::Ready, HIGH);
-	if (blastPin == LOW) {
-		// we not in burst mode
-		fsm.trigger(ReadyAndNoBurst);
-	} 
 }
 
 void
@@ -426,15 +442,13 @@ enteringDataState() noexcept {
 
 void processDataRequest() noexcept {
 	auto usedAddress = getBurstAddress(baseAddress);
-	if (performingRead) {
-		setDataBits(load(usedAddress));
-	} else {
-		// perform a store
-		store(usedAddress, getDataBits());
+	writeMemoryRequest(usedAddress, performingRead ? 0 : getDataBits());
+	fsm.trigger(ToSignalWaitState);
+	while (!acknowledged) {
+		// wait
 	}
 	// at the end of the day, signal ready on the request
 	// get the base address 
-	signalReady();
 }
 
 void doRecoveryState() noexcept {
