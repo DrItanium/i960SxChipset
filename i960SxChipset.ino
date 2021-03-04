@@ -50,8 +50,8 @@ enum class i960Pinout : decltype(A0) {
 	Led = 0, 	  // output
    	CLOCK_OUT, // output, unusable
 	AS_,     // input, AVR Int2
-	GPIOSelect, // output
-	SS_,		// input pullup
+	FAIL_, // input
+	GPIOSelect,		// output
 	MOSI,		  // reserved
 	MISO,		  // reserved
 	SCK, 		  // reserved
@@ -59,7 +59,7 @@ enum class i960Pinout : decltype(A0) {
 	RX0, 		  // reserved
 	TX0, 		  // reserved
 	AVR_INT0,	  // AVR Interrupt INT0
-	AVR_INT1,	  // AVR Interrupt INT1
+	MEMACK_,	  // AVR Interrupt INT1
 	PWM0,		  // unused
 	PWM1, 		  // unused
 	PWM2, 		  // unused
@@ -74,12 +74,12 @@ enum class i960Pinout : decltype(A0) {
 	BLAST_, 	 // input
 	DEN_, 	     // input
 // PORT A
-	FT232H_EN_, // output
-	Analog1,
-	Analog2,
-	Analog3,
-	Analog4,
-	Analog5,
+	STATE_IDLE_, 	// output
+	STATE_ADDR_, 	// output
+	STATE_DATA_, 	// output
+	STATE_WAIT_, 	// output
+	STATE_RECOVER_, // output
+	STATE_FAIL_,    // output
 	Analog6,
 	Analog7,
 	Count,		  // special
@@ -319,6 +319,7 @@ State ti(nullptr, idleState, nullptr);
 State ta(onAddressStateEntered, doAddressState, nullptr);
 State td(enteringDataState, processDataRequest, nullptr);
 State tr(nullptr, doRecoveryState, nullptr);
+State tw(nullptr, nullptr, nullptr);
 Fsm fsm(&ti);
 volatile bool asTriggered = false;
 volatile uint32_t baseAddress = 0;
@@ -327,6 +328,11 @@ ISR (INT2_vect)
 {
 	asTriggered = true;
 	// this is the AS_ pin doing its thing
+}
+
+ISR (INT1_vect) 
+{
+
 }
 
 void idleState() noexcept {
@@ -407,9 +413,11 @@ void setupCPUInterface() {
 			i960Pinout::BLAST_,
 			i960Pinout::AS_,
 			i960Pinout::W_R_,
-			i960Pinout::DEN_);
-	EIMSK |= 0b100; // enable INT2 pin
-	EICRA |= 0b100000; // trigger on falling edge
+			i960Pinout::DEN_,
+			i960Pinout::FAIL_,
+			i960Pinout::MEMACK_);
+	EIMSK |= 0b110; // enable INT2 and INT1 pin
+	EICRA |= 0b101000; // trigger on falling edge
 }
 void setupIOExpanders() {
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
@@ -442,14 +450,23 @@ void setup() {
 	setupPins(OUTPUT, 
 			i960Pinout::Reset960,
 			i960Pinout::Led,
-			i960Pinout::FT232H_EN_);
+			i960Pinout::STATE_IDLE_,
+			i960Pinout::STATE_ADDR_,
+			i960Pinout::STATE_DATA_,
+			i960Pinout::STATE_WAIT_,
+			i960Pinout::STATE_RECOVER_,
+			i960Pinout::STATE_FAIL_);
+	digitalWriteBlock(HIGH,
+			i960Pinout::STATE_IDLE_,
+			i960Pinout::STATE_ADDR_,
+			i960Pinout::STATE_DATA_,
+			i960Pinout::STATE_WAIT_,
+			i960Pinout::STATE_RECOVER_,
+			i960Pinout::STATE_FAIL_);
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-	digitalWrite(i960Pinout::FT232H_EN_, HIGH);
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
 		SPI.begin();
-		// @todo: do research into making SS_ able to trigger a new transaction
-		//pinMode(i960Pinout::SS_, INPUT_PULLUP);
 
 		setupIOExpanders();
 		setupCPUInterface();
