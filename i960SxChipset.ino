@@ -359,6 +359,7 @@ void idleState() noexcept {
 }
 void onAddressStateEntered() noexcept {
 	asTriggered = false;
+	digitalWrite(i960Pinout::STATE_ADDR_, LOW);
 }
 void doAddressState() noexcept {
 	if (digitalRead(i960Pinout::DEN_) == LOW) {
@@ -378,6 +379,7 @@ void signalReady() noexcept {
 
 void
 enteringDataState() noexcept {
+	digitalWrite(i960Pinout::STATE_DATA_, LOW);
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
