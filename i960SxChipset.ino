@@ -315,15 +315,28 @@ void doAddressState() noexcept;
 void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
-State ti(nullptr, idleState, nullptr);
-State ta(onAddressStateEntered, doAddressState, nullptr);
-State td(enteringDataState, processDataRequest, nullptr);
-State tr(nullptr, doRecoveryState, nullptr);
-State tw(nullptr, nullptr, nullptr);
+void enteringIdleState() noexcept;
+void waitingState() noexcept;
+State ti([]() { digitalWrite(i960Pinout::STATE_IDLE_, LOW); }, 
+		idleState, 
+		[]() { digitalWrite(i960Pinout::STATE_IDLE_, HIGH); });
+State ta(onAddressStateEntered, 
+		doAddressState, 
+		[]() { digitalWrite(i960Pinout::STATE_ADDR_, HIGH); });
+State td(enteringDataState, 
+		processDataRequest, 
+		[]() { digitalWrite(i960Pinout::STATE_DATA_, HIGH); });
+State tr([]() { digitalWrite(i960Pinout::STATE_RECOVER_, LOW); }, 
+		doRecoveryState, 
+		[]() { digitalWrite(i960Pinout::STATE_RECOVER_, HIGH); });
+State tw([]() { digitalWrite(i960Pinout::STATE_WAIT_, LOW); }, 
+		waitingState,
+		[]() { digitalWrite(i960Pinout::STATE_WAIT_, HIGH); });
 Fsm fsm(&ti);
 volatile bool asTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
+volatile bool acknowledged = false;
 ISR (INT2_vect)
 {
 	asTriggered = true;
@@ -332,6 +345,10 @@ ISR (INT2_vect)
 
 ISR (INT1_vect) 
 {
+	acknowledged = true;
+}
+
+void waitingState() noexcept {
 
 }
 
@@ -457,12 +474,12 @@ void setup() {
 			i960Pinout::STATE_RECOVER_,
 			i960Pinout::STATE_FAIL_);
 	digitalWriteBlock(HIGH,
-			i960Pinout::STATE_IDLE_,
 			i960Pinout::STATE_ADDR_,
 			i960Pinout::STATE_DATA_,
 			i960Pinout::STATE_WAIT_,
 			i960Pinout::STATE_RECOVER_,
 			i960Pinout::STATE_FAIL_);
+	digitalWrite(i960Pinout::STATE_IDLE_, LOW);
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
 	{
 		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
