@@ -352,37 +352,37 @@ constexpr auto ToDataState = 6;
 constexpr auto ToSignalReadyState = 7;
 constexpr auto ToSignalWaitState = 8;
 void idleState() noexcept;
-void onAddressStateEntered() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringIdleState() noexcept;
-State ti([]() { digitalWrite(i960Pinout::STATE_IDLE_, LOW); }, 
+template<i960Pinout pin> void pullLow() noexcept { digitalWrite(pin, LOW); }
+template<i960Pinout pin> void pullHigh() noexcept { digitalWrite(pin, HIGH); }
+State ti(pullLow<i960Pinout::STATE_IDLE_>, 
 		idleState, 
-		[]() { digitalWrite(i960Pinout::STATE_IDLE_, HIGH); });
+		pullHigh<i960Pinout::STATE_IDLE_>);
 Fsm fsm(&ti);
-State ta(onAddressStateEntered, 
+State ta([]() {
+			asTriggered = false;
+			digitalWrite(i960Pinout::STATE_ADDR_, LOW);
+		}, 
 		doAddressState, 
-		[]() { digitalWrite(i960Pinout::STATE_ADDR_, HIGH); });
+		pullHigh<i960Pinout::STATE_ADDR_>);
 State td(enteringDataState, 
 		processDataRequest, 
-		[]() { digitalWrite(i960Pinout::STATE_DATA_, HIGH); });
-State tr([]() { digitalWrite(i960Pinout::STATE_RECOVER_, LOW); }, 
-		doRecoveryState, 
-		[]() { digitalWrite(i960Pinout::STATE_RECOVER_, HIGH); });
-State tw([]() {
-			digitalWrite(i960Pinout::STATE_WAIT_, LOW);
-		}, 
+		pullHigh<i960Pinout::STATE_DATA_>);
+State tr(pullLow<i960Pinout::STATE_RECOVER_>, 
+		doRecoveryState,
+		pullHigh<i960Pinout::STATE_RECOVER_>);
+State tw(pullLow<i960Pinout::STATE_WAIT_>,
 		[]() {
 			if (acknowledged) {
-				digitalWrite(i960Pinout::STATE_WAIT_, HIGH);
+				acknowledged = false;
 				fsm.trigger(ToSignalReadyState);
 			}
 		},
-		[]() {
-			acknowledged = false;
-		});
+		pullHigh<i960Pinout::STATE_WAIT_>);
 State trdy(nullptr, []() {
 	auto result = readMemoryResult();
 	if (performingRead) {
@@ -415,10 +415,6 @@ void idleState() noexcept {
 	if (asTriggered) {
 		fsm.trigger(NewRequest);
 	}
-}
-void onAddressStateEntered() noexcept {
-	asTriggered = false;
-	digitalWrite(i960Pinout::STATE_ADDR_, LOW);
 }
 void doAddressState() noexcept {
 	if (digitalRead(i960Pinout::DEN_) == LOW) {
