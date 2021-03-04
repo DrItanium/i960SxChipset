@@ -276,6 +276,13 @@ void transfer16Bits(uint16_t value) noexcept {
 	SPI.transfer(value);
 	SPI.transfer(value >> 8);
 }
+// We talk to the FT232H via an external SPI SRAM of 1 Megabit (128 kbytes)
+// there are two addresses used in the design
+
+constexpr auto MemoryRequestLocation = 0x00'0000;
+constexpr auto MemoryResultLocation = 0x00'0100;
+constexpr auto OpcodeWrite = 0b0000'0010;
+constexpr auto OpcodeRead = 0b0000'0011;
 uint16_t read16Bits() noexcept {
 	auto lower = static_cast<uint16_t>(SPI.transfer(0));
 	auto upper = static_cast<uint16_t>(SPI.transfer(0));
@@ -296,9 +303,9 @@ void writeMemoryRequest(Address address, uint16_t value) noexcept {
 	uint16_t operation = isWriteOperation() ? 0b100 : 0b000;
 	operation |= getByteEnableBits();
 	HoldPinLow<i960Pinout::SRAM_EN_> holder;
-	SPI.transfer(0x02);
+	SPI.transfer(OpcodeWrite);
 	// we save to address zero in the sram
-	transferAddress(0);
+	transferAddress(MemoryRequestLocation);
 	transfer16Bits(operation);
 	transfer32Bits(address);
 	transfer16Bits(value);
@@ -306,8 +313,8 @@ void writeMemoryRequest(Address address, uint16_t value) noexcept {
 
 uint16_t readMemoryResult() noexcept {
 	HoldPinLow<i960Pinout::SRAM_EN_> holder;
-	SPI.transfer(0x03);
-	transferAddress(0x100);
+	SPI.transfer(OpcodeRead);
+	transferAddress(MemoryResultLocation);
 	return read16Bits();
 }
 
