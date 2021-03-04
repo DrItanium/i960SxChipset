@@ -378,10 +378,10 @@ State tw([]() {
 		[]() {
 			if (acknowledged) {
 				fsm.trigger(ToSignalReadyState);
+				digitalWrite(i960Pinout::STATE_WAIT_, HIGH);
 			}
 		},
 		[]() {
-			digitalWrite(i960Pinout::STATE_WAIT_, HIGH);
 			acknowledged = false;
 		});
 State trdy(nullptr, []() {
