@@ -80,7 +80,7 @@ enum class i960Pinout : decltype(A0) {
 	STATE_WAIT_, 	// output
 	STATE_RECOVER_, // output
 	STATE_FAIL_,    // output
-	Analog6,
+	SRAM_EN_,		// output
 	Analog7,
 	Count,		  // special
 };
@@ -273,6 +273,12 @@ void store(Address address, uint16_t value) noexcept {
 	Serial.println(address, HEX);
 }
 
+void prepareMemoryRequest(Address address, uint16_t value) noexcept {
+	uint16_t operation = isWriteOperation() ? 0b100 : 0b000;
+	operation |= getByteEnableBits();
+
+}
+
 // State diagram based off of i960SA/SB Reference manual
 // Basic Bus States
 // Ti - Idle State (where we start)
@@ -316,7 +322,6 @@ void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringIdleState() noexcept;
-void waitingState() noexcept;
 State ti([]() { digitalWrite(i960Pinout::STATE_IDLE_, LOW); }, 
 		idleState, 
 		[]() { digitalWrite(i960Pinout::STATE_IDLE_, HIGH); });
@@ -329,9 +334,6 @@ State td(enteringDataState,
 State tr([]() { digitalWrite(i960Pinout::STATE_RECOVER_, LOW); }, 
 		doRecoveryState, 
 		[]() { digitalWrite(i960Pinout::STATE_RECOVER_, HIGH); });
-State tw([]() { digitalWrite(i960Pinout::STATE_WAIT_, LOW); }, 
-		waitingState,
-		[]() { digitalWrite(i960Pinout::STATE_WAIT_, HIGH); });
 Fsm fsm(&ti);
 volatile bool asTriggered = false;
 volatile uint32_t baseAddress = 0;
@@ -348,9 +350,6 @@ ISR (INT1_vect)
 	acknowledged = true;
 }
 
-void waitingState() noexcept {
-
-}
 
 void idleState() noexcept {
 	if (asTriggered) {
@@ -474,13 +473,15 @@ void setup() {
 			i960Pinout::STATE_DATA_,
 			i960Pinout::STATE_WAIT_,
 			i960Pinout::STATE_RECOVER_,
-			i960Pinout::STATE_FAIL_);
+			i960Pinout::STATE_FAIL_,
+			i960Pinout::SRAM_EN_);
 	digitalWriteBlock(HIGH,
 			i960Pinout::STATE_ADDR_,
 			i960Pinout::STATE_DATA_,
 			i960Pinout::STATE_WAIT_,
 			i960Pinout::STATE_RECOVER_,
-			i960Pinout::STATE_FAIL_);
+			i960Pinout::STATE_FAIL_,
+			i960Pinout::SRAM_EN_);
 	digitalWrite(i960Pinout::STATE_IDLE_, LOW);
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
 	{
