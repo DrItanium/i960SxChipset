@@ -365,7 +365,7 @@ State ti(pullLow<i960Pinout::STATE_IDLE_>,
 Fsm fsm(&ti);
 State ta([]() {
 			asTriggered = false;
-			digitalWrite(i960Pinout::STATE_ADDR_, LOW);
+			pullLow<i960Pinout::STATE_ADDR_>();
 		}, 
 		doAddressState, 
 		pullHigh<i960Pinout::STATE_ADDR_>);
@@ -378,19 +378,19 @@ State tr(pullLow<i960Pinout::STATE_RECOVER_>,
 State tw(pullLow<i960Pinout::STATE_WAIT_>,
 		[]() {
 			if (acknowledged) {
-				acknowledged = false;
+				pullHigh<i960Pinout::STATE_WAIT_>();
 				fsm.trigger(ToSignalReadyState);
 			}
 		},
-		pullHigh<i960Pinout::STATE_WAIT_>);
+		[]() { acknowledged = false; });
 State trdy(nullptr, []() {
 	auto result = readMemoryResult();
 	if (performingRead) {
 		setDataBits(result);
 	} 
 	auto blastPin = getBlastPin();
-	digitalWrite(i960Pinout::Ready, LOW);
-	digitalWrite(i960Pinout::Ready, HIGH);
+	pullLow<i960Pinout::Ready>();
+	pullHigh<i960Pinout::Ready>();
 	if (blastPin == LOW) {
 		// we not in burst mode
 		fsm.trigger(ReadyAndNoBurst);
