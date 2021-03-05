@@ -50,7 +50,7 @@ enum class i960Pinout : decltype(A0) {
 	Led = 0, 	  // output
    	CLOCK_OUT, // output, unusable
 	AS_,     // input, AVR Int2
-	FAIL_, // input
+	FAIL_, // input, PCINT11
 	GPIOSelect,		// output
 	MOSI,		  // reserved
 	MISO,		  // reserved
@@ -354,6 +354,7 @@ volatile bool asTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
 volatile bool acknowledged = false;
+volatile bool failTriggered = false;
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -379,7 +380,7 @@ void enteringIdleState() noexcept;
 template<i960Pinout pin> void pullLow() noexcept { digitalWrite(pin, LOW); }
 template<i960Pinout pin> void pullHigh() noexcept { digitalWrite(pin, HIGH); }
 State tStart(nullptr, startupState, nullptr);
-State tSystemTest([](){ digitalWrite(i960Pinout::STATE_FAIL_, LOW); }, systemTestState, [](){ digitalWrite(i960Pinout::STATE_FAIL_, HIGH); });
+State tSystemTest(pullLow<i960Pinout::STATE_FAIL_>, systemTestState, pullHigh<i960Pinout::STATE_FAIL_>);
 Fsm fsm(&tStart);
 State tIdle(pullLow<i960Pinout::STATE_IDLE_>, 
 		idleState, 
@@ -420,7 +421,7 @@ State tRdy(nullptr, []() {
 				fsm.trigger(ToDataState);
 			}
 		}, nullptr);
-State tChecksumFailure([]() { digitalWrite(i960Pinout::STATE_FAIL_, LOW); }, nullptr, nullptr);
+State tChecksumFailure(pullLow<i960Pinout::STATE_FAIL_>, nullptr, nullptr);
 
 void startupState() noexcept {
 	if (digitalRead(i960Pinout::FAIL_) == LOW) {
@@ -442,7 +443,6 @@ ISR (INT2_vect)
 ISR (INT1_vect) {
 	acknowledged = true;
 }
-
 
 void idleState() noexcept {
 	if (digitalRead(i960Pinout::FAIL_) == LOW) {
