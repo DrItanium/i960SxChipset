@@ -50,7 +50,7 @@ enum class i960Pinout : decltype(A0) {
 	Led = 0, 	  // output
    	CLOCK_OUT, // output, unusable
 	AS_,     // input, AVR Int2
-	FAIL_, // input, PCINT11
+	PWM4, 	 // unused 
 	GPIOSelect,		// output
 	MOSI,		  // reserved
 	MISO,		  // reserved
@@ -81,7 +81,7 @@ enum class i960Pinout : decltype(A0) {
 	STATE_RECOVER_, // output
 	STATE_FAIL_,    // output
 	SRAM_EN_,		// output
-	Analog7,
+	FAIL_,			// input, PCINT7
 	Count,		  // special
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
@@ -442,6 +442,10 @@ ISR (INT2_vect)
 
 ISR (INT1_vect) {
 	acknowledged = true;
+}
+
+ISR(PCINT1_vect) {
+	// this is for the fail pin triggering things
 }
 
 void idleState() noexcept {
