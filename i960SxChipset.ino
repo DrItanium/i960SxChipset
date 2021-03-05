@@ -554,5 +554,7 @@ void setup() {
 // the loop routine runs over and over again forever:
 void loop() {
 	fsm.run_machine();
+	// update the fail state pin
+	digitalWrite(i960Pinout::STATE_FAIL_, digitalRead(i960Pinout::FAIL_));
 	t.update();
 }
