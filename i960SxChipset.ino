@@ -354,7 +354,6 @@ volatile bool asTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
 volatile bool acknowledged = false;
-volatile bool failTriggered = false;
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -444,9 +443,6 @@ ISR (INT1_vect) {
 	acknowledged = true;
 }
 
-ISR(PCINT1_vect) {
-	// this is for the fail pin triggering things
-}
 
 void idleState() noexcept {
 	if (digitalRead(i960Pinout::FAIL_) == LOW) {
