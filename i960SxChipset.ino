@@ -309,9 +309,17 @@ uint16_t readMemoryResult() noexcept {
 	return read16Bits();
 }
 
+// The bootup process has a separate set of states
+// TStart - Where we start
+// TSystemTest - Processor performs self test
+//
+// TStart -> TSystemTest via FAIL_ being asserted
+// TSystemTest -> Ti via FAIL_ being deasserted
+// 
+// State machine will stay here for the duration
 // State diagram based off of i960SA/SB Reference manual
 // Basic Bus States
-// Ti - Idle State (where we start)
+// Ti - Idle State
 // Ta - Address State
 // Td - Data State
 // Tr - Recovery State
@@ -351,6 +359,13 @@ constexpr auto RequestPending = 5;
 constexpr auto ToDataState = 6;
 constexpr auto ToSignalReadyState = 7;
 constexpr auto ToSignalWaitState = 8;
+constexpr auto PerformSelfTest = 9;
+constexpr auto SelfTestComplete = 10;
+constexpr auto ChecksumFailure = 11;
+void startingSystemTest() noexcept;
+void systemTestPassed() noexcept;
+void startupState() noexcept;
+void systemTestState() noexcept;
 void idleState() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
@@ -359,23 +374,25 @@ void enteringDataState() noexcept;
 void enteringIdleState() noexcept;
 template<i960Pinout pin> void pullLow() noexcept { digitalWrite(pin, LOW); }
 template<i960Pinout pin> void pullHigh() noexcept { digitalWrite(pin, HIGH); }
-State ti(pullLow<i960Pinout::STATE_IDLE_>, 
+State tStart(nullptr, startupState, nullptr);
+State tSystemTest([](){ digitalWrite(i960Pinout::STATE_FAIL_, LOW); }, systemTestState, [](){ digitalWrite(i960Pinout::STATE_FAIL_, HIGH); });
+Fsm fsm(&tStart);
+State tIdle(pullLow<i960Pinout::STATE_IDLE_>, 
 		idleState, 
 		pullHigh<i960Pinout::STATE_IDLE_>);
-Fsm fsm(&ti);
-State ta([]() {
+State tAddr([]() {
 			asTriggered = false;
 			pullLow<i960Pinout::STATE_ADDR_>();
 		}, 
 		doAddressState, 
 		pullHigh<i960Pinout::STATE_ADDR_>);
-State td(enteringDataState, 
+State tData(enteringDataState, 
 		processDataRequest, 
 		pullHigh<i960Pinout::STATE_DATA_>);
-State tr(pullLow<i960Pinout::STATE_RECOVER_>, 
+State tRecovery(pullLow<i960Pinout::STATE_RECOVER_>, 
 		doRecoveryState,
 		pullHigh<i960Pinout::STATE_RECOVER_>);
-State tw(pullLow<i960Pinout::STATE_WAIT_>,
+State tWait(pullLow<i960Pinout::STATE_WAIT_>,
 		[]() {
 			if (acknowledged) {
 				pullHigh<i960Pinout::STATE_WAIT_>();
@@ -383,22 +400,34 @@ State tw(pullLow<i960Pinout::STATE_WAIT_>,
 			}
 		},
 		[]() { acknowledged = false; });
-State trdy(nullptr, []() {
-	auto result = readMemoryResult();
-	if (performingRead) {
-		setDataBits(result);
-	} 
-	auto blastPin = getBlastPin();
-	pullLow<i960Pinout::Ready>();
-	pullHigh<i960Pinout::Ready>();
-	if (blastPin == LOW) {
-		// we not in burst mode
-		fsm.trigger(ReadyAndNoBurst);
-	}  else {
-		// we are in burst mode so move back to data state
-		fsm.trigger(ToDataState);
-	}
+State tRdy(nullptr, []() {
+			auto result = readMemoryResult();
+			if (performingRead) {
+				setDataBits(result);
+			} 
+			auto blastPin = getBlastPin();
+			pullLow<i960Pinout::Ready>();
+			pullHigh<i960Pinout::Ready>();
+			if (blastPin == LOW) {
+				// we not in burst mode
+				fsm.trigger(ReadyAndNoBurst);
+			}  else {
+				// we are in burst mode so move back to data state
+				fsm.trigger(ToDataState);
+			}
 		}, nullptr);
+State tChecksumFailure([]() { digitalWrite(i960Pinout::STATE_FAIL_, LOW); }, nullptr, nullptr);
+
+void startupState() noexcept {
+	if (digitalRead(i960Pinout::FAIL_) == LOW) {
+		fsm.trigger(PerformSelfTest);
+	}
+}
+void systemTestState() noexcept {
+	if (digitalRead(i960Pinout::FAIL_) == HIGH) {
+		fsm.trigger(SelfTestComplete);
+	}
+}
 
 ISR (INT2_vect)
 {
@@ -412,8 +441,12 @@ ISR (INT1_vect) {
 
 
 void idleState() noexcept {
-	if (asTriggered) {
-		fsm.trigger(NewRequest);
+	if (digitalRead(i960Pinout::FAIL_) == LOW) {
+		fsm.trigger(ChecksumFailure);
+	} else {
+		if (asTriggered) {
+			fsm.trigger(NewRequest);
+		}
 	}
 }
 void doAddressState() noexcept {
@@ -444,24 +477,31 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
-	if (asTriggered) {
-		fsm.trigger(RequestPending);
+	if (digitalRead(i960Pinout::FAIL_) == LOW) {
+		fsm.trigger(ChecksumFailure);
 	} else {
-		fsm.trigger(NoRequest);
+		if (asTriggered) {
+			fsm.trigger(RequestPending);
+		} else {
+			fsm.trigger(NoRequest);
+		}
 	}
 }
 
 
 void setupBusStateMachine() noexcept {
-	fsm.add_transition(&ti, &ta, NewRequest, nullptr);
-	fsm.add_transition(&ta, &td, ToDataState, nullptr);
-	//fsm.add_transition(&td, &tr, ReadyAndNoBurst, nullptr);
-	fsm.add_transition(&tr, &ta, RequestPending, nullptr);
-	fsm.add_transition(&tr, &ti, NoRequest, nullptr);
-	fsm.add_transition(&td, &tw, ToSignalWaitState, nullptr);
-	fsm.add_transition(&tw, &trdy, ToSignalReadyState, nullptr);
-	fsm.add_transition(&trdy, &tr, ReadyAndNoBurst, nullptr);
-	fsm.add_transition(&trdy, &td, ToDataState, nullptr);
+	fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
+	fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
+	fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
+	fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
+	fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
+	fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
+	fsm.add_transition(&tData, &tWait, ToSignalWaitState, nullptr);
+	fsm.add_transition(&tWait, &tRdy, ToSignalReadyState, nullptr);
+	fsm.add_transition(&tRdy, &tRecovery, ReadyAndNoBurst, nullptr);
+	fsm.add_transition(&tRdy, &tData, ToDataState, nullptr);
+	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
+	fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
 }
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
