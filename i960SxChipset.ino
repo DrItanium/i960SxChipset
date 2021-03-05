@@ -324,6 +324,7 @@ uint16_t readMemoryResult() noexcept {
 // Td - Data State
 // Tr - Recovery State
 // Tw - Wait State
+// TChecksumFailure - Checksum Failure State
 
 // READY - ~READY asserted
 // NOT READY - ~READY not asserted
@@ -344,6 +345,9 @@ uint16_t readMemoryResult() noexcept {
 // Td -> Tw if not ready 
 // Tw -> Td if ready and burst (blast high)
 // Tw -> Tr after signaling ready and no burst (blast low)
+
+// Ti -> TChecksumFailure if FAIL_ is asserted
+// Tr -> TChecksumFailure if FAIL_ is asserted
 
 // NOTE: Tw may turn out to be synthetic
 volatile bool asTriggered = false;
@@ -493,15 +497,15 @@ void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
 	fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
 	fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
+	fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
 	fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
-	fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
-	fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
 	fsm.add_transition(&tData, &tWait, ToSignalWaitState, nullptr);
 	fsm.add_transition(&tWait, &tRdy, ToSignalReadyState, nullptr);
 	fsm.add_transition(&tRdy, &tRecovery, ReadyAndNoBurst, nullptr);
 	fsm.add_transition(&tRdy, &tData, ToDataState, nullptr);
+	fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
+	fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
 	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
-	fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
 }
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
