@@ -581,25 +581,18 @@ void setup() {
 			i960Pinout::SRAM_EN_);
 	digitalWrite(i960Pinout::STATE_IDLE_, LOW);
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-	{
-		HoldPinLow<i960Pinout::Reset960> holdi960InReset;
-		SPI.begin();
+	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
+	SPI.begin();
 
-		setupIOExpanders();
-		setupCPUInterface();
-		setupBusStateMachine();
+	setupIOExpanders();
+	setupCPUInterface();
+	setupBusStateMachine();
 
-		Serial.println("Finished starting up!");
-		Serial.println("Waiting 2 seconds!");
-		delay(2000);
-	}
+	Serial.println("Finished starting up!");
+	Serial.println("Holding reset line for a second to make sure!");
 	delay(1000);
-	// At this point the cpu will have started up and we must check out the
-	// fail circuit during bootup.
+	// we want to jump into the code as soon as possible after this point
 }
-/// @todo implement bootup fail state detection. Probably have to use a discrete circuit
-/// 
-// the loop routine runs over and over again forever:
 void loop() {
 	fsm.run_machine();
 	// update the fail state pin
