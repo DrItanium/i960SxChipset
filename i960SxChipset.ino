@@ -138,9 +138,13 @@ struct DigitalPin {
 		static constexpr auto getDirection() noexcept { return OUTPUT; } \
 		static constexpr auto getAssertionState() noexcept { return asserted; } \
 		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		static void assert() noexcept { digitalWrite(pin, getAssertionState()); } \
-		static void deassert() noexcept { digitalWrite(pin, getDeassertionState()); } \
-		static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
+		inline static void assert() noexcept { digitalWrite(pin, getAssertionState()); } \
+		inline static void deassert() noexcept { digitalWrite(pin, getDeassertionState()); } \
+		inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
+		inline static void pulse() noexcept { \
+			assert(); \
+			deassert(); \
+		} \
 	}
 #define DefInputPin(pin, asserted, deasserted) \
 	template<> \
@@ -158,9 +162,9 @@ struct DigitalPin {
 		static constexpr auto getDirection() noexcept { return INPUT; } \
 		static constexpr auto getAssertionState() noexcept { return asserted; } \
 		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		static bool isAsserted() noexcept { digitalRead(pin) == getAssertionState(); } \
-		static bool isDeasserted() noexcept { digitalRead(pin) == getDeassertionState(); } \
-		static auto read() noexcept { return digitalRead(pin); } \
+		inline static bool isAsserted() noexcept { digitalRead(pin) == getAssertionState(); } \
+		inline static bool isDeasserted() noexcept { digitalRead(pin) == getDeassertionState(); } \
+		inline static auto read() noexcept { return digitalRead(pin); } \
 	}
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::SRAM_EN_, LOW, HIGH);
@@ -171,6 +175,7 @@ DefOutputPin(i960Pinout::STATE_ADDR_, LOW, HIGH);
 DefOutputPin(i960Pinout::STATE_RECOVER_, LOW, HIGH);
 DefOutputPin(i960Pinout::STATE_FAIL_, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
+DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
@@ -455,30 +460,28 @@ void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringIdleState() noexcept;
-template<i960Pinout pin> void pullLow() noexcept { digitalWrite(pin, LOW); }
-template<i960Pinout pin> void pullHigh() noexcept { digitalWrite(pin, HIGH); }
 State tStart(nullptr, startupState, nullptr);
-State tSystemTest(pullLow<i960Pinout::STATE_FAIL_>, systemTestState, pullHigh<i960Pinout::STATE_FAIL_>);
+State tSystemTest(DigitalPin<i960Pinout::STATE_FAIL_>::assert, systemTestState, DigitalPin<i960Pinout::STATE_FAIL_>::deassert);
 Fsm fsm(&tStart);
-State tIdle(pullLow<i960Pinout::STATE_IDLE_>, 
+State tIdle(DigitalPin<i960Pinout::STATE_IDLE_>::assert, 
 		idleState, 
-		pullHigh<i960Pinout::STATE_IDLE_>);
+		DigitalPin<i960Pinout::STATE_IDLE_>::deassert);
 State tAddr([]() {
 			asTriggered = false;
-			pullLow<i960Pinout::STATE_ADDR_>();
+			DigitalPin<i960Pinout::STATE_ADDR_>::assert();
 		}, 
 		doAddressState, 
-		pullHigh<i960Pinout::STATE_ADDR_>);
+		DigitalPin<i960Pinout::STATE_ADDR_>::deassert);
 State tData(enteringDataState, 
 		processDataRequest, 
-		pullHigh<i960Pinout::STATE_DATA_>);
-State tRecovery(pullLow<i960Pinout::STATE_RECOVER_>, 
+		DigitalPin<i960Pinout::STATE_DATA_>::deassert);
+State tRecovery(DigitalPin<i960Pinout::STATE_RECOVER_>::assert,
 		doRecoveryState,
-		pullHigh<i960Pinout::STATE_RECOVER_>);
-State tWait(pullLow<i960Pinout::STATE_WAIT_>,
+		DigitalPin<i960Pinout::STATE_RECOVER_>::deassert);
+State tWait(DigitalPin<i960Pinout::STATE_WAIT_>::assert,
 		[]() {
 			if (acknowledged) {
-				pullHigh<i960Pinout::STATE_WAIT_>();
+				DigitalPin<i960Pinout::STATE_WAIT_>::deassert();
 				fsm.trigger(ToSignalReadyState);
 			}
 		},
@@ -489,8 +492,7 @@ State tRdy(nullptr, []() {
 				setDataBits(result);
 			} 
 			auto blastPin = getBlastPin();
-			pullLow<i960Pinout::Ready>();
-			pullHigh<i960Pinout::Ready>();
+			DigitalPin<i960Pinout::Ready>::pulse();
 			if (blastPin == LOW) {
 				// we not in burst mode
 				fsm.trigger(ReadyAndNoBurst);
@@ -499,7 +501,7 @@ State tRdy(nullptr, []() {
 				fsm.trigger(ToDataState);
 			}
 		}, nullptr);
-State tChecksumFailure(pullLow<i960Pinout::STATE_FAIL_>, nullptr, nullptr);
+State tChecksumFailure(DigitalPin<i960Pinout::STATE_FAIL_>::assert, nullptr, nullptr);
 
 
 void startupState() noexcept {
@@ -542,7 +544,7 @@ void doAddressState() noexcept {
 
 void
 enteringDataState() noexcept {
-	digitalWrite(i960Pinout::STATE_DATA_, LOW);
+	DigitalPin<i960Pinout::STATE_DATA_>::assert();
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
