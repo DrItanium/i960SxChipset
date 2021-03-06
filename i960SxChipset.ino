@@ -86,6 +86,18 @@ enum class i960Pinout : decltype(A0) {
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 
+inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
+	digitalWrite(static_cast<int>(ip), value);
+}
+
+inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
+	pinMode(static_cast<int>(ip), value);
+}
+
+inline auto digitalRead(i960Pinout ip) {
+	return digitalRead(static_cast<int>(ip));
+}
+
 enum class IOExpanderAddress : byte {
 	DataLines = 0b000,
 	Lower16Lines,
@@ -96,37 +108,74 @@ enum class IOExpanderAddress : byte {
 	OtherDevice2,
 	OtherDevice3,
 };
-
-template<i960Pinout pin> 
-struct InputPinState {
-	InputPinState() = delete;
-	~InputPinState() = delete;
-	InputPinState(const InputPinState&) = delete;
-	InputPinState(InputPinState&&) = delete;
-	InputPinState& operator=(const InputPinState&) = delete;
-	InputPinState& operator=(InputPinState&&) = delete;
+template<i960Pinout pin>
+struct DigitalPin {
+	DigitalPin() = delete;
+	~DigitalPin() = delete;
+	DigitalPin(const DigitalPin&) = delete;
+	DigitalPin(DigitalPin&&) = delete;
+	DigitalPin& operator=(const DigitalPin&) = delete;
+	DigitalPin& operator=(DigitalPin&&) = delete;
+	static constexpr bool isInputPin() noexcept { return false; }
+	static constexpr bool isOutputPin() noexcept { return false; }
+	static constexpr bool getDirection() noexcept { return false; }
+	static constexpr auto getPin() noexcept { return pin; }
 };
 
-#define DescribeInputPinStates(pin, asserted, deasserted) \
+#define DefOutputPin(pin, asserted, deasserted) \
 	template<> \
-	struct InputPinState < pin > { \
-	InputPinState() = delete; \
-	~InputPinState() = delete; \
-	InputPinState(const InputPinState&) = delete; \
-	InputPinState(InputPinState&&) = delete; \
-	InputPinState& operator=(const InputPinState&) = delete; \
-	InputPinState& operator=(InputPinState&&) = delete; \
-		using T = decltype(asserted); \
-	static constexpr auto getPin() noexcept { return pin; } \
-	static constexpr auto getAssertionState() noexcept { return asserted; } \
-	static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-	static constexpr bool isAsserted(T value) noexcept { return asserted == value; } \
-	static constexpr bool isDeasserted(T value) noexcept { return deasserted == value; } \
+	struct DigitalPin< pin > { \
+	static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
+		DigitalPin() = delete; \
+		~DigitalPin() = delete; \
+		DigitalPin(const DigitalPin&) = delete; \
+		DigitalPin(DigitalPin&&) = delete; \
+		DigitalPin& operator=(const DigitalPin&) = delete; \
+		DigitalPin& operator=(DigitalPin&&) = delete; \
+		static constexpr auto isInputPin() noexcept { return false; } \
+		static constexpr auto isOutputPin() noexcept { return true; } \
+		static constexpr auto getPin() noexcept { return pin; } \
+		static constexpr auto getDirection() noexcept { return OUTPUT; } \
+		static constexpr auto getAssertionState() noexcept { return asserted; } \
+		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
+		static void assert() noexcept { digitalWrite(pin, getAssertionState()); } \
+		static void deassert() noexcept { digitalWrite(pin, getDeassertionState()); } \
+		static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
 	}
-DescribeInputPinStates(i960Pinout::FAIL, HIGH, LOW);
-DescribeInputPinStates(i960Pinout::DEN_, LOW, HIGH);
-DescribeInputPinStates(i960Pinout::AS_, LOW, HIGH);
-#undef DescribeInputPinStates
+#define DefInputPin(pin, asserted, deasserted) \
+	template<> \
+	struct DigitalPin< pin > { \
+		static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
+		DigitalPin() = delete; \
+		~DigitalPin() = delete; \
+		DigitalPin(const DigitalPin&) = delete; \
+		DigitalPin(DigitalPin&&) = delete; \
+		DigitalPin& operator=(const DigitalPin&) = delete; \
+		DigitalPin& operator=(DigitalPin&&) = delete; \
+		static constexpr auto isInputPin() noexcept { return true; } \
+		static constexpr auto isOutputPin() noexcept { return false; } \
+		static constexpr auto getPin() noexcept { return pin; } \
+		static constexpr auto getDirection() noexcept { return INPUT; } \
+		static constexpr auto getAssertionState() noexcept { return asserted; } \
+		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
+		static bool isAsserted() noexcept { digitalRead(pin) == getAssertionState(); } \
+		static bool isDeasserted() noexcept { digitalRead(pin) == getDeassertionState(); } \
+		static auto read() noexcept { return digitalRead(pin); } \
+	}
+DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
+DefOutputPin(i960Pinout::SRAM_EN_, LOW, HIGH);
+DefOutputPin(i960Pinout::STATE_DATA_, LOW, HIGH);
+DefOutputPin(i960Pinout::STATE_WAIT_, LOW, HIGH);
+DefOutputPin(i960Pinout::STATE_IDLE_, LOW, HIGH);
+DefOutputPin(i960Pinout::STATE_ADDR_, LOW, HIGH);
+DefOutputPin(i960Pinout::STATE_RECOVER_, LOW, HIGH);
+DefOutputPin(i960Pinout::STATE_FAIL_, LOW, HIGH);
+DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
+DefInputPin(i960Pinout::FAIL, HIGH, LOW);
+DefInputPin(i960Pinout::DEN_, LOW, HIGH);
+DefInputPin(i960Pinout::AS_, LOW, HIGH);
+#undef DefInputPin
+#undef DefOutputPin
 
 /**
  * Normally generated by the linker as the value used for validation purposes
@@ -141,13 +190,6 @@ constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) n
 template<IOExpanderAddress addr, int enablePin = static_cast<int>(i960Pinout::GPIOSelect)>
 using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr), enablePin>;
 
-inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
-	digitalWrite(static_cast<int>(ip), value);
-}
-
-inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
-	pinMode(static_cast<int>(ip), value);
-}
 
 template<typename ... Pins>
 void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
@@ -166,14 +208,20 @@ class PinToggler {
 		~PinToggler() { digitalWrite(pinId, onDestruction); }
 };
 
-inline auto digitalRead(i960Pinout ip) {
-	return digitalRead(static_cast<int>(ip));
-}
 template<i960Pinout pinId>
 using HoldPinLow = PinToggler<pinId, LOW, HIGH>;
 
 template<i960Pinout pinId>
 using HoldPinHigh = PinToggler<pinId, HIGH, LOW>;
+
+template<i960Pinout pinId>
+class PinAsserter {
+	public:
+		static_assert(DigitalPin<pinId>::isOutputPin());
+		PinAsserter() { DigitalPin<pinId>::assert(); }
+		~PinAsserter() { DigitalPin<pinId>::deassert(); }
+};
+
 
 // 8 IOExpanders to a single enable line for SPI purposes 
 // 4 of them are reserved
@@ -453,22 +501,14 @@ State tRdy(nullptr, []() {
 		}, nullptr);
 State tChecksumFailure(pullLow<i960Pinout::STATE_FAIL_>, nullptr, nullptr);
 
-template<i960Pinout pin>
-bool inputPinAsserted() noexcept {
-	return InputPinState<pin>::isAsserted(digitalRead(pin));
-}
-template<i960Pinout pin>
-bool inputPinDeasserted() noexcept {
-	return InputPinState<pin>::isDeasserted(digitalRead(pin));
-}
 
 void startupState() noexcept {
-	if (inputPinAsserted<i960Pinout::FAIL>()) {
+	if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
 		fsm.trigger(PerformSelfTest);
 	}
 }
 void systemTestState() noexcept {
-	if (inputPinDeasserted<i960Pinout::FAIL>()) {
+	if (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
 		fsm.trigger(SelfTestComplete);
 	}
 }
@@ -485,7 +525,7 @@ ISR (INT1_vect) {
 
 
 void idleState() noexcept {
-	if (inputPinAsserted<i960Pinout::FAIL>()) {
+	if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
 		fsm.trigger(ChecksumFailure);
 	} else {
 		if (asTriggered) {
@@ -494,7 +534,7 @@ void idleState() noexcept {
 	}
 }
 void doAddressState() noexcept {
-	if (inputPinAsserted<i960Pinout::DEN_>()) {
+	if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
 		fsm.trigger(ToDataState);
 	}
 }
@@ -521,7 +561,7 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
-	if (inputPinAsserted<i960Pinout::FAIL>()) {
+	if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
 		fsm.trigger(ChecksumFailure);
 	} else {
 		if (asTriggered) {
@@ -615,9 +655,9 @@ void setup() {
 			i960Pinout::STATE_RECOVER_,
 			i960Pinout::STATE_FAIL_,
 			i960Pinout::SRAM_EN_);
-	digitalWrite(i960Pinout::STATE_IDLE_, LOW);
+	DigitalPin<i960Pinout::STATE_IDLE_>::assert();
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-	HoldPinLow<i960Pinout::Reset960> holdi960InReset;
+	PinAsserter<i960Pinout::Reset960> holdi960InReset;
 	SPI.begin();
 
 	setupIOExpanders();
@@ -632,6 +672,6 @@ void setup() {
 void loop() {
 	fsm.run_machine();
 	// update the fail state pin
-	digitalWrite(i960Pinout::STATE_FAIL_, digitalRead(i960Pinout::FAIL) == LOW);
+	DigitalPin<i960Pinout::STATE_FAIL_>::write(DigitalPin<i960Pinout::FAIL>::isDeasserted());
 	t.update();
 }
