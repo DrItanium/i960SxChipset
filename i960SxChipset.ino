@@ -384,6 +384,11 @@ void transferAddress(Address address) noexcept {
 void writeMemoryRequest(Address address, uint16_t value) noexcept {
 	uint16_t operation = isWriteOperation() ? 0b100 : 0b000;
 	operation |= getByteEnableBits();
+	Serial.println("Command: ");
+	Serial.println(OpcodeWrite, HEX);
+	Serial.println(operation, HEX);
+	Serial.println(address, HEX);
+	Serial.println(value, HEX);
 	PinAsserter<i960Pinout::SRAM_EN_> holder;
 	SPI.transfer(OpcodeWrite);
 	// we save to address zero in the sram

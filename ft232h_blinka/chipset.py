@@ -15,6 +15,7 @@ with busio.SPI(board.SCK, board.MOSI, board.MISO) as spi:
     cs = digitalio.DigitalInOut(board.D4)
     ack = digitalio.DigitalInOut(board.D6)
     ack.direction = digitalio.Direction.OUTPUT
+    ack.value = True
     atmega1284pSync = digitalio.DigitalInOut(board.D5)
     cs.direction = digitalio.Direction.OUTPUT
     cs.value = True
