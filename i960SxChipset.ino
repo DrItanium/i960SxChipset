@@ -377,6 +377,8 @@ void transferAddress(Address address) noexcept {
 	SPI.transfer(static_cast<uint8_t>(address));
 }
 void writeMemoryRequest(Address address, uint16_t value) noexcept {
+	// @todo reimplement to be a standalone thing
+	// I have dropped the interface to the ft232h
 	uint16_t operation = isWriteOperation() ? 0b100 : 0b000;
 	operation |= getByteEnableBits();
 	setIsolatedSPIBusId(0); // SRAM
