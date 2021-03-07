@@ -59,8 +59,8 @@ enum class i960Pinout : decltype(A0) {
 	RX0, 		  // reserved
 	TX0, 		  // reserved
 	AVR_INT0,	  // AVR Interrupt INT0
-	MEMACK_,	  // AVR Interrupt INT1
-	PWM0,		  // unused
+	AVR_INT1, 		// AVR Interrupt INT1
+	MEMACK_,	  // input
 	PWM1, 		  // unused
 	PWM2, 		  // unused
 	PWM3, 		  // unused
@@ -201,6 +201,7 @@ DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
+DefInputPin(i960Pinout::MEMACK_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 #undef DefInputPullupPin
@@ -454,7 +455,6 @@ uint16_t readMemoryResult() noexcept {
 volatile bool asTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
-volatile bool acknowledged = false;
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -497,12 +497,11 @@ State tRecovery(DigitalPin<i960Pinout::STATE_RECOVER_>::assert,
 		DigitalPin<i960Pinout::STATE_RECOVER_>::deassert);
 State tWait(DigitalPin<i960Pinout::STATE_WAIT_>::assert,
 		[]() {
-			if (acknowledged) {
-				DigitalPin<i960Pinout::STATE_WAIT_>::deassert();
+			if (DigitalPin<i960Pinout::MEMACK_>::isAsserted()) {
 				fsm.trigger(ToSignalReadyState);
 			}
 		},
-		[]() { acknowledged = false; });
+		DigitalPin<i960Pinout::STATE_WAIT_>::deassert);
 State tRdy(nullptr, []() {
 			if (auto result = readMemoryResult(); performingRead) {
 				setDataBits(result);
@@ -539,9 +538,6 @@ ISR (INT2_vect)
 	// this is the AS_ pin doing its thing
 }
 
-ISR (INT1_vect) {
-	acknowledged = true;
-}
 
 
 void idleState() noexcept {
@@ -577,9 +573,6 @@ void processDataRequest() noexcept {
 	auto usedAddress = getBurstAddress(baseAddress);
 	writeMemoryRequest(usedAddress, performingRead ? 0 : getDataBits());
 	fsm.trigger(ToSignalWaitState);
-	while (!acknowledged) {
-		// wait
-	}
 	// at the end of the day, signal ready on the request
 	// get the base address 
 }
@@ -632,8 +625,8 @@ void setupCPUInterface() {
 			i960Pinout::DEN_,
 			i960Pinout::FAIL,
 			i960Pinout::MEMACK_);
-	EIMSK |= 0b110; // enable INT2 and INT1 pin
-	EICRA |= 0b101000; // trigger on falling edge
+	EIMSK |= 0b100; // enable INT2 pin
+	EICRA |= 0b100000; // trigger on falling edge
 }
 void setupIOExpanders() {
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
