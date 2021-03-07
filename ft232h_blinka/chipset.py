@@ -4,13 +4,36 @@ import board
 import busio
 import digitalio
 from adafruit_bus_device.spi_device import SPIDevice
+from statemachine import StateMachine, State
 
 # make a storage block of 1 gigabyte
 # zero out memory to make sure it is allocated
+def pulseLow(pin):
+    pin.value = False
+    pin.value = True
+
 print("Starting up!")
-mcuReset = digitalio.DigitalInOut(board.D7)
-mcuReset.direction = digitalio.Direction.OUTPUT
-mcuReset.value = False
+reset960 = digitalio.DigitalInOut(board.C0)
+reset960.direction = digitalio.Direction.OUTPUT
+reset960.value = False # hold in reset for the time being
+int0 = digitalio.DigitalInOut(board.C1)
+int0.direction = digitalio.Direction.OUTPUT
+int0.value = True # default to high
+wr = digitalio.DigitalInOut(board.C2)
+wr.direction = digitalio.Direction.INPUT
+den = digitalio.DigitalInOut(board.C3)
+den.direction = digitalio.Direction.INPUT
+addrState = digitalio.DigitalInOut(board.C4)
+addrState.direction = digitalio.Direction.INPUT
+ready = digitalio.DigitalInOut(board.C5)
+ready.direction = digitalio.Direction.OUTPUT
+ready.value = True # default to high
+blast = digitalio.DigitalInOut(board.C6)
+blast.direction = digitalio.Direction.INPUT
+fail = digitalio.DigitalInOut(board.C7)
+fail.direction = digitalio.Direction.INPUT
+
+
 i960Memory = bytearray(1024 * 1024 * 1024)
 with busio.SPI(board.SCK, board.MOSI, board.MISO) as spi:
     cs = digitalio.DigitalInOut(board.D4)
