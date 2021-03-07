@@ -7,6 +7,7 @@ from adafruit_bus_device.spi_device import SPIDevice
 
 # make a storage block of 1 gigabyte
 # zero out memory to make sure it is allocated
+print("Starting up!")
 mcuReset = digitalio.DigitalInOut(board.D7)
 mcuReset.direction = digitalio.Direction.OUTPUT
 mcuReset.value = False
@@ -29,6 +30,7 @@ with busio.SPI(board.SCK, board.MOSI, board.MISO) as spi:
     readCommand[3] = 0x00
     inputBuffer = bytearray(8)
     outputBuffer = bytearray(2)
+    print("Done Setting up!")
     mcuReset.value = True
     while True:
         # keep waiting until sync pin goes low

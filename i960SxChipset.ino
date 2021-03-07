@@ -311,6 +311,9 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	Count,
 };
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
+void setIsolatedSPIBusId(uint8_t id) noexcept {
+	extraMemoryCommit.writePortB(id);
+}
 
 uint8_t getByteEnableBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
@@ -389,6 +392,7 @@ void writeMemoryRequest(Address address, uint16_t value) noexcept {
 	Serial.println(operation, HEX);
 	Serial.println(address, HEX);
 	Serial.println(value, HEX);
+	setIsolatedSPIBusId(0); // SRAM
 	PinAsserter<i960Pinout::SRAM_EN_> holder;
 	SPI.transfer(OpcodeWrite);
 	// we save to address zero in the sram
@@ -399,6 +403,7 @@ void writeMemoryRequest(Address address, uint16_t value) noexcept {
 }
 
 uint16_t readMemoryResult() noexcept {
+	setIsolatedSPIBusId(0); // SRAM
 	PinAsserter<i960Pinout::SRAM_EN_> holder;
 	SPI.transfer(OpcodeRead);
 	transferAddress(MemoryResultLocation);
@@ -516,11 +521,13 @@ State tChecksumFailure(DigitalPin<i960Pinout::STATE_FAIL_>::assert, nullptr, nul
 
 
 void startupState() noexcept {
+	Serial.println("Startup");
 	if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
 		fsm.trigger(PerformSelfTest);
 	}
 }
 void systemTestState() noexcept {
+	Serial.println("System Test");
 	if (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
 		fsm.trigger(SelfTestComplete);
 	}
@@ -538,6 +545,7 @@ ISR (INT1_vect) {
 
 
 void idleState() noexcept {
+	Serial.println("IDLE");
 	if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
 		fsm.trigger(ChecksumFailure);
 	} else {
@@ -547,6 +555,7 @@ void idleState() noexcept {
 	}
 }
 void doAddressState() noexcept {
+	Serial.println("ADDRESS");
 	if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
 		fsm.trigger(ToDataState);
 	}
@@ -555,6 +564,7 @@ void doAddressState() noexcept {
 
 void
 enteringDataState() noexcept {
+	Serial.println("DATA");
 	DigitalPin<i960Pinout::STATE_DATA_>::assert();
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
@@ -563,6 +573,7 @@ enteringDataState() noexcept {
 
 
 void processDataRequest() noexcept {
+	Serial.println("WAIT");
 	auto usedAddress = getBurstAddress(baseAddress);
 	writeMemoryRequest(usedAddress, performingRead ? 0 : getDataBits());
 	fsm.trigger(ToSignalWaitState);
@@ -574,6 +585,7 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
+	Serial.println("RECOVERY");
 	if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
 		fsm.trigger(ChecksumFailure);
 	} else {
@@ -645,6 +657,7 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
+	setIsolatedSPIBusId(0); // use the sram scratch device
 }
 
 // the setup routine runs once when you press reset:
