@@ -363,22 +363,13 @@ constexpr auto MemoryResultLocation = 0x00'0100;
 constexpr auto OpcodeWrite = 0b0000'0010;
 constexpr auto OpcodeRead = 0b0000'0011;
 
-void transfer16Bits(uint16_t value) noexcept {
-	SPI.transfer(value);
-	SPI.transfer(value >> 8);
-}
-
-uint16_t read16Bits() noexcept {
-	auto lower = static_cast<uint16_t>(SPI.transfer(0));
-	auto upper = static_cast<uint16_t>(SPI.transfer(0));
-	return (upper << 8) | lower;
+uint16_t transfer16Bits(uint16_t value) noexcept {
+	return SPI.transfer16(value);
 }
 
 void transfer32Bits(uint32_t value) noexcept {
-	SPI.transfer(value);
-	SPI.transfer(value >> 8);
-	SPI.transfer(value >> 16);
-	SPI.transfer(value >> 24);
+	SPI.transfer16(value >> 16);
+	SPI.transfer16(value);
 }
 void transferAddress(Address address) noexcept {
 	SPI.transfer(static_cast<uint8_t>(address >> 16));
@@ -388,11 +379,6 @@ void transferAddress(Address address) noexcept {
 void writeMemoryRequest(Address address, uint16_t value) noexcept {
 	uint16_t operation = isWriteOperation() ? 0b100 : 0b000;
 	operation |= getByteEnableBits();
-	Serial.println("Command: ");
-	Serial.println(OpcodeWrite, HEX);
-	Serial.println(operation, HEX);
-	Serial.println(address, HEX);
-	Serial.println(value, HEX);
 	setIsolatedSPIBusId(0); // SRAM
 	PinAsserter<i960Pinout::SRAM_EN_> holder;
 	SPI.transfer(OpcodeWrite);
@@ -401,6 +387,8 @@ void writeMemoryRequest(Address address, uint16_t value) noexcept {
 	transfer16Bits(operation);
 	transfer32Bits(address);
 	transfer16Bits(value);
+
+
 }
 
 uint16_t readMemoryResult() noexcept {
@@ -408,7 +396,7 @@ uint16_t readMemoryResult() noexcept {
 	PinAsserter<i960Pinout::SRAM_EN_> holder;
 	SPI.transfer(OpcodeRead);
 	transferAddress(MemoryResultLocation);
-	return read16Bits();
+	return transfer16Bits(0);
 }
 
 // The bootup process has a separate set of states
@@ -497,13 +485,17 @@ State tRecovery(DigitalPin<i960Pinout::STATE_RECOVER_>::assert,
 		DigitalPin<i960Pinout::STATE_RECOVER_>::deassert);
 State tWait(DigitalPin<i960Pinout::STATE_WAIT_>::assert,
 		[]() {
+			Serial.println("WAIT");
 			if (DigitalPin<i960Pinout::MEMACK_>::isAsserted()) {
 				fsm.trigger(ToSignalReadyState);
 			}
 		},
 		DigitalPin<i960Pinout::STATE_WAIT_>::deassert);
 State tRdy(nullptr, []() {
+			Serial.println("RDY");
 			if (auto result = readMemoryResult(); performingRead) {
+				Serial.print("Result value: 0x");
+				Serial.println(result, HEX);
 				setDataBits(result);
 			} 
 			auto blastPin = getBlastPin();
@@ -560,7 +552,6 @@ void doAddressState() noexcept {
 
 void
 enteringDataState() noexcept {
-	Serial.println("DATA");
 	DigitalPin<i960Pinout::STATE_DATA_>::assert();
 	// when we do the transition, record the information we need
 	baseAddress = getAddress();
@@ -569,7 +560,7 @@ enteringDataState() noexcept {
 
 
 void processDataRequest() noexcept {
-	Serial.println("WAIT");
+	Serial.println("DATA");
 	auto usedAddress = getBurstAddress(baseAddress);
 	writeMemoryRequest(usedAddress, performingRead ? 0 : getDataBits());
 	fsm.trigger(ToSignalWaitState);
@@ -650,7 +641,6 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
-	setIsolatedSPIBusId(0); // use the sram scratch device
 }
 
 // the setup routine runs once when you press reset:
