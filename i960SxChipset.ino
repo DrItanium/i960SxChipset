@@ -380,13 +380,31 @@ void writeMemoryRequest(Address address, uint16_t value) noexcept {
 	uint16_t operation = isWriteOperation() ? 0b100 : 0b000;
 	operation |= getByteEnableBits();
 	setIsolatedSPIBusId(0); // SRAM
-	PinAsserter<i960Pinout::SRAM_EN_> holder;
-	SPI.transfer(OpcodeWrite);
-	// we save to address zero in the sram
-	transferAddress(MemoryRequestLocation);
-	transfer16Bits(operation);
-	transfer32Bits(address);
-	transfer16Bits(value);
+	Serial.print(" Opcode: 0x"); Serial.println(OpcodeWrite, HEX);
+	Serial.print(" Location: 0x"); Serial.println(MemoryRequestLocation, HEX);
+	Serial.print(" Operation: 0x"); Serial.println(operation, HEX);
+	Serial.print(" Address: 0x"); Serial.println(address, HEX);
+	Serial.print(" Value: 0x"); Serial.println(value, HEX);
+	{
+		PinAsserter<i960Pinout::SRAM_EN_> holder;
+		SPI.transfer(OpcodeWrite);
+		// we save to address zero in the sram
+		transferAddress(MemoryRequestLocation);
+		transfer16Bits(operation);
+		transfer32Bits(address);
+		transfer16Bits(value);
+	}
+	Serial.println("----");
+	{
+		PinAsserter<i960Pinout::SRAM_EN_> holder;
+		SPI.transfer(OpcodeRead);
+		// we save to address zero in the sram
+		transferAddress(MemoryRequestLocation);
+		Serial.println(transfer16Bits(0), HEX);
+		Serial.println(transfer16Bits(0), HEX);
+		Serial.println(transfer16Bits(0), HEX);
+		Serial.println(transfer16Bits(0), HEX);
+	}
 
 
 }
