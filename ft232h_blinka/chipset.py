@@ -126,6 +126,58 @@ class MCP23S17:
         self.performWrite(device, addresses['gpioa'], value)
 
 
+# The bootup process has a separate set of states
+# TStart - Where we start
+# TSystemTest - Processor performs self test
+# 
+# TStart -> TSystemTest via FAIL being asserted
+# TSystemTest -> Ti via FAIL being deasserted
+# 
+# State machine will stay here for the duration
+# State diagram based off of i960SA/SB Reference manual
+# Basic Bus States
+# Ti - Idle State
+# Ta - Address State
+# Td - Data State
+# Tr - Recovery State
+# Tw - Wait State
+# TChecksumFailure - Checksum Failure State
+# 
+# READY - ~READY asserted
+# NOT READY - ~READY not asserted
+# BURST - ~BLAST not asserted
+# NO BURST - ~BLAST asserted
+# NEW REQUEST - ~AS asserted
+# NO REQUEST - ~AS not asserted when in 
+# 
+# Ti -> Ti via no request
+# Tr -> Ti via no request
+# Tr -> Ta via request pending
+# Ti -> Ta via new request
+# on enter of Ta, set address state to false
+# on enter of Td, burst is sampled
+# Ta -> Td
+# Td -> Tr after signaling ready and no burst (blast low)
+# Td -> Td after signaling ready and burst (blast high)
+# Td -> Tw if not ready 
+# Tw -> Td if ready and burst (blast high)
+# Tw -> Tr after signaling ready and no burst (blast low)
+# 
+# Ti -> TChecksumFailure if FAIL is asserted
+# Tr -> TChecksumFailure if FAIL is asserted
+# 
+# NOTE: Tw may turn out to be synthetic
+class Controller(StateMachine):
+    start = State('Start', initial=True)
+    selfTest = State('Self Test')
+    idle = State('Idle')
+    addr = State('Address')
+    data = State('Data')
+    recovery = State('Recovery')
+    wait = State('Wait')
+    rdy = State('Ready')
+    checksumFailure = State('Checksum Failure')
+
 
 
 
@@ -184,6 +236,8 @@ with busio.SPI(board.SCK, board.MOSI, board.MISO) as spi:
     previousValue = True
     print("Done Setting up!")
     mcuReset.value = True
+    # we are going to be constantly walking through a state machine servicing
+    # requests
     while True:
         # keep waiting until sync pin goes low
         if (atmega1284pSync.value != previousValue):
