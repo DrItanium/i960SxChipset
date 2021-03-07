@@ -503,14 +503,12 @@ State tRecovery(DigitalPin<i960Pinout::STATE_RECOVER_>::assert,
 		DigitalPin<i960Pinout::STATE_RECOVER_>::deassert);
 State tWait(DigitalPin<i960Pinout::STATE_WAIT_>::assert,
 		[]() {
-			Serial.println("WAIT");
 			if (DigitalPin<i960Pinout::MEMACK_>::isAsserted()) {
 				fsm.trigger(ToSignalReadyState);
 			}
 		},
 		DigitalPin<i960Pinout::STATE_WAIT_>::deassert);
 State tRdy(nullptr, []() {
-			Serial.println("RDY");
 			if (auto result = readMemoryResult(); performingRead) {
 				Serial.print("Result value: 0x");
 				Serial.println(result, HEX);
