@@ -174,13 +174,81 @@ class Controller(StateMachine):
     addr = State('Address')
     data = State('Data')
     recovery = State('Recovery')
-    wait = State('Wait')
-    rdy = State('Ready')
     checksumFailure = State('Checksum Failure')
 
+    performSelfTest = start.to(selfTest)
+    selfTestComplete = selfTest.to(idle)
+    waitSelfTest = selfTest.to.itself()
+    newRequest = idle.to(addr)
+    triggerChecksumFailure = idle.to(checksumFailure) | recovery.to(checksumFailure)
+    toDataState = addr.to(data)
+    readyAndNoBurst = data.to(recovery)
+    readyAndBurst = data.to.itself()
+    requestPending = recovery.to(addr)
+    noRequest = recovery.to(idle)
+    def __init__(self, addrUpper, addrLower, dataLines, otherLines, device, wr, ready, blast):
+        StateMachine.__init__(self)
+        self.baseAddress = -1
+        self.performingRead = False
+        self.device = device
+        self.addrUpper = addrUpper
+        self.addrLower = addrLower
+        self.dataLines = dataLines
+        self.otherLines = otherLines
+        self.wr = wr
+        self.ready = ready
+        self.blast = blast
+    def getAddress(self):
+        lower16 = self.addrLower.readGPIOs(self.device)
+        upper16 = self.addrUpper.readGPIOs(self.device)
+        return lower16 | (upper16 << 16)
 
 
+    def makeDataLinesRead(self):
+        self.dataLines.writeGPIOsDirection(self.device, 0xFFFF)
+    def makeDataLinesWrite(self):
+        self.dataLines.writeGPIOsDirection(self.device, 0)
 
+    def isWrite(self):
+        return self.wr.value == True
+
+    def isRead(self):
+        return self.wr.value == False
+
+    def getData(self):
+        self.makeDataLinesRead()
+        return self.dataLines.readGPIOs(self.device)
+
+    def setData(self, value):
+        self.makeDataLinesWrite()
+        self.dataLines.writeGPIOs(self.device, value)
+
+
+    def pulseReady(self):
+        self.ready.value = False
+        self.ready.value = True 
+
+    def getByteEnableBits(self):
+        return (self.extraLines.readGPIOs(self.device) & 0b11000) >> 3
+
+    def getBurstAddressBits(self):
+        return (self.extraLines.readGPIOs(self.device) & 0b111) << 1
+
+    def isBurstLast(self):
+        return self.blast.value == False
+
+    def on_exit_addr(self):
+        # pull in all the values necessary
+        self.baseAddress = self.getAddress()
+        self.performingRead = self.isRead()
+    def getBurstAddress(self):
+        return (self.baseAddress & (~0b1110)) | self.getBurstAddressBits()
+
+def memoryRead(address):
+    # TODO implement
+    return 0
+def memoryWrite(address, value):
+    pass
 
 print("Starting up!")
 reset960 = digitalio.DigitalInOut(board.C0)
@@ -233,22 +301,54 @@ with busio.SPI(board.SCK, board.MOSI, board.MISO) as spi:
     extraLines.writeGPIOsDirection(device, 0b0000000001011111)
     # set the lock and HOLD pins correctly
     extraLines.writePortA(device, 0b10000000)
-    previousValue = True
+    controller = Controller(addrUpper16, addrLower16, dataLines, extraLines, device, wr, ready, blast)
     print("Done Setting up!")
     mcuReset.value = True
     # we are going to be constantly walking through a state machine servicing
     # requests
     while True:
-        # keep waiting until sync pin goes low
-        if (atmega1284pSync.value != previousValue):
-            if previousValue:
-                with device as spi:
-                    spi.write(readCommand)
-                    spi.readinto(inputBuffer)
-                print("Bytes Got: ")
-                for b in inputBuffer:
-                    print(b)
-
+        if controller.is_start:
+            if fail.value == True:
+                controller.performSelfTest()
+        elif controller.is_selfTest:
+            if fail.value == False:
+                controller.selfTestComplete()
+        elif controller.is_idle:
+            aState = addrState.value
+            fState = fail.value
+            if fState == True:
+                controller.triggerChecksumFailure()
+            if aState == False:
+                controller.newRequest()
+        elif controller.is_addr:
+            if den.value == True:
+                controller.toDataState()
+        elif controller.is_data:
+            usedAddress = controller.getBurstAddress()
+            print("Used Address: 0x", hex(usedAddress))
+            if controller.performingRead:
+                controller.setData(memoryRead(usedAddress))
             else:
-                print("Sync disabled!")
-            previousValue = not previousValue
+                data = controller.getData()
+                print("Data: 0x", hex(data))
+                memoryWrite(usedAddress, data)
+            isLast = controller.isBurstLast()
+            controller.pulseReady()
+            if isLast:
+                controller.readyAndNoBurst()
+            else:
+                controller.readyAndBurst()
+        elif controller.is_recovery:
+            if fail.value == False:
+                controller.triggerChecksumFailure()
+            else:
+                if addrState.value == False:
+                    controller.requestPending()
+                else:
+                    controller.noRequest()
+
+
+                
+
+
+
