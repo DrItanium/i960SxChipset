@@ -93,10 +93,10 @@ class MCP23S17:
         self.hardwareAddressPinsEnabled = (result & 0b00001000) != 0
 
     def getIOCon(self, device):
-        return self.performRead(device, addresses['iocon'])
+        return self.performRead(device, self.addresses['iocon'])
 
     def setIOCon(self, device, value):
-        self.performWrite(device, addresses['iocon'], value)
+        self.performWrite(device, self.addresses['iocon'], value)
         self._refreshIOCon(device)
 
     def enableHardwareAddressPins(self, device):
@@ -108,22 +108,22 @@ class MCP23S17:
             self.setIOCon(device, self.getIOCon(device) & 0b11110110)
 
     def writeGPIOsDirection(self, device, pattern):
-        self.performWrite16(device, addresses['iodira'], addresses['iodirb'], pattern)
+        self.performWrite16(device, self.addresses['iodira'], self.addresses['iodirb'], pattern)
 
     def readGPIOsDirection(self, device):
-        return self.performRead16(device, addresses['iodira'], addresses['iodirb'])
+        return self.performRead16(device, self.addresses['iodira'], self.addresses['iodirb'])
 
     def readGPIOs(self, device):
-        return self.performRead16(device, addresses['gpioa'], addresses['gpiob'])
+        return self.performRead16(device, self.addresses['gpioa'], self.addresses['gpiob'])
 
     def writeGPIOs(self, device, value):
-        self.performWrite16(device, addresses['gpioa'], addresses['gpiob'], value)
+        self.performWrite16(device, self.addresses['gpioa'], self.addresses['gpiob'], value)
 
     def writePortB(self, device, value):
-        self.performWrite(device, addresses['gpiob'], value)
+        self.performWrite(device, self.addresses['gpiob'], value)
 
     def writePortA(self, device, value):
-        self.performWrite(device, addresses['gpioa'], value)
+        self.performWrite(device, self.addresses['gpioa'], value)
 
 
 # The bootup process has a separate set of states
@@ -202,6 +202,10 @@ class Controller(StateMachine):
         lower16 = self.addrLower.readGPIOs(self.device)
         upper16 = self.addrUpper.readGPIOs(self.device)
         return lower16 | (upper16 << 16)
+    def on_enter_selfTest(self):
+        print("Entering Self Test Phase")
+    def on_enter_idle(self):
+        print("Idle!")
 
 
     def makeDataLinesRead(self):
@@ -303,7 +307,7 @@ with busio.SPI(board.SCK, board.MOSI, board.MISO) as spi:
     extraLines.writePortA(device, 0b10000000)
     controller = Controller(addrUpper16, addrLower16, dataLines, extraLines, device, wr, ready, blast)
     print("Done Setting up!")
-    mcuReset.value = True
+    reset960.value = True
     # we are going to be constantly walking through a state machine servicing
     # requests
     while True:
