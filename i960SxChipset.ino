@@ -51,16 +51,16 @@ enum class i960Pinout : decltype(A0) {
    	CLOCK_OUT, // output, unusable
 	AS_,     // input, AVR Int2
 	PWM4, 	 // unused 
-	GPIOSelect,		// output
+	SS,		// unused 
 	MOSI,		  // reserved
 	MISO,		  // reserved
 	SCK, 		  // reserved
 // PORT D
 	RX0, 		  // reserved
 	TX0, 		  // reserved
-	AVR_INT0,	  // AVR Interrupt INT0
-	AVR_INT1, 		// AVR Interrupt INT1
-	MEMACK_,	  // input
+	DEN_,	  // AVR Interrupt INT0
+	MEMACK_, 		// AVR Interrupt INT1
+	PWM0,	  // input
 	PWM1, 		  // unused
 	PWM2, 		  // unused
 	PWM3, 		  // unused
@@ -72,7 +72,7 @@ enum class i960Pinout : decltype(A0) {
 	W_R_, 		  // input
 	Reset960,		  // output
 	BLAST_, 	 // input
-	DEN_, 	     // input
+	FAIL, 	     // input 
 // PORT A
 	STATE_IDLE_, 	// output
 	STATE_ADDR_, 	// output
@@ -80,8 +80,8 @@ enum class i960Pinout : decltype(A0) {
 	STATE_WAIT_, 	// output
 	STATE_RECOVER_, // output
 	STATE_FAIL_,    // output
-	SRAM_EN_,		// output
-	FAIL,			// input, PCINT7
+	Analog6,		// unused 
+	Analog7,		// unused 
 	Count,		  // special
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
