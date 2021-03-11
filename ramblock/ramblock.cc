@@ -14,9 +14,9 @@ int main(int argc, char** argv) {
             ("help", "show this help message")
             ("serial-port", boost::program_options::value<std::string>(), "Set the serial port")
             ("baud", boost::program_options::value<uint32_t>(), "Set the baud rate")
-            ("flow-control", boost::program_options::value<std::string>(), "Set flow control kind")
-            ("parity", boost::program_options::value<std::string>(), "Set port parity")
-            ("stop-bits", boost::program_options::value<double>()->default_value(1.0), "set number of stop bits")
+            ("flow-control", boost::program_options::value<std::string>()->default_value("none"), "Set flow control kind [none, hardware, software]")
+            ("parity", boost::program_options::value<std::string>()->default_value("none"), "Set port parity [even, odd, none]")
+            ("stop-bits", boost::program_options::value<double>()->default_value(1.0), "set number of stop bits [1, 1.5, 2]")
             ("character-size", boost::program_options::value<uint32_t>()->default_value(8), "Set the character size (default 8)");
 
 
@@ -76,12 +76,12 @@ int main(int argc, char** argv) {
             sp.set_option(boost::asio::serial_port::parity(getParity(vm["parity"].as<std::string>())));
 
             return 0;
-        } catch (std::runtime_error& error) {
-            std::cerr << "ERROR: " << error.what() << std::endl;
-            return 1;
         } catch (boost::system::system_error &error) {
             std::cerr << "ERROR: " << error.what() << std::endl;
             std::cerr << "Terminating execution!" << std::endl;
+            return 1;
+        } catch (std::runtime_error& error) {
+            std::cerr << "ERROR: " << error.what() << std::endl;
             return 1;
         }
     }
