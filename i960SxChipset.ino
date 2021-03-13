@@ -517,19 +517,18 @@ void processDataRequest() noexcept {
 	Serial.print(" ");
 	Serial.println( performingRead ? 0 : getDataBits(), HEX);
 	if (auto count = Serial.readBytes(reinterpret_cast<byte*>(&readResult), 2); count != 2) {
-		fsm.trigger(ChecksumFailure);
-	} else {
-		if (performingRead) {
-			setDataBits(readResult);
-		}
-		// setup the proper address and emit this over serial
-		auto blastPin = getBlastPin();
-		DigitalPin<i960Pinout::Ready>::pulse();
-		if (blastPin == LOW) {
-			// we not in burst mode
-			fsm.trigger(ReadyAndNoBurst);
-		} 
+		readResult = 0;
+	} 
+	if (performingRead) {
+		setDataBits(readResult);
 	}
+	// setup the proper address and emit this over serial
+	auto blastPin = getBlastPin();
+	DigitalPin<i960Pinout::Ready>::pulse();
+	if (blastPin == LOW) {
+		// we not in burst mode
+		fsm.trigger(ReadyAndNoBurst);
+	} 
 
 }
 
