@@ -411,6 +411,7 @@ constexpr auto OpcodeRead = 0b0000'0011;
 
 // NOTE: Tw may turn out to be synthetic
 volatile bool asTriggered = false;
+volatile bool denTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
 constexpr auto NoRequest = 0;
@@ -450,24 +451,8 @@ State tData(enteringDataState,
 State tRecovery(nullptr,
 		doRecoveryState,
 		nullptr);
-State tWait(nullptr,
-		[]() {
-		},
-		nullptr);
 State tRdy(nullptr, []() {
 #if 0
-			if (auto result = readMemoryResult(); performingRead) {
-				setDataBits(result);
-			} 
-			auto blastPin = getBlastPin();
-			DigitalPin<i960Pinout::Ready>::pulse();
-			if (blastPin == LOW) {
-				// we not in burst mode
-				fsm.trigger(ReadyAndNoBurst);
-			}  else {
-				// we are in burst mode so move back to data state
-				fsm.trigger(ToDataState);
-			}
 #endif
 		}, nullptr);
 State tChecksumFailure(nullptr, nullptr, nullptr);
@@ -489,6 +474,10 @@ ISR (INT2_vect)
 	asTriggered = true;
 	// this is the AS_ pin doing its thing
 }
+ISR (INT0_vect) 
+{
+	denTriggered = true;
+}
 
 
 
@@ -502,7 +491,7 @@ void idleState() noexcept {
 	}
 }
 void doAddressState() noexcept {
-	if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
+	if (denTriggered) {
 		fsm.trigger(ToDataState);
 	}
 }
@@ -511,6 +500,7 @@ void doAddressState() noexcept {
 void
 enteringDataState() noexcept {
 	// when we do the transition, record the information we need
+	denTriggered = false;
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
 }
@@ -518,10 +508,22 @@ enteringDataState() noexcept {
 
 void processDataRequest() noexcept {
 	auto usedAddress = getBurstAddress(baseAddress);
+	// setup the proper address and emit this over serial
+#if 0
+	if (auto result = readMemoryResult(); performingRead) {
+		setDataBits(result);
+	} 
+	auto blastPin = getBlastPin();
+	DigitalPin<i960Pinout::Ready>::pulse();
+	if (blastPin == LOW) {
+		// we not in burst mode
+		fsm.trigger(ReadyAndNoBurst);
+	} 
 	//writeMemoryRequest(usedAddress, performingRead ? 0 : getDataBits());
 	//fsm.trigger(ToSignalWaitState);
 	// at the end of the day, signal ready on the request
 	// get the base address 
+#endif
 }
 
 void doRecoveryState() noexcept {
@@ -543,10 +545,7 @@ void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
 	fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
 	fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
-	fsm.add_transition(&tData, &tWait, ToSignalWaitState, nullptr);
-	fsm.add_transition(&tWait, &tRdy, ToSignalReadyState, nullptr);
-	fsm.add_transition(&tRdy, &tRecovery, ReadyAndNoBurst, nullptr);
-	fsm.add_transition(&tRdy, &tData, ToDataState, nullptr);
+	fsm.add_transition(&tData, &tRecovery, ReadyAndNoBurst, nullptr);
 	fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
 	fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
 	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
@@ -570,8 +569,8 @@ void setupCPUInterface() {
 			i960Pinout::W_R_,
 			i960Pinout::DEN_,
 			i960Pinout::FAIL);
-	EIMSK |= 0b100; // enable INT2 pin
-	EICRA |= 0b100000; // trigger on falling edge
+	EIMSK |= 0b101; // enable INT2 and INT0 pin
+	EICRA |= 0b100010; // trigger on falling edge
 }
 void setupIOExpanders() {
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
