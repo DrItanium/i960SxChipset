@@ -350,7 +350,13 @@ Address getBurstAddress() noexcept {
 bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
 bool isWriteOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isDeasserted(); }
 auto getBlastPin() noexcept { return DigitalPin<i960Pinout::BLAST_>::read(); }
-
+uint16_t makeCommandOperation() noexcept {
+	if (auto enableBits = getByteEnableBits(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+		return enableBits;
+	} else {
+		return 0b100 | enableBits;
+	}
+}
 void setHOLDPin(decltype(LOW) value) noexcept {
 	digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, extraMemoryCommit);
 }
@@ -363,11 +369,6 @@ void setLOCKPin(decltype(LOW) value) noexcept {
 // circuitry.
 // We talk to the FT232H via an external SPI SRAM of 1 Megabit (128 kbytes)
 // there are two addresses used in the design
-
-constexpr auto MemoryRequestLocation = 0x00'0000;
-constexpr auto MemoryResultLocation = 0x00'0100;
-constexpr auto OpcodeWrite = 0b0000'0010;
-constexpr auto OpcodeRead = 0b0000'0011;
 
 // The bootup process has a separate set of states
 // TStart - Where we start
@@ -414,6 +415,7 @@ volatile bool asTriggered = false;
 volatile bool denTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
+uint16_t readResult = 0;
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -508,22 +510,27 @@ enteringDataState() noexcept {
 
 void processDataRequest() noexcept {
 	auto usedAddress = getBurstAddress(baseAddress);
-	// setup the proper address and emit this over serial
-#if 0
-	if (auto result = readMemoryResult(); performingRead) {
-		setDataBits(result);
-	} 
-	auto blastPin = getBlastPin();
-	DigitalPin<i960Pinout::Ready>::pulse();
-	if (blastPin == LOW) {
-		// we not in burst mode
-		fsm.trigger(ReadyAndNoBurst);
-	} 
-	//writeMemoryRequest(usedAddress, performingRead ? 0 : getDataBits());
-	//fsm.trigger(ToSignalWaitState);
-	// at the end of the day, signal ready on the request
-	// get the base address 
-#endif
+	// send the command request through the 
+	Serial.print(makeCommandOperation(), HEX);
+	Serial.print(" ");
+	Serial.print(usedAddress, HEX);
+	Serial.print(" ");
+	Serial.println( performingRead ? 0 : getDataBits(), HEX);
+	if (auto count = Serial.readBytes(reinterpret_cast<byte*>(&readResult), 2); count != 2) {
+		fsm.trigger(ChecksumFailure);
+	} else {
+		if (performingRead) {
+			setDataBits(readResult);
+		}
+		// setup the proper address and emit this over serial
+		auto blastPin = getBlastPin();
+		DigitalPin<i960Pinout::Ready>::pulse();
+		if (blastPin == LOW) {
+			// we not in burst mode
+			fsm.trigger(ReadyAndNoBurst);
+		} 
+	}
+
 }
 
 void doRecoveryState() noexcept {
@@ -549,6 +556,7 @@ void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
 	fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
 	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
+	fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
 }
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
@@ -595,10 +603,11 @@ void setupIOExpanders() {
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
 }
-
+constexpr auto SerialTimeout = 10000; // 10 seconds
 // the setup routine runs once when you press reset:
 void setup() {
 	Serial.begin(115200);
+	Serial.setTimeout(SerialTimeout);
 	lcd.begin(16, 2);
 	lcd.print("80960Sx Chipset");
 	setupPins(OUTPUT, 
