@@ -4,10 +4,47 @@
 
 #include <iostream>
 #include <string>
+#include <memory>
 #include <boost/asio.hpp>
 #include <boost/program_options.hpp>
+enum class MaskStyle : uint8_t {
+    Error = 0b00,
+    LowerEightBits = 0b01,
+    UpperEightBits = 0b10,
+    FullWord = 0b11,
+};
+class MemoryBlock {
+    using Address = uint32_t;
+    using BackingStorage = uint8_t[];
+    using ActualBlock = std::unique_ptr<BackingStorage >;
+public:
+    explicit MemoryBlock(uint32_t size) : theBlock_(std::make_unique<BackingStorage>(size)) {}
 
+    uint16_t
+    read(Address address, MaskStyle style) {
+        switch (style) {
+            case MaskStyle::LowerEightBits:
+            case MaskStyle::UpperEightBits:
+            case MaskStyle::FullWord:
+            default:
+                throw std::runtime_error("Illegal memory style");
+        }
+    }
 
+    void
+    write(Address address, uint16_t value, MaskStyle style) {
+        switch (style) {
+            case MaskStyle::LowerEightBits:
+
+            case MaskStyle::UpperEightBits:
+            case MaskStyle::FullWord:
+            default:
+                throw std::runtime_error("Illegal memory style");
+        }
+    }
+private:
+    ActualBlock theBlock_;
+};
 int main(int argc, char** argv) {
     boost::program_options::options_description desc("Options");
     desc.add_options()
@@ -17,7 +54,9 @@ int main(int argc, char** argv) {
             ("flow-control", boost::program_options::value<std::string>()->default_value("none"), "Set flow control kind [none, hardware, software]")
             ("parity", boost::program_options::value<std::string>()->default_value("none"), "Set port parity [even, odd, none]")
             ("stop-bits", boost::program_options::value<double>()->default_value(1.0), "set number of stop bits [1, 1.5, 2]")
-            ("character-size", boost::program_options::value<uint32_t>()->default_value(8), "Set the character size (default 8)");
+            ("character-size", boost::program_options::value<uint32_t>()->default_value(8), "Set the character size (default 8)")
+            ("memory-block-size", boost::program_options::value<uint32_t>()->default_value(1024*1024), "Set the size of the memory block in bytes");
+
 
 
     boost::program_options::variables_map vm;
@@ -74,6 +113,7 @@ int main(int argc, char** argv) {
             sp.set_option(boost::asio::serial_port::character_size(vm["character-size"].as<uint32_t>()));
             sp.set_option(boost::asio::serial_port::stop_bits(getStopBits(vm["stop-bits"].as<double>())));
             sp.set_option(boost::asio::serial_port::parity(getParity(vm["parity"].as<std::string>())));
+            memoryBlock.reset(std::make_unique<uint8_t[]>(vm["memory-block-size"].as<uint32_t>() / sizeof(uint16_t)));
 
             return 0;
         } catch (boost::system::system_error &error) {
