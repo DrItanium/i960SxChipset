@@ -506,16 +506,31 @@ enteringDataState() noexcept {
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
 }
-
-
+struct Command {
+	Command(uint16_t cmd, uint32_t addr, uint16_t val = 0) : command(cmd), address(addr), value(val) { }
+	uint16_t command;
+	uint32_t address;
+	uint16_t value;
+	void emit(Stream& stream) {
+		stream.write(static_cast<uint8_t>(command));
+		stream.write(static_cast<uint8_t>(command >> 8));
+		stream.write(static_cast<uint8_t>(address));
+		stream.write(static_cast<uint8_t>(address >> 8));
+		stream.write(static_cast<uint8_t>(address >> 16));
+		stream.write(static_cast<uint8_t>(address >> 24));
+		stream.write(static_cast<uint8_t>(value));
+		stream.write(static_cast<uint8_t>(value >> 8));
+	}
+};
+static_assert(sizeof(Command) == 8);
+void sendDataRequest() {
+	Command cmd(makeCommandOperation(), 
+			getBurstAddress(baseAddress), 
+			performingRead ? 0 : getDataBits());
+	cmd.emit(Serial);
+}
 void processDataRequest() noexcept {
-	auto usedAddress = getBurstAddress(baseAddress);
-	// send the command request through the 
-	Serial.print(makeCommandOperation(), HEX);
-	Serial.print(" ");
-	Serial.print(usedAddress, HEX);
-	Serial.print(" ");
-	Serial.println( performingRead ? 0 : getDataBits(), HEX);
+	sendDataRequest();
 	if (auto count = Serial.readBytes(reinterpret_cast<byte*>(&readResult), 2); count != 2) {
 		readResult = 0;
 	} 
