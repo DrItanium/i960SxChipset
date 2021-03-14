@@ -74,11 +74,11 @@ enum class i960Pinout : decltype(A0) {
 	BLAST_, 	 // input
 	FAIL, 	     // input
 // PORT A
-    SRAM_EN0_, // output
-    SRAM_EN1_, // output
+    SPI_BUS_EN, // output
+    Analog1,
     Analog2,
     Analog3,
-	Analog4,
+    Analog4,
 	Analog5,
 	Analog6,
 	Analog7,
@@ -189,8 +189,7 @@ struct DigitalPin {
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-DefOutputPin(i960Pinout::SRAM_EN1_, LOW, HIGH);
-DefOutputPin(i960Pinout::SRAM_EN0_, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
@@ -631,11 +630,12 @@ template<i960Pinout enablePin>
 void testMemoryBoard() {
     static_assert(DigitalPin<enablePin>::isOutputPin());
     static constexpr auto mask = 0b1111'1110'0000'0000'0000'0000;
-    for (uint32_t i = 0; i < 0x100000; ++i) {
+    auto previousValue = -1;
+    for (uint32_t i = 0; i < 0b0010'0000'0000'0000'0000'0000; ++i) {
         auto controlBits = static_cast<uint8_t>((mask & i) >> 17);
-        auto targetDevice = static_cast<uint8_t>(controlBits & 0b111);
-        auto value = static_cast<uint8_t>(i);
+        auto targetDevice = static_cast<uint8_t>(controlBits & 0b0111'111);
         extraMemoryCommit.writePortB(targetDevice);
+        auto value = static_cast<uint8_t>(i);
         write8<enablePin>(i, i);
         auto result = read8<enablePin>(i);
         if (result != value) {
@@ -655,13 +655,11 @@ void testMemoryBoard() {
 // the setup routine runs once when you press reset:
 void setup() {
 	Serial.begin(115200);
-	setupPins(OUTPUT,
-			i960Pinout::Reset960,
-			i960Pinout::Led,
-			i960Pinout::SRAM_EN0_,
-			i960Pinout::SRAM_EN1_);
-	digitalWrite(i960Pinout::SRAM_EN0_, HIGH);
-    digitalWrite(i960Pinout::SRAM_EN1_, HIGH);
+    setupPins(OUTPUT,
+              i960Pinout::Reset960,
+              i960Pinout::Led,
+              i960Pinout::SPI_BUS_EN);
+	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
 	SPI.begin();
@@ -669,8 +667,7 @@ void setup() {
 	setupCPUInterface();
 	setupBusStateMachine();
     Serial.println("Running memory boards through their paces");
-    testMemoryBoard<i960Pinout::SRAM_EN0_>();
-    testMemoryBoard<i960Pinout::SRAM_EN1_>();
+    testMemoryBoard<i960Pinout::SPI_BUS_EN>();
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 }
