@@ -621,6 +621,7 @@ constexpr auto SerialTimeout = 10000; // 10 seconds
 // the setup routine runs once when you press reset:
 void setup() {
 	Serial.begin(115200);
+	while(!Serial);
 	Serial.setTimeout(SerialTimeout);
 	lcd.begin(16, 2);
 	lcd.print("80960Sx Chipset");
