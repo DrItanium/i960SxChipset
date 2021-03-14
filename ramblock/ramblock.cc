@@ -9,10 +9,10 @@
 #include <boost/asio.hpp>
 #include <boost/program_options.hpp>
 enum class MaskStyle : uint8_t {
-    Error = 0b00,
-    LowerEightBits = 0b01,
-    UpperEightBits = 0b10,
-    FullWord = 0b11,
+    FullWord = 0b00,
+    UpperEightBits = 0b01,
+    LowerEightBits = 0b10,
+    Error = 0b11,
 };
 class MemoryBlock {
     using Address = uint32_t;
@@ -23,10 +23,14 @@ public:
 
     uint16_t
     read(Address address, MaskStyle style) {
+        std::cout << "Read: 0x" << std::hex << address << std::endl;
         switch (style) {
             case MaskStyle::LowerEightBits:
+                return static_cast<uint16_t>(theBlock_[address]);
             case MaskStyle::UpperEightBits:
+                return (static_cast<uint16_t>(theBlock_[address+1]) << 8);
             case MaskStyle::FullWord:
+                return static_cast<uint16_t>(theBlock_[address]) | (static_cast<uint16_t>(theBlock_[address+1]) << 8);
             default:
                 throw std::runtime_error("Illegal memory style");
         }
@@ -36,10 +40,17 @@ public:
     write(Address address, uint16_t value, MaskStyle style) {
         switch (style) {
             case MaskStyle::LowerEightBits:
+                theBlock_[address] = value;
+                break;
             case MaskStyle::UpperEightBits:
+                theBlock_[address + 1] = static_cast<uint8_t>(value >> 8);
+                break;
             case MaskStyle::FullWord:
+                theBlock_[address] = value;
+                theBlock_[address + 1] = static_cast<uint8_t>(value >> 8);
+                break;
             default:
-                throw std::runtime_error("Illegal memory style");
+                throw std::runtime_error("Write: Illegal memory style");
         }
     }
 private:
@@ -55,7 +66,7 @@ int main(int argc, char** argv) {
             ("parity", boost::program_options::value<std::string>()->default_value("none"), "Set port parity [even, odd, none]")
             ("stop-bits", boost::program_options::value<double>()->default_value(1.0), "set number of stop bits [1, 1.5, 2]")
             ("character-size", boost::program_options::value<uint32_t>()->default_value(8), "Set the character size (default 8)")
-            ("memory-block-size", boost::program_options::value<uint32_t>()->default_value(1024*1024), "Set the size of the memory block in bytes");
+            ("memory-block-size", boost::program_options::value<uint32_t>()->default_value(0xFFFF'FFFF), "Set the size of the memory block in bytes");
 
 
 
@@ -107,19 +118,13 @@ int main(int argc, char** argv) {
         };
         try {
             boost::asio::io_service service;
-            boost::asio::serial_port sp(service);
+            boost::asio::serial_port sp(service, serialPortName.c_str());
             sp.set_option(boost::asio::serial_port::baud_rate(vm["baud"].as<uint32_t>()));
             sp.set_option(boost::asio::serial_port::flow_control(getFlowControl(vm["flow-control"].as<std::string>())));
             sp.set_option(boost::asio::serial_port::character_size(vm["character-size"].as<uint32_t>()));
             sp.set_option(boost::asio::serial_port::stop_bits(getStopBits(vm["stop-bits"].as<double>())));
             sp.set_option(boost::asio::serial_port::parity(getParity(vm["parity"].as<std::string>())));
             MemoryBlock mb(vm["memory-block-size"].as<uint32_t>());
-            boost::system::error_code ec;
-            sp.open(serialPortName.c_str(), ec);
-            if (ec) {
-                std::cerr << "error: opening port " << serialPortName << " failed. Reason: " << ec.message() << std::endl;
-                return 1;
-            }
             std::array<uint8_t, 8> data = { 0 };
             while (true) {
                 auto count = boost::asio::read(sp, boost::asio::buffer(data, 8));
@@ -132,10 +137,10 @@ int main(int argc, char** argv) {
                                    (static_cast<uint32_t>(data[3]) << 8) |
                                    (static_cast<uint32_t>(data[4]) << 16) |
                                    (static_cast<uint32_t>(data[5]) << 24);
+                    auto value = static_cast<uint16_t>(data[6])  | (static_cast<uint16_t>(data[7]) << 8);
                     uint16_t result = 0;
                     if (operation & 0b100) {
                         // write operation
-                        auto value = static_cast<uint16_t>(data[6])  | (static_cast<uint16_t>(data[7]) << 8);
                         mb.write(address, value, style);
                     } else {
                         // read operation
