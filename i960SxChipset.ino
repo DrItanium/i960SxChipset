@@ -189,13 +189,13 @@ struct DigitalPin {
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
+DefOutputPin(i960Pinout::SRAM_EN1_, LOW, HIGH);
+DefOutputPin(i960Pinout::SRAM_EN0_, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
-DefInputPin(i960Pinout::SRAM_EN1_, LOW, HIGH);
-DefInputPin(i960Pinout::SRAM_EN0_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 #undef DefInputPullupPin
@@ -256,8 +256,7 @@ class PinAsserter {
 		~PinAsserter() { DigitalPin<pinId>::deassert(); }
 };
 
-
-// 8 IOExpanders to a single enable line for SPI purposes 
+// 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
 IOExpander<IOExpanderAddress::DataLines> dataLines;
 IOExpander<IOExpanderAddress::Lower16Lines> lower16;
@@ -589,17 +588,74 @@ void setupIOExpanders() {
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
 }
-constexpr auto SerialTimeout = 10000; // 10 seconds
+void transferAddress(uint32_t address) {
+    SPI.transfer(static_cast<uint8_t>(address >> 16));
+    SPI.transfer(static_cast<uint8_t>(address >> 8));
+    SPI.transfer(static_cast<uint8_t>(address));
+}
+enum class SRAMOpcodes : uint8_t {
+    RDSR = 0x05,
+    RDMR = RDSR,
+    WRSR = 0x01,
+    WRMR = WRSR,
+    READ = 0x03,
+    WRITE = 0x02,
+    EDIO = 0x3B,
+    EQIO = 0x38,
+    RSTIO = 0xFF,
+    Read = READ,
+    Write = WRITE,
+};
+void transferOpcode(SRAMOpcodes opcode) noexcept {
+    SPI.transfer(static_cast<uint8_t>(opcode));
+}
+template<i960Pinout enablePin>
+void write8(uint32_t address, uint8_t value) noexcept {
+    static_assert(DigitalPin<enablePin>::isOutputPin());
+    PinAsserter<enablePin> asserter;
+    transferOpcode(SRAMOpcodes::Write);
+    transferAddress(address);
+    SPI.transfer(value);
+}
+template<i960Pinout enablePin>
+uint8_t read8(uint32_t address) noexcept {
+    static_assert(DigitalPin<enablePin>::isOutputPin());
+    PinAsserter<enablePin> asserter;
+    transferOpcode(SRAMOpcodes::Read);
+    transferAddress(address);
+    auto result = SPI.transfer(0);
+    // make sure that we do the transfer correctly
+    return result;
+}
+template<i960Pinout enablePin>
+void testMemoryBoard() {
+    static_assert(DigitalPin<enablePin>::isOutputPin());
+    static constexpr auto mask = 0b1111'1110'0000'0000'0000'0000;
+    for (uint32_t i = 0; i < 0x100000; ++i) {
+        auto controlBits = static_cast<uint8_t>((mask & i) >> 17);
+        auto targetDevice = static_cast<uint8_t>(controlBits & 0b111);
+        auto value = static_cast<uint8_t>(i);
+        extraMemoryCommit.writePortB(targetDevice);
+        write8<enablePin>(i, i);
+        auto result = read8<enablePin>(i);
+        if (result != value) {
+            Serial.print("Failure, id: ") ;
+            Serial.print(targetDevice, DEC);
+            Serial.print(" address: 0x");
+            Serial.print(i, HEX);
+            Serial.print(" value: 0x");
+            Serial.print(value, HEX);
+            Serial.print(" got: 0x");
+            Serial.println(result, HEX);
+            delay(1);
+        }
+    }
+    Serial.println("Done!");
+}
 // the setup routine runs once when you press reset:
 void setup() {
 	Serial.begin(115200);
-	//while(!Serial);
-	//Serial.setTimeout(SerialTimeout);
-#if 0
-	lcd.begin(16, 2);
-	lcd.print("80960Sx Chipset");
-#endif
-	setupPins(OUTPUT, 
+	setupPins(OUTPUT,
 			i960Pinout::Reset960,
 			i960Pinout::Led,
 			i960Pinout::SRAM_EN0_,
@@ -612,9 +668,9 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-
-	//tft.println("Finished starting up!");
-	//tft.println("Holding reset line for a second to make sure!");
+    Serial.println("Running memory boards through their paces");
+    testMemoryBoard<i960Pinout::SRAM_EN0_>();
+    testMemoryBoard<i960Pinout::SRAM_EN1_>();
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 }
