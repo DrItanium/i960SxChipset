@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include <array>
 #include <boost/asio.hpp>
 #include <boost/program_options.hpp>
 enum class MaskStyle : uint8_t {
@@ -35,7 +36,6 @@ public:
     write(Address address, uint16_t value, MaskStyle style) {
         switch (style) {
             case MaskStyle::LowerEightBits:
-
             case MaskStyle::UpperEightBits:
             case MaskStyle::FullWord:
             default:
@@ -107,14 +107,43 @@ int main(int argc, char** argv) {
         };
         try {
             boost::asio::io_service service;
-            boost::asio::serial_port sp(service, serialPortName.c_str());
+            boost::asio::serial_port sp(service);
             sp.set_option(boost::asio::serial_port::baud_rate(vm["baud"].as<uint32_t>()));
             sp.set_option(boost::asio::serial_port::flow_control(getFlowControl(vm["flow-control"].as<std::string>())));
             sp.set_option(boost::asio::serial_port::character_size(vm["character-size"].as<uint32_t>()));
             sp.set_option(boost::asio::serial_port::stop_bits(getStopBits(vm["stop-bits"].as<double>())));
             sp.set_option(boost::asio::serial_port::parity(getParity(vm["parity"].as<std::string>())));
-            memoryBlock.reset(std::make_unique<uint8_t[]>(vm["memory-block-size"].as<uint32_t>() / sizeof(uint16_t)));
-
+            MemoryBlock mb(vm["memory-block-size"].as<uint32_t>());
+            boost::system::error_code ec;
+            sp.open(serialPortName.c_str(), ec);
+            if (ec) {
+                std::cerr << "error: opening port " << serialPortName << " failed. Reason: " << ec.message() << std::endl;
+                return 1;
+            }
+            std::array<uint8_t, 8> data = { 0 };
+            while (true) {
+                auto count = boost::asio::read(sp, boost::asio::buffer(data, 8));
+                if (count != 8) {
+                    throw std::runtime_error("not enough bytes!");
+                } else {
+                    auto operation = static_cast<uint16_t>(data[0])  | (static_cast<uint16_t>(data[1]) << 8);
+                    auto style = static_cast<MaskStyle>(operation & 0b11);
+                    auto address = static_cast<uint32_t>(data[2]) |
+                                   (static_cast<uint32_t>(data[3]) << 8) |
+                                   (static_cast<uint32_t>(data[4]) << 16) |
+                                   (static_cast<uint32_t>(data[5]) << 24);
+                    uint16_t result = 0;
+                    if (operation & 0b100) {
+                        // write operation
+                        auto value = static_cast<uint16_t>(data[6])  | (static_cast<uint16_t>(data[7]) << 8);
+                        mb.write(address, value, style);
+                    } else {
+                        // read operation
+                        result = mb.read(address, style);
+                    }
+                    sp.write_some(boost::asio::buffer(&result, 2));
+                }
+            }
             return 0;
         } catch (boost::system::system_error &error) {
             std::cerr << "ERROR: " << error.what() << std::endl;
