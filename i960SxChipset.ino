@@ -503,9 +503,25 @@ enteringDataState() noexcept {
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
 }
+void
+performWrite(Address address, uint16_t value) noexcept {
+   Serial.print("Write 0x");
+   Serial.print(value, HEX);
+   Serial.print(" to 0x");
+   Serial.println(address, HEX);
+}
+uint16_t
+performRead(Address address) noexcept {
+    Serial.print("Read from 0x");
+    Serial.println(address, HEX);
+    return 0;
+}
 void processDataRequest() noexcept {
+    auto burstAddress = getBurstAddress(baseAddress);
 	if (performingRead) {
-		setDataBits(readResult);
+		setDataBits(performRead(burstAddress));
+	} else {
+	    performWrite(burstAddress, getDataBits());
 	}
 	// setup the proper address and emit this over serial
 	auto blastPin = getBlastPin();
@@ -666,8 +682,10 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
+	#if 0
     Serial.println("Running memory boards through their paces");
     testMemoryBoard<i960Pinout::SPI_BUS_EN>();
+    #endif
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 }
