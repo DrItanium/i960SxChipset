@@ -31,7 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Board Platform: MightyCore
 #include <SPI.h>
 #include <libbonuspin.h>
+#ifdef ARDUINO_AVR_ATmega1284
 #include <Timer.h>
+#endif
 #include <Fsm.h>
 template<typename T>
 class TreatAs final {
@@ -45,7 +47,40 @@ using Byte = uint8_t;
 using TreatAsByte = TreatAs<uint8_t>;
 using TreatAsShort = TreatAs<uint16_t>;
 using TreatAsWord = TreatAs<uint32_t>;
+constexpr auto using1284p() noexcept {
+#ifdef ARDUINO_AVR_ATmega1284
+    return true;
+#else
+    return false;
+#endif
+}
+constexpr auto usingUno() noexcept {
+#ifdef ARDUINO_AVR_UNO
+    return true;
+#else
+    return false;
+#endif
+}
+enum class TargetBoard {
+    Unknown = 0,
+    MightyCore_1284p,
+    ArduinoUno,
+};
+
+constexpr auto getTargetBoard() noexcept {
+    if (using1284p()) {
+        return TargetBoard::MightyCore_1284p;
+    } else if (usingUno()) {
+        return TargetBoard::ArduinoUno;
+    } else {
+        return TargetBoard::Unknown;
+    }
+}
+
+static_assert(getTargetBoard() != TargetBoard::Unknown, "Unknown board target! Please port or specify a supported one!");
+
 enum class i960Pinout : decltype(A0) {
+#ifdef ARDUINO_AVR_ATmega1284
 // PORT B
 	Led = 0, 	  // output
    	CLOCK_OUT, // output, unusable
@@ -83,8 +118,45 @@ enum class i960Pinout : decltype(A0) {
 	Analog6,
 	Analog7,
 	Count,		  // special
+#elif defined(ARDUINO_AVR_UNO)
+    Led = LED_BUILTIN,
+    SCL = A5,
+    SDA = A4,
+    AS_ = 2,
+    DEN_ = 3,
+    Ready = 4,
+    Int0_ = 5,
+    W_R_ = 6,
+    Reset960 = 7,
+    BLAST_ = 8,
+    FAIL = 9,
+    GPIOSelect = 10,
+    MOSI = 11,
+    MISO = 12,
+    SCK = 13,
+    SPI_BUS_EN = A0,
+    Analog1 = A1,
+    Analog2 = A2,
+    Analog3 = A3,
+    Analog4 = A4,
+    Analog5 = A5,
+#else
+#error "Unsupported board, unknown pinout"
+#endif
 };
-static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
+constexpr auto getPinCount() noexcept {
+#ifdef ARDUINO_AVR_ATmega1284
+    return 32;
+#elif defined(ARDUINO_AVR_UNO)
+    return 18;
+#else
+#error "Unsupported board, unknown pinout"
+    return -1;
+#endif
+}
+#ifdef ARDUINO_AVR_ATmega1284
+static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= getPinCount());
+#endif
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
 	digitalWrite(static_cast<int>(ip), value);
@@ -262,7 +334,9 @@ IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 IOExpander<IOExpanderAddress::Upper16Lines> upper16;
 IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
 
+#ifdef ARDUINO_AVR_ATmega1284
 Timer t;
+#endif
 
 Address
 getAddress() noexcept {
@@ -467,13 +541,21 @@ void systemTestState() noexcept {
 		fsm.trigger(SelfTestComplete);
 	}
 }
-
-ISR (INT2_vect)
+#ifdef ARDUINO_AVR_ATmega1284
+#define AS_ISR INT2_vect
+#define DEN_ISR INT0_vect
+#elif defined(ARDUINO_AVR_UNO)
+#define AS_ISR INT0_vect
+#define DEN_ISR INT1_vect
+#else
+#error "AS and DEN ISR must be defined for this unknown board"
+#endif
+ISR (AS_ISR)
 {
 	asTriggered = true;
 	// this is the AS_ pin doing its thing
 }
-ISR (INT0_vect) 
+ISR (DEN_ISR)
 {
 	denTriggered = true;
 }
@@ -558,6 +640,15 @@ void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
 	fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
 }
+void setupInterrupts() noexcept {
+    if constexpr (using1284p()) {
+        EIMSK |= 0b101; // enable INT2 and INT0 pin
+        EICRA |= 0b100010; // trigger on falling edge
+    } else if constexpr (usingUno()) {
+        EIMSK |= 0b11; // enable INT1 and INT0 pin
+        EICRA |= 0b1010; // trigger on falling edge
+    }
+}
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
@@ -577,8 +668,7 @@ void setupCPUInterface() {
 			i960Pinout::W_R_,
 			i960Pinout::DEN_,
 			i960Pinout::FAIL);
-	EIMSK |= 0b101; // enable INT2 and INT0 pin
-	EICRA |= 0b100010; // trigger on falling edge
+	setupInterrupts();
 }
 void setupIOExpanders() {
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
@@ -676,7 +766,10 @@ void setup() {
               i960Pinout::Led,
               i960Pinout::SPI_BUS_EN);
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+
+#ifdef ARDUINO_AVR_ATmega1284
 	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
+#endif
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
 	SPI.begin();
 	setupIOExpanders();
@@ -691,5 +784,7 @@ void setup() {
 }
 void loop() {
 	fsm.run_machine();
+#ifdef ARDUINO_AVR_ATmega1284
 	t.update();
+#endif
 }
