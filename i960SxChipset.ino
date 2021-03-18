@@ -61,6 +61,9 @@ constexpr auto usingUno() noexcept {
     return false;
 #endif
 }
+constexpr auto getCPUFrequency() noexcept {
+    return F_CPU;
+}
 enum class TargetBoard {
     Unknown = 0,
     MightyCore_1284p,
