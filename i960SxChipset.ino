@@ -398,10 +398,6 @@ State tData(enteringDataState,
 State tRecovery(nullptr,
 		doRecoveryState,
 		nullptr);
-State tRdy(nullptr, []() {
-#if 0
-#endif
-		}, nullptr);
 State tChecksumFailure(nullptr, nullptr, nullptr);
 
 
