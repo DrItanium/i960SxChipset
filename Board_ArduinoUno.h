@@ -32,7 +32,7 @@ enum class i960Pinout : decltype(A0) {
     SDA = A4,
     Led = LED_BUILTIN,
 };
-static_assert(static_cast<i960Pinout::Count> == 14);
+static_assert(static_cast<int>(i960Pinout::Count) == 14);
 #define AS_ISR INT0_vect
 #define DEN_ISR INT1_vect
 #endif //ARDUINO_BOARD_ARDUINOUNO_H
