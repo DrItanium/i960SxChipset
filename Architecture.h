@@ -4,21 +4,32 @@
 
 #ifndef ARCHITECTURE_H
 #define ARCHITECTURE_H
+#if defined(__arm__) || defined(__thumb__)
+#define CPU_IS_ARM
+#endif
+#if defined(__AVR) || defined(AVR)
+#define CPU_IS_AVR
+#endif
+
+#if defined(CPU_IS_ARM) && defined(CPU_IS_AVR)
+#error "Multiple CPU architectures detected!"
+#endif
+
 enum class CPUArchitecture {
-    Unknown = 0,
-    ARM,
-    AVR,
+    ISA_Unknown = 0,
+    ISA_ARM,
+    ISA_AVR,
 };
 
 constexpr auto architectureIsArm() noexcept {
-#if defined(__arm__) || defined(__thumb__)
+#ifdef CPU_IS_ARM
     return true;
 #else
     return false;
 #endif
 }
 constexpr auto architectureIsAVR() noexcept {
-#if defined(__AVR) || defined(AVR)
+#ifdef CPU_IS_AVR
     return true;
 #else
     return false;
@@ -27,11 +38,16 @@ constexpr auto architectureIsAVR() noexcept {
 
 constexpr auto getArchitecture() noexcept {
     if constexpr (architectureIsAVR()) {
-        return CPUArchitecture::AVR;
+        return CPUArchitecture::ISA_AVR;
     } else if constexpr (architectureIsArm()) {
-        return CPUArchitecture::ARM;
+        return CPUArchitecture::ISA_ARM;
     } else {
-        return CPUArchitecture::Unknown;
+        return CPUArchitecture::ISA_Unknown;
     }
 }
+#ifndef CPU_IS_ARM
+#ifndef CPU_IS_AVR
+#warning "Unknown cpu architecture being used."
+#endif
+#endif
 #endif //ARCHITECTURE_H

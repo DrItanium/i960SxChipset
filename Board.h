@@ -4,7 +4,13 @@
 
 #ifndef ARDUINO_BOARD_H
 #define ARDUINO_BOARD_H
+#include "Architecture.h"
 #include "BoardSpecific.h"
+#ifdef CPU_IS_AVR
+#ifdef __NO_INTERRUPTS__
+#error "i960 Chipset requires interrupts on AVR"
+#endif
+#endif
 #ifdef ARDUINO_AVR_ATmega1284
 #include "Board_ATmega1284.h"
 #elif defined(ARDUINO_AVR_UNO)
