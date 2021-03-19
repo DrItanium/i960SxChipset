@@ -49,4 +49,6 @@ enum class i960Pinout : decltype(A0) {
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 extern Timer t;
+#define AS_ISR INT2_vect
+#define DEN_ISR INT0_vect
 #endif //ARDUINO_BOARD_ATMEGA1284_H

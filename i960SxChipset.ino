@@ -460,15 +460,6 @@ void systemTestState() noexcept {
 		fsm.trigger(SelfTestComplete);
 	}
 }
-#ifdef ARDUINO_AVR_ATmega1284
-#define AS_ISR INT2_vect
-#define DEN_ISR INT0_vect
-#elif defined(ARDUINO_AVR_UNO)
-#define AS_ISR INT0_vect
-#define DEN_ISR INT1_vect
-#else
-#error "AS and DEN ISR must be defined for this unknown board"
-#endif
 ISR (AS_ISR)
 {
 	asTriggered = true;
@@ -683,6 +674,9 @@ void testMemoryBoard() {
 // the setup routine runs once when you press reset:
 void setup() {
 	Serial.begin(115200);
+	if constexpr (hasSoftwareSerial()) {
+	    while(!Serial);
+	}
     setupPins(OUTPUT,
               i960Pinout::Reset960,
               i960Pinout::Led,

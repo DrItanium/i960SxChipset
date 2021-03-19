@@ -29,4 +29,6 @@ enum class i960Pinout : decltype(A0) {
     Analog4 = A4,
     Analog5 = A5,
 };
+#define AS_ISR INT0_vect
+#define DEN_ISR INT1_vect
 #endif //ARDUINO_BOARD_ARDUINOUNO_H

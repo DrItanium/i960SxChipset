@@ -13,5 +13,19 @@
 #else
 #error "Unknown board!"
 #endif
+#ifndef AS_ISR
+#error "AS_ Must be bound to an interrupt service routine!"
+#endif
 
+#ifndef DEN_ISR
+#error "DEN_ Must be bound to an interrupt service routine!"
+#endif
+
+constexpr bool hasSoftwareSerial() noexcept {
+#ifdef SOFTWARE_IS_SERIAL
+    return true;
+#else
+    return false;
+#endif
+}
 #endif //ARDUINO_BOARD_H
