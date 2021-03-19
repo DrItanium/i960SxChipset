@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Language options:
 /// - C++17
 /// Board Platform: MightyCore
+#include "Board.h"
 #include <SPI.h>
 #include <libbonuspin.h>
 #ifdef ARDUINO_AVR_ATmega1284
