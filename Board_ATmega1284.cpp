@@ -16,3 +16,4 @@ void setupInterrupts() {
     EICRA |= 0b100010; // trigger on falling edge
 }
 
+Timer t;

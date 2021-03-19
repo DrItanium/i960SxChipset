@@ -324,10 +324,6 @@ IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 IOExpander<IOExpanderAddress::Upper16Lines> upper16;
 IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
 
-#ifdef ARDUINO_AVR_ATmega1284
-Timer t;
-#endif
-
 Address
 getAddress() noexcept {
 	auto lower16Addr = static_cast<Address>(lower16.readGPIOs());
