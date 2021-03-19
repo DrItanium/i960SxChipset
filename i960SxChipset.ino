@@ -630,6 +630,7 @@ void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
 	fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
 }
+#if 0
 void setupInterrupts() noexcept {
     if constexpr (using1284p()) {
         EIMSK |= 0b101; // enable INT2 and INT0 pin
@@ -638,7 +639,9 @@ void setupInterrupts() noexcept {
         EIMSK |= 0b11; // enable INT1 and INT0 pin
         EICRA |= 0b1010; // trigger on falling edge
     }
+
 }
+#endif
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
@@ -756,10 +759,7 @@ void setup() {
               i960Pinout::Led,
               i960Pinout::SPI_BUS_EN);
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-
-#ifdef ARDUINO_AVR_ATmega1284
-	t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-#endif
+    boardSpecificSetup();
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
 	SPI.begin();
 	setupIOExpanders();
@@ -774,7 +774,5 @@ void setup() {
 }
 void loop() {
 	fsm.run_machine();
-#ifdef ARDUINO_AVR_ATmega1284
-	t.update();
-#endif
+	boardSpecificLoopBody();
 }

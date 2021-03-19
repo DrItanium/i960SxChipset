@@ -5,6 +5,7 @@
 #ifndef ARDUINO_BOARD_ATMEGA1284_H
 #define ARDUINO_BOARD_ATMEGA1284_H
 #include "BoardSpecific.h"
+#include <Timer.h>
 
 enum class i960Pinout : decltype(A0) {
     // PORT B
@@ -46,4 +47,5 @@ enum class i960Pinout : decltype(A0) {
 	Count,		  // special
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
+Timer t;
 #endif //ARDUINO_BOARD_ATMEGA1284_H

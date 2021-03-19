@@ -6,4 +6,5 @@
 #define ARDUINO_BOARDSPECIFIC_H
 void boardSpecificSetup();
 void boardSpecificLoopBody();
+void setupInterrupts();
 #endif //ARDUINO_BOARDSPECIFIC_H
