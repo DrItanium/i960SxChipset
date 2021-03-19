@@ -33,18 +33,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <libbonuspin.h>
 #include <Fsm.h>
-template<typename T>
-class TreatAs final {
-	public:
-		using ReturnType = T;
-};
 using Address = uint32_t;
 using Short = uint16_t;
 using BusDatum = Short;
-using Byte = uint8_t;
-using TreatAsByte = TreatAs<uint8_t>;
-using TreatAsShort = TreatAs<uint16_t>;
-using TreatAsWord = TreatAs<uint32_t>;
 
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
@@ -310,11 +301,6 @@ void setLOCKPin(decltype(LOW) value) noexcept {
 }
 
 
-/// @todo add the FAIL pin based off of the diagrams I have (requires external
-// circuitry.
-// We talk to the FT232H via an external SPI SRAM of 1 Megabit (128 kbytes)
-// there are two addresses used in the design
-
 // The bootup process has a separate set of states
 // TStart - Where we start
 // TSystemTest - Processor performs self test
@@ -348,10 +334,6 @@ void setLOCKPin(decltype(LOW) value) noexcept {
 // Ta -> Td
 // Td -> Tr after signaling ready and no burst (blast low)
 // Td -> Td after signaling ready and burst (blast high)
-// Td -> Tw if not ready 
-// Tw -> Td if ready and burst (blast high)
-// Tw -> Tr after signaling ready and no burst (blast low)
-
 // Ti -> TChecksumFailure if FAIL is asserted
 // Tr -> TChecksumFailure if FAIL is asserted
 
