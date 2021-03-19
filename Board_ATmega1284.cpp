@@ -2,6 +2,7 @@
 // Created by jwscoggins on 3/19/21.
 //
 
+#ifdef ARDUINO_AVR_ATmega1284
 #include "Board_ATmega1284.h"
 
 void boardSpecificSetup() {
@@ -17,3 +18,4 @@ void setupInterrupts() {
 }
 
 Timer t;
+#endif
