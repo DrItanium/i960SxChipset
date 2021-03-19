@@ -7,6 +7,7 @@
 #include "BoardSpecific.h"
 
 #ifdef ARDUINO_AVR_ATmega1284
+#include "Board_ATmega1284.h"
 #elif defined(ARDUINO_AVR_UNO)
 #else
 #error "Unknown board!"

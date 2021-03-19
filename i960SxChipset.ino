@@ -80,9 +80,7 @@ constexpr auto getTargetBoard() noexcept {
         return TargetBoard::Unknown;
     }
 }
-
-static_assert(getTargetBoard() != TargetBoard::Unknown, "Unknown board target! Please port or specify a supported one!");
-
+#if 0
 enum class i960Pinout : decltype(A0) {
 #ifdef ARDUINO_AVR_ATmega1284
 // PORT B
@@ -148,18 +146,6 @@ enum class i960Pinout : decltype(A0) {
 #error "Unsupported board, unknown pinout"
 #endif
 };
-constexpr auto getPinCount() noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
-    return 32;
-#elif defined(ARDUINO_AVR_UNO)
-    return 18;
-#else
-#error "Unsupported board, unknown pinout"
-    return -1;
-#endif
-}
-#ifdef ARDUINO_AVR_ATmega1284
-static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= getPinCount());
 #endif
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
