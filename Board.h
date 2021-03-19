@@ -33,4 +33,5 @@ constexpr bool hasSoftwareSerial() noexcept {
     return false;
 #endif
 }
+constexpr auto getCPUFrequency() noexcept { return F_CPU; }
 #endif //ARDUINO_BOARD_H

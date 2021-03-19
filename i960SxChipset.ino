@@ -32,9 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Board.h"
 #include <SPI.h>
 #include <libbonuspin.h>
-#ifdef ARDUINO_AVR_ATmega1284
-#include <Timer.h>
-#endif
 #include <Fsm.h>
 template<typename T>
 class TreatAs final {
@@ -48,38 +45,7 @@ using Byte = uint8_t;
 using TreatAsByte = TreatAs<uint8_t>;
 using TreatAsShort = TreatAs<uint16_t>;
 using TreatAsWord = TreatAs<uint32_t>;
-constexpr auto using1284p() noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
-    return true;
-#else
-    return false;
-#endif
-}
-constexpr auto usingUno() noexcept {
-#ifdef ARDUINO_AVR_UNO
-    return true;
-#else
-    return false;
-#endif
-}
-constexpr auto getCPUFrequency() noexcept {
-    return F_CPU;
-}
-enum class TargetBoard {
-    Unknown = 0,
-    MightyCore_1284p,
-    ArduinoUno,
-};
 
-constexpr auto getTargetBoard() noexcept {
-    if (using1284p()) {
-        return TargetBoard::MightyCore_1284p;
-    } else if (usingUno()) {
-        return TargetBoard::ArduinoUno;
-    } else {
-        return TargetBoard::Unknown;
-    }
-}
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
 	digitalWrite(static_cast<int>(ip), value);
@@ -550,18 +516,6 @@ void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
 	fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
 }
-#if 0
-void setupInterrupts() noexcept {
-    if constexpr (using1284p()) {
-        EIMSK |= 0b101; // enable INT2 and INT0 pin
-        EICRA |= 0b100010; // trigger on falling edge
-    } else if constexpr (usingUno()) {
-        EIMSK |= 0b11; // enable INT1 and INT0 pin
-        EICRA |= 0b1010; // trigger on falling edge
-    }
-
-}
-#endif
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
