@@ -42,18 +42,18 @@ enum class i960Pinout : decltype(A0) {
     MOSI,
     MISO,
     SCK,
+    SPI_BUS_EN,
+    Analog1,
+    Analog2,
+    Analog3,
+    Analog4,
+    Analog5,
     Count,
-    SPI_BUS_EN = A0,
-    Analog1 = A1,
-    Analog2 = A2,
-    Analog3 = A3,
-    Analog4 = A4,
-    Analog5 = A5,
     SCL = A5,
     SDA = A4,
     Led = LED_BUILTIN,
 };
-static_assert(static_cast<int>(i960Pinout::Count) == 14);
+static_assert(static_cast<int>(i960Pinout::Count) == 20);
 #define AS_ISR INT0_vect
 #define DEN_ISR INT1_vect
 #endif //ARDUINO_BOARD_ARDUINOUNO_H
