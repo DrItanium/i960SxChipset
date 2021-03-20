@@ -36,6 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Board_ATmega1284.h"
 #elif defined(ARDUINO_AVR_UNO)
 #include "Board_ArduinoUno.h"
+#elif defined(ARDUINO_AVR_ATTINYX61)
+#include "Board_Attiny861.h"
 #else
 #error "Unknown board!"
 #endif
