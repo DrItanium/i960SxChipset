@@ -34,8 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libbonuspin.h>
 #include <Fsm.h>
 using Address = uint32_t;
-using Short = uint16_t;
-using BusDatum = Short;
 
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
