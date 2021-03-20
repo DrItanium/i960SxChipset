@@ -27,6 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Board_ATmega1284.h"
 
 void boardSpecificSetup() {
+    pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
+
     t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
 }
 void boardSpecificLoopBody() {

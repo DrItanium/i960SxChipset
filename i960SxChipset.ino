@@ -598,7 +598,6 @@ void setup() {
 	}
     setupPins(OUTPUT,
               i960Pinout::Reset960,
-              i960Pinout::Led,
               i960Pinout::SPI_BUS_EN);
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     boardSpecificSetup();

@@ -29,32 +29,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "BoardSpecific.h"
 enum class i960Pinout : decltype(A0) {
-    RX0 = 0,
-    TX0,
-    AS_,
-    DEN_,
-    Ready,
+    Ready = 0,
     Int0_,
+    DEN_,
+    SPI_BUS_EN,
     W_R_,
     Reset960,
-    BLAST_,
-    FAIL,
-    GPIOSelect,
+    // Software Serial, can be reused
+    RX0,
+    TX0,
     Pin_MOSI,
     Pin_MISO,
     Pin_SCK,
+    GPIOSelect,
+    BLAST_,
+    FAIL,
+    AS_,
+    MCU_RESET,
     Count,
-    SPI_BUS_EN = A0,
-    Analog1 = A1,
-    Analog2 = A2,
-    Analog3 = A3,
-    Analog4 = A4,
-    Analog5 = A5,
-    SCL = A5,
-    SDA = A4,
-    Led = LED_BUILTIN,
 };
-static_assert(static_cast<int>(i960Pinout::Count) == 14);
+static_assert(static_cast<int>(i960Pinout::Count) == 16);
 #define AS_ISR INT0_vect
 #define DEN_ISR INT1_vect
+#define SOFTWARE_IS_SERIAL
 #endif //ARDUINO_BOARD_ATTINY861_H
