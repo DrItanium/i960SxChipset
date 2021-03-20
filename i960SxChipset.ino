@@ -286,13 +286,6 @@ Address getBurstAddress() noexcept {
 bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
 bool isWriteOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isDeasserted(); }
 auto getBlastPin() noexcept { return DigitalPin<i960Pinout::BLAST_>::read(); }
-uint16_t makeCommandOperation() noexcept {
-	if (auto enableBits = getByteEnableBits(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-		return enableBits;
-	} else {
-		return 0b100 | enableBits;
-	}
-}
 void setHOLDPin(decltype(LOW) value) noexcept {
 	digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, extraMemoryCommit);
 }
