@@ -23,38 +23,19 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef ARDUINO_BOARD_ATTINY861_H
-#define ARDUINO_BOARD_ATTINY861_H
+#ifdef ARDUINO_AVR_ATTINYX61
+#include "Board_Attiny861.h"
 
-#include <Arduino.h>
-#include "BoardSpecific.h"
-enum class i960Pinout : decltype(A0) {
-    RX0 = 0,
-    TX0,
-    AS_,
-    DEN_,
-    Ready,
-    Int0_,
-    W_R_,
-    Reset960,
-    BLAST_,
-    FAIL,
-    GPIOSelect,
-    Pin_MOSI,
-    Pin_MISO,
-    Pin_SCK,
-    Count,
-    SPI_BUS_EN = A0,
-    Analog1 = A1,
-    Analog2 = A2,
-    Analog3 = A3,
-    Analog4 = A4,
-    Analog5 = A5,
-    SCL = A5,
-    SDA = A4,
-    Led = LED_BUILTIN,
-};
-static_assert(static_cast<int>(i960Pinout::Count) == 14);
-#define AS_ISR INT0_vect
-#define DEN_ISR INT1_vect
-#endif //ARDUINO_BOARD_ATTINY861_H
+void boardSpecificSetup() {
+}
+void boardSpecificLoopBody() {
+}
+
+void setupInterrupts() {
+#if 0
+    EIMSK |= 0b11; // enable INT1 and INT0 pin
+    EICRA |= 0b1010; // trigger on falling edge
+#endif
+}
+
+#endif
