@@ -50,7 +50,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef DEN_ISR
 #error "DEN_ Must be bound to an interrupt service routine!"
 #endif
-
+constexpr bool hasSerial() noexcept {
+#ifndef NO_SERIAL
+    return true;
+#else
+    return false;
+#endif
+}
 constexpr bool hasSoftwareSerial() noexcept {
 #ifdef SOFTWARE_IS_SERIAL
     return true;

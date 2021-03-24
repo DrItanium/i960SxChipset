@@ -427,15 +427,19 @@ enteringDataState() noexcept {
 }
 void
 performWrite(Address address, uint16_t value) noexcept {
-   Serial.print("Write 0x");
-   Serial.print(value, HEX);
-   Serial.print(" to 0x");
-   Serial.println(address, HEX);
+    if constexpr(hasSerial()) {
+        Serial.print("Write 0x");
+        Serial.print(value, HEX);
+        Serial.print(" to 0x");
+        Serial.println(address, HEX);
+    }
 }
 uint16_t
 performRead(Address address) noexcept {
-    Serial.print("Read from 0x");
-    Serial.println(address, HEX);
+    if constexpr (hasSerial()) {
+        Serial.print("Read from 0x");
+        Serial.println(address, HEX);
+    }
     return 0;
 }
 void processDataRequest() noexcept {
@@ -515,11 +519,11 @@ void setupIOExpanders() {
 	extraMemoryCommit.refreshIOCon();
 	// now all devices tied to this ~CS pin have separate addresses
 	// make each of these inputs
-	lower16.writeGPIOsDirection(0b11111111'11111111);
-	upper16.writeGPIOsDirection(0b11111111'11111111);
-	dataLines.writeGPIOsDirection(0b11111111'11111111);
+	lower16.writeGPIOsDirection(0xFFFF);
+	upper16.writeGPIOsDirection(0xFFFF);
+	dataLines.writeGPIOsDirection(0xFFFF);
 	// set lower eight to inputs and upper eight to outputs
-	extraMemoryCommit.writeGPIOsDirection(0b00000000'11111111);
+	extraMemoryCommit.writeGPIOsDirection(0x00FF);
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
@@ -575,25 +579,31 @@ void testMemoryBoard() {
         auto value = static_cast<uint8_t>(i);
         write8<enablePin>(i, i);
         if (auto result = read8<enablePin>(i); result != value) {
-            Serial.print("Failure, id: ") ;
-            Serial.print(targetDevice, DEC);
-            Serial.print(" address: 0x");
-            Serial.print(i, HEX);
-            Serial.print(" value: 0x");
-            Serial.print(value, HEX);
-            Serial.print(" got: 0x");
-            Serial.println(result, HEX);
+            if constexpr (hasSerial()) {
+                Serial.print("Failure, id: ");
+                Serial.print(targetDevice, DEC);
+                Serial.print(" address: 0x");
+                Serial.print(i, HEX);
+                Serial.print(" value: 0x");
+                Serial.print(value, HEX);
+                Serial.print(" got: 0x");
+                Serial.println(result, HEX);
+            }
             delay(1);
         }
     }
-    Serial.println("Done!");
+    if constexpr (hasSerial()) {
+        Serial.println("Done!");
+    }
 }
 // the setup routine runs once when you press reset:
 void setup() {
-	Serial.begin(115200);
-	if constexpr (hasSoftwareSerial()) {
-	    while(!Serial);
-	}
+    if constexpr (hasSerial()) {
+        Serial.begin(115200);
+        if constexpr (hasSoftwareSerial()) {
+            while (!Serial);
+        }
+    }
     setupPins(OUTPUT,
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN);
@@ -604,9 +614,11 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-    Serial.println("Running memory boards through their paces");
-    testMemoryBoard<i960Pinout::SPI_BUS_EN>();
-	delay(1000);
+	if constexpr (hasSerial()) {
+        Serial.println("Running memory boards through their paces");
+    }
+    //testMemoryBoard<i960Pinout::SPI_BUS_EN>();
+	//delay(1000);
 	// we want to jump into the code as soon as possible after this point
 }
 void loop() {

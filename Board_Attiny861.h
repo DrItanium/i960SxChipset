@@ -52,4 +52,6 @@ static_assert(static_cast<int>(i960Pinout::Count) == 16);
 #define AS_ISR INT0_vect
 #define DEN_ISR INT1_vect
 #define SOFTWARE_IS_SERIAL
+// disable serial for now
+#define NO_SERIAL
 #endif //ARDUINO_BOARD_ATTINY861_H
