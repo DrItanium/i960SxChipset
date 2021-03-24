@@ -14,5 +14,6 @@ void setupInterrupts() {
     EIMSK |= 0b11; // enable INT1 and INT0 pin
     EICRA |= 0b1010; // trigger on falling edge
 #endif
+#warning "Configure Interrupts for Attiny88!"
 }
 #endif
