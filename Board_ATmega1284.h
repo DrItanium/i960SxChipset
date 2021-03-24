@@ -28,6 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "BoardSpecific.h"
 #include <Timer.h>
+#include <Adafruit_GFX.h>
+#include <SD.h>
 
 enum class i960Pinout : decltype(A0) {
     // PORT B

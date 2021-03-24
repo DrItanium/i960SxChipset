@@ -27,6 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ARDUINO_BOARD_ARDUINOUNO_H
 #include <Arduino.h>
 #include "BoardSpecific.h"
+#include <Adafruit_GFX.h>
+#include <SD.h>
 enum class i960Pinout : decltype(A0) {
     RX0 = 0,
     TX0,
