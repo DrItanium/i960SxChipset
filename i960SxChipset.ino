@@ -291,6 +291,14 @@ void setLOCKPin(decltype(LOW) value) noexcept {
 	digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extraMemoryCommit);
 }
 
+/**
+ * @brief Set PortB on the extra io expander
+ * @param targetDevice the spi index
+ */
+void setSPIBusId(uint8_t targetDevice) noexcept {
+    extraMemoryCommit.writePortB(targetDevice);
+}
+
 
 // The bootup process has a separate set of states
 // TStart - Where we start
@@ -563,11 +571,10 @@ void testMemoryBoard() {
     for (uint32_t i = 0; i < 0b0010'0000'0000'0000'0000'0000; ++i) {
         auto controlBits = static_cast<uint8_t>((mask & i) >> 17);
         auto targetDevice = static_cast<uint8_t>(controlBits & 0b0111'111);
-        extraMemoryCommit.writePortB(targetDevice);
+        setSPIBusId(targetDevice);
         auto value = static_cast<uint8_t>(i);
         write8<enablePin>(i, i);
-        auto result = read8<enablePin>(i);
-        if (result != value) {
+        if (auto result = read8<enablePin>(i); result != value) {
             Serial.print("Failure, id: ") ;
             Serial.print(targetDevice, DEC);
             Serial.print(" address: 0x");
@@ -597,10 +604,8 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-	#if 0
     Serial.println("Running memory boards through their paces");
     testMemoryBoard<i960Pinout::SPI_BUS_EN>();
-    #endif
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 }
