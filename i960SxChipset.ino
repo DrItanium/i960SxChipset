@@ -425,6 +425,8 @@ enteringDataState() noexcept {
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
 }
+/// @todo add byte enable mask to the load and store routines
+
 void
 performWrite(Address address, uint16_t value) noexcept {
     if constexpr(hasSerial()) {
@@ -614,11 +616,13 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
+#if 0
 	if constexpr (hasSerial()) {
         Serial.println("Running memory boards through their paces");
     }
-    //testMemoryBoard<i960Pinout::SPI_BUS_EN>();
-	//delay(1000);
+    testMemoryBoard<i960Pinout::SPI_BUS_EN>();
+	delay(1000);
+#endif
 	// we want to jump into the code as soon as possible after this point
 }
 void loop() {
