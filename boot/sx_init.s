@@ -240,3 +240,22 @@ move_data:
     cmpibg  g0,g4, move_data # loop until done
     bx (g14)
 
+/* The routine below fixes up the stack for a flase interrupt return.
+ * We have reserved area on the stack before the call to this
+ * routine. We need to build a phony interrupt record here
+ * to force the processor to pick it up on return. Also, we
+ * will take advantage of the fact that the processor will
+ * restore the PC and AC to its registers
+ */
+
+fix_stack:
+    flush_reg
+    or  pfp, 7, pfp     # put interrupt return code into pfp
+
+    ldconst 0x1f0002, g0
+    st  g0, -16(fp)     # store contrived PC
+    ldconst 0x3b001000, g0  # setup arithmetic controls
+    st  g0, -12(fp)     # store contrived AC
+    ret
+
+
