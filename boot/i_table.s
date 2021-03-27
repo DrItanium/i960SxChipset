@@ -271,7 +271,7 @@ intr_table:
         .word _user_intr;           # Reserved
         .word _user_intr;           # Reserved
         .word _user_intr;           # Reserved
-        .word _user_intr;           # Reserved
+        .word _NMI_intr;            # NMI Interrupt
         .word _user_intr;           # Reserved
         .word _user_intr;           # Reserved
         .word _user_intr;           # Reserved
