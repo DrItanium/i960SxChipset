@@ -20,7 +20,8 @@
    on the software, documentation and results solely at your own
    risk.							  */
 /******************************************************************/
-
+#ifndef NINDY_STOP_H__
+#define NINDY_STOP_H__
 
 /******************************************************************
  *
@@ -82,3 +83,5 @@
 
 #define STOP_GDB_BPT    0xff
 	/* Application program has reached breakpoint (fmark) set by host */
+
+#endif // end NINDY_STOP_H__

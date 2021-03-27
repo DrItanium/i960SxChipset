@@ -20,8 +20,11 @@
    on the software, documentation and results solely at your own 
    risk.							  */
 /******************************************************************/
-
+#ifndef NINDY_VERSION_H__
+#define NINDY_VERSION_H__
 /* define version number */
 
 #define	XVERSION 	""
 #define	VERSION		"3.01"
+
+#endif // end NINDY_VERSION_H__

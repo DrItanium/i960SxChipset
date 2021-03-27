@@ -42,6 +42,7 @@
 /* works out fine.  It just takes some time for	*/
 /* the programmer to get it all sorted out.	*/
 /************************************************/
+
 static const struct { short opcode; char *name; short numops; }
 instr[] = {
 
