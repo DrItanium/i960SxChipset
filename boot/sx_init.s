@@ -219,5 +219,24 @@ reinitialize_iac:
     .word _prcb_ram     # use newly copied PRCB
     .word start_again_ip    # start here
 
+/* -- define RAM area to copy the PRCB and interrupt table
+ *    to after initial bootup from EPROM/FLASH
+ */
+    .bss intr_ram, 1028, 6
+    .bss _prcb_ram, 176, 6
+ /* -- define RAM area for stacks; size is only a suggestion your actual
+  *    mileage may vary
+  */
+    .bss _user_stack, 0x2000, 6
+    .bss _intr_stack, 0x2000, 6
+    .bss _sup_stack, 0x2000, 6
 
+/* -- Below is a software loop to move data */
+
+move_data:
+    ldq (g1)[g4*1], g8  # load 4 workds into g8
+    stq g8, (g2)[g4*1]  # store to RAM block
+    addi g4,16, g4      # increment index
+    cmpibg  g0,g4, move_data # loop until done
+    bx (g14)
 
