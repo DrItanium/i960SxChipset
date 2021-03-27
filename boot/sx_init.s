@@ -63,3 +63,37 @@ system_address_table:
     // now reserve 88 more bytes
     .space 88
 
+    .word sys_proc_table        // initialization words
+    .word 0x304000fb
+    .space 8
+
+    .word system_address_table
+    .word 0x00fc00fb            // initialization words
+    .space 8
+
+    .word sys_proc_table
+    .word 0x304000fb            // initialization words
+    .space 8
+
+    .word fault_proc_table
+    .word 0x304000fb            // initialization words
+
+// initial PRCB
+// this is our startup PRCB. After initialization.
+// this will be copied to RAM
+
+prcb_ptr:
+    .word 0x0 // 0 - reserved
+    .word 0xc // 4 - initialize to 0xc
+    .word 0x0 // 8 - reserved
+    .word 0x0 // 12 - reserved
+    .word 0x0 // 16 - reserved
+    .word intr_table // 20 - interrupt table address
+    .word _intr_stack // 24 - interrupt stack pointer
+    .word 0x0 // 28 - reserved
+    .word 0x000001ff  // 32 - pointer to offset zero
+    .word 0x0000027f  // 36 - system procedure table pointer
+    .word fault_table // 40 - fault table
+    .space 0x0 // 44 - reserved
+    .word 32 // 48 - reserved
+    .word 92 // 80 - scratch space
