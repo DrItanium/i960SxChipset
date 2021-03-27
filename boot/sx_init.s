@@ -99,21 +99,78 @@ prcb_ptr:
     .word 92 // 80 - scratch space
 
 // the system procedure table will _only_ be used if the user make a supervisor procedure call
-.align 6
+    .align 6
 sys_proc_table:
-.word 0 # Reserved
-.word 0 # Reserved
-.word 0 # Reserved
-.word (_sup_stack + 0x1) # Supervisor stack pointer
-.word 0 # Preserved
-.word 0 # Preserved
-.word 0 # Preserved
-.word 0 # Preserved
-.word 0 # Preserved
-.word 0 # Preserved
-.word 0 # Preserved
-.word 0 # Preserved
-.word 0 # Calls 0
-.word 0 # Calls 1
-.word 0 # Calls 2
-.word 0 # Calls 3
+    .word 0 # Reserved
+    .word 0 # Reserved
+    .word 0 # Reserved
+    .word (_sup_stack + 0x1) # Supervisor stack pointer
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Calls 0
+    .word 0 # Calls 1
+    .word 0 # Calls 2
+    .word 0 # Calls 3
+
+// below is the fault table for calls to the fault handler.
+// this table is provided because the above table (supervisor table) will allow
+// tracing of trace-fault events (creating an endless loop), whereas this table will
+// not allow tracing of trace-fault events.
+
+    .align 6
+fault_proc_table:
+    .word 0 # Reserved
+    .word 0 # Reserved
+    .word 0 # Reserved
+    .word _sup_stack # Supervisor stack pointer
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word 0 # Preserved
+    .word (_user_reserved + 0x2)    # entry 0
+    .word (_user_trace + 0x2)    # entry 1
+    .word (_user_operation + 0x2)    # entry 2
+    .word (_user_arithmetic + 0x2)    # entry 3
+    .word (_user_real_arithmetic + 0x2)    # entry 4
+    .word (_user_constraint + 0x2)    # entry 5
+    .word (_user_protection + 0x2)    # entry 6
+    .word (_user_machine + 0x2)    # entry 7
+    .word (_user_type + 0x2)    # entry 8
+
+ // processor starts execution at this spot upon power-up after self-test.
+
+ start_ip:
+    mov 0, g14 # C compiler expects g14 = 0
+
+# copy the interrupt table to RAM space
+    lda 1024, g0 # load length of the interrupt table
+    lda 0, g4 # initialize offset to 0
+    lda intr_table, g1 # load source
+    lda intr_ram, g2    # load address of new table
+    bal move_data # branch to move routine
+
+# copy PRCB to RAM space, located at _prcb_ram
+
+    lda 176,g0 # load length of PRCB
+    lda 0, g4 # initialize offset to 0
+    lda prcb_ptr, g1 # load source
+    lda _prdb_ram, g2 # load destination
+    bal move_data # branch to move routine
+
+ # fix up the PRCB to point to a new interrupt table
+    lda intr_ram, g12 # load address
+    st g12, 20(g2) # store into PRCB
+
+
+
+
