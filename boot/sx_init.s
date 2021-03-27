@@ -97,3 +97,23 @@ prcb_ptr:
     .space 0x0 // 44 - reserved
     .word 32 // 48 - reserved
     .word 92 // 80 - scratch space
+
+// the system procedure table will _only_ be used if the user make a supervisor procedure call
+.align 6
+sys_proc_table:
+.word 0 # Reserved
+.word 0 # Reserved
+.word 0 # Reserved
+.word (_sup_stack + 0x1) # Supervisor stack pointer
+.word 0 # Preserved
+.word 0 # Preserved
+.word 0 # Preserved
+.word 0 # Preserved
+.word 0 # Preserved
+.word 0 # Preserved
+.word 0 # Preserved
+.word 0 # Preserved
+.word 0 # Calls 0
+.word 0 # Calls 1
+.word 0 # Calls 2
+.word 0 # Calls 3
