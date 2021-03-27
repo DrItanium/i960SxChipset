@@ -341,7 +341,6 @@ volatile bool asTriggered = false;
 volatile bool denTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
-uint16_t readResult = 0;
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
