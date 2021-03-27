@@ -26,7 +26,8 @@
  * remote host.  Used by NINDY monitor, library libnin, comm960, gdb960,
  * etc.  Also contains some defines for NINDY console I/O requests.
  *****************************************************************************/
-
+#ifndef NINDY_BLOCK_IO_H__
+#define NINDY_BLOCK_IO_H__
 /* the following four are hardware dependent */
 #define	BIT_16		short
 #define	BIT_32		int
@@ -64,3 +65,4 @@
  */
 #define CI 		0
 #define CO 		1
+#endif // end NINDY_BLOCK_IO_H__

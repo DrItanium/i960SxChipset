@@ -20,6 +20,8 @@
    on the software, documentation and results solely at your own 
    risk.							  */
 /******************************************************************/
+#ifndef NINDY_DEFINES_H__
+#define NINDY_DEFINES_H__
 /************************************************/
 /* For an explanation of "GDB mode", see the 	*/
 /* description of the 'gdb' flag in globals.h. 	*/
@@ -85,3 +87,4 @@
  */
 #define ARG_CNT  1	/* If set, count portion of argument is required */
 #define ARG_ADDR 2	/* If set, address portion of argument is required */
+#endif // end NINDY_DEFINES_H__

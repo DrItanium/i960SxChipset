@@ -36,7 +36,8 @@
  *	that it can decide where to use hard breakpoints instead of soft,
  *	where to disallow memory accesses, etc.
  ***************************************************************************/
-
+#ifndef NINDY_MEMMAP_H__
+#define NINDY_MEMMAP_H__
 
 /******** A single entry in the memory map *******/
 
@@ -73,3 +74,4 @@ struct memseg {
  ******/
 
 extern struct memseg memmap[];
+#endif // end NINDY_MEMMAP_H__

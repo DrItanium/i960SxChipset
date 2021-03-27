@@ -42,7 +42,8 @@
  * COPY OF USER'S LOCAL, GLOBAL, AND CONTROL REGISTERS *
  *                                                     *
  *******************************************************/
-
+#ifndef NINDY_REGS_H__
+#define NINDY_REGS_H__
 extern 	unsigned int register_set[];
 
 /* Number of registers and number of bytes in each register
@@ -113,3 +114,5 @@ extern  double	fp_register_set[];	/* fp register set */
 #define REG_FP1	1
 #define REG_FP2	2
 #define REG_FP3	3
+
+#endif // end NINDY_REGS_H__

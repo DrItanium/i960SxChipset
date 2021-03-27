@@ -20,7 +20,8 @@
    on the software, documentation and results solely at your own 
    risk.							  */
 /******************************************************************/
-
+#ifndef NINDY_GLOBALS_H__
+#define NINDY_GLOBALS_H__
 struct sect { 		/* section header structure */
 	char		sec_name[8];   	/* section name */
 	long    	p_addr;		/* physical address */
@@ -139,3 +140,4 @@ extern char stop_code;
 			/* The reason why the user program last stopped.
 			 * See fault.c for legal values.
 			 */
+#endif // end NINDY_GLOBALS_H__

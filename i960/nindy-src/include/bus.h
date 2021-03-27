@@ -25,6 +25,8 @@
 ****    bus.h   header file for 80960CA bus controller              ****
 ****                                                                ****
 ***********************************************************************/
+#ifndef NINDY_BUS_H__
+#define NINDY_BUS_H__
 
 #define BURST_ENABLE    0x1
 #define READY_ENABLE    0x2
@@ -51,3 +53,4 @@ Perform a bit-wise OR of the desired parameters to specify a region.
         NXDA(1) | NWAD(2) | NWDD(2);
 
 */
+#endif // end NINDY_BUS_H__

@@ -21,6 +21,9 @@
    risk.							  */
 /******************************************************************/
 
+#ifndef NINDY_BREAK_H__
+#define NINDY_BREAK_H__
+
 /* Description of a single hardware breakpoint
  *
  * The number of and types of entries in the table are determined by the
@@ -44,3 +47,4 @@ extern struct bpt bptable[];
 extern char have_data_bpts;	/* TRUE if there are one or more data breakpoint
 				 * entries in the table,
 				 */
+#endif // end NINDY_BREAK_H__

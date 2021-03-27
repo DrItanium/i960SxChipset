@@ -25,6 +25,8 @@
  * Magic addresses, etc., for NINDY when running on Intel QT960 board.
  * Used by NINDY monitor and QT library (80960) code.
  *********************************************************************/
+ #ifndef NINDY_QTCOMMON_H__
+ #define NINDY_QTCOMMON_H__
 
 #define BASE_ADDR0	0x18000000
 #define BASE_ADDR1	0x18010000
@@ -258,3 +260,6 @@ int flsize;	  /* Flash size used for Flash download */
 		%error;
 	}
 #endif
+
+#endif // end NINDY_QTCOMMON_H__
+

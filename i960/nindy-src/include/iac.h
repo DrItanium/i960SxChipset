@@ -20,7 +20,8 @@
    on the software, documentation and results solely at your own 
    risk.							  */
 /******************************************************************/
-
+#ifndef NINDY_IAC_H__
+#define NINDY_IAC_H__
 /* iac structure */
 typedef struct {
 	unsigned short 	field2;
@@ -30,3 +31,4 @@ typedef struct {
 	unsigned int	field4;
 	unsigned int	field5;
 } iac_struct;
+#endif // end NINDY_IAC_H__
