@@ -43,13 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
 #error "Unknown board!"
 #endif
-#ifndef AS_ISR
-#error "AS_ Must be bound to an interrupt service routine!"
-#endif
 
-#ifndef DEN_ISR
-#error "DEN_ Must be bound to an interrupt service routine!"
-#endif
 constexpr bool hasSerial() noexcept {
 #ifndef NO_SERIAL
     return true;

@@ -36,8 +36,6 @@ void boardSpecificLoopBody() {
 }
 
 void setupInterrupts() {
-    EIMSK |= 0b101; // enable INT2 and INT0 pin
-    EICRA |= 0b100010; // trigger on falling edge
 }
 
 Timer t;

@@ -56,6 +56,6 @@ enum class i960Pinout : decltype(A0) {
     Led = LED_BUILTIN,
 };
 static_assert(static_cast<int>(i960Pinout::Count) == 20);
-#define AS_ISR INT0_vect
-#define DEN_ISR INT1_vect
+#define AS_ISR 0
+#define DEN_ISR 1
 #endif //ARDUINO_BOARD_ARDUINOUNO_H

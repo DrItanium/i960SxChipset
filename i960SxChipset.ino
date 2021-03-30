@@ -389,16 +389,12 @@ void systemTestState() noexcept {
 		fsm.trigger(SelfTestComplete);
 	}
 }
-ISR (AS_ISR)
-{
-	asTriggered = true;
-	// this is the AS_ pin doing its thing
+void onASAsserted() {
+    asTriggered = true;
 }
-ISR (DEN_ISR)
-{
-	denTriggered = true;
+void onDENAsserted() {
+    denTriggered = true;
 }
-
 
 
 void idleState() noexcept {
@@ -504,7 +500,9 @@ void setupCPUInterface() {
 			i960Pinout::W_R_,
 			i960Pinout::DEN_,
 			i960Pinout::FAIL);
-	setupInterrupts();
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
+    setupInterrupts(); // board specific
 }
 void setupIOExpanders() {
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is

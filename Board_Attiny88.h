@@ -36,6 +36,4 @@ enum class i960Pinout : decltype(A0) {
     SDA = A4,
 };
 static_assert(static_cast<int>(i960Pinout::Count) == 23);
-#define AS_ISR INT0_vect
-#define DEN_ISR INT1_vect
 #endif //ARDUINO_BOARD_ATTINY88_H
