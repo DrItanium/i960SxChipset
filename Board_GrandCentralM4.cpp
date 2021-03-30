@@ -26,9 +26,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef ARDUINO_GRAND_CENTRAL_M4
 #include "Board_GrandCentralM4.h"
 Adafruit_NeoPixel onboardPixel(OnboardNeoPixelCount, OnboardNeoPixelPin, NEO_GRB+NEO_KHZ800);
+Adafruit_FlashTransport_QSPI flashTransport;
+Adafruit_SPIFlash onboardFlash(&flashTransport);
+SdFat onboardSdCard;
 void boardSpecificSetup() {
     onboardPixel.begin();
     onboardPixel.show();
+    onboardFlash.begin();
+    /// @todo implement support for accessing the onboard SdCard
 }
 void boardSpecificLoopBody() {
 }

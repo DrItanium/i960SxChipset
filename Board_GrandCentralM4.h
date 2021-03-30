@@ -37,6 +37,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 constexpr auto OnboardNeoPixelPin = 88;
 constexpr auto OnboardNeoPixelCount = 1;
+/// @todo implement proper pinout
+
 enum class i960Pinout : decltype(A0) {
     Ready = 0,
     Int0_,
@@ -59,5 +61,8 @@ enum class i960Pinout : decltype(A0) {
 };
 static_assert(static_cast<int>(i960Pinout::Count) == 16);
 extern Adafruit_NeoPixel onboardPixel;
+extern Adafruit_FlashTransport_QSPI flashTransport;
+extern Adafruit_SPIFlash onboardFlash;
+extern SdFat onboardSDCard;
 #define SOFTWARE_IS_SERIAL
 #endif //ARDUINO_BOARD_GRANDCENTRALM4_H
