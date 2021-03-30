@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SdFat.h>
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_SPIFlash.h>
+#include <Adafruit_GFX.h>
 #include "BoardSpecific.h"
 
 constexpr auto OnboardNeoPixelPin = PIN_NEOPIXEL;
