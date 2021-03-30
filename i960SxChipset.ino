@@ -600,7 +600,9 @@ void setup() {
     if constexpr (hasSerial()) {
         Serial.begin(115200);
         if constexpr (hasSoftwareSerial()) {
-            while (!Serial);
+            while (!Serial) {
+                delay(100);
+            }
         }
     }
     setupPins(OUTPUT,

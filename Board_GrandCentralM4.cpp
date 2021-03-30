@@ -25,7 +25,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef ARDUINO_GRAND_CENTRAL_M4
 #include "Board_GrandCentralM4.h"
+Adafruit_NeoPixel onboardPixel(OnboardNeoPixelCount, OnboardNeoPixelPin, NEO_GRB+NEO_KHZ800);
 void boardSpecificSetup() {
+    onboardPixel.begin();
+    onboardPixel.show();
 }
 void boardSpecificLoopBody() {
 }

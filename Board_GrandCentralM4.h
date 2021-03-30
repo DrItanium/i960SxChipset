@@ -30,8 +30,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ARDUINO_BOARD_GRANDCENTRALM4_H
 
 #include <Arduino.h>
-#include <SD.h>
+#include <SdFat.h>
+#include <Adafruit_NeoPixel.h>
+#include <Adafruit_SPIFlash.h>
 #include "BoardSpecific.h"
+
+constexpr auto OnboardNeoPixelPin = 88;
+constexpr auto OnboardNeoPixelCount = 1;
 enum class i960Pinout : decltype(A0) {
     Ready = 0,
     Int0_,
@@ -53,5 +58,6 @@ enum class i960Pinout : decltype(A0) {
     Count,
 };
 static_assert(static_cast<int>(i960Pinout::Count) == 16);
+extern Adafruit_NeoPixel onboardPixel;
 #define SOFTWARE_IS_SERIAL
 #endif //ARDUINO_BOARD_GRANDCENTRALM4_H
