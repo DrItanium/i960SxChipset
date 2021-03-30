@@ -120,21 +120,21 @@ enum class i960Pinout : decltype(A0) {
     USBHostEnable,
     USB_DM,
     USB_DP,
-    SD_SPI_INTERFACE0,
-    SD_SPI_INTERFACE1,
-    SD_SPI_INTERFACE2,
-    SD_SPI_INTERFACE3,
+    SD_MISO,
+    SD_SCK,
+    SD_MOSI,
+    SD_ENABLE,
     DAC_AREF,
     DAC_VOUT0,
     DAC_VOUT1,
     LED_DUPLICATE,
     InternalNeoPixel,
-    QSPI0,
-    QSPI1,
-    QSPI2,
-    QSPI3,
-    QSPI4,
-    QSPI5,
+    QSPI_SCK,
+    QSPI_CS,
+    QSPI_IO0,
+    QSPI_IO1,
+    QSPI_IO2,
+    QSPI_IO3,
     SD_Detect,
     SWO,
     Count,
@@ -155,5 +155,6 @@ extern Adafruit_NeoPixel onboardPixel;
 extern Adafruit_FlashTransport_QSPI flashTransport;
 extern Adafruit_SPIFlash onboardFlash;
 extern SdFat onboardSDCard;
+bool sdcardInstalled() noexcept;
 #define SOFTWARE_IS_SERIAL
 #endif //ARDUINO_BOARD_GRANDCENTRALM4_H
