@@ -25,4 +25,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef ARDUINO_GRAND_CENTRAL_M4
 #include "Board_GrandCentralM4.h"
+void boardSpecificSetup() {
+}
+void boardSpecificLoopBody() {
+}
+
+void setupInterrupts() {
+}
 #endif
