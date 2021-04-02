@@ -46,9 +46,20 @@ GrandCentralM4::loopBody() {
 
 }
 void
-GrandCentralM4::setupInterrupts()
-{
-
+GrandCentralM4::setupInterrupts() {
 }
+
+uint16_t
+GrandCentralM4::load(uint32_t address, LoadStoreStyle style) {
+    /// @todo implement
+    return 0;
+}
+
+void
+GrandCentralM4::store(uint32_t address, uint16_t value, LoadStoreStyle style) {
+    // do nothing for now
+}
+
+GrandCentralM4 TheBoard;
 
 #endif

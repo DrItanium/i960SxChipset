@@ -430,6 +430,8 @@ performWrite(Address address, uint16_t value) noexcept {
         Serial.print(" to 0x");
         Serial.println(address, HEX);
     }
+    auto bits = static_cast<LoadStoreStyle>(getByteEnableBits());
+    TheBoard.store(address, value, bits);
 }
 uint16_t
 performRead(Address address) noexcept {
@@ -437,7 +439,8 @@ performRead(Address address) noexcept {
         Serial.print("Read from 0x");
         Serial.println(address, HEX);
     }
-    return 0;
+    auto bits = static_cast<LoadStoreStyle>(getByteEnableBits());
+    return TheBoard.load(address, bits);
 }
 void processDataRequest() noexcept {
     auto burstAddress = getBurstAddress(baseAddress);
@@ -502,7 +505,7 @@ void setupCPUInterface() {
 			i960Pinout::FAIL);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-    setupInterrupts(); // board specific
+    TheBoard.setupInterrupts();
 }
 void setupIOExpanders() {
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
@@ -609,7 +612,7 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN);
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-    boardSpecificSetup();
+	TheBoard.begin();
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
 	SPI.begin();
 	setupIOExpanders();
@@ -626,5 +629,5 @@ void setup() {
 }
 void loop() {
 	fsm.run_machine();
-	boardSpecificLoopBody();
+	TheBoard.loopBody();
 }
