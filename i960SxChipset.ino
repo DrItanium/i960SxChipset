@@ -420,7 +420,8 @@ enteringDataState() noexcept {
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
 }
-/// @todo add byte enable mask to the load and store routines
+
+LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
 
 void
 performWrite(Address address, uint16_t value) noexcept {
@@ -430,8 +431,7 @@ performWrite(Address address, uint16_t value) noexcept {
         Serial.print(" to 0x");
         Serial.println(address, HEX);
     }
-    auto bits = static_cast<LoadStoreStyle>(getByteEnableBits());
-    TheBoard.store(address, value, bits);
+    TheBoard.store(address, value, getStyle());
 }
 uint16_t
 performRead(Address address) noexcept {
@@ -439,8 +439,7 @@ performRead(Address address) noexcept {
         Serial.print("Read from 0x");
         Serial.println(address, HEX);
     }
-    auto bits = static_cast<LoadStoreStyle>(getByteEnableBits());
-    return TheBoard.load(address, bits);
+    return TheBoard.load(address, getStyle());
 }
 void processDataRequest() noexcept {
     auto burstAddress = getBurstAddress(baseAddress);
