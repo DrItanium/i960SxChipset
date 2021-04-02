@@ -24,7 +24,23 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #ifndef ARDUINO_BOARDSPECIFIC_H
 #define ARDUINO_BOARDSPECIFIC_H
-void boardSpecificSetup();
-void boardSpecificLoopBody();
-void setupInterrupts();
+#include <cstdint>
+enum class LoadStoreStyle : uint8_t {
+    // based off of BE0,BE1 pins
+    Load16 = 0b00,
+    Upper8 = 0b01,
+    Lower8 = 0b10,
+    None = 0b11,
+};
+class Board {
+public:
+    Board() = default;
+    virtual ~Board() = default;
+    virtual void begin() noexcept = 0;
+    virtual void loopBody() noexcept = 0;
+    virtual void setupInterrupts() noexcept = 0;
+    virtual uint16_t load(uint32_t address, LoadStoreStyle style) noexcept = 0;
+    virtual void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept = 0;
+    virtual bool sdcardInstalled() noexcept = 0;
+};
 #endif //ARDUINO_BOARDSPECIFIC_H

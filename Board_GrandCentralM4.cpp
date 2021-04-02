@@ -29,18 +29,26 @@ Adafruit_NeoPixel onboardPixel(OnboardNeoPixelCount, OnboardNeoPixelPin, NEO_GRB
 Adafruit_FlashTransport_QSPI flashTransport;
 Adafruit_SPIFlash onboardFlash(&flashTransport);
 SdFat onboardSdCard;
-volatile bool hasSd = false;
-void boardSpecificSetup() {
-    onboardPixel.begin();
-    onboardPixel.show();
-    onboardFlash.begin();
-    hasSd = onboardSdCard.begin(SDCARD_SS_PIN);
+GrandCentralM4::GrandCentralM4() : onboardPixel_(OnboardNeoPixelCount, OnboardNeoPixelPin, NEO_GRB+NEO_KHZ800),
+                                   flashTransport_(),
+                                   onboardFlash_(&flashTransport_) {
+
+}
+void GrandCentralM4::begin() {
+    onboardPixel_.begin();
+    onboardPixel_.show();
+    onboardFlash_.begin();
+    hasSd_ = onboardSdCard.begin(SDCARD_SS_PIN);
     /// @todo implement support for accessing the onboard SdCard
 }
-bool sdcardInstalled() noexcept { return hasSd; }
-void boardSpecificLoopBody() {
+void
+GrandCentralM4::loopBody() {
+
+}
+void
+GrandCentralM4::setupInterrupts()
+{
+
 }
 
-void setupInterrupts() {
-}
 #endif

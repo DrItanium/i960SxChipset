@@ -27,15 +27,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ARDUINO_BOARD_H
 #include "Architecture.h"
 #include <cstdint>
-class Board {
-public:
-    Board() = default;
-    virtual ~Board() = default;
-    virtual void begin() noexcept = 0;
-    virtual void loopBody() noexcept = 0;
-    virtual uint16_t load(uint32_t address) noexcept = 0;
-    virtual void store(uint32_t address, uint16_t value) noexcept = 0;
-};
 #include "BoardSpecific.h"
 #ifdef CPU_IS_AVR
 #ifdef __NO_INTERRUPTS__

@@ -144,10 +144,25 @@ enum class i960Pinout : decltype(A0) {
     Led = LED_BUILTIN,
 };
 static_assert(static_cast<int>(i960Pinout::Count) == 97);
-extern Adafruit_NeoPixel onboardPixel;
-extern Adafruit_FlashTransport_QSPI flashTransport;
-extern Adafruit_SPIFlash onboardFlash;
-extern SdFat onboardSDCard;
 bool sdcardInstalled() noexcept;
 #define SOFTWARE_IS_SERIAL
+class GrandCentralM4 : public Board {
+public:
+    GrandCentralM4();
+    ~GrandCentralM4() override = default;
+    void begin() noexcept override;
+    void loopBody() noexcept override;
+    void setupInterrupts() noexcept override;
+    uint16_t load(uint32_t address, LoadStoreStyle style) noexcept override;
+    void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override;
+    bool sdcardInstalled() noexcept override { return hasSd_; }
+private:
+    Adafruit_NeoPixel onboardPixel_;
+    Adafruit_FlashTransport_QSPI flashTransport_;
+    Adafruit_SPIFlash onboardFlash_;
+    SdFat onboardSDCard_;
+    bool hasSd_ = false;
+};
+extern GrandCentralM4 TheBoard;
+
 #endif //ARDUINO_BOARD_GRANDCENTRALM4_H
