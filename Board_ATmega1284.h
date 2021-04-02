@@ -71,5 +71,18 @@ enum class i960Pinout : decltype(A0) {
 	Count,		  // special
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
-extern Timer t;
+class MightyCore_1284p : public Board {
+public:
+    MightyCore_1284p() = default;
+    ~MightyCore_1284p() override = default;
+    void begin() noexcept override;
+    void loopBody() noexcept override;
+    void setupInterrupts() noexcept override;
+    uint16_t load(uint32_t address, LoadStoreStyle style) noexcept override;
+    void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override;
+    bool sdcardInstalled() noexcept override;
+private:
+    Timer t_;
+};
+extern MightyCore_1284p TheBoard;
 #endif //ARDUINO_BOARD_ATMEGA1284_H
