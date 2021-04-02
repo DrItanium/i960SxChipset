@@ -37,10 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Board_ATmega1284.h"
 #elif defined(ARDUINO_AVR_UNO)
 #include "Board_ArduinoUno.h"
-#elif defined(ARDUINO_AVR_ATTINYX61)
-#include "Board_Attiny861.h"
-#elif defined(ARDUINO_AVR_ATTINYX8)
-#include "Board_Attiny88.h"
 #elif defined(ARDUINO_GRAND_CENTRAL_M4)
 #include "Board_GrandCentralM4.h"
 #else
