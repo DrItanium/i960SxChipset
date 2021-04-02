@@ -35,8 +35,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #ifdef ARDUINO_AVR_ATmega1284
 #include "Board_ATmega1284.h"
-#elif defined(ARDUINO_AVR_UNO)
-#include "Board_ArduinoUno.h"
 #elif defined(ARDUINO_GRAND_CENTRAL_M4)
 #include "Board_GrandCentralM4.h"
 #else
