@@ -80,7 +80,7 @@ public:
     void setupInterrupts() noexcept override;
     uint16_t load(uint32_t address, LoadStoreStyle style) noexcept override;
     void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override;
-    bool sdcardInstalled() noexcept override;
+    bool sdcardInstalled(uint8_t index = 0) const noexcept override;
 private:
     Timer t_;
 };

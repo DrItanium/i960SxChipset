@@ -155,14 +155,14 @@ public:
     void setupInterrupts() noexcept override;
     uint16_t load(uint32_t address, LoadStoreStyle style) noexcept override;
     void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override;
-    bool sdcardInstalled(uint8_t index = 0) const noexcept override { return hasSd_; }
+    bool sdcardInstalled(uint8_t index = 0) const noexcept override;
 private:
     Adafruit_NeoPixel onboardPixel_;
     Adafruit_FlashTransport_QSPI flashTransport_;
     Adafruit_SPIFlash onboardFlash_;
     SdFat onboardSDCard_;
-    SdFat wifiSDCard_;
-    SdFat displaySDCard_;
+    //SdFat wifiSDCard_;
+    //SdFat displaySDCard_;
     bool onboardHasSd_ = false;
     bool wifiHasSd_ = false;
     bool displayHasSd_ = false;

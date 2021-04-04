@@ -48,7 +48,7 @@ MightyCore_1284p::store(uint32_t address, uint16_t value, LoadStoreStyle style) 
 
 }
 bool
-MightyCore_1284p::sdcardInstalled() noexcept {
+MightyCore_1284p::sdcardInstalled(uint8_t) const noexcept {
     return false;
 }
 
