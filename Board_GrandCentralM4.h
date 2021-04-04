@@ -163,7 +163,6 @@ private:
     Adafruit_FlashTransport_QSPI flashTransport_;
     Adafruit_SPIFlash onboardFlash_;
     SdFat onboardSDCard_;
-    Adafruit_BluefruitLE_SPI ble_;
     //SdFat wifiSDCard_;
     //SdFat displaySDCard_;
     bool onboardHasSd_ = false;
