@@ -46,13 +46,13 @@ enum class i960Pinout : decltype(A0) {
     TX0,
     Digital2,
     Digital3,
-    Digital4,
+    TFT_CCS, // sd card enable on tft shield
     Digital5,
     Digital6,
     Digital7,
-    Digital8,
+    TFT_DC,  // TFT Shield DC pin
     Digital9,
-    Digital10,
+    TFT_CS,  // TFT Shield tft CS pin
     Digital11,
     Digital12,
     Digital13,
@@ -109,12 +109,12 @@ enum class i960Pinout : decltype(A0) {
     ICSP_MISO,
     ICSP_MOSI,
     ICSP_SCK,
-    Analog0, // 67
-    Analog1,
-    Analog2,
-    Analog3,
-    Analog4,
-    Analog5,
+    BLUEFRUIT_CS, // 67, Bluefruit Shield ~CS
+    BLUEFRUIT_IRQ,  // Bluefruit Shield IRQ
+    BLUEFRUIT_RST,  // Bluefruit Shield Reset
+    AIRLIFT_CS,     // Airlift Shield ~CS
+    AIRLIFT_BUSY,   // Airlift Shield BUSY
+    AIRLIFT_SD,     // Airlift Shield ~SD_CS
     Analog6,
     Analog7,
     RXLed,
@@ -155,13 +155,17 @@ public:
     void setupInterrupts() noexcept override;
     uint16_t load(uint32_t address, LoadStoreStyle style) noexcept override;
     void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override;
-    bool sdcardInstalled() noexcept override { return hasSd_; }
+    bool sdcardInstalled(uint8_t index = 0) const noexcept override { return hasSd_; }
 private:
     Adafruit_NeoPixel onboardPixel_;
     Adafruit_FlashTransport_QSPI flashTransport_;
     Adafruit_SPIFlash onboardFlash_;
     SdFat onboardSDCard_;
-    bool hasSd_ = false;
+    SdFat wifiSDCard_;
+    SdFat displaySDCard_;
+    bool onboardHasSd_ = false;
+    bool wifiHasSd_ = false;
+    bool displayHasSd_ = false;
 };
 extern GrandCentralM4 TheBoard;
 

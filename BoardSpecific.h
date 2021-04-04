@@ -40,6 +40,6 @@ public:
     virtual void setupInterrupts() noexcept = 0;
     virtual uint16_t load(uint32_t address, LoadStoreStyle style) noexcept = 0;
     virtual void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept = 0;
-    virtual bool sdcardInstalled() noexcept = 0;
+    virtual bool sdcardInstalled(uint8_t index = 0) const noexcept = 0;
 };
 #endif //ARDUINO_BOARDSPECIFIC_H
