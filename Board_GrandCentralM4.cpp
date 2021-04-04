@@ -34,7 +34,7 @@ void GrandCentralM4::begin() {
     onboardPixel_.begin();
     onboardPixel_.show();
     onboardFlash_.begin();
-    onboardHasSd_ = onboardSdCard_.begin(SDCARD_SS_PIN);
+    onboardHasSd_ = onboardSDCard_.begin(SDCARD_SS_PIN);
     /// @todo implement support for accessing the onboard SdCard
 }
 void
