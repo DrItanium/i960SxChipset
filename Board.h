@@ -26,14 +26,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ARDUINO_BOARD_H
 #define ARDUINO_BOARD_H
 #include "Architecture.h"
-#include <cstdint>
 #include "BoardSpecific.h"
-#ifdef CPU_IS_AVR
+
 #ifdef __NO_INTERRUPTS__
-#error "i960 Chipset requires interrupts on AVR"
+#error "i960 Chipset requires interrupts"
 #endif
-#endif
-#ifdef ARDUINO_AVR_ATmega1284
+
+#if defined(ARDUINO_AVR_ATmega1284)
 #include "Board_ATmega1284.h"
 #elif defined(ARDUINO_GRAND_CENTRAL_M4)
 #include "Board_GrandCentralM4.h"

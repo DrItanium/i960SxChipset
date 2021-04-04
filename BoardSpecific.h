@@ -24,7 +24,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #ifndef ARDUINO_BOARDSPECIFIC_H
 #define ARDUINO_BOARDSPECIFIC_H
-#include <cstdint>
 enum class LoadStoreStyle : uint8_t {
     // based off of BE0,BE1 pins
     Load16 = 0b00,

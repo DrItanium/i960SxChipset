@@ -385,7 +385,7 @@ void startupState() noexcept {
 	}
 }
 void systemTestState() noexcept {
-	if (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
+    if (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
 		fsm.trigger(SelfTestComplete);
 	}
 }
@@ -395,7 +395,6 @@ void onASAsserted() {
 void onDENAsserted() {
     denTriggered = true;
 }
-
 
 void idleState() noexcept {
 	if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
@@ -486,6 +485,9 @@ void setupBusStateMachine() noexcept {
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
+    if constexpr (hasSerial()) {
+        Serial.println("Setting up interrupts!");
+    }
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
@@ -505,8 +507,14 @@ void setupCPUInterface() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     TheBoard.setupInterrupts();
+    if constexpr (hasSerial()) {
+        Serial.println("Done setting up interrupts!");
+    }
 }
 void setupIOExpanders() {
+    if constexpr (hasSerial()) {
+        Serial.println("Setting up IOExpanders!");
+    }
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
 	// disabled. We can send out a single IOCON.HAEN enable message and all
 	// should receive it. 
@@ -528,6 +536,9 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
+	if constexpr (hasSerial()) {
+	    Serial.println("Setup io expanders!");
+	}
 }
 void transferAddress(uint32_t address) {
     SPI.transfer(static_cast<uint8_t>(address >> 16));
@@ -606,6 +617,7 @@ void setup() {
                 delay(100);
             }
         }
+        Serial.println("i960Sx chipset bringup");
     }
     setupPins(OUTPUT,
               i960Pinout::Reset960,
@@ -617,13 +629,7 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-#if 0
-	if constexpr (hasSerial()) {
-        Serial.println("Running memory boards through their paces");
-    }
-    testMemoryBoard<i960Pinout::SPI_BUS_EN>();
 	delay(1000);
-#endif
 	// we want to jump into the code as soon as possible after this point
 }
 void loop() {

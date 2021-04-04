@@ -52,4 +52,6 @@ MightyCore_1284p::sdcardInstalled() noexcept {
     return false;
 }
 
+MightyCore_1284p TheBoard;
+
 #endif
