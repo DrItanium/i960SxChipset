@@ -35,6 +35,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_SPIFlash.h>
 #include <Adafruit_GFX.h>
 #include <ArduinoJson.h>
+#include <Adafruit_BLE.h>
+#include <Adafruit_BluefruitLE_SPI.h>
 #include "BoardSpecific.h"
 
 constexpr auto OnboardNeoPixelPin = PIN_NEOPIXEL;
@@ -161,6 +163,7 @@ private:
     Adafruit_FlashTransport_QSPI flashTransport_;
     Adafruit_SPIFlash onboardFlash_;
     SdFat onboardSDCard_;
+    Adafruit_BluefruitLE_SPI ble_;
     //SdFat wifiSDCard_;
     //SdFat displaySDCard_;
     bool onboardHasSd_ = false;

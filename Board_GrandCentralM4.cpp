@@ -27,14 +27,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Board_GrandCentralM4.h"
 GrandCentralM4::GrandCentralM4() : onboardPixel_(OnboardNeoPixelCount, OnboardNeoPixelPin, NEO_GRB+NEO_KHZ800),
                                    flashTransport_(),
-                                   onboardFlash_(&flashTransport_) {
+                                   onboardFlash_(&flashTransport_),
+                                   ble_(static_cast<int>(i960Pinout::BLUEFRUIT_CS),
+                                       static_cast<int>(i960Pinout::BLUEFRUIT_IRQ),
+                                       static_cast<int>(i960Pinout::BLUEFRUIT_RST))
+                                       {
 
+}
+void error(const __FlashStringHelper* err) {
+    Serial.println(err);
+    while(true);
 }
 void GrandCentralM4::begin() {
     onboardPixel_.begin();
     onboardPixel_.show();
     onboardFlash_.begin();
     onboardHasSd_ = onboardSDCard_.begin(SDCARD_SS_PIN);
+    if (!ble_.begin(true)) {
+        error(F("Couldn't find Bluefruit, make sure it's in CoMmand mode & check wiring?"));
+    }
+    Serial.println(F("OK!"));
     /// @todo implement support for accessing the onboard SdCard
 }
 void
