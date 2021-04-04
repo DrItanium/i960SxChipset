@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "BoardSpecific.h"
 #include <Timer.h>
 #include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
 #include <SD.h>
 
 enum class i960Pinout : decltype(A0) {
@@ -36,7 +37,7 @@ enum class i960Pinout : decltype(A0) {
 	Led = 0, 	  // output
    	CLOCK_OUT, // output, unusable
 	AS_,     // input, AVR Int2
-	PWM4, 	 // unused
+	TFT_RST, 	 // output
 	GPIOSelect,		// output
 	MOSI,		  // reserved
 	MISO,		  // reserved
@@ -46,7 +47,7 @@ enum class i960Pinout : decltype(A0) {
 	TX0, 		  // reserved
 	DEN_,	  // AVR Interrupt INT0
 	AVR_INT1, 		// AVR Interrupt INT1
-	PWM0,	  // input
+	TFT_DC,	       //
 	PWM1, 		  // unused
 	PWM2, 		  // unused
 	PWM3, 		  // unused
@@ -73,7 +74,7 @@ enum class i960Pinout : decltype(A0) {
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 class MightyCore_1284p : public Board {
 public:
-    MightyCore_1284p() = default;
+    MightyCore_1284p();
     ~MightyCore_1284p() override = default;
     void begin() noexcept override;
     void loopBody() noexcept override;
@@ -81,8 +82,10 @@ public:
     uint16_t load(uint32_t address, LoadStoreStyle style) noexcept override;
     void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override;
     bool sdcardInstalled(uint8_t index = 0) const noexcept override;
+    void runAtBottomOfSetup() noexcept override;
 private:
     Timer t_;
+    Adafruit_ILI9341 tft_;
 };
 extern MightyCore_1284p TheBoard;
 #endif //ARDUINO_BOARD_ATMEGA1284_H

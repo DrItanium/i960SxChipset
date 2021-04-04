@@ -25,10 +25,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef ARDUINO_AVR_ATmega1284
 #include "Board_ATmega1284.h"
+MightyCore_1284p::MightyCore_1284p() : tft_(static_cast<int>(i960Pinout::SPI_BUS_EN),
+                                            static_cast<int>(i960Pinout::TFT_DC),
+                                            static_cast<int>(i960Pinout::MOSI),
+                                            static_cast<int>(i960Pinout::SCK),
+                                            static_cast<int>(i960Pinout::TFT_RST),
+                                            static_cast<int>(i960Pinout::MISO)) {
+
+}
 void
 MightyCore_1284p::begin() noexcept {
     pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
     t_.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
+    tft_.begin();
 }
 void
 MightyCore_1284p::loopBody() noexcept {
@@ -50,6 +59,11 @@ MightyCore_1284p::store(uint32_t address, uint16_t value, LoadStoreStyle style) 
 bool
 MightyCore_1284p::sdcardInstalled(uint8_t) const noexcept {
     return false;
+}
+
+void
+MightyCore_1284p::runAtBottomOfSetup() noexcept {
+
 }
 
 MightyCore_1284p TheBoard;
