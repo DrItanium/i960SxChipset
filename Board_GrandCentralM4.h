@@ -146,6 +146,8 @@ enum class i960Pinout : decltype(A0) {
     Led = LED_BUILTIN,
 };
 static_assert(static_cast<int>(i960Pinout::Count) == 97);
+static_assert(static_cast<int>(i960Pinout::GPIOSelect) == 53);
+static_assert(static_cast<int>(i960Pinout::AS_) == 22);
 bool sdcardInstalled() noexcept;
 #define SOFTWARE_IS_SERIAL
 class GrandCentralM4 : public Board {
