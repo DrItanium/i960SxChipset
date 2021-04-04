@@ -425,9 +425,9 @@ LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteE
 void
 performWrite(Address address, uint16_t value) noexcept {
     if constexpr(hasSerial()) {
-        Serial.print("Write 0x");
+        Serial.print(F("Write 0x"));
         Serial.print(value, HEX);
-        Serial.print(" to 0x");
+        Serial.print(F(" to 0x"));
         Serial.println(address, HEX);
     }
     TheBoard.store(address, value, getStyle());
@@ -435,7 +435,7 @@ performWrite(Address address, uint16_t value) noexcept {
 uint16_t
 performRead(Address address) noexcept {
     if constexpr (hasSerial()) {
-        Serial.print("Read from 0x");
+        Serial.print(F("Read from 0x"));
         Serial.println(address, HEX);
     }
     return TheBoard.load(address, getStyle());
@@ -486,7 +486,7 @@ void setupBusStateMachine() noexcept {
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
     if constexpr (hasSerial()) {
-        Serial.println("Setting up interrupts!");
+        Serial.println(F("Setting up interrupts!"));
     }
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
@@ -508,12 +508,12 @@ void setupCPUInterface() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     TheBoard.setupInterrupts();
     if constexpr (hasSerial()) {
-        Serial.println("Done setting up interrupts!");
+        Serial.println(F("Done setting up interrupts!"));
     }
 }
 void setupIOExpanders() {
     if constexpr (hasSerial()) {
-        Serial.println("Setting up IOExpanders!");
+        Serial.println(F("Setting up IOExpanders!"));
     }
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
 	// disabled. We can send out a single IOCON.HAEN enable message and all
@@ -537,7 +537,7 @@ void setupIOExpanders() {
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
 	if constexpr (hasSerial()) {
-	    Serial.println("Setup io expanders!");
+	    Serial.println(F("Setup io expanders!"));
 	}
 }
 void transferAddress(uint32_t address) {
@@ -592,20 +592,20 @@ void testMemoryBoard() {
         write8<enablePin>(i, i);
         if (auto result = read8<enablePin>(i); result != value) {
             if constexpr (hasSerial()) {
-                Serial.print("Failure, id: ");
+                Serial.print(F("Failure, id: "));
                 Serial.print(targetDevice, DEC);
-                Serial.print(" address: 0x");
+                Serial.print(F(" address: 0x"));
                 Serial.print(i, HEX);
-                Serial.print(" value: 0x");
+                Serial.print(F(" value: 0x"));
                 Serial.print(value, HEX);
-                Serial.print(" got: 0x");
+                Serial.print(F(" got: 0x"));
                 Serial.println(result, HEX);
             }
             delay(1);
         }
     }
     if constexpr (hasSerial()) {
-        Serial.println("Done!");
+        Serial.println(F("Done!"));
     }
 }
 // the setup routine runs once when you press reset:
@@ -617,7 +617,7 @@ void setup() {
                 delay(100);
             }
         }
-        Serial.println("i960Sx chipset bringup");
+        Serial.println(F("i960Sx chipset bringup"));
     }
     setupPins(OUTPUT,
               i960Pinout::Reset960,
