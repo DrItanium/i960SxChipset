@@ -43,7 +43,7 @@ enum class i960Pinout : decltype(A0) {
     Led = 0, 	  // output
     CLOCK_OUT, // output, unusable
     AS_,     // input, AVR Int2
-    TFT_RST, 	 // output
+    PWM4, 	 // output
     GPIOSelect,		// output
     MOSI,		  // reserved
     MISO,		  // reserved
@@ -53,7 +53,7 @@ enum class i960Pinout : decltype(A0) {
     TX0, 		  // reserved
     DEN_,	  // AVR Interrupt INT0
     AVR_INT1, 		// AVR Interrupt INT1
-    TFT_DC,	       //
+    PWM0,	       //
     PWM1, 		  // unused
     PWM2, 		  // unused
     PWM3, 		  // unused
@@ -68,7 +68,7 @@ enum class i960Pinout : decltype(A0) {
     FAIL, 	     // input
 // PORT A
     SPI_BUS_EN, // output
-    Analog1,
+    DC,
     Analog2,
     Analog3,
     Analog4,
@@ -245,11 +245,7 @@ IOExpander<IOExpanderAddress::Upper16Lines> upper16;
 IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
 Timer t;
 Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::SPI_BUS_EN),
-                     static_cast<int>(i960Pinout::TFT_DC),
-                     static_cast<int>(i960Pinout::MOSI),
-                     static_cast<int>(i960Pinout::SCK),
-                     static_cast<int>(i960Pinout::TFT_RST),
-                     static_cast<int>(i960Pinout::MISO));
+                     static_cast<int>(i960Pinout::DC));
 
 Address
 getAddress() noexcept {
@@ -605,18 +601,12 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-    tft.begin();
-    setIsolatedSPIBusId(6); // TFT screen id
-    uint8_t x = tft.readcommand8(ILI9341_RDMODE);
-    Serial.print(F("Display Power Mode: 0x")); Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDMADCTL);
-    Serial.print(F("MADCTL Mode: 0x")); Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDPIXFMT);
-    Serial.print(F("Pixel Format: 0x")); Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDIMGFMT);
-    Serial.print(F("Image Format: 0x")); Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDSELFDIAG);
-    Serial.print(F("Self Diagnostic: 0x")); Serial.println(x, HEX);
+	tft.begin();
+	tft.fillScreen(ILI9341_BLACK);
+	tft.setCursor(0,0);
+	tft.setTextColor(ILI9341_WHITE);
+	tft.setTextSize(3);
+	tft.println("i960Sx!");
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 }
