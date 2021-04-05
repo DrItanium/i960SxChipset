@@ -33,9 +33,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libbonuspin.h>
 #include <Fsm.h>
 #include <Timer.h>
+#include <SD.h>
+#include <Wire.h>
+
+#include <ArduinoJson.h>
+
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
-#include <SD.h>
 using Address = uint32_t;
 
 enum class i960Pinout : decltype(A0) {
