@@ -34,8 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #if defined(ARDUINO_AVR_ATmega1284)
 #include "Board_ATmega1284.h"
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)
-#include "Board_GrandCentralM4.h"
 #else
 #error "Unknown board!"
 #endif

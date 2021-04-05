@@ -545,69 +545,6 @@ void transferAddress(uint32_t address) {
     SPI.transfer(static_cast<uint8_t>(address >> 8));
     SPI.transfer(static_cast<uint8_t>(address));
 }
-enum class SRAMOpcodes : uint8_t {
-    RDSR = 0x05,
-    RDMR = RDSR,
-    WRSR = 0x01,
-    WRMR = WRSR,
-    READ = 0x03,
-    WRITE = 0x02,
-    EDIO = 0x3B,
-    EQIO = 0x38,
-    RSTIO = 0xFF,
-    Read = READ,
-    Write = WRITE,
-};
-void transferOpcode(SRAMOpcodes opcode) noexcept {
-    SPI.transfer(static_cast<uint8_t>(opcode));
-}
-template<i960Pinout enablePin>
-void write8(uint32_t address, uint8_t value) noexcept {
-    static_assert(DigitalPin<enablePin>::isOutputPin());
-    PinAsserter<enablePin> asserter;
-    transferOpcode(SRAMOpcodes::Write);
-    transferAddress(address);
-    SPI.transfer(value);
-}
-template<i960Pinout enablePin>
-uint8_t read8(uint32_t address) noexcept {
-    static_assert(DigitalPin<enablePin>::isOutputPin());
-    PinAsserter<enablePin> asserter;
-    transferOpcode(SRAMOpcodes::Read);
-    transferAddress(address);
-    auto result = SPI.transfer(0);
-    // make sure that we do the transfer correctly
-    return result;
-}
-template<i960Pinout enablePin>
-void testMemoryBoard() {
-    static_assert(DigitalPin<enablePin>::isOutputPin());
-    static constexpr auto mask = 0b1111'1110'0000'0000'0000'0000;
-    auto previousValue = -1;
-    for (uint32_t i = 0; i < 0b0010'0000'0000'0000'0000'0000; ++i) {
-        auto controlBits = static_cast<uint8_t>((mask & i) >> 17);
-        auto targetDevice = static_cast<uint8_t>(controlBits & 0b0111'111);
-        setSPIBusId(targetDevice);
-        auto value = static_cast<uint8_t>(i);
-        write8<enablePin>(i, i);
-        if (auto result = read8<enablePin>(i); result != value) {
-            if constexpr (hasSerial()) {
-                Serial.print(F("Failure, id: "));
-                Serial.print(targetDevice, DEC);
-                Serial.print(F(" address: 0x"));
-                Serial.print(i, HEX);
-                Serial.print(F(" value: 0x"));
-                Serial.print(value, HEX);
-                Serial.print(F(" got: 0x"));
-                Serial.println(result, HEX);
-            }
-            delay(1);
-        }
-    }
-    if constexpr (hasSerial()) {
-        Serial.println(F("Done!"));
-    }
-}
 // the setup routine runs once when you press reset:
 void setup() {
     if constexpr (hasSerial()) {
