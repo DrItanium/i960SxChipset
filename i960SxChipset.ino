@@ -309,7 +309,7 @@ enum class SPIBusDevice : uint8_t {
     Unused7,
 };
 volatile SPIBusDevice busId = SPIBusDevice::Unused0;
-void setIsolatedSPIBusId(SPIBusDevice id) noexcept {
+void setSPIBusId(SPIBusDevice id) noexcept {
     static bool initialized = false;
     bool setMemoryId = false;
     if (!initialized) {
@@ -614,7 +614,7 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-	setIsolatedSPIBusId(SPIBusDevice::TFTDisplay);
+	setSPIBusId(SPIBusDevice::TFTDisplay);
 	tft.begin();
 	tft.fillScreen(ILI9341_BLACK);
 	tft.setCursor(0,0);
