@@ -29,12 +29,55 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Language options:
 /// - C++17
 /// Board Platform: MightyCore
-#include "Board.h"
 #include <SPI.h>
 #include <libbonuspin.h>
 #include <Fsm.h>
+#include <Timer.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
+#include <SD.h>
 using Address = uint32_t;
 
+enum class i960Pinout : decltype(A0) {
+    // PORT B
+    Led = 0, 	  // output
+    CLOCK_OUT, // output, unusable
+    AS_,     // input, AVR Int2
+    TFT_RST, 	 // output
+    GPIOSelect,		// output
+    MOSI,		  // reserved
+    MISO,		  // reserved
+    SCK, 		  // reserved
+// PORT D
+    RX0, 		  // reserved
+    TX0, 		  // reserved
+    DEN_,	  // AVR Interrupt INT0
+    AVR_INT1, 		// AVR Interrupt INT1
+    TFT_DC,	       //
+    PWM1, 		  // unused
+    PWM2, 		  // unused
+    PWM3, 		  // unused
+// PORT C
+    SCL,		  // reserved
+    SDA, 		  // reserved
+    Ready, 	  // output
+    Int0_,		  // output
+    W_R_, 		  // input
+    Reset960,		  // output
+    BLAST_, 	 // input
+    FAIL, 	     // input
+// PORT A
+    SPI_BUS_EN, // output
+    Analog1,
+    Analog2,
+    Analog3,
+    Analog4,
+    Analog5,
+    Analog6,
+    Analog7,
+    Count,		  // special
+};
+static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
 	digitalWrite(static_cast<int>(ip), value);
@@ -200,6 +243,13 @@ IOExpander<IOExpanderAddress::DataLines> dataLines;
 IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 IOExpander<IOExpanderAddress::Upper16Lines> upper16;
 IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
+Timer t;
+Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::SPI_BUS_EN),
+                     static_cast<int>(i960Pinout::TFT_DC),
+                     static_cast<int>(i960Pinout::MOSI),
+                     static_cast<int>(i960Pinout::SCK),
+                     static_cast<int>(i960Pinout::TFT_RST),
+                     static_cast<int>(i960Pinout::MISO));
 
 Address
 getAddress() noexcept {
@@ -420,25 +470,29 @@ enteringDataState() noexcept {
 	performingRead = isReadOperation();
 }
 
+enum class LoadStoreStyle : uint8_t {
+    // based off of BE0,BE1 pins
+    Load16 = 0b00,
+    Upper8 = 0b01,
+    Lower8 = 0b10,
+    None = 0b11,
+};
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
 
 void
 performWrite(Address address, uint16_t value) noexcept {
-    if constexpr(hasSerial()) {
-        Serial.print(F("Write 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" to 0x"));
-        Serial.println(address, HEX);
-    }
-    TheBoard.store(address, value, getStyle());
+    Serial.print(F("Write 0x"));
+    Serial.print(value, HEX);
+    Serial.print(F(" to 0x"));
+    Serial.println(address, HEX);
+    /// @todo implement
 }
 uint16_t
 performRead(Address address) noexcept {
-    if constexpr (hasSerial()) {
-        Serial.print(F("Read from 0x"));
-        Serial.println(address, HEX);
-    }
-    return TheBoard.load(address, getStyle());
+    Serial.print(F("Read from 0x"));
+    Serial.println(address, HEX);
+    /// @todo implement
+    return 0;
 }
 void processDataRequest() noexcept {
     auto burstAddress = getBurstAddress(baseAddress);
@@ -485,9 +539,7 @@ void setupBusStateMachine() noexcept {
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
-    if constexpr (hasSerial()) {
-        Serial.println(F("Setting up interrupts!"));
-    }
+    Serial.println(F("Setting up interrupts!"));
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
@@ -506,15 +558,10 @@ void setupCPUInterface() {
 			i960Pinout::FAIL);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-    TheBoard.setupInterrupts();
-    if constexpr (hasSerial()) {
-        Serial.println(F("Done setting up interrupts!"));
-    }
+    Serial.println(F("Done setting up interrupts!"));
 }
 void setupIOExpanders() {
-    if constexpr (hasSerial()) {
-        Serial.println(F("Setting up IOExpanders!"));
-    }
+    Serial.println(F("Setting up IOExpanders!"));
 	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
 	// disabled. We can send out a single IOCON.HAEN enable message and all
 	// should receive it. 
@@ -536,9 +583,7 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
-	if constexpr (hasSerial()) {
-	    Serial.println(F("Setup io expanders!"));
-	}
+    Serial.println(F("Setup io expanders!"));
 }
 void transferAddress(uint32_t address) {
     SPI.transfer(static_cast<uint8_t>(address >> 16));
@@ -547,20 +592,15 @@ void transferAddress(uint32_t address) {
 }
 // the setup routine runs once when you press reset:
 void setup() {
-    if constexpr (hasSerial()) {
-        Serial.begin(115200);
-        if constexpr (hasSoftwareSerial()) {
-            while (!Serial) {
-                delay(100);
-            }
-        }
-        Serial.println(F("i960Sx chipset bringup"));
-    }
+    Serial.begin(115200);
+    Serial.println(F("i960Sx chipset bringup"));
     setupPins(OUTPUT,
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN);
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-	TheBoard.begin();
+    pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
+    t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
+    tft.begin();
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
 	SPI.begin();
 	setupIOExpanders();
@@ -571,5 +611,5 @@ void setup() {
 }
 void loop() {
 	fsm.run_machine();
-	TheBoard.loopBody();
+    t.update();
 }
