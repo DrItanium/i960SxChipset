@@ -600,12 +600,23 @@ void setup() {
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
     t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
-    tft.begin();
+    SPI.begin();
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
-	SPI.begin();
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
+    tft.begin();
+    setIsolatedSPIBusId(6); // TFT screen id
+    uint8_t x = tft.readcommand8(ILI9341_RDMODE);
+    Serial.print(F("Display Power Mode: 0x")); Serial.println(x, HEX);
+    x = tft.readcommand8(ILI9341_RDMADCTL);
+    Serial.print(F("MADCTL Mode: 0x")); Serial.println(x, HEX);
+    x = tft.readcommand8(ILI9341_RDPIXFMT);
+    Serial.print(F("Pixel Format: 0x")); Serial.println(x, HEX);
+    x = tft.readcommand8(ILI9341_RDIMGFMT);
+    Serial.print(F("Image Format: 0x")); Serial.println(x, HEX);
+    x = tft.readcommand8(ILI9341_RDSELFDIAG);
+    Serial.print(F("Self Diagnostic: 0x")); Serial.println(x, HEX);
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 }
