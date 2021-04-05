@@ -43,7 +43,7 @@ enum class i960Pinout : decltype(A0) {
     Led = 0, 	  // output
     CLOCK_OUT, // output, unusable
     AS_,     // input, AVR Int2
-    PWM4, 	 // output
+    DC, 	 // output
     GPIOSelect,		// output
     MOSI,		  // reserved
     MISO,		  // reserved
@@ -68,7 +68,7 @@ enum class i960Pinout : decltype(A0) {
     FAIL, 	     // input
 // PORT A
     SPI_BUS_EN, // output
-    DC,
+    Analog1,
     Analog2,
     Analog3,
     Analog4,
@@ -601,6 +601,7 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
+	setIsolatedSPIBusId(6);
 	tft.begin();
 	tft.fillScreen(ILI9341_BLACK);
 	tft.setCursor(0,0);
