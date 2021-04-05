@@ -61,11 +61,6 @@ MightyCore_1284p::sdcardInstalled(uint8_t) const noexcept {
     return false;
 }
 
-void
-MightyCore_1284p::runAtBottomOfSetup() noexcept {
-
-}
-
 MightyCore_1284p TheBoard;
 
 #endif

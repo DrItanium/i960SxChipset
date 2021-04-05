@@ -37,7 +37,6 @@ public:
     virtual ~Board() = default;
     /// @todo migrate sketch specific things into the top level of this class (IOExpanders, etc)
     virtual void begin() noexcept = 0;
-    virtual void runAtBottomOfSetup() noexcept = 0;
     virtual void loopBody() noexcept = 0;
     virtual void setupInterrupts() noexcept = 0;
     virtual uint16_t load(uint32_t address, LoadStoreStyle style) noexcept = 0;

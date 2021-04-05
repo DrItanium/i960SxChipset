@@ -82,7 +82,6 @@ public:
     uint16_t load(uint32_t address, LoadStoreStyle style) noexcept override;
     void store(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override;
     bool sdcardInstalled(uint8_t index = 0) const noexcept override;
-    void runAtBottomOfSetup() noexcept override;
 private:
     Timer t_;
     Adafruit_ILI9341 tft_;
