@@ -298,8 +298,30 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	Count,
 };
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
-void setIsolatedSPIBusId(uint8_t id) noexcept {
-	extraMemoryCommit.writePortB(id);
+enum class SPIBusDevice : uint8_t {
+    Unused0 = 0,
+    Unused1,
+    Unused2,
+    Unused3,
+    Unused4,
+    Unused5,
+    TFTDisplay,
+    Unused7,
+};
+volatile SPIBusDevice busId = SPIBusDevice::Unused0;
+void setIsolatedSPIBusId(SPIBusDevice id) noexcept {
+    static bool initialized = false;
+    bool setMemoryId = false;
+    if (!initialized) {
+        initialized = true;
+        setMemoryId = true;
+    } else {
+       setMemoryId = (id != busId);
+    }
+    if (setMemoryId) {
+        busId = id;
+        extraMemoryCommit.writePortB(static_cast<uint8_t>(busId));
+    }
 }
 
 uint8_t getByteEnableBits() noexcept {
@@ -336,15 +358,6 @@ void setHOLDPin(decltype(LOW) value) noexcept {
 void setLOCKPin(decltype(LOW) value) noexcept {
 	digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extraMemoryCommit);
 }
-
-/**
- * @brief Set PortB on the extra io expander
- * @param targetDevice the spi index
- */
-void setSPIBusId(uint8_t targetDevice) noexcept {
-    extraMemoryCommit.writePortB(targetDevice);
-}
-
 
 // The bootup process has a separate set of states
 // TStart - Where we start
@@ -601,7 +614,7 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-	setIsolatedSPIBusId(6);
+	setIsolatedSPIBusId(SPIBusDevice::TFTDisplay);
 	tft.begin();
 	tft.fillScreen(ILI9341_BLACK);
 	tft.setCursor(0,0);
