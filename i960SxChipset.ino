@@ -302,16 +302,126 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	Count,
 };
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
-enum class SPIBusDevice : uint8_t {
-    Unused0 = 0,
-    Unused1,
-    Unused2,
-    Unused3,
-    Unused4,
-    Unused5,
-    TFTDisplay,
-    Unused7,
+// The upper eight lines of the Extra GPIO expander is used as an SPI address selector
+// This provides up to 256 devices to be present on the SPI address bus and controlable through the single SPI_BUS_EN pin from the 1284p
+// The "SPI Address" is used to select which CS line to pull low when ~SPI_BUS_EN is pulled low by the MCU. It requires some extra logic to
+// use but is stupid simple to layout physically. These IDs have _no_ direct correlation to the memory map exposed to the i960 itself.
+// This is only used internally. The idea is to use the SDCard to define the memory mapping bound to a given SPIBusDevice.
+
+// Physically, the 8-bit address is broken up into a 2:3:3 design as follows:
+// [0b00'000'000, 0b00'111'111] : "Onboard" Devices
+// [0b01'000'000, 0b01'111'111] : "More Onboard/Optional" Devices
+// [0b10'000'000, 0b10'111'111] : "Even More Onboard/Optional" Devices
+// [0b11'000'000, 0b11'111'111] : User Devices [Direct access from the i960]
+enum class SPIBusDevice : uint16_t {
+    // WINBOND 4Megabit Flash
+    Flash0,
+    Flash1 ,
+    Flash2,
+    Flash3,
+    Flash4,
+    Flash5,
+    Flash6,
+    Flash7,
+    // 23LC1024 SRAM Chips (128Kbyte)
+    SRAM0,
+    SRAM1,
+    SRAM2,
+    SRAM3,
+    SRAM4,
+    SRAM5,
+    SRAM6,
+    SRAM7,
+    //
+    SRAM8,
+    SRAM9,
+    SRAM10,
+    SRAM11,
+    SRAM12,
+    SRAM13,
+    SRAM14,
+    SRAM15,
+    // ESPRESSIF PSRAM64H (8Megabyte/64-megabit)
+    PSRAM0,
+    PSRAM1,
+    PSRAM2,
+    PSRAM3,
+    PSRAM4,
+    PSRAM5,
+    PSRAM6,
+    PSRAM7,
+    //
+    PSRAM8,
+    PSRAM9,
+    PSRAM10,
+    PSRAM11,
+    PSRAM12,
+    PSRAM13,
+    PSRAM14,
+    PSRAM15,
+    //
+    PSRAM16,
+    PSRAM17,
+    PSRAM18,
+    PSRAM19,
+    PSRAM20,
+    PSRAM21,
+    PSRAM22,
+    PSRAM23,
+    // Misc Device Block Set 6
+    TFT_DISPLAY,
+    SD_CARD0,
+    Airlift,
+    BluetoothLEFriend,
+    GPIO128_0, // 128-gpios via Eight MCP23S17s connected to a single SPI Enable Line
+    GPIO128_1, // 128-gpios via Eight MCP23S17s connected to a single SPI Enable Line
+    GPIO128_2, // 128-gpios via Eight MCP23S17s connected to a single SPI Enable Line
+    // Misc Device Block Set 7
+    // Extended Devices
+    //
+    PSRAM24,
+    PSRAM25,
+    PSRAM26,
+    PSRAM27,
+    PSRAM28,
+    PSRAM29,
+    PSRAM30,
+    PSRAM31,
+    // GPIO Block
+    // Each entry exposes 128 GPIOS across 8 MCP23S17 IO Expanders
+    // Total of 1024 GPIOs + configuration registers will be mapped into the i960s memory space
+    GPIO128_0,
+    GPIO128_1,
+    GPIO128_2,
+    GPIO128_3,
+    GPIO128_4,
+    GPIO128_5,
+    GPIO128_6,
+    GPIO128_7,
+    // ADC Block (MCP3008's)
+    // 64 analog inputs at 10 bit resolution (could replace with higher precision if desired)
+    ADC_0,
+    ADC_1,
+    ADC_2,
+    ADC_3,
+    ADC_4,
+    ADC_5,
+    ADC_6,
+    ADC_7,
+    // DAC Block, Reserved but has gone unused for now
+    DAC_0,
+    DAC_1,
+    DAC_2,
+    DAC_3,
+    DAC_4,
+    DAC_5,
+    DAC_6,
+    DAC_7,
+    // Misc Block
+
+    Count
 };
+static_assert (static_cast<int>(SPIBusDevice::Count) <= 256);
 volatile SPIBusDevice busId = SPIBusDevice::Unused0;
 void setSPIBusId(SPIBusDevice id) noexcept {
     static bool initialized = false;
@@ -618,6 +728,7 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
+	#if 0
 	setSPIBusId(SPIBusDevice::TFTDisplay);
 	tft.begin();
 	tft.fillScreen(ILI9341_BLACK);
@@ -625,6 +736,7 @@ void setup() {
 	tft.setTextColor(ILI9341_WHITE);
 	tft.setTextSize(3);
 	tft.println("i960Sx!");
+    #endif
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 }
