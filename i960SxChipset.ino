@@ -302,6 +302,13 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	Count,
 };
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
+enum class LoadStoreStyle : uint8_t {
+    // based off of BE0,BE1 pins
+    Full16 = 0b00,
+    Upper8 = 0b01,
+    Lower8 = 0b10,
+    None = 0b11,
+};
 // The upper eight lines of the Extra GPIO expander is used as an SPI address selector
 // This provides up to 256 devices to be present on the SPI address bus and controlable through the single SPI_BUS_EN pin from the 1284p
 // The "SPI Address" is used to select which CS line to pull low when ~SPI_BUS_EN is pulled low by the MCU. It requires some extra logic to
@@ -314,6 +321,15 @@ static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 // [0b10'000'000, 0b10'111'111] : "Even More Onboard/Optional" Devices
 // [0b11'000'000, 0b11'111'111] : User Devices [Direct access from the i960]
 enum class SPIBusDevice : uint16_t {
+    // Unused
+    Unused0,
+    Unused1,
+    Unused2,
+    Unused3,
+    Unused4,
+    Unused5,
+    Unused6,
+    Unused7,
     // WINBOND 4Megabit Flash
     Flash0,
     Flash1 ,
@@ -368,60 +384,80 @@ enum class SPIBusDevice : uint16_t {
     PSRAM21,
     PSRAM22,
     PSRAM23,
-    // Misc Device Block Set 6
+    // Misc Device Block Set 7
     TFT_DISPLAY,
     SD_CARD0,
     Airlift,
     BluetoothLEFriend,
     GPIO128_0, // 128-gpios via Eight MCP23S17s connected to a single SPI Enable Line
-    GPIO128_1, // 128-gpios via Eight MCP23S17s connected to a single SPI Enable Line
-    GPIO128_2, // 128-gpios via Eight MCP23S17s connected to a single SPI Enable Line
+    ADC0, // A single MCP3008/MCP3208 Analog to Digital Converter
+    DAC0, // A single ??? Digital to Analog converter
     // Misc Device Block Set 7
-    // Extended Devices
-    //
-    PSRAM24,
-    PSRAM25,
-    PSRAM26,
-    PSRAM27,
-    PSRAM28,
-    PSRAM29,
-    PSRAM30,
-    PSRAM31,
-    // GPIO Block
-    // Each entry exposes 128 GPIOS across 8 MCP23S17 IO Expanders
-    // Total of 1024 GPIOs + configuration registers will be mapped into the i960s memory space
-    GPIO128_0,
-    GPIO128_1,
-    GPIO128_2,
-    GPIO128_3,
-    GPIO128_4,
-    GPIO128_5,
-    GPIO128_6,
-    GPIO128_7,
-    // ADC Block (MCP3008's)
-    // 64 analog inputs at 10 bit resolution (could replace with higher precision if desired)
-    ADC_0,
-    ADC_1,
-    ADC_2,
-    ADC_3,
-    ADC_4,
-    ADC_5,
-    ADC_6,
-    ADC_7,
-    // DAC Block, Reserved but has gone unused for now
-    DAC_0,
-    DAC_1,
-    DAC_2,
-    DAC_3,
-    DAC_4,
-    DAC_5,
-    DAC_6,
-    DAC_7,
-    // Misc Block
 
     Count
 };
 static_assert (static_cast<int>(SPIBusDevice::Count) <= 256);
+/**
+ * @brief Describes an arbitrary device of an arbitrary size that is mapped into memory at a given location
+ */
+class Device {
+public:
+    constexpr Device(uint32_t start, uint32_t len) noexcept : startAddress_(start), length_(len) {}
+    virtual ~Device() = default;
+    constexpr auto getStartAddress() const noexcept { return startAddress_; }
+    constexpr auto getLength() const noexcept { return length_; }
+    constexpr auto getEndAddress() const noexcept { return length_ + startAddress_; }
+    constexpr bool mapsToGivenRange(uint32_t address) const noexcept {
+        return (address >= startAddress_) && (getEndAddress() > address);
+    }
+    virtual uint16_t read(uint32_t address, LoadStoreStyle style) noexcept = 0;
+    virtual void write(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept = 0;
+private:
+    uint32_t startAddress_ = 0;
+    uint32_t length_ = 0;
+};
+/**
+ * @brief Describes a block of RAM of an arbitrary size that is mapped into memory at a given location
+ */
+class RAM : public Device{
+public:
+    constexpr RAM(uint32_t start, uint32_t ramSize) : Device(start, ramSize) { }
+    ~RAM() override = default;
+    uint16_t read(uint32_t address, LoadStoreStyle style) noexcept override {
+        switch (style) {
+            case LoadStoreStyle::Full16:
+                return read16(address);
+            case LoadStoreStyle::Lower8:
+                return read8(address);
+            case LoadStoreStyle::Upper8:
+                return read8(address+1);
+            default:
+                return 0;
+        }
+    }
+    void write (uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override {
+        switch (style) {
+            case LoadStoreStyle::Full16:
+                write16(address, value);
+                break;
+            case LoadStoreStyle::Lower8:
+                write8(address, static_cast<uint8_t>(value));
+                break;
+            case LoadStoreStyle::Upper8:
+                write8(address + 1, static_cast<uint8_t>(value >> 8));
+                break;
+            default:
+                // do nothing
+                break;
+        }
+    }
+protected:
+    virtual uint8_t read8(uint32_t address) = 0;
+    virtual uint16_t read16(uint32_t address) = 0;
+    virtual void write8(uint32_t address, uint8_t value) = 0;
+    virtual void write16(uint32_t address, uint16_t value) = 0;
+};
+
 volatile SPIBusDevice busId = SPIBusDevice::Unused0;
 void setSPIBusId(SPIBusDevice id) noexcept {
     static bool initialized = false;
@@ -583,7 +619,92 @@ void doAddressState() noexcept {
 		fsm.trigger(ToDataState);
 	}
 }
+/**
+ * @brief Represents a single Espressif PSRAM64H device
+ */
+class PSRAM64H : public RAM {
+public:
+    enum class Opcodes : uint8_t {
+        Read = 0x03,
+        FastRead = 0x0B,
+        FastReadQuad = 0xEB,
+        Write = 0x02,
+        QuadWrite = 0x38,
+        EnterQuadMode = 0x35,
+        ExitQuadMode = 0xF5,
+        ResetEnable = 0x66,
+        Reset = 0x99,
+        SetBurstLength = 0xC0,
+        ReadID = 0x9F,
+    };
+    static constexpr uint32_t Size = 8 * static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+public:
+    constexpr PSRAM64H(uint32_t startAddress, SPIBusDevice id) : RAM(startAddress, Size), busId_(id) { }
+    ~PSRAM64H() override = default;
+    constexpr auto getBusID() const noexcept { return busId_; }
+protected:
+    uint8_t read8(uint32_t address) override;
+    uint16_t read16(uint32_t address) override;
+    void write8(uint32_t address, uint8_t value) override;
+    void write16(uint32_t address, uint16_t value) override;
+private:
+    SPIBusDevice busId_;
+};
 
+uint8_t
+PSRAM64H::read8(uint32_t address) {
+    setSPIBusId(busId_);
+    byte a = static_cast<byte>(address >> 16);
+    byte b = static_cast<byte>(address >> 8);
+    byte c = static_cast<byte>(address);
+    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
+    SPI.transfer(static_cast<byte>(Opcodes::Read));
+    SPI.transfer(a);
+    SPI.transfer(b);
+    SPI.transfer(c);
+    return SPI.transfer(0x00);
+}
+
+uint16_t
+PSRAM64H::read16(uint32_t address) {
+    setSPIBusId(busId_);
+    byte a = static_cast<byte>(address >> 16);
+    byte b = static_cast<byte>(address >> 8);
+    byte c = static_cast<byte>(address);
+    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
+    SPI.transfer(static_cast<byte>(Opcodes::Read));
+    SPI.transfer(a);
+    SPI.transfer(b);
+    SPI.transfer(c);
+    return SPI.transfer16(0x00);
+}
+
+void
+PSRAM64H::write8(uint32_t address, uint8_t value) {
+    setSPIBusId(busId_);
+    byte a = static_cast<byte>(address >> 16);
+    byte b = static_cast<byte>(address >> 8);
+    byte c = static_cast<byte>(address);
+    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
+    SPI.transfer(static_cast<byte>(Opcodes::Write));
+    SPI.transfer(a);
+    SPI.transfer(b);
+    SPI.transfer(c);
+    SPI.transfer(value);
+}
+void
+PSRAM64H::write16(uint32_t address, uint16_t value) {
+    setSPIBusId(busId_);
+    byte a = static_cast<byte>(address >> 16);
+    byte b = static_cast<byte>(address >> 8);
+    byte c = static_cast<byte>(address);
+    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
+    SPI.transfer(static_cast<byte>(Opcodes::Write));
+    SPI.transfer(a);
+    SPI.transfer(b);
+    SPI.transfer(c);
+    SPI.transfer16(value);
+}
 
 void
 enteringDataState() noexcept {
@@ -593,13 +714,6 @@ enteringDataState() noexcept {
 	performingRead = isReadOperation();
 }
 
-enum class LoadStoreStyle : uint8_t {
-    // based off of BE0,BE1 pins
-    Load16 = 0b00,
-    Upper8 = 0b01,
-    Lower8 = 0b10,
-    None = 0b11,
-};
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
 
 void
