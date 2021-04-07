@@ -651,6 +651,85 @@ private:
     SPIBusDevice busId_;
 };
 
+class SRAM_23LC1024 : public RAM {
+public:
+    enum class Opcodes : uint8_t {
+        Read = 0x03,
+        Write = 0x02,
+        EDIO = 0x3B,
+        EQIO = 0x38,
+        RSTIO = 0xFF,
+        RDMR = 0x05,
+        WRMR = 0x01,
+    };
+    static constexpr uint32_t Size = 128 * static_cast<uint32_t>(1024);
+public:
+    constexpr SRAM_23LC1024(uint32_t startAddress, SPIBusDevice id) : RAM(startAddress, Size), busId_(id) { }
+    ~SRAM_23LC1024() override = default;
+    constexpr auto getBusID() const noexcept { return busId_; }
+protected:
+    uint8_t read8(uint32_t address) override;
+    uint16_t read16(uint32_t address) override;
+    void write8(uint32_t address, uint8_t value) override;
+    void write16(uint32_t address, uint16_t value) override;
+private:
+    SPIBusDevice busId_;
+};
+uint8_t
+SRAM_23LC1024::read8(uint32_t address) {
+    setSPIBusId(busId_);
+    byte a = static_cast<byte>(address >> 16);
+    byte b = static_cast<byte>(address >> 8);
+    byte c = static_cast<byte>(address);
+    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
+    SPI.transfer(static_cast<byte>(Opcodes::Read));
+    SPI.transfer(a);
+    SPI.transfer(b);
+    SPI.transfer(c);
+    return SPI.transfer(0x00);
+}
+
+uint16_t
+SRAM_23LC1024::read16(uint32_t address) {
+    setSPIBusId(busId_);
+    byte a = static_cast<byte>(address >> 16);
+    byte b = static_cast<byte>(address >> 8);
+    byte c = static_cast<byte>(address);
+    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
+    SPI.transfer(static_cast<byte>(Opcodes::Read));
+    SPI.transfer(a);
+    SPI.transfer(b);
+    SPI.transfer(c);
+    return SPI.transfer16(0x00);
+}
+
+void
+SRAM_23LC1024::write8(uint32_t address, uint8_t value) {
+    setSPIBusId(busId_);
+    byte a = static_cast<byte>(address >> 16);
+    byte b = static_cast<byte>(address >> 8);
+    byte c = static_cast<byte>(address);
+    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
+    SPI.transfer(static_cast<byte>(Opcodes::Write));
+    SPI.transfer(a);
+    SPI.transfer(b);
+    SPI.transfer(c);
+    SPI.transfer(value);
+}
+void
+SRAM_23LC1024::write16(uint32_t address, uint16_t value) {
+    setSPIBusId(busId_);
+    byte a = static_cast<byte>(address >> 16);
+    byte b = static_cast<byte>(address >> 8);
+    byte c = static_cast<byte>(address);
+    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
+    SPI.transfer(static_cast<byte>(Opcodes::Write));
+    SPI.transfer(a);
+    SPI.transfer(b);
+    SPI.transfer(c);
+    SPI.transfer16(value);
+}
+
 uint8_t
 PSRAM64H::read8(uint32_t address) {
     setSPIBusId(busId_);
