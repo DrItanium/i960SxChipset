@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
+#include <WiFiNINA.h> // Must be Adafruit's Fork
 #include "Pinout.h"
 #include "Device.h"
 #include "RAM.h"
@@ -296,6 +297,13 @@ void transferAddress(uint32_t address) {
     SPI.transfer(static_cast<uint8_t>(address >> 8));
     SPI.transfer(static_cast<uint8_t>(address));
 }
+void setupWifi() noexcept {
+    WiFi.setPins(static_cast<int>(i960Pinout::WIFI_EN),
+                 static_cast<int>(i960Pinout::WIFI_BUSY),
+                 static_cast<int>(i960Pinout::WIFI_RST),
+                 -1, // disable
+                 &SPI);
+}
 // the setup routine runs once when you press reset:
 void setup() {
     Serial.begin(115200);
@@ -315,6 +323,7 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
+	setupWifi();
 	tft.begin();
 	tft.fillScreen(ILI9341_BLACK);
 	tft.setCursor(0,0);
