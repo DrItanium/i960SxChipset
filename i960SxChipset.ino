@@ -461,7 +461,7 @@ void setup() {
 	tft.setTextColor(ILI9341_WHITE);
 	tft.setTextSize(3);
 	tft.println("i960Sx!");
-	roundTripTest<SPIBusDevice::SRAM0>();
+	//roundTripTest<SPIBusDevice::SRAM0>();
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 	Serial.println(F("i960Sx chipset brought up fully!"));
