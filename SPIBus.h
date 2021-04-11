@@ -38,24 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // [0b10'000'000, 0b10'111'111] : "Even More Onboard/Optional" Devices
 // [0b11'000'000, 0b11'111'111] : User Devices [Direct access from the i960]
 enum class SPIBusDevice : uint16_t {
-    // Unused
-    Unused0,
-    Unused1,
-    Unused2,
-    Unused3,
-    Unused4,
-    Unused5,
-    Unused6,
-    Unused7,
-    // WINBOND 4Megabit Flash
-    Flash0,
-    Flash1 ,
-    Flash2,
-    Flash3,
-    Flash4,
-    Flash5,
-    Flash6,
-    Flash7,
     // 23LC1024 SRAM Chips (128Kbyte)
     SRAM0,
     SRAM1,
@@ -74,6 +56,15 @@ enum class SPIBusDevice : uint16_t {
     SRAM13,
     SRAM14,
     SRAM15,
+    // WINBOND 4Megabit Flash
+    Flash0,
+    Flash1 ,
+    Flash2,
+    Flash3,
+    Flash4,
+    Flash5,
+    Flash6,
+    Flash7,
     // ESPRESSIF PSRAM64H (8Megabyte/64-megabit)
     PSRAM0,
     PSRAM1,
@@ -101,15 +92,24 @@ enum class SPIBusDevice : uint16_t {
     PSRAM21,
     PSRAM22,
     PSRAM23,
-    // Misc Device Block Set 7
-    TFT_DISPLAY,
-    SD_CARD0,
-    Airlift,
-    BluetoothLEFriend,
-    GPIO128_0, // 128-gpios via Eight MCP23S17s connected to a single SPI Enable Line
-    ADC0, // A single MCP3008/MCP3208 Analog to Digital Converter
-    DAC0, // A single ??? Digital to Analog converter
-    // Misc Device Block Set 7
+    //
+    GPIO128_0,
+    GPIO128_1,
+    GPIO128_2,
+    GPIO128_3,
+    GPIO128_4,
+    GPIO128_5,
+    GPIO128_6,
+    GPIO128_7,
+    //
+    ADC_0,
+    ADC_1,
+    ADC_2,
+    ADC_3,
+    ADC_4,
+    ADC_5,
+    ADC_6,
+    ADC_7,
 
     Count
 };
