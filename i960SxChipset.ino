@@ -297,6 +297,9 @@ void transferAddress(uint32_t address) {
     SPI.transfer(static_cast<uint8_t>(address >> 8));
     SPI.transfer(static_cast<uint8_t>(address));
 }
+Adafruit_BluefruitLE_SPI ble(static_cast<int>(i960Pinout::BLE_EN),
+                             static_cast<int>(i960Pinout::BLE_IRQ),
+                             static_cast<int>(i960Pinout::BLE_RST));
 byte macAddress[6];
 void printMacAddress(byte mac[]) {
     for (int i = 5; i >= 0; --i) {
