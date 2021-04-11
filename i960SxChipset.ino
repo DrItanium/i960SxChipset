@@ -408,6 +408,31 @@ void setupSPIDevices() {
     registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM22, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 22));
     registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM23, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 23));
 }
+
+template<SPIBusDevice dev>
+bool roundTripTest() noexcept {
+    if (auto device = Devices[static_cast<int>(dev)]; !device) {
+        return true;
+    } else {
+        bool successful = true;
+        // do a full load
+        for (int i = device->getStartAddress(); i < device->getEndAddress(); i+=2) {
+            auto expected = static_cast<uint16_t>(i);
+            device->write(i, expected, LoadStoreStyle::Full16);
+            auto result = device->read(i, LoadStoreStyle::Full16);
+            if (result != expected) {
+                Serial.print(F("FAILURE: Writing 0x");
+                Serial.print(expected, HEX)
+                Serial.print(F(" to 0x"));
+                Serial.print(i, HEX);
+                Serial.print(F(" yielded 0x"));
+                Serial.println(result, HEX);
+                successful = false;
+            }
+        }
+        return successful;
+    }
+}
 // the setup routine runs once when you press reset:
 void setup() {
     Serial.begin(115200);
