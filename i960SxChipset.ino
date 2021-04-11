@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
 #include <WiFiNINA.h> // Must be Adafruit's Fork
-#include <Adafruit_BluefruitLE_SPI.h>
 #include "Pinout.h"
 #include "Device.h"
 #include "RAM.h"
@@ -63,9 +62,6 @@ constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) n
 Timer t;
 Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC));
-Adafruit_BluefruitLE_SPI ble(static_cast<int>(i960Pinout::BLE_EN),
-                             static_cast<int>(i960Pinout::BLE_IRQ),
-                             static_cast<int>(i960Pinout::BLE_RST));
 byte macAddress[6];
 union WordEntry {
     byte bytes[2];

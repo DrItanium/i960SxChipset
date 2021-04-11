@@ -43,7 +43,7 @@ enum class i960Pinout : decltype(A0) {
     TX0, 		  // reserved
     DEN_,	  // AVR Interrupt INT0
     AVR_INT1, 		// AVR Interrupt INT1
-    BLE_RST,	   //
+    PWM0,	   //
     PWM1, 		  // unused
     PWM2, 		  // unused
     PWM3, 		  // unused
@@ -60,11 +60,11 @@ enum class i960Pinout : decltype(A0) {
     DC, 	 // output
     DISPLAY_EN, // output
     SD_EN,      // output
-    BLE_EN,
-    BLE_IRQ,
     WIFI_EN,
     WIFI_BUSY,
     WIFI_RST,
+    Analog6,
+    Analog7,
     Count,		  // special
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
