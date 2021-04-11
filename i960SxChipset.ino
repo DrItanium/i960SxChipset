@@ -72,6 +72,9 @@ union WordEntry {
     uint16_t word;
 };
 constexpr auto OnBoardSRAMCacheSize = 8192 /* bytes */ / sizeof (WordEntry);
+/**
+ * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
+ */
 volatile WordEntry OnBoardSRAMCache[8192/sizeof(uint16_t)];
 
 
@@ -348,7 +351,7 @@ void setupWifi() noexcept {
 }
 void setupSRAMCache() {
     // 8k on board cache
-    for (int i = 0; i < 4096; ++i) {
+    for (int i = 0; i < OnBoardSRAMCacheSize; ++i) {
         OnBoardSRAMCache[i].word = 0;
     }
 }
