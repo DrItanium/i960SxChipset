@@ -40,62 +40,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
+#include "Pinout.h"
 #include "Device.h"
 #include "RAM.h"
+#include "SPIBus.h"
 using Address = uint32_t;
 
-enum class i960Pinout : decltype(A0) {
-    // PORT B
-    Led = 0, 	  // output
-    CLOCK_OUT, // output, unusable
-    AS_,     // input, AVR Int2
-    DC, 	 // output
-    GPIOSelect,		// output
-    MOSI,		  // reserved
-    MISO,		  // reserved
-    SCK, 		  // reserved
-// PORT D
-    RX0, 		  // reserved
-    TX0, 		  // reserved
-    DEN_,	  // AVR Interrupt INT0
-    AVR_INT1, 		// AVR Interrupt INT1
-    PWM0,	       //
-    PWM1, 		  // unused
-    PWM2, 		  // unused
-    PWM3, 		  // unused
-// PORT C
-    SCL,		  // reserved
-    SDA, 		  // reserved
-    Ready, 	  // output
-    Int0_,		  // output
-    W_R_, 		  // input
-    Reset960,		  // output
-    BLAST_, 	 // input
-    FAIL, 	     // input
-// PORT A
-    SPI_BUS_EN, // output
-    Analog1,
-    Analog2,
-    Analog3,
-    Analog4,
-    Analog5,
-    Analog6,
-    Analog7,
-    Count,		  // special
-};
-static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
 
-inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
-	digitalWrite(static_cast<int>(ip), value);
-}
-
-inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
-	pinMode(static_cast<int>(ip), value);
-}
-
-inline auto digitalRead(i960Pinout ip) {
-	return digitalRead(static_cast<int>(ip));
-}
 
 enum class IOExpanderAddress : byte {
 	DataLines = 0b000,
@@ -107,96 +58,6 @@ enum class IOExpanderAddress : byte {
 	OtherDevice2,
 	OtherDevice3,
 };
-template<i960Pinout pin>
-struct DigitalPin {
-	DigitalPin() = delete;
-	~DigitalPin() = delete;
-	DigitalPin(const DigitalPin&) = delete;
-	DigitalPin(DigitalPin&&) = delete;
-	DigitalPin& operator=(const DigitalPin&) = delete;
-	DigitalPin& operator=(DigitalPin&&) = delete;
-	static constexpr bool isInputPin() noexcept { return false; }
-	static constexpr bool isOutputPin() noexcept { return false; }
-	static constexpr bool getDirection() noexcept { return false; }
-	static constexpr auto getPin() noexcept { return pin; }
-};
-
-#define DefOutputPin(pin, asserted, deasserted) \
-	template<> \
-	struct DigitalPin< pin > { \
-	static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-		DigitalPin() = delete; \
-		~DigitalPin() = delete; \
-		DigitalPin(const DigitalPin&) = delete; \
-		DigitalPin(DigitalPin&&) = delete; \
-		DigitalPin& operator=(const DigitalPin&) = delete; \
-		DigitalPin& operator=(DigitalPin&&) = delete; \
-		static constexpr auto isInputPin() noexcept { return false; } \
-		static constexpr auto isOutputPin() noexcept { return true; } \
-		static constexpr auto getPin() noexcept { return pin; } \
-		static constexpr auto getDirection() noexcept { return OUTPUT; } \
-		static constexpr auto getAssertionState() noexcept { return asserted; } \
-		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		inline static void assert() noexcept { digitalWrite(pin, getAssertionState()); } \
-		inline static void deassert() noexcept { digitalWrite(pin, getDeassertionState()); } \
-		inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
-		inline static void pulse() noexcept { \
-			assert(); \
-			deassert(); \
-		} \
-	}
-#define DefInputPin(pin, asserted, deasserted) \
-	template<> \
-	struct DigitalPin< pin > { \
-		static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-		DigitalPin() = delete; \
-		~DigitalPin() = delete; \
-		DigitalPin(const DigitalPin&) = delete; \
-		DigitalPin(DigitalPin&&) = delete; \
-		DigitalPin& operator=(const DigitalPin&) = delete; \
-		DigitalPin& operator=(DigitalPin&&) = delete; \
-		static constexpr auto isInputPin() noexcept { return true; } \
-		static constexpr auto isOutputPin() noexcept { return false; } \
-		static constexpr auto getPin() noexcept { return pin; } \
-		static constexpr auto getDirection() noexcept { return INPUT; } \
-		static constexpr auto getAssertionState() noexcept { return asserted; } \
-		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		inline static auto read() noexcept { return digitalRead(pin); } \
-		inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
-		inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
-	}
-#define DefInputPullupPin(pin, asserted, deasserted) \
-	template<> \
-	struct DigitalPin< pin > { \
-		static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-		DigitalPin() = delete; \
-		~DigitalPin() = delete; \
-		DigitalPin(const DigitalPin&) = delete; \
-		DigitalPin(DigitalPin&&) = delete; \
-		DigitalPin& operator=(const DigitalPin&) = delete; \
-		DigitalPin& operator=(DigitalPin&&) = delete; \
-		static constexpr auto isInputPin() noexcept { return true; } \
-		static constexpr auto isOutputPin() noexcept { return false; } \
-		static constexpr auto getPin() noexcept { return pin; } \
-		static constexpr auto getDirection() noexcept { return INPUT_PULLUP; } \
-		static constexpr auto getAssertionState() noexcept { return asserted; } \
-		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		inline static bool isAsserted() noexcept { return digitalRead(pin) == getAssertionState(); } \
-		inline static bool isDeasserted() noexcept { return digitalRead(pin) == getDeassertionState(); } \
-		inline static auto read() noexcept { return digitalRead(pin); } \
-	}
-DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
-DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
-DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
-DefInputPin(i960Pinout::FAIL, HIGH, LOW);
-DefInputPin(i960Pinout::DEN_, LOW, HIGH);
-DefInputPin(i960Pinout::AS_, LOW, HIGH);
-DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
-DefInputPin(i960Pinout::W_R_, LOW, HIGH);
-#undef DefInputPin
-#undef DefOutputPin
-#undef DefInputPullupPin
 
 /**
  * Normally generated by the linker as the value used for validation purposes
@@ -212,36 +73,6 @@ template<IOExpanderAddress addr, int enablePin = static_cast<int>(i960Pinout::GP
 using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr), enablePin>;
 
 
-template<typename ... Pins>
-void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
-	(pinMode(pins, direction), ...);
-}
-
-template<typename ... Pins>
-void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
-	(digitalWrite(pins, value), ...);
-}
-
-template<i960Pinout pinId, decltype(HIGH) onConstruction, decltype(LOW) onDestruction>
-class PinToggler {
-	public:
-		PinToggler() { digitalWrite(pinId, onConstruction); }
-		~PinToggler() { digitalWrite(pinId, onDestruction); }
-};
-
-template<i960Pinout pinId>
-using HoldPinLow = PinToggler<pinId, LOW, HIGH>;
-
-template<i960Pinout pinId>
-using HoldPinHigh = PinToggler<pinId, HIGH, LOW>;
-
-template<i960Pinout pinId>
-class PinAsserter {
-	public:
-		static_assert(DigitalPin<pinId>::isOutputPin());
-		PinAsserter() { DigitalPin<pinId>::assert(); }
-		~PinAsserter() { DigitalPin<pinId>::deassert(); }
-};
 
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
@@ -304,113 +135,6 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	Count,
 };
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
-// The upper eight lines of the Extra GPIO expander is used as an SPI address selector
-// This provides up to 256 devices to be present on the SPI address bus and controlable through the single SPI_BUS_EN pin from the 1284p
-// The "SPI Address" is used to select which CS line to pull low when ~SPI_BUS_EN is pulled low by the MCU. It requires some extra logic to
-// use but is stupid simple to layout physically. These IDs have _no_ direct correlation to the memory map exposed to the i960 itself.
-// This is only used internally. The idea is to use the SDCard to define the memory mapping bound to a given SPIBusDevice.
-
-// Physically, the 8-bit address is broken up into a 2:3:3 design as follows:
-// [0b00'000'000, 0b00'111'111] : "Onboard" Devices
-// [0b01'000'000, 0b01'111'111] : "More Onboard/Optional" Devices
-// [0b10'000'000, 0b10'111'111] : "Even More Onboard/Optional" Devices
-// [0b11'000'000, 0b11'111'111] : User Devices [Direct access from the i960]
-enum class SPIBusDevice : uint16_t {
-    // Unused
-    Unused0,
-    Unused1,
-    Unused2,
-    Unused3,
-    Unused4,
-    Unused5,
-    Unused6,
-    Unused7,
-    // WINBOND 4Megabit Flash
-    Flash0,
-    Flash1 ,
-    Flash2,
-    Flash3,
-    Flash4,
-    Flash5,
-    Flash6,
-    Flash7,
-    // 23LC1024 SRAM Chips (128Kbyte)
-    SRAM0,
-    SRAM1,
-    SRAM2,
-    SRAM3,
-    SRAM4,
-    SRAM5,
-    SRAM6,
-    SRAM7,
-    //
-    SRAM8,
-    SRAM9,
-    SRAM10,
-    SRAM11,
-    SRAM12,
-    SRAM13,
-    SRAM14,
-    SRAM15,
-    // ESPRESSIF PSRAM64H (8Megabyte/64-megabit)
-    PSRAM0,
-    PSRAM1,
-    PSRAM2,
-    PSRAM3,
-    PSRAM4,
-    PSRAM5,
-    PSRAM6,
-    PSRAM7,
-    //
-    PSRAM8,
-    PSRAM9,
-    PSRAM10,
-    PSRAM11,
-    PSRAM12,
-    PSRAM13,
-    PSRAM14,
-    PSRAM15,
-    //
-    PSRAM16,
-    PSRAM17,
-    PSRAM18,
-    PSRAM19,
-    PSRAM20,
-    PSRAM21,
-    PSRAM22,
-    PSRAM23,
-    // Misc Device Block Set 7
-    TFT_DISPLAY,
-    SD_CARD0,
-    Airlift,
-    BluetoothLEFriend,
-    GPIO128_0, // 128-gpios via Eight MCP23S17s connected to a single SPI Enable Line
-    ADC0, // A single MCP3008/MCP3208 Analog to Digital Converter
-    DAC0, // A single ??? Digital to Analog converter
-    // Misc Device Block Set 7
-
-    Count
-};
-static_assert (static_cast<int>(SPIBusDevice::Count) <= 256);
-/**
- * @brief Describes a block of RAM of an arbitrary size that is mapped into memory at a given location
- */
-
-volatile SPIBusDevice busId = SPIBusDevice::Unused0;
-void setSPIBusId(SPIBusDevice id) noexcept {
-    static bool initialized = false;
-    bool setMemoryId = false;
-    if (!initialized) {
-        initialized = true;
-        setMemoryId = true;
-    } else {
-       setMemoryId = (id != busId);
-    }
-    if (setMemoryId) {
-        busId = id;
-        extraMemoryCommit.writePortB(static_cast<uint8_t>(busId));
-    }
-}
 
 uint8_t getByteEnableBits() noexcept {
 	return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;

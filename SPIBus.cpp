@@ -23,40 +23,24 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef ARDUINO_PSRAM64H_H
-#define ARDUINO_PSRAM64H_H
-#include "RAM.h"
 #include "SPIBus.h"
-/**
- * @brief Represents a single Espressif PSRAM64H device
- */
-class PSRAM64H : public RAM {
-public:
-    enum class Opcodes : uint8_t {
-        Read = 0x03,
-        FastRead = 0x0B,
-        FastReadQuad = 0xEB,
-        Write = 0x02,
-        QuadWrite = 0x38,
-        EnterQuadMode = 0x35,
-        ExitQuadMode = 0xF5,
-        ResetEnable = 0x66,
-        Reset = 0x99,
-        SetBurstLength = 0xC0,
-        ReadID = 0x9F,
-    };
-    static constexpr uint32_t Size = 8 * static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
-public:
-    constexpr PSRAM64H(uint32_t startAddress, SPIBusDevice id) : RAM(startAddress, Size), busId_(id) { }
-    ~PSRAM64H() override = default;
-    constexpr auto getBusID() const noexcept { return busId_; }
-protected:
-    uint8_t read8(uint32_t address) override;
-    uint16_t read16(uint32_t address) override;
-    void write8(uint32_t address, uint8_t value) override;
-    void write16(uint32_t address, uint16_t value) override;
-private:
-    SPIBusDevice busId_;
-};
 
-#endif //ARDUINO_PSRAM64H_H
+volatile SPIBusDevice busId = SPIBusDevice::Unused0;
+void setSPIBusId(SPIBusDevice id) noexcept {
+    static bool initialized = false;
+    bool setMemoryId = false;
+    if (!initialized) {
+        initialized = true;
+        setMemoryId = true;
+    } else {
+        setMemoryId = (id != busId);
+    }
+    if (setMemoryId) {
+        busId = id;
+        extraMemoryCommit.writePortB(static_cast<uint8_t>(busId));
+    }
+}
+
+SPIBusDevice getCurrentSPIBusDevice() noexcept {
+    return busId;
+}
