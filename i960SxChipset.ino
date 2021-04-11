@@ -45,8 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "RAM.h"
 #include "SPIBus.h"
 #include "IOExpanders.h"
-using Address = uint32_t;
-
 
 
 
@@ -291,7 +289,7 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
-    Serial.println(F("Setup io expanders!"));
+    Serial.println(F("Done setting up io expanders!"));
 }
 void transferAddress(uint32_t address) {
     SPI.transfer(static_cast<uint8_t>(address >> 16));
@@ -324,6 +322,7 @@ void setup() {
     #endif
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
+	Serial.println(F("i960Sx chipset brought up fully!"));
 }
 void loop() {
 	fsm.run_machine();
