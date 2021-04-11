@@ -67,10 +67,12 @@ Adafruit_BluefruitLE_SPI ble(static_cast<int>(i960Pinout::BLE_EN),
                              static_cast<int>(i960Pinout::BLE_IRQ),
                              static_cast<int>(i960Pinout::BLE_RST));
 byte macAddress[6];
-volatile union {
+union WordEntry {
     byte bytes[2];
     uint16_t word;
-} OnBoardSRAMCache[8192/sizeof(uint16_t)];
+};
+constexpr auto OnBoardSRAMCacheSize = 8192 /* bytes */ / sizeof (WordEntry);
+volatile WordEntry OnBoardSRAMCache[8192/sizeof(uint16_t)];
 
 
 // The bootup process has a separate set of states
@@ -370,6 +372,7 @@ void setup() {
 	setupCPUInterface();
 	setupBusStateMachine();
 	setupWifi();
+	setupSRAMCache();
 	tft.begin();
 	tft.fillScreen(ILI9341_BLACK);
 	tft.setCursor(0,0);
