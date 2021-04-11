@@ -29,3 +29,54 @@ IOExpander<IOExpanderAddress::DataLines> dataLines;
 IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 IOExpander<IOExpanderAddress::Upper16Lines> upper16;
 IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
+Address
+getAddress() noexcept {
+    auto lower16Addr = static_cast<Address>(lower16.readGPIOs());
+    auto upper16Addr = static_cast<Address>(upper16.readGPIOs()) << 16;
+    return lower16Addr | upper16Addr;
+}
+uint16_t
+getDataBits() noexcept {
+    dataLines.writeGPIOsDirection(0xFFFF);
+    return static_cast<uint16_t>(dataLines.readGPIOs());
+}
+
+void
+setDataBits(uint16_t value) noexcept {
+    dataLines.writeGPIOsDirection(0);
+    dataLines.writeGPIOs(value);
+}
+
+
+
+uint8_t getByteEnableBits() noexcept {
+    return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
+}
+
+decltype(LOW) getByteEnable0() noexcept {
+    return (getByteEnableBits() & 1) == 0 ? LOW : HIGH;
+}
+decltype(LOW) getByteEnable1() noexcept {
+    return (getByteEnableBits() & 0b10) == 0 ? LOW : HIGH;
+}
+
+uint8_t getBurstAddressBits() noexcept {
+    return (extraMemoryCommit.readGPIOs() & 0b111) << 1;
+}
+
+Address getBurstAddress(Address base) noexcept {
+    return getBurstAddress(base, static_cast<Address>(getBurstAddressBits()));
+}
+Address getBurstAddress() noexcept {
+    return getBurstAddress(getAddress());
+}
+
+bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
+bool isWriteOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isDeasserted(); }
+decltype(LOW) getBlastPin() noexcept { return DigitalPin<i960Pinout::BLAST_>::read(); }
+void setHOLDPin(decltype(LOW) value) noexcept {
+    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, extraMemoryCommit);
+}
+void setLOCKPin(decltype(LOW) value) noexcept {
+    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extraMemoryCommit);
+}

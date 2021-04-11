@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ARDUINO_PINOUT_H
 #include <Arduino.h>
 #include <libbonuspin.h>
+using Address = uint32_t;
 enum class i960Pinout : decltype(A0) {
     // PORT B
     Led = 0, 	  // output

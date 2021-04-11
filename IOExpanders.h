@@ -28,7 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include <libbonuspin.h>
 #include "Pinout.h"
-
 enum class IOExpanderAddress : byte {
     DataLines = 0b000,
     Lower16Lines,
@@ -39,6 +38,38 @@ enum class IOExpanderAddress : byte {
     OtherDevice2,
     OtherDevice3,
 };
+// layout of the extra memory commit expander
+// PA0 - BurstAddress1 - input
+// PA1 - BurstAddress2 - input
+// PA2 - BurstAddress3 - input
+// PA3 - BE0_ - input
+// PA4 - BE1_ - input
+// PA5 - HOLD  - output
+// PA6 - HLDA  - input
+// PA7 - _LOCK - output
+// PB0-PB7 - Unused
+
+enum class ExtraGPIOExpanderPinout : decltype(A0) {
+    BurstAddress1,
+    BurstAddress2,
+    BurstAddress3,
+    ByteEnable0,
+    ByteEnable1,
+    HOLD,
+    HLDA,
+    LOCK_,
+    // add support for upto 256 spi devices
+    Unused0,
+    Unused1,
+    Unused2,
+    Unused3,
+    Unused4,
+    Unused5,
+    Unused6,
+    Unused7,
+    Count,
+};
+static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 template<IOExpanderAddress addr, int enablePin = static_cast<int>(i960Pinout::GPIOSelect)>
 using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr), enablePin>;
 
@@ -49,4 +80,24 @@ extern IOExpander<IOExpanderAddress::Lower16Lines> lower16;
 extern IOExpander<IOExpanderAddress::Upper16Lines> upper16;
 extern IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
 
+Address getAddress() noexcept;
+uint16_t getDataBits() noexcept;
+void setDataBits(uint16_t value) noexcept;
+uint8_t getByteEnableBits() noexcept;
+decltype(LOW) getByteEnable0() noexcept;
+decltype(HIGH) getByteEnable1() noexcept;
+
+uint8_t getBurstAddressBits() noexcept;
+
+constexpr Address getBurstAddress(Address base, Address burstBits) noexcept {
+    return (base & (~0b1110)) | burstBits;
+}
+Address getBurstAddress(Address base) noexcept;
+Address getBurstAddress() noexcept;
+
+bool isReadOperation() noexcept;
+bool isWriteOperation() noexcept;
+decltype(LOW) getBlastPin() noexcept;
+void setHOLDPin(decltype(LOW) value) noexcept;
+void setLOCKPin(decltype(LOW) value) noexcept;
 #endif //ARDUINO_IOEXPANDERS_H
