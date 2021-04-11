@@ -43,7 +43,7 @@ enum class i960Pinout : decltype(A0) {
     TX0, 		  // reserved
     DEN_,	  // AVR Interrupt INT0
     AVR_INT1, 		// AVR Interrupt INT1
-    PWM0,	       //
+    BLE_RST,	   //
     PWM1, 		  // unused
     PWM2, 		  // unused
     PWM3, 		  // unused
