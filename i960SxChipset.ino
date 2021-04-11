@@ -63,6 +63,14 @@ constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) n
 Timer t;
 Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC));
+Adafruit_BluefruitLE_SPI ble(static_cast<int>(i960Pinout::BLE_EN),
+                             static_cast<int>(i960Pinout::BLE_IRQ),
+                             static_cast<int>(i960Pinout::BLE_RST));
+byte macAddress[6];
+volatile union {
+    byte bytes[2];
+    uint16_t word;
+} OnBoardSRAMCache[8192/sizeof(uint16_t)];
 
 
 // The bootup process has a separate set of states
@@ -298,10 +306,6 @@ void transferAddress(uint32_t address) {
     SPI.transfer(static_cast<uint8_t>(address >> 8));
     SPI.transfer(static_cast<uint8_t>(address));
 }
-Adafruit_BluefruitLE_SPI ble(static_cast<int>(i960Pinout::BLE_EN),
-                             static_cast<int>(i960Pinout::BLE_IRQ),
-                             static_cast<int>(i960Pinout::BLE_RST));
-byte macAddress[6];
 void printMacAddress(byte mac[]) {
     for (int i = 5; i >= 0; --i) {
         if (mac[i] < 16) {
@@ -339,6 +343,12 @@ void setupWifi() noexcept {
     WiFi.macAddress(macAddress);
     Serial.print(F("MAC: "));
     printMacAddress(macAddress);
+}
+void setupSRAMCache() {
+    // 8k on board cache
+    for (int i = 0; i < 4096; ++i) {
+        OnBoardSRAMCache[i].word = 0;
+    }
 }
 // the setup routine runs once when you press reset:
 void setup() {
