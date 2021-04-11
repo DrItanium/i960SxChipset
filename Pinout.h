@@ -33,7 +33,7 @@ enum class i960Pinout : decltype(A0) {
     Led = 0, 	  // output
     CLOCK_OUT, // output, unusable
     AS_,     // input, AVR Int2
-    DC, 	 // output
+    SPI_BUS_EN, // output
     GPIOSelect,		// output
     MOSI,		  // reserved
     MISO,		  // reserved
@@ -57,14 +57,14 @@ enum class i960Pinout : decltype(A0) {
     BLAST_, 	 // input
     FAIL, 	     // input
 // PORT A
-    SPI_BUS_EN, // output
+    DC, 	 // output
     DISPLAY_EN, // output
     SD_EN,      // output
-    Analog3,
-    Analog4,
-    Analog5,
-    Analog6,
-    Analog7,
+    BLE_EN,
+    BLE_IRQ,
+    WIFI_EN,
+    WIFI_BUSY,
+    WIFI_RST,
     Count,		  // special
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
