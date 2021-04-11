@@ -304,13 +304,6 @@ enum class ExtraGPIOExpanderPinout : decltype(A0) {
 	Count,
 };
 static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
-enum class LoadStoreStyle : uint8_t {
-    // based off of BE0,BE1 pins
-    Full16 = 0b00,
-    Upper8 = 0b01,
-    Lower8 = 0b10,
-    None = 0b11,
-};
 // The upper eight lines of the Extra GPIO expander is used as an SPI address selector
 // This provides up to 256 devices to be present on the SPI address bus and controlable through the single SPI_BUS_EN pin from the 1284p
 // The "SPI Address" is used to select which CS line to pull low when ~SPI_BUS_EN is pulled low by the MCU. It requires some extra logic to
@@ -564,37 +557,6 @@ void doAddressState() noexcept {
 		fsm.trigger(ToDataState);
 	}
 }
-/**
- * @brief Represents a single Espressif PSRAM64H device
- */
-class PSRAM64H : public RAM {
-public:
-    enum class Opcodes : uint8_t {
-        Read = 0x03,
-        FastRead = 0x0B,
-        FastReadQuad = 0xEB,
-        Write = 0x02,
-        QuadWrite = 0x38,
-        EnterQuadMode = 0x35,
-        ExitQuadMode = 0xF5,
-        ResetEnable = 0x66,
-        Reset = 0x99,
-        SetBurstLength = 0xC0,
-        ReadID = 0x9F,
-    };
-    static constexpr uint32_t Size = 8 * static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
-public:
-    constexpr PSRAM64H(uint32_t startAddress, SPIBusDevice id) : RAM(startAddress, Size), busId_(id) { }
-    ~PSRAM64H() override = default;
-    constexpr auto getBusID() const noexcept { return busId_; }
-protected:
-    uint8_t read8(uint32_t address) override;
-    uint16_t read16(uint32_t address) override;
-    void write8(uint32_t address, uint8_t value) override;
-    void write16(uint32_t address, uint16_t value) override;
-private:
-    SPIBusDevice busId_;
-};
 
 class SRAM_23LC1024 : public RAM {
 public:
@@ -675,60 +637,6 @@ SRAM_23LC1024::write16(uint32_t address, uint16_t value) {
     SPI.transfer16(value);
 }
 
-uint8_t
-PSRAM64H::read8(uint32_t address) {
-    setSPIBusId(busId_);
-    byte a = static_cast<byte>(address >> 16);
-    byte b = static_cast<byte>(address >> 8);
-    byte c = static_cast<byte>(address);
-    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
-    SPI.transfer(static_cast<byte>(Opcodes::Read));
-    SPI.transfer(a);
-    SPI.transfer(b);
-    SPI.transfer(c);
-    return SPI.transfer(0x00);
-}
-
-uint16_t
-PSRAM64H::read16(uint32_t address) {
-    setSPIBusId(busId_);
-    byte a = static_cast<byte>(address >> 16);
-    byte b = static_cast<byte>(address >> 8);
-    byte c = static_cast<byte>(address);
-    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
-    SPI.transfer(static_cast<byte>(Opcodes::Read));
-    SPI.transfer(a);
-    SPI.transfer(b);
-    SPI.transfer(c);
-    return SPI.transfer16(0x00);
-}
-
-void
-PSRAM64H::write8(uint32_t address, uint8_t value) {
-    setSPIBusId(busId_);
-    byte a = static_cast<byte>(address >> 16);
-    byte b = static_cast<byte>(address >> 8);
-    byte c = static_cast<byte>(address);
-    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
-    SPI.transfer(static_cast<byte>(Opcodes::Write));
-    SPI.transfer(a);
-    SPI.transfer(b);
-    SPI.transfer(c);
-    SPI.transfer(value);
-}
-void
-PSRAM64H::write16(uint32_t address, uint16_t value) {
-    setSPIBusId(busId_);
-    byte a = static_cast<byte>(address >> 16);
-    byte b = static_cast<byte>(address >> 8);
-    byte c = static_cast<byte>(address);
-    HoldPinLow<i960Pinout::SPI_BUS_EN> transaction;
-    SPI.transfer(static_cast<byte>(Opcodes::Write));
-    SPI.transfer(a);
-    SPI.transfer(b);
-    SPI.transfer(c);
-    SPI.transfer16(value);
-}
 
 void
 enteringDataState() noexcept {

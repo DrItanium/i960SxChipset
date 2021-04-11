@@ -23,35 +23,39 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef ARDUINO_DEVICE_H
-#define ARDUINO_DEVICE_H
+#ifndef ARDUINO_PSRAM64H_H
+#define ARDUINO_PSRAM64H_H
+#include "RAM.h"
 /**
- * @brief Sx Load/Store styles that the processor will request
+ * @brief Represents a single Espressif PSRAM64H device
  */
-enum class LoadStoreStyle : uint8_t {
-    // based off of BE0,BE1 pins
-    Full16 = 0b00,
-    Upper8 = 0b01,
-    Lower8 = 0b10,
-    None = 0b11,
-};
-/**
- * @brief Describes an arbitrary device of an arbitrary size that is mapped into memory at a given location
- */
-class Device {
+class PSRAM64H : public RAM {
 public:
-    constexpr Device(uint32_t start, uint32_t len) noexcept : startAddress_(start), length_(len) {}
-    virtual ~Device() = default;
-    constexpr auto getStartAddress() const noexcept { return startAddress_; }
-    constexpr auto getLength() const noexcept { return length_; }
-    constexpr auto getEndAddress() const noexcept { return length_ + startAddress_; }
-    constexpr bool mapsToGivenRange(uint32_t address) const noexcept {
-        return (address >= startAddress_) && (getEndAddress() > address);
-    }
-    virtual uint16_t read(uint32_t address, LoadStoreStyle style) noexcept = 0;
-    virtual void write(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept = 0;
+    enum class Opcodes : uint8_t {
+        Read = 0x03,
+        FastRead = 0x0B,
+        FastReadQuad = 0xEB,
+        Write = 0x02,
+        QuadWrite = 0x38,
+        EnterQuadMode = 0x35,
+        ExitQuadMode = 0xF5,
+        ResetEnable = 0x66,
+        Reset = 0x99,
+        SetBurstLength = 0xC0,
+        ReadID = 0x9F,
+    };
+    static constexpr uint32_t Size = 8 * static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+public:
+    constexpr PSRAM64H(uint32_t startAddress, SPIBusDevice id) : RAM(startAddress, Size), busId_(id) { }
+    ~PSRAM64H() override = default;
+    constexpr auto getBusID() const noexcept { return busId_; }
+protected:
+    uint8_t read8(uint32_t address) override;
+    uint16_t read16(uint32_t address) override;
+    void write8(uint32_t address, uint8_t value) override;
+    void write16(uint32_t address, uint16_t value) override;
 private:
-    uint32_t startAddress_ = 0;
-    uint32_t length_ = 0;
+    SPIBusDevice busId_;
 };
-#endif //ARDUINO_DEVICE_H
+
+#endif //ARDUINO_PSRAM64H_H

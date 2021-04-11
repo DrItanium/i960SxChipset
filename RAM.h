@@ -25,6 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef ARDUINO_RAM_H
 #define ARDUINO_RAM_H
+#include "Device.h"
 
 class RAM : public Device{
 public:
