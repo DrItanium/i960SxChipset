@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SPIBus.h"
 #include "IOExpanders.h"
 #include "SRAM_23LC1024.h"
+#include "PSRAM64H.h"
 
 
 
@@ -353,29 +354,59 @@ void setupSRAMCache() {
     }
 }
 volatile Device* Devices[256] = { 0 };
-void setSPIDevice(SPIBusDevice device, Device* dev) {
-    Devices[static_cast<int>(device)] = dev;
+template<typename T, typename ... Args>
+void registerSPIDevice(SPIBusDevice device, Args&&... args) {
+    Devices[static_cast<int>(device)] = new T(args..., device);
+}
+constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
+    return start + (size * count);
 }
 void setupSPIDevices() {
     static constexpr Address RamStartingAddress = 0x8000'0000;
     static constexpr auto SRAMBlockSize = SRAM_23LC1024::Size;
-    setSPIDevice(SPIBusDevice::SRAM0, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*0), SPIBusDevice::SRAM0));
-    setSPIDevice(SPIBusDevice::SRAM1, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*1), SPIBusDevice::SRAM1));
-    setSPIDevice(SPIBusDevice::SRAM2, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*2), SPIBusDevice::SRAM2));
-    setSPIDevice(SPIBusDevice::SRAM3, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*3), SPIBusDevice::SRAM3));
-    setSPIDevice(SPIBusDevice::SRAM4, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*4), SPIBusDevice::SRAM4));
-    setSPIDevice(SPIBusDevice::SRAM5, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*5), SPIBusDevice::SRAM5));
-    setSPIDevice(SPIBusDevice::SRAM6, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*6), SPIBusDevice::SRAM6));
-    setSPIDevice(SPIBusDevice::SRAM7, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*7), SPIBusDevice::SRAM7));
-    setSPIDevice(SPIBusDevice::SRAM8, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*8), SPIBusDevice::SRAM8));
-    setSPIDevice(SPIBusDevice::SRAM9, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*9), SPIBusDevice::SRAM9));
-    setSPIDevice(SPIBusDevice::SRAM10, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*10), SPIBusDevice::SRAM10));
-    setSPIDevice(SPIBusDevice::SRAM11, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*11), SPIBusDevice::SRAM11));
-    setSPIDevice(SPIBusDevice::SRAM12, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*12), SPIBusDevice::SRAM12));
-    setSPIDevice(SPIBusDevice::SRAM13, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*13), SPIBusDevice::SRAM13));
-    setSPIDevice(SPIBusDevice::SRAM14, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*14), SPIBusDevice::SRAM14));
-    setSPIDevice(SPIBusDevice::SRAM15, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*15), SPIBusDevice::SRAM15));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM0, computeAddressStart(RamStartingAddress , SRAMBlockSize,0));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM1, computeAddressStart(RamStartingAddress , SRAMBlockSize,1));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM2, computeAddressStart(RamStartingAddress , SRAMBlockSize,2));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM3, computeAddressStart(RamStartingAddress , SRAMBlockSize,3));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM4, computeAddressStart(RamStartingAddress , SRAMBlockSize,4));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM5, computeAddressStart(RamStartingAddress , SRAMBlockSize,5));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM6, computeAddressStart(RamStartingAddress , SRAMBlockSize,6));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM7, computeAddressStart(RamStartingAddress , SRAMBlockSize,7));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM8, computeAddressStart(RamStartingAddress , SRAMBlockSize,8));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM9, computeAddressStart(RamStartingAddress , SRAMBlockSize,9));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM10, computeAddressStart(RamStartingAddress ,SRAMBlockSize,10));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM11, computeAddressStart(RamStartingAddress ,SRAMBlockSize,11));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM12, computeAddressStart(RamStartingAddress ,SRAMBlockSize,12));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM13, computeAddressStart(RamStartingAddress ,SRAMBlockSize,13));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM14, computeAddressStart(RamStartingAddress ,SRAMBlockSize,14));
+    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM15, computeAddressStart(RamStartingAddress ,SRAMBlockSize,15));
     static_assert((RamStartingAddress+ (SRAMBlockSize*16)) == 0x8020'0000);
+    static constexpr auto PSRAMStartingAddress = RamStartingAddress + 0x0100'0000;
+    static constexpr auto PSRAMSize = PSRAM64H::Size;
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM0, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 0));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM1, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 1));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM2, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 2));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM3, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 3));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM4, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 4));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM5, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 5));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM6, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 6));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM7, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 7));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM8, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 8));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM9, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 9));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM10, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 10));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM11, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 11));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM12, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 12));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM13, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 13));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM14, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 14));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM15, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 15));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM16, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 16));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM17, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 17));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM18, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 18));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM19, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 19));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM20, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 20));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM21, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 21));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM22, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 22));
+    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM23, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 23));
 }
 // the setup routine runs once when you press reset:
 void setup() {
