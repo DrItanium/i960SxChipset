@@ -59,7 +59,7 @@ constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) n
 }
 
 Timer t;
-Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::SPI_BUS_EN),
+Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC));
 
 
@@ -302,8 +302,12 @@ void setup() {
     Serial.println(F("i960Sx chipset bringup"));
     setupPins(OUTPUT,
               i960Pinout::Reset960,
-              i960Pinout::SPI_BUS_EN);
+              i960Pinout::SPI_BUS_EN,
+              i960Pinout::DISPLAY_EN,
+              i960Pinout::SD_EN);
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+    digitalWrite(i960Pinout::SD_EN, HIGH);
+    digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
     pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
     t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
     SPI.begin();
@@ -311,15 +315,12 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-	#if 0
-	setSPIBusId(SPIBusDevice::TFTDisplay);
 	tft.begin();
 	tft.fillScreen(ILI9341_BLACK);
 	tft.setCursor(0,0);
 	tft.setTextColor(ILI9341_WHITE);
 	tft.setTextSize(3);
 	tft.println("i960Sx!");
-    #endif
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 	Serial.println(F("i960Sx chipset brought up fully!"));

@@ -58,8 +58,8 @@ enum class i960Pinout : decltype(A0) {
     FAIL, 	     // input
 // PORT A
     SPI_BUS_EN, // output
-    Analog1,
-    Analog2,
+    DISPLAY_EN, // output
+    SD_EN,      // output
     Analog3,
     Analog4,
     Analog5,
@@ -163,6 +163,8 @@ DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
+DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
+DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
