@@ -23,25 +23,30 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "SPIBus.h"
-#include "IOExpanders.h"
+#ifndef ARDUINO_IOEXPANDERS_H
+#define ARDUINO_IOEXPANDERS_H
+#include <Arduino.h>
+#include <libbonuspin.h>
+#include "Pinout.h"
 
-volatile SPIBusDevice busId = SPIBusDevice::Unused0;
-void setSPIBusId(SPIBusDevice id) noexcept {
-    static bool initialized = false;
-    bool setMemoryId = false;
-    if (!initialized) {
-        initialized = true;
-        setMemoryId = true;
-    } else {
-        setMemoryId = (id != busId);
-    }
-    if (setMemoryId) {
-        busId = id;
-        extraMemoryCommit.writePortB(static_cast<uint8_t>(busId));
-    }
-}
+enum class IOExpanderAddress : byte {
+    DataLines = 0b000,
+    Lower16Lines,
+    Upper16Lines,
+    MemoryCommitExtras,
+    OtherDevice0,
+    OtherDevice1,
+    OtherDevice2,
+    OtherDevice3,
+};
+template<IOExpanderAddress addr, int enablePin = static_cast<int>(i960Pinout::GPIOSelect)>
+using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr), enablePin>;
 
-SPIBusDevice getCurrentSPIBusDevice() noexcept {
-    return busId;
-}
+// 8 IOExpanders to a single enable line for SPI purposes
+// 4 of them are reserved
+extern IOExpander<IOExpanderAddress::DataLines> dataLines;
+extern IOExpander<IOExpanderAddress::Lower16Lines> lower16;
+extern IOExpander<IOExpanderAddress::Upper16Lines> upper16;
+extern IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
+
+#endif //ARDUINO_IOEXPANDERS_H

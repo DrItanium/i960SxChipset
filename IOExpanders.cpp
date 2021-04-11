@@ -23,25 +23,9 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "SPIBus.h"
 #include "IOExpanders.h"
 
-volatile SPIBusDevice busId = SPIBusDevice::Unused0;
-void setSPIBusId(SPIBusDevice id) noexcept {
-    static bool initialized = false;
-    bool setMemoryId = false;
-    if (!initialized) {
-        initialized = true;
-        setMemoryId = true;
-    } else {
-        setMemoryId = (id != busId);
-    }
-    if (setMemoryId) {
-        busId = id;
-        extraMemoryCommit.writePortB(static_cast<uint8_t>(busId));
-    }
-}
-
-SPIBusDevice getCurrentSPIBusDevice() noexcept {
-    return busId;
-}
+IOExpander<IOExpanderAddress::DataLines> dataLines;
+IOExpander<IOExpanderAddress::Lower16Lines> lower16;
+IOExpander<IOExpanderAddress::Upper16Lines> upper16;
+IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
