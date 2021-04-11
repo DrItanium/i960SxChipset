@@ -297,12 +297,44 @@ void transferAddress(uint32_t address) {
     SPI.transfer(static_cast<uint8_t>(address >> 8));
     SPI.transfer(static_cast<uint8_t>(address));
 }
+byte macAddress[6];
+void printMacAddress(byte mac[]) {
+    for (int i = 5; i >= 0; --i) {
+        if (mac[i] < 16) {
+            Serial.print(F("0"));
+        }
+        Serial.print(mac[i], HEX);
+        if (i > 0) {
+            Serial.print(F(":"));
+        }
+    }
+    Serial.println();
+}
 void setupWifi() noexcept {
     WiFi.setPins(static_cast<int>(i960Pinout::WIFI_EN),
                  static_cast<int>(i960Pinout::WIFI_BUSY),
                  static_cast<int>(i960Pinout::WIFI_RST),
                  -1, // disable
                  &SPI);
+
+    if (WiFi.status() == WL_NO_MODULE) {
+        Serial.println(F("Communication with WiFi module failed!"));
+        delay(1000);
+    }
+    auto fv = WiFi.firmwareVersion();
+    Serial.println(fv);
+    if (fv < "1.0.0") {
+        Serial.println(F("Please upgrade the firmware"));
+        while(1) {
+            delay(10);
+        }
+    }
+    Serial.println(F("Firmware OK"));
+
+    // cache the mac address on startup
+    WiFi.macAddress(macAddress);
+    Serial.print(F("MAC: "));
+    printMacAddress(macAddress);
 }
 // the setup routine runs once when you press reset:
 void setup() {
