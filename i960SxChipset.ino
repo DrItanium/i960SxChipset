@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
 #include <WiFiNINA.h> // Must be Adafruit's Fork
+#include <Adafruit_BluefruitLE_SPI.h>
 #include "Pinout.h"
 #include "Device.h"
 #include "RAM.h"
