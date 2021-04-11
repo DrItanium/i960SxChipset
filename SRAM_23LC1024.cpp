@@ -23,7 +23,11 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <Arduino.h>
+#include <SPI.h>
 #include "SRAM_23LC1024.h"
+#include "Pinout.h"
+#include "SPIBus.h"
 uint8_t
 SRAM_23LC1024::read8(uint32_t address) {
     setSPIBusId(busId_);

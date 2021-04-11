@@ -46,6 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "RAM.h"
 #include "SPIBus.h"
 #include "IOExpanders.h"
+#include "SRAM_23LC1024.h"
 
 
 
@@ -351,6 +352,31 @@ void setupSRAMCache() {
         OnBoardSRAMCache[i].word = 0;
     }
 }
+volatile Device* Devices[256] = { 0 };
+void setSPIDevice(SPIBusDevice device, Device* dev) {
+    Devices[static_cast<int>(device)] = dev;
+}
+void setupSPIDevices() {
+    static constexpr Address RamStartingAddress = 0x8000'0000;
+    static constexpr auto SRAMBlockSize = SRAM_23LC1024::Size;
+    setSPIDevice(SPIBusDevice::SRAM0, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*0), SPIBusDevice::SRAM0));
+    setSPIDevice(SPIBusDevice::SRAM1, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*1), SPIBusDevice::SRAM1));
+    setSPIDevice(SPIBusDevice::SRAM2, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*2), SPIBusDevice::SRAM2));
+    setSPIDevice(SPIBusDevice::SRAM3, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*3), SPIBusDevice::SRAM3));
+    setSPIDevice(SPIBusDevice::SRAM4, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*4), SPIBusDevice::SRAM4));
+    setSPIDevice(SPIBusDevice::SRAM5, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*5), SPIBusDevice::SRAM5));
+    setSPIDevice(SPIBusDevice::SRAM6, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*6), SPIBusDevice::SRAM6));
+    setSPIDevice(SPIBusDevice::SRAM7, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*7), SPIBusDevice::SRAM7));
+    setSPIDevice(SPIBusDevice::SRAM8, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*8), SPIBusDevice::SRAM8));
+    setSPIDevice(SPIBusDevice::SRAM9, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*9), SPIBusDevice::SRAM9));
+    setSPIDevice(SPIBusDevice::SRAM10, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*10), SPIBusDevice::SRAM10));
+    setSPIDevice(SPIBusDevice::SRAM11, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*11), SPIBusDevice::SRAM11));
+    setSPIDevice(SPIBusDevice::SRAM12, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*12), SPIBusDevice::SRAM12));
+    setSPIDevice(SPIBusDevice::SRAM13, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*13), SPIBusDevice::SRAM13));
+    setSPIDevice(SPIBusDevice::SRAM14, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*14), SPIBusDevice::SRAM14));
+    setSPIDevice(SPIBusDevice::SRAM15, new SRAM_23LC1024(RamStartingAddress + (SRAMBlockSize*15), SPIBusDevice::SRAM15));
+    static_assert((RamStartingAddress+ (SRAMBlockSize*16)) == 0x8020'0000);
+}
 // the setup routine runs once when you press reset:
 void setup() {
     Serial.begin(115200);
@@ -372,6 +398,7 @@ void setup() {
 	setupBusStateMachine();
 	setupWifi();
 	setupSRAMCache();
+	setupSPIDevices();
 	tft.begin();
 	tft.fillScreen(ILI9341_BLACK);
 	tft.setCursor(0,0);
