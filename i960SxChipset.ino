@@ -353,7 +353,7 @@ void setupSRAMCache() {
         OnBoardSRAMCache[i].word = 0;
     }
 }
-volatile Device* Devices[256] = { 0 };
+Device* Devices[256] = { nullptr };
 template<typename T, typename ... Args>
 void registerSPIDevice(SPIBusDevice device, Args&&... args) {
     Devices[static_cast<int>(device)] = new T(args..., device);
@@ -421,8 +421,8 @@ bool roundTripTest() noexcept {
             device->write(i, expected, LoadStoreStyle::Full16);
             auto result = device->read(i, LoadStoreStyle::Full16);
             if (result != expected) {
-                Serial.print(F("FAILURE: Writing 0x");
-                Serial.print(expected, HEX)
+                Serial.print(F("FAILURE: Writing 0x"));
+                Serial.print(expected, HEX);
                 Serial.print(F(" to 0x"));
                 Serial.print(i, HEX);
                 Serial.print(F(" yielded 0x"));
@@ -461,6 +461,7 @@ void setup() {
 	tft.setTextColor(ILI9341_WHITE);
 	tft.setTextSize(3);
 	tft.println("i960Sx!");
+	roundTripTest<SPIBusDevice::SRAM0>();
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 	Serial.println(F("i960Sx chipset brought up fully!"));
