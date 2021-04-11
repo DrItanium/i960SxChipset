@@ -40,6 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
+#include "Device.h"
+#include "RAM.h"
 using Address = uint32_t;
 
 enum class i960Pinout : decltype(A0) {
@@ -398,65 +400,8 @@ enum class SPIBusDevice : uint16_t {
 };
 static_assert (static_cast<int>(SPIBusDevice::Count) <= 256);
 /**
- * @brief Describes an arbitrary device of an arbitrary size that is mapped into memory at a given location
- */
-class Device {
-public:
-    constexpr Device(uint32_t start, uint32_t len) noexcept : startAddress_(start), length_(len) {}
-    virtual ~Device() = default;
-    constexpr auto getStartAddress() const noexcept { return startAddress_; }
-    constexpr auto getLength() const noexcept { return length_; }
-    constexpr auto getEndAddress() const noexcept { return length_ + startAddress_; }
-    constexpr bool mapsToGivenRange(uint32_t address) const noexcept {
-        return (address >= startAddress_) && (getEndAddress() > address);
-    }
-    virtual uint16_t read(uint32_t address, LoadStoreStyle style) noexcept = 0;
-    virtual void write(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept = 0;
-private:
-    uint32_t startAddress_ = 0;
-    uint32_t length_ = 0;
-};
-/**
  * @brief Describes a block of RAM of an arbitrary size that is mapped into memory at a given location
  */
-class RAM : public Device{
-public:
-    constexpr RAM(uint32_t start, uint32_t ramSize) : Device(start, ramSize) { }
-    ~RAM() override = default;
-    uint16_t read(uint32_t address, LoadStoreStyle style) noexcept override {
-        switch (style) {
-            case LoadStoreStyle::Full16:
-                return read16(address);
-            case LoadStoreStyle::Lower8:
-                return read8(address);
-            case LoadStoreStyle::Upper8:
-                return read8(address+1);
-            default:
-                return 0;
-        }
-    }
-    void write (uint32_t address, uint16_t value, LoadStoreStyle style) noexcept override {
-        switch (style) {
-            case LoadStoreStyle::Full16:
-                write16(address, value);
-                break;
-            case LoadStoreStyle::Lower8:
-                write8(address, static_cast<uint8_t>(value));
-                break;
-            case LoadStoreStyle::Upper8:
-                write8(address + 1, static_cast<uint8_t>(value >> 8));
-                break;
-            default:
-                // do nothing
-                break;
-        }
-    }
-protected:
-    virtual uint8_t read8(uint32_t address) = 0;
-    virtual uint16_t read16(uint32_t address) = 0;
-    virtual void write8(uint32_t address, uint8_t value) = 0;
-    virtual void write16(uint32_t address, uint16_t value) = 0;
-};
 
 volatile SPIBusDevice busId = SPIBusDevice::Unused0;
 void setSPIBusId(SPIBusDevice id) noexcept {
@@ -792,7 +737,6 @@ enteringDataState() noexcept {
 	baseAddress = getAddress();
 	performingRead = isReadOperation();
 }
-
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
 
 void
