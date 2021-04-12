@@ -61,20 +61,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) noexcept {
 	return - (satPtr + pcrbPtr + startIP);
 }
-
 Timer t;
 Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC));
 byte macAddress[6];
+File currentFile;
+Device* Devices[256] = { nullptr };
 union WordEntry {
     byte bytes[2];
     uint16_t word;
 };
-constexpr auto OnBoardSRAMCacheSize = 8192 /* bytes */ / sizeof (WordEntry);
+constexpr auto OnBoardSRAMCacheSizeInBytes = 8192;
+constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
 /**
  * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
  */
-volatile WordEntry OnBoardSRAMCache[8192/sizeof(uint16_t)];
+volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
 
 
 // The bootup process has a separate set of states
@@ -348,13 +350,13 @@ void setupWifi() noexcept {
     Serial.print(F("MAC: "));
     printMacAddress(macAddress);
 }
+
 void setupSRAMCache() {
     // 8k on board cache
     for (int i = 0; i < OnBoardSRAMCacheSize; ++i) {
         OnBoardSRAMCache[i].word = 0;
     }
 }
-Device* Devices[256] = { nullptr };
 template<typename T, typename ... Args>
 void registerSPIDevice(SPIBusDevice device, Args&&... args) {
     Devices[static_cast<int>(device)] = new T(args..., device);
@@ -444,6 +446,21 @@ bool roundTripTest() noexcept {
         return successful;
     }
 }
+void setupTFT() {
+    tft.begin();
+    tft.fillScreen(ILI9341_BLACK);
+    tft.setCursor(0,0);
+    tft.setTextColor(ILI9341_WHITE);
+    tft.setTextSize(3);
+    tft.println("i960Sx!");
+}
+void setupSDCard() {
+    if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+        Serial.println("SD Card initialization failed");
+    } else {
+        Serial.println("SD Card initialization successful");
+    }
+}
 // the setup routine runs once when you press reset:
 void setup() {
     Serial.begin(115200);
@@ -466,12 +483,8 @@ void setup() {
 	setupWifi();
 	setupSRAMCache();
 	setupSPIDevices();
-	tft.begin();
-	tft.fillScreen(ILI9341_BLACK);
-	tft.setCursor(0,0);
-	tft.setTextColor(ILI9341_WHITE);
-	tft.setTextSize(3);
-	tft.println("i960Sx!");
+	setupSDCard();
+	setupTFT();
 	//roundTripTest<SPIBusDevice::SRAM0>();
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
