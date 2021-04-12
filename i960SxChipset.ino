@@ -66,12 +66,13 @@ Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC));
 byte macAddress[6];
 File currentFile;
+char serialBuffer[80]; // will be mapped into main memory
 Device* Devices[256] = { nullptr };
 union WordEntry {
     byte bytes[2];
     uint16_t word;
 };
-constexpr auto OnBoardSRAMCacheSizeInBytes = 8192;
+constexpr auto OnBoardSRAMCacheSizeInBytes = 2048;
 constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
 /**
  * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
