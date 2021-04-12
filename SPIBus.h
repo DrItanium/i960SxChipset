@@ -111,7 +111,8 @@ enum class SPIBusDevice : uint16_t {
     ADC_6,
     ADC_7,
 
-    Count
+    Count,
+    Initial = Flash0,
 };
 static_assert (static_cast<int>(SPIBusDevice::Count) <= 256);
 /**

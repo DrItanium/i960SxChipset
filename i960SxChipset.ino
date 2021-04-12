@@ -48,6 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "IOExpanders.h"
 #include "SRAM_23LC1024.h"
 #include "PSRAM64H.h"
+#include "W25Q32JV.h"
 
 
 
@@ -361,9 +362,37 @@ void registerSPIDevice(SPIBusDevice device, Args&&... args) {
 constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
     return start + (size * count);
 }
+// we have access to 12 Winbond Flash Modules, which hold onto common program code, This gives us access to 96 megabytes of Flash.
+// At this point it is a massive pain in the ass to program all these devices but who cares
 void setupSPIDevices() {
     static constexpr Address RamStartingAddress = 0x8000'0000;
-    static constexpr auto PSRAMStartingAddress = RamStartingAddress + 0x0100'0000;
+    static constexpr auto FlashStartingAddress = 0x0000'0000;
+    static constexpr auto FlashSize = W25Q32JV::Size;
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash0, computeAddressStart(FlashStartingAddress, FlashSize, 0));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash1, computeAddressStart(FlashStartingAddress, FlashSize, 1));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash2, computeAddressStart(FlashStartingAddress, FlashSize, 2));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash3, computeAddressStart(FlashStartingAddress, FlashSize, 3));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash4, computeAddressStart(FlashStartingAddress, FlashSize, 4));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash5, computeAddressStart(FlashStartingAddress, FlashSize, 5));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash6, computeAddressStart(FlashStartingAddress, FlashSize, 6));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash7, computeAddressStart(FlashStartingAddress, FlashSize, 7));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash8, computeAddressStart(FlashStartingAddress, FlashSize, 8));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash9, computeAddressStart(FlashStartingAddress, FlashSize, 9));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash10, computeAddressStart(FlashStartingAddress, FlashSize, 10));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash11, computeAddressStart(FlashStartingAddress, FlashSize, 11));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash12, computeAddressStart(FlashStartingAddress, FlashSize, 12));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash13, computeAddressStart(FlashStartingAddress, FlashSize, 13));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash14, computeAddressStart(FlashStartingAddress, FlashSize, 14));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash15, computeAddressStart(FlashStartingAddress, FlashSize, 15));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash16, computeAddressStart(FlashStartingAddress, FlashSize, 16));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash17, computeAddressStart(FlashStartingAddress, FlashSize, 17));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash18, computeAddressStart(FlashStartingAddress, FlashSize, 18));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash19, computeAddressStart(FlashStartingAddress, FlashSize, 19));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash20, computeAddressStart(FlashStartingAddress, FlashSize, 20));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash21, computeAddressStart(FlashStartingAddress, FlashSize, 21));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash22, computeAddressStart(FlashStartingAddress, FlashSize, 22));
+    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash23, computeAddressStart(FlashStartingAddress, FlashSize, 23));
+    static constexpr auto PSRAMStartingAddress = RamStartingAddress;
     static constexpr auto PSRAMSize = PSRAM64H::Size;
     registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM0, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 0));
     registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM1, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 1));

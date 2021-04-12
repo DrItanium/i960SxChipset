@@ -58,6 +58,8 @@ public:
     constexpr W25Q32JV(uint32_t startAddress, SPIBusDevice id) : RAM(startAddress, Size), busId_(id) { }
     ~W25Q32JV() override = default;
     constexpr auto getBusID() const noexcept { return busId_; }
+private:
+    void sendReadOperation(uint32_t address);
 protected:
     uint8_t read8(uint32_t address) override;
     uint16_t read16(uint32_t address) override;
