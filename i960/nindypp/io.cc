@@ -137,36 +137,35 @@ namespace {
  * @brief local routine to add character to input buffer
  * @param c The character to add
  */
-void buffer_char(char c) {
-	input_buffer[in] = c;
-	if ( ++in >= LINESIZE ){
-		in = 0;
-	}
-}
-}
+    void
+    buffer_char(char c) {
+        input_buffer[in] = c;
+        if ( ++in >= LINESIZE ){
+            in = 0;
+        }
+    }
 
-void init_sio_buf()
+    void
+    badfmt( char* f )
+    {
+        prtf( "\nInternal error: bad prtf format: %s\n", f );
+    }
+}
+void
+init_sio_buf()
 {
-	in = out = 0;
+    in = 0;
+    out = 0;
 }
 
-/************************************************/
-/* co:						*/
-/*						*/
-/* Send character to console, checking for	*/
-/* XON/XOFF (don't check for XON/XOFF if an	*/
-/* xmodem binary download is in progress	*/
-/************************************************/
-co(c)
-    unsigned char c;
+void
+co(unsigned char c)
 {
-	unsigned char tmp;
-
 	if ( !downld ){
 		/* we need to check for flow control before transmitting */
 		while ( csts() ){
 			/* there is a character at the input queue, read it */
-			tmp = board_ci();
+			unsigned char tmp = board_ci();
 			if ( tmp == XOFF ){
 				while ( (tmp=board_ci()) != XON ){
 					buffer_char(tmp);
@@ -191,22 +190,19 @@ co(c)
 unsigned char
 ci()
 {
-	unsigned char c;
-
 	if ( out != in ){
 		/* Input buffer not empty: get character from there. */
-		c = input_buffer[out];
+		unsigned char c = input_buffer[out];
 		if ( ++out >= LINESIZE ){
 			out = 0;
 		}
-
+        return c;
 	} else {
-		/* get character from keyboard */
-		c = board_ci();
+        // get character from keyboard
+	    return board_ci();
 	}
-	return c;
 }
-
+#if 0
 /************************************************/
 /* laser io                                     */
 /*                                              */
@@ -234,25 +230,16 @@ int type, chr;
 
 	return 0;
 }
+#endif
 
-/***********************************************/
-/* This routine allows the PRCB to be returned */
-/* to the io libraries, in order to set        */
-/* interrupts, modify control table, etc.      */
-/***********************************************/
-unsigned int get_prcb()
+unsigned int
+get_prcb()
 {
 	return((int)&prcb_ram);
 }
 
-/************************************************/
-/* Change the Baud rate           	 	*/
-/*                           			*/
-/************************************************/
-baud( dummy, dummy2, baudrate )
-int dummy;	/* Ignored */
-int dummy2;	/* Ignored */
-char *baudrate;
+bool
+baud( int dummy, int dummy2, char* baudrate )
 {
 int i;
 int baud;
@@ -260,65 +247,26 @@ int baud;
 	if ( atod(baudrate,&baud) && (i=lookup_baud(baud)) != ERROR ){
 		change_baud(baud);
 		end.r_baud = i;
-		return TRUE;
+		return true;
 	} else {
 		prtf( "Bad baud rate specification" );
-		return FALSE;
+		return false;
 	}
 }
 
 
-/************************************************/
-/* Return the offset of a baudrate in the table	*/
-/* baudtable[], ERROR if not found.		*/
-/*                           			*/
-/************************************************/
 int
-lookup_baud(baudrate)
-int baudrate;
+lookup_baud(int baudrate)
 {
-int i;
-
-	for ( i=0; baudtable[i]; i++ ){
-		if ( baudtable[i] == baudrate ){
-			return i;
-		}
-	}
-	return ERROR;
+    for (int i=0; baudtable[i]; i++ ){
+        if ( baudtable[i] == baudrate ){
+            return i;
+        }
+    }
+    return ERROR;
 }
 
 
-/************************************************/
-/* prtf						*/
-/*   (1) provides a simple-minded equivalent	*/
-/*       of the printf function.		*/
-/*   (2) translates '\n' to \n\r'.		*/
-/*   (3) does nothing (suppresses output) if we	*/
-/*	 are running in gdb mode (i.e.,		*/
-/*	 processing a remote debugger commmand).*/
-/*						*/
-/* In addition to the format string, up to 4	*/
-/* arguments can be passed.			*/
-/*						*/
-/* Only the following specifications are	*/
-/* recognized in the format string:		*/
-/*						*/
-/*	%B	output a single hex Byte, as 2	*/
-/*		  hex digits with lead 0s.	*/
-/*	%b	output a single hex Byte, up to	*/
-/*		   2 digits without lead 0s.	*/
-/*	%c	output a single character	*/
-/*	%H	output a hex Half (short) word,	*/
-/*		  as 4 hex digits with lead 0s.	*/
-/*	%h	output a hex Half (short) word,	*/
-/*		  up to 4 digits w/o lead 0s.	*/
-/*	%s	output a character string.	*/
-/*	%X	output a heX word, as 8 hex	*/
-/*		  digits with lead 0s.		*/
-/*	%x	output a heX word: up to 8 hex	*/
-/*		  digits without lead 0s.	*/
-/*	%%	output the character '%'.	*/
-/************************************************/
 #define MAX_PRTF_ARGS 4
 
 prtf( fmt, arg0, arg1, arg2, arg3 )
@@ -406,30 +354,11 @@ char *q;
 	}
 }
 
-static
-badfmt( f )
-char *f;
-{
-	prtf( "\nInternal error: bad prtf format: %s\n", f );
-}
 
-/************************************************/
-/* gprtf					*/
-/*	This is a version of prtf() that does   */
-/*      suppress output while in gdb mode, and	*/
-/*	so can be used to format replies to a	*/
-/*	debugger on a remote host.		*/
-/************************************************/
-gprtf( fmt, arg0, arg1, arg2, arg3 )
-char *fmt;
-int arg0;
-int arg1;
-int arg2;
-int arg3;
+void
+gprtf( char* fmt, int arg0, int arg1, int arg2, int arg3 )
 {
-	char old_gdb;
-
-	old_gdb = gdb;
+	char old_gdb = gdb;
 	gdb = FALSE;
 	prtf(fmt,arg0,arg1,arg2,arg3);
 	gdb = old_gdb;
