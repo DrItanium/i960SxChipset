@@ -6,4 +6,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(chipset chipset.cc)
 
-target_link_libraries(ramblock PUBLIC boost_system boost_program_options pthread)
+target_link_libraries(chipset PUBLIC boost_system boost_program_options pthread)
