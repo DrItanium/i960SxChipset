@@ -54,4 +54,7 @@ private:
     uint32_t startAddress_ = 0;
     uint32_t length_ = 0;
 };
+
+template<typename T>
+using DeviceOpcodes = typename T::Opcodes;
 #endif //ARDUINO_DEVICE_H
