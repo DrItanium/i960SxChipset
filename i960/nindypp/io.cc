@@ -292,29 +292,18 @@ lookup_baud(int baudrate)
 
 
 #define MAX_PRTF_ARGS 4
-
-prtf( fmt, arg0, arg1, arg2, arg3 )
-char *fmt;
-int arg0;
-int arg1;
-int arg2;
-int arg3;
+void
+prtf(char* fmt, int arg0, int arg1, int arg2, int arg3 )
 {
-int args[MAX_PRTF_ARGS];
-int argc;
-char *p;
-char *q;
-
 	if ( gdb ){
 		return;		/* suppress output */
 	}
 
-	args[0] = arg0;
-	args[1] = arg1;
-	args[2] = arg2;
-	args[3] = arg3;
-	argc = 0;
-	for ( p = fmt; *p; p++ ){
+	int args[MAX_PRTF_ARGS] {
+	    arg0, arg1, arg2, arg3,
+	};
+	int argc = 0;
+	for (char* p = fmt; *p; p++ ){
 		if ( *p != '%' ){
 			co( *p );
 			if ( *p == '\n' ){
@@ -359,7 +348,7 @@ char *q;
 			out_hex (args[argc], SHORT, (*p=='H') ? TRUE : FALSE);
 			break;
 		case 's':
-			for ( q = (char*)args[argc]; *q; q++ ){
+			for (char* q = (char*)args[argc]; *q; q++ ){
 				co(*q);
 				if ( *q == '\n' ){
 					co('\r');

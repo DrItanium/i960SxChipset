@@ -113,9 +113,9 @@ sys_proc_table:
     .word 0 # Preserved
     .word 0 # Preserved
     .word 0 # Preserved
-    .word 0 # Calls 0
-    .word 0 # Calls 1
-    .word 0 # Calls 2
+	.word	(_console_io + 0x2)	# Calls 0 - console I/O routines
+	.word	(_file_io + 0x2)	# Calls 1 - remote host service request
+	.word	(_lpt_io + 0x2)		# Calls 2 - laser printer I/O routines
     .word 0 # Calls 3
 
 // below is the fault table for calls to the fault handler.
