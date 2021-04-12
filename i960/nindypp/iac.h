@@ -47,12 +47,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef NINDY_IAC_H__
 #define NINDY_IAC_H__
 /* iac structure */
-typedef struct {
+struct iac_struct {
 	unsigned short 	field2;
 	unsigned char 	field1;
 	unsigned char	message_type;
 	unsigned int	field3;
 	unsigned int	field4;
 	unsigned int	field5;
-} iac_struct;
+};
 #endif // end NINDY_IAC_H__

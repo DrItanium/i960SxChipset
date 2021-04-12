@@ -74,7 +74,9 @@ struct aout {		/* a.out header structure */
 	long		start_addr; 	/* starting address */
 	long 		text_begin;	/* start of text section */
 	long		data_begin; 	/* start of data section */
-} aoutbuf;
+};
+
+aout aoutbuf;
 
 /* The following are sizes of the above structures NOT INCLUDING any padding
  * added by the compiler for alignment of entries within arrays.
@@ -128,11 +130,13 @@ char user_is_running;		/* TRUE if user's application program has
  *		was alst talking to the console.  This baud rate should be
  *		restored after restart.
  */
-extern struct restart {
+struct restart {
 	char r_magic[5];
 	char r_gdb;
 	char r_baud;
-} end;
+};
+
+extern restart end;
 
 #define RESTART_ARGS_VALID	"\125\252\125\252"	/* 0x55aa55aa */
 

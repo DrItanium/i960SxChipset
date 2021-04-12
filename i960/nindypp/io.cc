@@ -35,32 +35,24 @@ static int in = 0;	/* Offset in buffer at which next input char goes */
 static int out = 0;	/* Offset in buffer from which next output char taken */
 
 /* Table of legal baudrates, terminated with illegal rate "0" */
-int baudtable[] = { 1200, 2400, 4800, 9600, 19200, 38400, 0 };
+int baudtable[] = {
+        1200,
+        2400,
+        4800,
+        9600,
+        19200,
+        38400,
+        57600,
+        74880,
+        115200,
+        230400,
+        250000,
+        500000,
+        1000000,
+        2000000,
+        0 };
 
 
-/************************************************/
-/*  Output					*/
-/* 						*/
-/* Memory mapped I/O routine, writes 8 bit value*/
-/* to port 					*/
-/************************************************/
-output(port, value)
-unsigned char *port, value;
-{
-	*port = value;
-}
-
-/************************************************/
-/*  Input					*/
-/* 						*/
-/*  Memory mapped input routine, returns 8 bit  */
-/* value from port				*/
-/************************************************/
-unsigned char input(port)
-unsigned char *port;
-{
-	return(*port);
-}
 
 /************************************************/
 /* read byte (timeout)                          */
@@ -90,22 +82,12 @@ int ticks;
 	return(TIMEOUT);
 }
 
-/************************************************/
-/* console io                                   */
-/*                                              */
-/* Provide system services console io.		*/
-/* This routine will be entered from "calls 0"  */
-/* in the supervisior table, thus allowing an   */
-/* application to execute code and do I/O to    */
-/* the serial device of this monitor through    */
-/* run-time binding 				*/
-/************************************************/
-console_io(type, chr)
-int type, chr;
+void
+console_io(int type, int chr)
 {
 	switch (type) {
 	case CI:
-		*(unsigned char *)chr = ci();
+	    *reinterpret_cast<unsigned char*>(chr) = ci();
 		break;
 	case CO:
 		co(chr);
@@ -125,46 +107,45 @@ int type, chr;
 /* leading determines whether or not to print   */
 /* leading zeros				*/
 /************************************************/
-static
-out_hex(value, bits, leading)
-unsigned int value;
-int bits;	/* Number of low-order bits in 'value' to be output */
-int leading;	/* leading 0 flag */
-{
-	static char tohex[] = "0123456789abcdef";
-	unsigned char out;
+namespace {
+    /**
+     * @brief Output a given value in hexadecimal (32-bit value). Output a 32-bit value in hex to the console
+     * leading determines whether or not to print leading zeros.
+     * @param value The value to emit
+     * @param bits Number of low-order bits in 'value' to be output
+     * @param leading Leading 0 flag?
+     */
+    void
+    out_hex(unsigned int value, int bits, int leading) {
+        static char tohex[] = "0123456789abcdef";
+        unsigned char out;
 
-	for (bits -= 4; bits >= 0; bits -= 4) {
-		out = ((value >> bits) & 0xf); /* capture digit */
-		if ( out == 0 ){
-			if ( leading || (bits == 0) ){
-				co('0');
-			}
-		} else {
-			co( tohex[out] );
-			leading = TRUE;
-		}
-	}
-}
+        for (bits -= 4; bits >= 0; bits -= 4) {
+            out = ((value >> bits) & 0xf); /* capture digit */
+            if ( out == 0 ){
+                if ( leading || (bits == 0) ){
+                    co('0');
+                }
+            } else {
+                co( tohex[out] );
+                leading = TRUE;
+            }
+        }
+    }
 
-/************************************************/
-/* buffer_char:					*/
-/*						*/
-/* local routine to add character to input	*/
-/* buffer.					*/
-/************************************************/
-static
-buffer_char( c )
-    char c;
-{
+/**
+ * @brief local routine to add character to input buffer
+ * @param c The character to add
+ */
+void buffer_char(char c) {
 	input_buffer[in] = c;
 	if ( ++in >= LINESIZE ){
 		in = 0;
 	}
 }
+}
 
-
-init_sio_buf()
+void init_sio_buf()
 {
 	in = out = 0;
 }
