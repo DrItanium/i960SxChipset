@@ -26,7 +26,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include "PSRAM64H.h"
 #include "Pinout.h"
-#include "SPIBus.h"
 uint8_t
 PSRAM64H::read8(uint32_t address) {
     setSPIBusId(busId_);

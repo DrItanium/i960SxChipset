@@ -363,24 +363,6 @@ constexpr auto computeAddressStart(Address start, Address size, Address count) n
 }
 void setupSPIDevices() {
     static constexpr Address RamStartingAddress = 0x8000'0000;
-    static constexpr auto SRAMBlockSize = SRAM_23LC1024::Size;
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM0, computeAddressStart(RamStartingAddress , SRAMBlockSize,0));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM1, computeAddressStart(RamStartingAddress , SRAMBlockSize,1));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM2, computeAddressStart(RamStartingAddress , SRAMBlockSize,2));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM3, computeAddressStart(RamStartingAddress , SRAMBlockSize,3));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM4, computeAddressStart(RamStartingAddress , SRAMBlockSize,4));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM5, computeAddressStart(RamStartingAddress , SRAMBlockSize,5));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM6, computeAddressStart(RamStartingAddress , SRAMBlockSize,6));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM7, computeAddressStart(RamStartingAddress , SRAMBlockSize,7));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM8, computeAddressStart(RamStartingAddress , SRAMBlockSize,8));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM9, computeAddressStart(RamStartingAddress , SRAMBlockSize,9));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM10, computeAddressStart(RamStartingAddress ,SRAMBlockSize,10));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM11, computeAddressStart(RamStartingAddress ,SRAMBlockSize,11));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM12, computeAddressStart(RamStartingAddress ,SRAMBlockSize,12));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM13, computeAddressStart(RamStartingAddress ,SRAMBlockSize,13));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM14, computeAddressStart(RamStartingAddress ,SRAMBlockSize,14));
-    registerSPIDevice<SRAM_23LC1024>(SPIBusDevice::SRAM15, computeAddressStart(RamStartingAddress ,SRAMBlockSize,15));
-    static_assert((RamStartingAddress+ (SRAMBlockSize*16)) == 0x8020'0000);
     static constexpr auto PSRAMStartingAddress = RamStartingAddress + 0x0100'0000;
     static constexpr auto PSRAMSize = PSRAM64H::Size;
     registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM0, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 0));

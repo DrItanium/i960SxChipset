@@ -38,24 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // [0b10'000'000, 0b10'111'111] : "Even More Onboard/Optional" Devices
 // [0b11'000'000, 0b11'111'111] : User Devices [Direct access from the i960]
 enum class SPIBusDevice : uint16_t {
-    // 23LC1024 SRAM Chips (128Kbyte)
-    SRAM0,
-    SRAM1,
-    SRAM2,
-    SRAM3,
-    SRAM4,
-    SRAM5,
-    SRAM6,
-    SRAM7,
-    //
-    SRAM8,
-    SRAM9,
-    SRAM10,
-    SRAM11,
-    SRAM12,
-    SRAM13,
-    SRAM14,
-    SRAM15,
     // WINBOND 4Megabit Flash
     Flash0,
     Flash1 ,
@@ -65,6 +47,24 @@ enum class SPIBusDevice : uint16_t {
     Flash5,
     Flash6,
     Flash7,
+    // WINBOND 4Megabit Flash
+    Flash8,
+    Flash9 ,
+    Flash10,
+    Flash11,
+    Flash12,
+    Flash13,
+    Flash14,
+    Flash15,
+    // WINBOND 4Megabit Flash
+    Flash16,
+    Flash17 ,
+    Flash18,
+    Flash19,
+    Flash20,
+    Flash21,
+    Flash22,
+    Flash23,
     // ESPRESSIF PSRAM64H (8Megabyte/64-megabit)
     PSRAM0,
     PSRAM1,
@@ -74,7 +74,7 @@ enum class SPIBusDevice : uint16_t {
     PSRAM5,
     PSRAM6,
     PSRAM7,
-    //
+    // ESPRESSIF PSRAM64H (8Megabyte/64-megabit)
     PSRAM8,
     PSRAM9,
     PSRAM10,
@@ -83,7 +83,7 @@ enum class SPIBusDevice : uint16_t {
     PSRAM13,
     PSRAM14,
     PSRAM15,
-    //
+    // ESPRESSIF PSRAM64H (8Megabyte/64-megabit)
     PSRAM16,
     PSRAM17,
     PSRAM18,
