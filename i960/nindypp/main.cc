@@ -62,7 +62,8 @@ double	fp_register_set[NUM_FP_REGS];  /* fp register set */
 /* Main		  			*/ 
 /* 					*/ 
 /****************************************/
-main()
+int 
+main(int argc, char**argv)
 {
 int i;
 int baudrate;
@@ -91,6 +92,7 @@ int baudrate;
 
 	out_message();
 	monitor();
+    return 0;
 }
 
 /****************************************/
@@ -101,6 +103,7 @@ int baudrate;
 /* from a start up routine, the regs    */
 /* will be set appropriately 		*/
 /****************************************/
+void
 init_regs()
 {
 unsigned int *reg_ptr;
