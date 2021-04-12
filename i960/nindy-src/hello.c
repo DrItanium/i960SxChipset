@@ -11,5 +11,3 @@ int i, ovrhead, tot_time;
 	tot_time = bentime() - tot_time - ovrhead;
 	printf ("Elapsed time = %ld uS\n", tot_time);
 }
-
-
