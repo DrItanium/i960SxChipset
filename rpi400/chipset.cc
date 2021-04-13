@@ -45,9 +45,9 @@ void setupRAM() {
 constexpr Address RAMStart = 0x8000'0000;
 constexpr Address RAMMax = RAMStart + RAMSizeInBytes;
 static_assert(RAMMax == 0xC000'0000);
-struct LoadUpper8Bits { };
-struct LoadLower8Bits { };
-struct LoadFull16Bits { };
+struct Upper8Bits { };
+struct Lower8Bits { };
+struct Full16Bits { };
 constexpr Address performRAMMask(Address value) noexcept {
     return (~RAMMax) & value;
 }
@@ -55,11 +55,12 @@ static_assert(performRAMMask(0x8000'0000) == 0);
 static_assert(performRAMMask(0x8000'FDED) == 0xFDED);
 static_assert(performRAMMask(0x9000'0000) == 0x1000'0000);
 static_assert(performRAMMask(0xA000'0000) == 0x2000'0000);
-#if 0
-uint8_t loadRAM(Address value, LoadUpper8Bits) {
-   //auto& cell =
-}
-#endif
+uint8_t loadRAM(Address value, Upper8Bits) noexcept { return ram[performRAMMask(value)].bytes[1]; }
+uint8_t loadRAM(Address value, Lower8Bits) noexcept { return ram[performRAMMask(value)].bytes[0]; }
+uint16_t loadRAM(Address value, Full16Bits) noexcept { return ram[performRAMMask(value)].word; }
+void storeRAM(Address addr, uint8_t value, Upper8Bits) noexcept { ram[performRAMMask(addr)].bytes[1] = value; }
+void storeRAM(Address addr, uint8_t value, Lower8Bits) noexcept { ram[performRAMMask(addr)].bytes[0] = value; }
+void storeRAM(Address addr, uint16_t value, Full16Bits) noexcept { ram[performRAMMask(addr)].word = value; }
 int main(int argc, char** argv) {
     setupRAM();
     for (auto i = 0u; i < RAMSizeInDataCells; ++i) {
