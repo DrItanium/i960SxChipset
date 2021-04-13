@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/program_options.hpp>
 using Short = uint16_t;
 using Ordinal = uint32_t;
+using Address = Ordinal;
 /**
  * @brief A single memory cell exposed to the i960Sx processor
  */
@@ -41,6 +42,24 @@ std::unique_ptr<DataCell[]> ram;
 void setupRAM() {
     ram = std::make_unique<DataCell[]>(RAMSizeInDataCells);
 }
+constexpr Address RAMStart = 0x8000'0000;
+constexpr Address RAMMax = RAMStart + RAMSizeInBytes;
+static_assert(RAMMax == 0xC000'0000);
+struct LoadUpper8Bits { };
+struct LoadLower8Bits { };
+struct LoadFull16Bits { };
+constexpr Address performRAMMask(Address value) noexcept {
+    return (~RAMMax) & value;
+}
+static_assert(performRAMMask(0x8000'0000) == 0);
+static_assert(performRAMMask(0x8000'FDED) == 0xFDED);
+static_assert(performRAMMask(0x9000'0000) == 0x1000'0000);
+static_assert(performRAMMask(0xA000'0000) == 0x2000'0000);
+#if 0
+uint8_t loadRAM(Address value, LoadUpper8Bits) {
+   //auto& cell =
+}
+#endif
 int main(int argc, char** argv) {
     setupRAM();
     for (auto i = 0u; i < RAMSizeInDataCells; ++i) {
