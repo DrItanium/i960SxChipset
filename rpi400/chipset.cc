@@ -41,6 +41,9 @@ constexpr auto RAMSizeInDataCells = RAMSizeInBytes / sizeof(Short);
 std::unique_ptr<DataCell[]> ram;
 void setupRAM() {
     ram = std::make_unique<DataCell[]>(RAMSizeInDataCells);
+    for (auto i = 0u; i < RAMSizeInDataCells; ++i) {
+        ram[i].word = 0;
+    }
 }
 constexpr Address RAMStart = 0x8000'0000;
 constexpr Address RAMMax = RAMStart + RAMSizeInBytes;
@@ -63,8 +66,5 @@ void storeRAM(Address addr, uint8_t value, Lower8Bits) noexcept { ram[performRAM
 void storeRAM(Address addr, uint16_t value, Full16Bits) noexcept { ram[performRAMMask(addr)].word = value; }
 int main(int argc, char** argv) {
     setupRAM();
-    for (auto i = 0u; i < RAMSizeInDataCells; ++i) {
-        ram[i].word = 0;
-    }
     return 0;
 }
