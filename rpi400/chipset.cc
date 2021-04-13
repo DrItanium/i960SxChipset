@@ -25,6 +25,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdint>
 #include <memory>
 #include <boost/program_options.hpp>
+#include <iostream>
+
 using Short = uint16_t;
 using Ordinal = uint32_t;
 using Address = Ordinal;
