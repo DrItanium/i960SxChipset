@@ -38,7 +38,7 @@ union DataCell {
 
 constexpr auto RAMSizeInBytes = 1024u * 1024u * 1024u;
 constexpr auto RAMSizeInDataCells = RAMSizeInBytes / sizeof(Short);
-std::unique_ptr<DataCell[]> ram;
+std::unique_ptr<DataCell[]> ram = nullptr;
 void setupRAM() {
     ram = std::make_unique<DataCell[]>(RAMSizeInDataCells);
     for (auto i = 0u; i < RAMSizeInDataCells; ++i) {
