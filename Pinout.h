@@ -33,7 +33,7 @@ enum class i960Pinout : decltype(A0) {
     Led = 0, 	  // output
     CLOCK_OUT, // output, unusable
     AS_,     // input, AVR Int2
-    SPI_BUS_EN, // output
+    PWM4, // unused
     GPIOSelect,		// output
     MOSI,		  // reserved
     MISO,		  // reserved
@@ -57,13 +57,13 @@ enum class i960Pinout : decltype(A0) {
     BLAST_, 	 // input
     FAIL, 	     // input
 // PORT A
+    SPI_BUS_EN, // output
     DC, 	 // output
     DISPLAY_EN, // output
     SD_EN,      // output
     WIFI_EN,
     WIFI_BUSY,
     WIFI_RST,
-    Analog6,
     Analog7,
     Count,		  // special
 };
