@@ -6,6 +6,7 @@
 #define RAMBLOCK_W25Q32JV_H
 #include "RAM.h"
 #include "SPIBus.h"
+template<i960Pinout enable>
 class W25Q32JV : public RAM {
 public:
     enum class Opcodes : uint8_t {
@@ -55,18 +56,39 @@ public:
     };
     static constexpr uint32_t Size = 4 * static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
 public:
-    constexpr W25Q32JV(uint32_t startAddress, SPIBusDevice id) : RAM(startAddress, Size), busId_(id) { }
+    constexpr W25Q32JV(uint32_t startAddress) : RAM(startAddress, Size) { }
     ~W25Q32JV() override = default;
-    constexpr auto getBusID() const noexcept { return busId_; }
-private:
-    void sendReadOperation(uint32_t address);
 protected:
-    uint8_t read8(uint32_t address) override;
-    uint16_t read16(uint32_t address) override;
-    void write8(uint32_t address, uint8_t value) override;
-    void write16(uint32_t address, uint16_t value) override;
-private:
-    SPIBusDevice busId_;
+    uint8_t read8(uint32_t address) override {
+        byte a = static_cast<byte>(address >> 16);
+        byte b = static_cast<byte>(address >> 8);
+        byte c = static_cast<byte>(address);
+        HoldPinLow <enable> transaction;
+        SPI.transfer(static_cast<byte>(Opcodes::Read));
+        SPI.transfer(a);
+        SPI.transfer(b);
+        SPI.transfer(c);
+        return SPI.transfer(0x00);
+    }
+    uint16_t read16(uint32_t address) override {
+        byte a = static_cast<byte>(address >> 16);
+        byte b = static_cast<byte>(address >> 8);
+        byte c = static_cast<byte>(address);
+        HoldPinLow <enable> transaction;
+        SPI.transfer(static_cast<byte>(Opcodes::Read));
+        SPI.transfer(a);
+        SPI.transfer(b);
+        SPI.transfer(c);
+        return SPI.transfer16(0x00);
+    }
+    void write8(uint32_t address, uint8_t value) override {
+        // Do not allow writing to this flash module at runtime, it must be programmed offline
+        // thus do nothing!
+    }
+    void write16(uint32_t address, uint16_t value) override {
+        // Do not allow writing to this flash module at runtime, it must be programmed offline
+        // thus do nothing!
+    }
 };
 
 #endif //RAMBLOCK_W25Q32JV_H
