@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
  * @brief Represents a single Espressif PSRAM64H device
  */
+ template<i960Pinout enable>
 class PSRAM64H : public RAM {
 public:
     enum class Opcodes : uint8_t {
@@ -47,16 +48,54 @@ public:
     };
     static constexpr uint32_t Size = 8 * static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
 public:
-    constexpr PSRAM64H(uint32_t startAddress, SPIBusDevice id) : RAM(startAddress, Size), busId_(id) { }
+    constexpr PSRAM64H(uint32_t startAddress) : RAM(startAddress, Size) { }
     ~PSRAM64H() override = default;
-    constexpr auto getBusID() const noexcept { return busId_; }
 protected:
-    uint8_t read8(uint32_t address) override;
-    uint16_t read16(uint32_t address) override;
-    void write8(uint32_t address, uint8_t value) override;
-    void write16(uint32_t address, uint16_t value) override;
-private:
-    SPIBusDevice busId_;
+    uint8_t read8(uint32_t address) override {
+        byte a = static_cast<byte>(address >> 16);
+        byte b = static_cast<byte>(address >> 8);
+        byte c = static_cast<byte>(address);
+        HoldPinLow<enable> transaction;
+        SPI.transfer(static_cast<byte>(Opcodes::Read));
+        SPI.transfer(a);
+        SPI.transfer(b);
+        SPI.transfer(c);
+        return SPI.transfer(0x00);
+    }
+    uint16_t read16(uint32_t address) override {
+        byte a = static_cast<byte>(address >> 16);
+        byte b = static_cast<byte>(address >> 8);
+        byte c = static_cast<byte>(address);
+        HoldPinLow<enable> transaction;
+        SPI.transfer(static_cast<byte>(Opcodes::Read));
+        SPI.transfer(a);
+        SPI.transfer(b);
+        SPI.transfer(c);
+        return SPI.transfer16(0x00);
+
+    }
+    void write8(uint32_t address, uint8_t value) override {
+        byte a = static_cast<byte>(address >> 16);
+        byte b = static_cast<byte>(address >> 8);
+        byte c = static_cast<byte>(address);
+        HoldPinLow<enable> transaction;
+        SPI.transfer(static_cast<byte>(Opcodes::Write));
+        SPI.transfer(a);
+        SPI.transfer(b);
+        SPI.transfer(c);
+        SPI.transfer(value);
+    }
+    void write16(uint32_t address, uint16_t value) override {
+        byte a = static_cast<byte>(address >> 16);
+        byte b = static_cast<byte>(address >> 8);
+        byte c = static_cast<byte>(address);
+        HoldPinLow<enable> transaction;
+        SPI.transfer(static_cast<byte>(Opcodes::Write));
+        SPI.transfer(a);
+        SPI.transfer(b);
+        SPI.transfer(c);
+        SPI.transfer16(value);
+    }
 };
 
 #endif //ARDUINO_PSRAM64H_H
