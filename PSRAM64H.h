@@ -25,12 +25,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef ARDUINO_PSRAM64H_H
 #define ARDUINO_PSRAM64H_H
+#include <SPI.h>
 #include "RAM.h"
-#include "SPIBus.h"
 /**
  * @brief Represents a single Espressif PSRAM64H device
  */
- template<i960Pinout enable>
+template<i960Pinout enable>
 class PSRAM64H : public RAM {
 public:
     enum class Opcodes : uint8_t {
@@ -50,6 +50,11 @@ public:
 public:
     constexpr PSRAM64H(uint32_t startAddress) : RAM(startAddress, Size) { }
     ~PSRAM64H() override = default;
+    void begin() override {
+        SPI.begin();
+        pinMode(enable, OUTPUT);
+        digitalWrite(enable, HIGH);
+    }
 protected:
     uint8_t read8(uint32_t address) override {
         byte a = static_cast<byte>(address >> 16);

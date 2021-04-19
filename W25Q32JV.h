@@ -5,7 +5,7 @@
 #ifndef RAMBLOCK_W25Q32JV_H
 #define RAMBLOCK_W25Q32JV_H
 #include "RAM.h"
-#include "SPIBus.h"
+#include <SPI.h>
 template<i960Pinout enable>
 class W25Q32JV : public RAM {
 public:
@@ -58,6 +58,11 @@ public:
 public:
     constexpr W25Q32JV(uint32_t startAddress) : RAM(startAddress, Size) { }
     ~W25Q32JV() override = default;
+    void begin() override {
+        SPI.begin();
+        pinMode(enable, OUTPUT);
+        digitalWrite(enable, HIGH);
+    }
 protected:
     uint8_t read8(uint32_t address) override {
         byte a = static_cast<byte>(address >> 16);

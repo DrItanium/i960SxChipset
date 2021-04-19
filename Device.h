@@ -50,6 +50,9 @@ public:
     }
     virtual uint16_t read(uint32_t address, LoadStoreStyle style) noexcept = 0;
     virtual void write(uint32_t address, uint16_t value, LoadStoreStyle style) noexcept = 0;
+    virtual void begin() {
+        // do nothing
+    }
 private:
     uint32_t startAddress_ = 0;
     uint32_t length_ = 0;

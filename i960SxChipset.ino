@@ -46,7 +46,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "RAM.h"
 #include "SPIBus.h"
 #include "IOExpanders.h"
-#include "SRAM_23LC1024.h"
 #include "PSRAM64H.h"
 #include "W25Q32JV.h"
 
@@ -78,6 +77,13 @@ constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (Word
  */
 volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
 
+static constexpr Address RamStartingAddress = 0x8000'0000;
+static constexpr auto FlashStartingAddress = 0x0000'0000;
+// The four directly connected SPI devices
+PSRAM64H<i960Pinout::PSRAM_CS0> ram0(RamStartingAddress);
+PSRAM64H<i960Pinout::PSRAM_CS1> ram1(RamStartingAddress+PSRAM64H<i960Pinout::PSRAM_CS1>::Size);
+W25Q32JV<i960Pinout::FLASH0_CS> flash0(FlashStartingAddress);
+W25Q32JV<i960Pinout::FLASH1_CS> flash1(FlashStartingAddress+W25Q32JV<i960Pinout::FLASH1_CS>::Size);
 
 // The bootup process has a separate set of states
 // TStart - Where we start
@@ -360,8 +366,6 @@ void setupSRAMCache() {
 constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
     return start + (size * count);
 }
-static constexpr Address RamStartingAddress = 0x8000'0000;
-static constexpr auto FlashStartingAddress = 0x0000'0000;
 // we have access to 12 Winbond Flash Modules, which hold onto common program code, This gives us access to 96 megabytes of Flash.
 // At this point it is a massive pain in the ass to program all these devices but who cares
 
@@ -380,6 +384,19 @@ void setupSDCard() {
         Serial.println("SD Card initialization successful");
     }
 }
+void setupFlashAndPSRAM() {
+    ram0.begin();
+    ram1.begin();
+    flash0.begin();
+    flash1.begin();
+}
+void setupPeripherals() {
+    setupTFT();
+    setupFlashAndPSRAM();
+    setupSDCard();
+    setupWifi();
+    setupSRAMCache();
+}
 // the setup routine runs once when you press reset:
 void setup() {
     Serial.begin(115200);
@@ -388,18 +405,10 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
-              i960Pinout::SD_EN,
-              i960Pinout::PSRAM_CS0,
-              i960Pinout::PSRAM_CS1,
-              i960Pinout::FLASH0_CS,
-              i960Pinout::FLASH1_CS);
+              i960Pinout::SD_EN);
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     digitalWrite(i960Pinout::SD_EN, HIGH);
     digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
-    digitalWrite(i960Pinout::PSRAM_CS0, HIGH);
-    digitalWrite(i960Pinout::PSRAM_CS1, HIGH);
-    digitalWrite(i960Pinout::FLASH0_CS, HIGH);
-    digitalWrite(i960Pinout::FLASH1_CS, HIGH);
     pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
     t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
     SPI.begin();
@@ -407,11 +416,7 @@ void setup() {
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
-	setupWifi();
-	setupSRAMCache();
-	setupSDCard();
-	setupTFT();
-	//roundTripTest<SPIBusDevice::SRAM0>();
+	setupPeripherals();
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
 	Serial.println(F("i960Sx chipset brought up fully!"));
