@@ -70,7 +70,7 @@ union WordEntry {
     byte bytes[2];
     uint16_t word;
 };
-constexpr auto OnBoardSRAMCacheSizeInBytes = 2048;
+constexpr auto OnBoardSRAMCacheSizeInBytes = 1024;
 constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
 /**
  * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
@@ -213,6 +213,22 @@ performWrite(Address address, uint16_t value) noexcept {
     Serial.print(value, HEX);
     Serial.print(F(" to 0x"));
     Serial.println(address, HEX);
+    if (address < RamStartingAddress) {
+        // we are in program land for the time being so do nothing!
+    } else {
+        // upper half needs to be walked down further
+        if (ram0.mapsToGivenRange(address)) {
+            ram0.write(address, value, getStyle());
+        } else if (ram1.mapsToGivenRange(address)) {
+            ram1.write(address, value, getStyle());
+        } else if (address >= 0xFF00'0000) {
+            // cpu internal space, we should never get to this location
+            Serial.println(F("Request to write into CPU internal space"));
+        } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
+            // this is the internal IO space
+            Serial.println(F("Request to write into IO space"));
+        }
+    }
     /// @todo implement
 }
 uint16_t
@@ -220,6 +236,27 @@ performRead(Address address) noexcept {
     Serial.print(F("Read from 0x"));
     Serial.println(address, HEX);
     /// @todo implement
+    if (address < RamStartingAddress) {
+        // we are in program land for the time being so do nothing!
+        if (flash0.mapsToGivenRange(address)) {
+            return flash0.read(address, getStyle());
+        } else if (flash1.mapsToGivenRange(address)) {
+            return flash1.read(address, getStyle());
+        }
+    } else {
+        // upper half needs to be walked down further
+        if (ram0.mapsToGivenRange(address)) {
+            return ram0.read(address, getStyle());
+        } else if (ram1.mapsToGivenRange(address)) {
+            return ram1.read(address, getStyle());
+        } else if (address >= 0xFF00'0000) {
+            // cpu internal space, we should never get to this location
+            Serial.println(F("Request to read from CPU internal space?"));
+        } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
+            // this is the internal IO space
+            Serial.println(F("Request to read from IO space"));
+        }
+    }
     return 0;
 }
 void processDataRequest() noexcept {
@@ -375,13 +412,13 @@ void setupTFT() {
     tft.setCursor(0,0);
     tft.setTextColor(ILI9341_WHITE);
     tft.setTextSize(3);
-    tft.println("i960Sx!");
+    tft.println(F("i960Sx!"));
 }
 void setupSDCard() {
     if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-        Serial.println("SD Card initialization failed");
+        Serial.println(F("SD Card initialization failed"));
     } else {
-        Serial.println("SD Card initialization successful");
+        Serial.println(F("SD Card initialization successful"));
     }
 }
 void setupFlashAndPSRAM() {
