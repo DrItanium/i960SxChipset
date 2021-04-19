@@ -67,7 +67,6 @@ Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
 byte macAddress[6];
 File currentFile;
 char serialBuffer[80]; // will be mapped into main memory
-Device* Devices[256] = { nullptr };
 union WordEntry {
     byte bytes[2];
     uint16_t word;
@@ -358,95 +357,14 @@ void setupSRAMCache() {
         OnBoardSRAMCache[i].word = 0;
     }
 }
-template<typename T, typename ... Args>
-void registerSPIDevice(SPIBusDevice device, Args&&... args) {
-    Devices[static_cast<int>(device)] = new T(args..., device);
-}
 constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
     return start + (size * count);
 }
+static constexpr Address RamStartingAddress = 0x8000'0000;
+static constexpr auto FlashStartingAddress = 0x0000'0000;
 // we have access to 12 Winbond Flash Modules, which hold onto common program code, This gives us access to 96 megabytes of Flash.
 // At this point it is a massive pain in the ass to program all these devices but who cares
-void setupSPIDevices() {
-    static constexpr Address RamStartingAddress = 0x8000'0000;
-    static constexpr auto FlashStartingAddress = 0x0000'0000;
-    static constexpr auto FlashSize = W25Q32JV::Size;
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash0, computeAddressStart(FlashStartingAddress, FlashSize, 0));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash1, computeAddressStart(FlashStartingAddress, FlashSize, 1));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash2, computeAddressStart(FlashStartingAddress, FlashSize, 2));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash3, computeAddressStart(FlashStartingAddress, FlashSize, 3));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash4, computeAddressStart(FlashStartingAddress, FlashSize, 4));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash5, computeAddressStart(FlashStartingAddress, FlashSize, 5));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash6, computeAddressStart(FlashStartingAddress, FlashSize, 6));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash7, computeAddressStart(FlashStartingAddress, FlashSize, 7));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash8, computeAddressStart(FlashStartingAddress, FlashSize, 8));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash9, computeAddressStart(FlashStartingAddress, FlashSize, 9));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash10, computeAddressStart(FlashStartingAddress, FlashSize, 10));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash11, computeAddressStart(FlashStartingAddress, FlashSize, 11));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash12, computeAddressStart(FlashStartingAddress, FlashSize, 12));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash13, computeAddressStart(FlashStartingAddress, FlashSize, 13));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash14, computeAddressStart(FlashStartingAddress, FlashSize, 14));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash15, computeAddressStart(FlashStartingAddress, FlashSize, 15));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash16, computeAddressStart(FlashStartingAddress, FlashSize, 16));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash17, computeAddressStart(FlashStartingAddress, FlashSize, 17));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash18, computeAddressStart(FlashStartingAddress, FlashSize, 18));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash19, computeAddressStart(FlashStartingAddress, FlashSize, 19));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash20, computeAddressStart(FlashStartingAddress, FlashSize, 20));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash21, computeAddressStart(FlashStartingAddress, FlashSize, 21));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash22, computeAddressStart(FlashStartingAddress, FlashSize, 22));
-    registerSPIDevice<W25Q32JV>(SPIBusDevice::Flash23, computeAddressStart(FlashStartingAddress, FlashSize, 23));
-    static constexpr auto PSRAMStartingAddress = RamStartingAddress;
-    static constexpr auto PSRAMSize = PSRAM64H::Size;
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM0, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 0));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM1, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 1));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM2, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 2));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM3, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 3));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM4, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 4));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM5, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 5));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM6, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 6));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM7, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 7));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM8, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 8));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM9, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 9));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM10, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 10));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM11, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 11));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM12, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 12));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM13, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 13));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM14, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 14));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM15, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 15));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM16, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 16));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM17, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 17));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM18, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 18));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM19, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 19));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM20, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 20));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM21, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 21));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM22, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 22));
-    registerSPIDevice<PSRAM64H>(SPIBusDevice::PSRAM23, computeAddressStart(PSRAMStartingAddress, PSRAMSize, 23));
-}
 
-template<SPIBusDevice dev>
-bool roundTripTest() noexcept {
-    if (auto device = Devices[static_cast<int>(dev)]; !device) {
-        return true;
-    } else {
-        bool successful = true;
-        // do a full load
-        for (int i = device->getStartAddress(); i < device->getEndAddress(); i+=2) {
-            auto expected = static_cast<uint16_t>(i);
-            device->write(i, expected, LoadStoreStyle::Full16);
-            auto result = device->read(i, LoadStoreStyle::Full16);
-            if (result != expected) {
-                Serial.print(F("FAILURE: Writing 0x"));
-                Serial.print(expected, HEX);
-                Serial.print(F(" to 0x"));
-                Serial.print(i, HEX);
-                Serial.print(F(" yielded 0x"));
-                Serial.println(result, HEX);
-                successful = false;
-            }
-        }
-        return successful;
-    }
-}
 void setupTFT() {
     tft.begin();
     tft.fillScreen(ILI9341_BLACK);
@@ -470,10 +388,18 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
-              i960Pinout::SD_EN);
+              i960Pinout::SD_EN,
+              i960Pinout::PSRAM_CS0,
+              i960Pinout::PSRAM_CS1,
+              i960Pinout::FLASH0_CS,
+              i960Pinout::FLASH1_CS);
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     digitalWrite(i960Pinout::SD_EN, HIGH);
     digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
+    digitalWrite(i960Pinout::PSRAM_CS0, HIGH);
+    digitalWrite(i960Pinout::PSRAM_CS1, HIGH);
+    digitalWrite(i960Pinout::FLASH0_CS, HIGH);
+    digitalWrite(i960Pinout::FLASH1_CS, HIGH);
     pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
     t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
     SPI.begin();
@@ -483,7 +409,6 @@ void setup() {
 	setupBusStateMachine();
 	setupWifi();
 	setupSRAMCache();
-	setupSPIDevices();
 	setupSDCard();
 	setupTFT();
 	//roundTripTest<SPIBusDevice::SRAM0>();

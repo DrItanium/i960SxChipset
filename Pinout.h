@@ -43,10 +43,10 @@ enum class i960Pinout : decltype(A0) {
     TX0, 		  // reserved
     DEN_,	  // AVR Interrupt INT0
     AVR_INT1, 		// AVR Interrupt INT1
-    PWM0,	   //
-    PWM1, 		  // unused
-    PWM2, 		  // unused
-    PWM3, 		  // unused
+    PSRAM_CS0,	   // output
+    PSRAM_CS1,	   // output
+    FLASH0_CS,     // output
+    FLASH1_CS,     // output
 // PORT C
     SCL,		  // reserved
     SDA, 		  // reserved
@@ -165,6 +165,10 @@ DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
+DefOutputPin(i960Pinout::PSRAM_CS0, LOW, HIGH);
+DefOutputPin(i960Pinout::PSRAM_CS1, LOW, HIGH);
+DefOutputPin(i960Pinout::FLASH0_CS, LOW, HIGH);
+DefOutputPin(i960Pinout::FLASH1_CS, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
