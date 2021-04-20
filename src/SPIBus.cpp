@@ -23,8 +23,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "SPIBus.h"
-#include "IOExpanders.h"
+#include "../include/SPIBus.h"
+#include "../include/IOExpanders.h"
 
 volatile SPIBusDevice busId = SPIBusDevice::Initial;
 void setSPIBusId(SPIBusDevice id) noexcept {

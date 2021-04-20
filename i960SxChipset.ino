@@ -41,13 +41,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
 #include <WiFiNINA.h> // Must be Adafruit's Fork
-#include "Pinout.h"
-#include "Device.h"
-#include "RAM.h"
-#include "SPIBus.h"
-#include "IOExpanders.h"
-#include "PSRAM64H.h"
-#include "W25Q32JV.h"
+#include "include/Pinout.h"
+#include "include/Device.h"
+#include "include/RAM.h"
+#include "include/SPIBus.h"
+#include "include/IOExpanders.h"
+#include "include/PSRAM64H.h"
+#include "include/W25Q32JV.h"
 
 
 
