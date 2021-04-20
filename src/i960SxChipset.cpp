@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
-#include <WiFiNINA.h> // Must be Adafruit's Fork
+//#include <WiFiNINA.h> // Must be Adafruit's Fork
 #include "Pinout.h"
 #include "Device.h"
 #include "RAM.h"
@@ -368,6 +368,7 @@ void printMacAddress(byte mac[]) {
     Serial.println();
 }
 void setupWifi() noexcept {
+#if 0
     WiFi.setPins(static_cast<int>(i960Pinout::WIFI_EN),
                  static_cast<int>(i960Pinout::WIFI_BUSY),
                  static_cast<int>(i960Pinout::WIFI_RST),
@@ -392,11 +393,12 @@ void setupWifi() noexcept {
     WiFi.macAddress(macAddress);
     Serial.print(F("MAC: "));
     printMacAddress(macAddress);
+#endif
 }
 
 void setupSRAMCache() {
     // 8k on board cache
-    for (int i = 0; i < OnBoardSRAMCacheSize; ++i) {
+    for (uint32_t i = 0; i < OnBoardSRAMCacheSize; ++i) {
         OnBoardSRAMCache[i].word = 0;
     }
 }

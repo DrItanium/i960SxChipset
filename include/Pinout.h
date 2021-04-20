@@ -111,12 +111,12 @@ struct DigitalPin {
 		static constexpr auto getDirection() noexcept { return OUTPUT; } \
 		static constexpr auto getAssertionState() noexcept { return asserted; } \
 		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		inline static void assert() noexcept { digitalWrite(pin, getAssertionState()); } \
-		inline static void deassert() noexcept { digitalWrite(pin, getDeassertionState()); } \
+		inline static void assertPin() noexcept { digitalWrite(pin, getAssertionState()); } \
+		inline static void deassertPin() noexcept { digitalWrite(pin, getDeassertionState()); } \
 		inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
 		inline static void pulse() noexcept { \
-			assert(); \
-			deassert(); \
+			assertPin(); \
+			deassertPin(); \
 		} \
 	}
 #define DefInputPin(pin, asserted, deasserted) \
@@ -205,8 +205,8 @@ template<i960Pinout pinId>
 class PinAsserter {
 public:
     static_assert(DigitalPin<pinId>::isOutputPin());
-    PinAsserter() { DigitalPin<pinId>::assert(); }
-    ~PinAsserter() { DigitalPin<pinId>::deassert(); }
+    PinAsserter() { DigitalPin<pinId>::assertPin(); }
+    ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
 };
 
 #endif //ARDUINO_PINOUT_H
