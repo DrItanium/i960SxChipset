@@ -9,8 +9,6 @@ cmake_minimum_required(VERSION 3.13)
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_C_COMPILER_WORKS 1)
 set(CMAKE_CXX_COMPILER_WORKS 1)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 project("i960SxChipset" C CXX)
 
