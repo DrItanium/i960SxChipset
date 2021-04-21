@@ -464,3 +464,18 @@ void loop() {
 	fsm.run_machine();
     t.update();
 }
+
+/// @todo Eliminate after MightyCore update
+#if __cplusplus >= 201402L
+
+void operator delete(void * ptr, size_t)
+{
+    ::operator delete(ptr);
+}
+
+void operator delete[](void * ptr, size_t)
+{
+    ::operator delete(ptr);
+}
+
+#endif // end language is C++14 or greater
