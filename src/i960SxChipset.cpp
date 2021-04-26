@@ -136,8 +136,6 @@ constexpr auto ToDataState = 6;
 constexpr auto PerformSelfTest = 7;
 constexpr auto SelfTestComplete = 8;
 constexpr auto ChecksumFailure = 9;
-void startingSystemTest() noexcept;
-void systemTestPassed() noexcept;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
@@ -145,7 +143,6 @@ void doAddressState() noexcept;
 void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
-void enteringIdleState() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
@@ -348,12 +345,8 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
+	setupSPIBus();
     Serial.println(F("Done setting up io expanders!"));
-}
-void transferAddress(uint32_t address) {
-    SPI.transfer(static_cast<uint8_t>(address >> 16));
-    SPI.transfer(static_cast<uint8_t>(address >> 8));
-    SPI.transfer(static_cast<uint8_t>(address));
 }
 void printMacAddress(byte mac[]) {
     for (int i = 5; i >= 0; --i) {

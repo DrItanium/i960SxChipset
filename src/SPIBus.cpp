@@ -26,8 +26,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../include/SPIBus.h"
 #include "../include/IOExpanders.h"
 
-volatile SPIBusDevice busId = SPIBusDevice::Initial;
-void setSPIBusId(SPIBusDevice id) noexcept {
+volatile byte busId = 0;
+void setSPIBusId(byte id) noexcept {
     static bool initialized = false;
     bool setMemoryId = false;
     if (!initialized) {
@@ -42,6 +42,14 @@ void setSPIBusId(SPIBusDevice id) noexcept {
     }
 }
 
-SPIBusDevice getCurrentSPIBusDevice() noexcept {
+byte getCurrentSPIBusDevice() noexcept {
     return busId;
+}
+
+void setupSPIBus(byte initialBusId) noexcept {
+    static bool initialized = false;
+    if (!initialized) {
+        setSPIBusId(initialBusId);
+        initialized = true;
+    }
 }
