@@ -66,11 +66,12 @@ Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
 byte macAddress[6];
 File currentFile;
 char serialBuffer[80]; // will be mapped into main memory
+// the upper 64 elements of the bus are exposed for direct processor usage
 union WordEntry {
     byte bytes[2];
     uint16_t word;
 };
-constexpr auto OnBoardSRAMCacheSizeInBytes = 1024;
+constexpr auto OnBoardSRAMCacheSizeInBytes = 128;
 constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
 /**
  * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
@@ -443,6 +444,7 @@ void setup() {
     digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
     pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
     t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
+    Wire.begin();
     SPI.begin();
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
 	setupIOExpanders();
@@ -457,7 +459,6 @@ void loop() {
 	fsm.run_machine();
     t.update();
 }
-
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
 
