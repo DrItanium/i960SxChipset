@@ -86,6 +86,9 @@ PSRAM64H<i960Pinout::PSRAM_CS1> ram1(RamStartingAddress+PSRAM64H<i960Pinout::PSR
 W25Q32JV<i960Pinout::FLASH0_CS> flash0(FlashStartingAddress);
 W25Q32JV<i960Pinout::FLASH1_CS> flash1(FlashStartingAddress+W25Q32JV<i960Pinout::FLASH1_CS>::Size);
 
+// ----------------------------------------------------------------
+// state machine
+// ----------------------------------------------------------------
 // The bootup process has a separate set of states
 // TStart - Where we start
 // TSystemTest - Processor performs self test
@@ -287,6 +290,10 @@ void doRecoveryState() noexcept {
 }
 
 
+// ----------------------------------------------------------------
+// setup routines
+// ----------------------------------------------------------------
+
 void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
 	fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
@@ -362,6 +369,7 @@ void printMacAddress(byte mac[]) {
     Serial.println();
 }
 void setupWifi() noexcept {
+    Serial.println(F("Trying to bring up wifi module"));
     WiFi.setPins(static_cast<int>(i960Pinout::WIFI_EN),
                  static_cast<int>(i960Pinout::WIFI_BUSY),
                  static_cast<int>(i960Pinout::WIFI_RST),
