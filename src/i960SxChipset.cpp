@@ -80,7 +80,72 @@ volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
 
 static constexpr Address RamStartingAddress = 0x8000'0000;
 static constexpr auto FlashStartingAddress = 0x0000'0000;
-// The four directly connected SPI devices
+
+// with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
+// set a single pixel in the display, storage area
+// we map these pixel values to specific storage cells on the microcontroller
+// A four address is used to act as a door bell!
+// storage area for the display + a doorbell address as well
+// the command is setup to send off to the display
+template<typename DisplayType>
+class DisplayCommand {
+public:
+    DisplayCommand(DisplayType& display) : display_(display) { }
+    [[nodiscard]] constexpr auto getCommand() const noexcept { return command_; }
+    [[nodiscard]] constexpr auto getX() const noexcept { return x_; }
+    [[nodiscard]] constexpr auto getY() const noexcept { return y_; }
+    [[nodiscard]] constexpr auto getW() const noexcept { return w_; }
+    [[nodiscard]] constexpr auto getH() const noexcept { return h_; }
+    [[nodiscard]] constexpr auto getRadius() const noexcept { return radius_; }
+    [[nodiscard]] constexpr uint16_t getColor() const noexcept { return color_; }
+    [[nodiscard]] constexpr auto getX0() const noexcept { return x0_; }
+    [[nodiscard]] constexpr auto getY0() const noexcept { return y0_; }
+    [[nodiscard]] constexpr auto getX1() const noexcept { return x1_; }
+    [[nodiscard]] constexpr auto getY1() const noexcept { return y1_; }
+    [[nodiscard]] constexpr auto getX2() const noexcept { return x2_; }
+    [[nodiscard]] constexpr auto getY2() const noexcept { return y2_; }
+    void setCommand(uint16_t command) noexcept { command_ = command; }
+    void setX(int16_t x) noexcept { x_ = x; }
+    void setY(int16_t y) noexcept { y_ = y; }
+    void setW(int16_t w) noexcept { w_ = w; }
+    void setH(int16_t h) noexcept { h_ = h; }
+    void setRadius(int16_t radius) noexcept { radius_ = radius; }
+    void setColor(uint16_t color) noexcept { color_ = color; }
+    void setX0(int16_t value) noexcept { x0_ = value; }
+    void setY0(int16_t value) noexcept { y0_ = value; }
+    void setX1(int16_t value) noexcept { x1_ = value; }
+    void setY1(int16_t value) noexcept { y1_ = value; }
+    void setX2(int16_t value) noexcept { x2_ = value; }
+    void setY2(int16_t value) noexcept { y2_ = value; }
+    const DisplayType& getAssociatedDisplay() const noexcept { return display_; }
+    DisplayType& getAssociatedDisplay() noexcept { return display_; }
+    /**
+     * @brief Invoke on doorbell write
+     * @param value the value written to the doorbell
+     */
+    void invoke(uint16_t value) {
+        // perhaps we'll do nothing with the value but hold onto it for now
+    }
+private:
+    DisplayType& display_;
+    uint16_t command_ = 0;
+    int16_t x_ = 0;
+    int16_t y_ = 0;
+    int16_t w_ = 0;
+    int16_t h_ = 0;
+    int16_t radius_ = 0;
+    uint16_t color_ = 0;
+    int16_t x0_ = 0;
+    int16_t y0_ = 0;
+    int16_t x1_ = 0;
+    int16_t y1_ = 0;
+    int16_t x2_ = 0;
+    int16_t y2_ = 0;
+};
+
+DisplayCommand<decltype(tft)> displayCommandSet(tft);
+
+
 
 // ----------------------------------------------------------------
 // state machine
