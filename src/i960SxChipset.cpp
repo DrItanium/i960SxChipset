@@ -90,6 +90,7 @@ static constexpr auto FlashStartingAddress = 0x0000'0000;
 template<typename DisplayType>
 class DisplayCommand {
 public:
+    /// @todo extend Device and take in a base address
     DisplayCommand(DisplayType& display) : display_(display) { }
     [[nodiscard]] constexpr auto getCommand() const noexcept { return command_; }
     [[nodiscard]] constexpr auto getX() const noexcept { return x_; }
