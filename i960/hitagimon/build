@@ -1,8 +1,0 @@
-#!/bin/bash
-i960-elf-gcc -c -o f_handle.o f_handle.c
-i960-elf-gcc -c -o ISR.o ISR.c
-i960-elf-as -ASB f_table.s -o f_table.o
-i960-elf-as -ASB i_handle.s -o i_handle.o
-i960-elf-as -ASB i_table.s -o i_table.o
-i960-elf-as -ASB sx_init.s -o sx_init.o
-i960-elf-ld -Tstart.ld ISR.o f_handle.o f_table.o i_handle.o i_table.o sx_init.o -o boot.o

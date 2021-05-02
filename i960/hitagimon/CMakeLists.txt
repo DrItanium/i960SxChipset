@@ -6,9 +6,11 @@ set(CMAKE_CXX_STANDARD 98)
 set(tools /home/jwscoggins/sys/i960-elf-gcc-3.4.6)
 set(CMAKE_C_COMPILER ${tools}/bin/i960-elf-gcc)
 set(CMAKE_CXX_COMPILER ${tools}/bin/i960-elf-g++)
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -msb")
+set(CMAKE_ASM-ATT_COMPILER ${tools}/bin/i960-elf-as)
+set(CMAKE_ASM-ATT_FLAGS "${CMAKE_ASM_FLAGS} -ASB")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msb -mnumerics")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msb -mnumerics")
+set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -T start.ld")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
@@ -21,6 +23,5 @@ add_executable(hitagimon
 		i_handle.s
 		ISR.c
 		i_table.s
-		sx_init.s)
-
-add_executable(nindy main.cc)
+		sx_init.s
+		main.cc)
