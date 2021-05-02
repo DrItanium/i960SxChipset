@@ -10,7 +10,9 @@ set(CMAKE_ASM-ATT_COMPILER ${tools}/bin/i960-elf-as)
 set(CMAKE_ASM-ATT_FLAGS "${CMAKE_ASM_FLAGS} -ASB")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msb -mnumerics")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msb -mnumerics")
-set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -T start.ld")
+set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_LD_FLAGS} -T start.ld -msb -mnumerics")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_LD_FLAGS} -T start.ld -msb -mnumerics")
+set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_LD_FLAGS} -T start.ld -msb -mnumerics")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
@@ -18,6 +20,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 add_executable(hitagimon
+		brk.cc
 		f_handle.c
 		f_table.s
 		i_handle.s
