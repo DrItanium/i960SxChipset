@@ -20,6 +20,8 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 add_executable(hitagimon
+		console.cc
+		console.h
 		brk.cc
 		f_handle.c
 		f_table.s
