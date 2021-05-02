@@ -54,9 +54,9 @@ static const char no_dbpts[] = "\n No Data breakpoints in this architecture";
 /* Display Breakpoints              	 	*/
 /*                           			*/
 /************************************************/
-static
-display_bpt( type )
-char type;	/* BRK_INST or BRK_DATA */
+static void
+display_bpt( char type )
+// char type;	/* BRK_INST or BRK_DATA */
 {
 int count;
 struct bpt *bp;
@@ -85,10 +85,10 @@ struct bpt *bp;
 /************************************************/
 static
 struct bpt *
-find_bpt( type, active, addr )
-char type;		/* BRK_DATA or BRK_INST		*/
-char active;		/* TRUE or FALSE		*/
-int *addr;		/* Only valid if active == TRUE	*/
+find_bpt( char type, char active, int* addr )
+// char type;		/* BRK_DATA or BRK_INST		*/
+// char active;		/* TRUE or FALSE		*/
+// int *addr;		/* Only valid if active == TRUE	*/
 {
 struct bpt *bp;
 
@@ -114,10 +114,11 @@ struct bpt *bp;
 /* ger requests.  In support of the latter, it	*/
 /* returns TRUE if it succeeds, FALSE otherwise.*/
 /************************************************/
-breakpt( dummy, nargs, addr )
-int dummy;	/* Ignored */
-int nargs;	/* Number of following arguments that are valid (0 or 1) */
-int addr;	/* Optional breakpoint address				*/
+void
+breakpt( int dummy, int nargs, int addr )
+// int dummy;	/* Ignored */
+// int nargs;	/* Number of following arguments that are valid (0 or 1) */
+// int addr;	/* Optional breakpoint address				*/
 
 {
 	if ( nargs == 0 ){
@@ -127,11 +128,11 @@ int addr;	/* Optional breakpoint address				*/
 	}
 }
 
-
-databreak( dummy, nargs, addr )
-int dummy;	/* Ignored */
-int nargs;	/* Number of following arguments that are valid (0 or 1) */
-int addr;	/* Optional breakpoint address			*/
+void
+databreak( int dummy, int nargs, int addr )
+// int dummy;	/* Ignored */
+// int nargs;	/* Number of following arguments that are valid (0 or 1) */
+// int addr;	/* Optional breakpoint address			*/
 {
 	if ( !have_data_bpts ){
 		prtf( no_dbpts );
@@ -142,10 +143,8 @@ int addr;	/* Optional breakpoint address			*/
 	}
 }
 
-
-set_bpt( type, addr )
-char type;
-int addr;
+int
+set_bpt( char type, int addr )
 {
 struct bpt *bp;
 char *typename;
@@ -182,19 +181,21 @@ int retval;	/* Return code, needed by gdb interface */
 /* the 'gdb mode' code to satisfy remote debug-	*/
 /* ger requests.				*/
 /************************************************/
-delete( dummy, nargs, addr )
-int dummy;	/* Ignored */
-int nargs;	/* Number of following arguments that are valid (0 or 1) */
-int addr;	/* Optional breakpoint address	*/
+void 
+delete( int dummy, int nargs, int addr )
+// int dummy;	/* Ignored */
+// int nargs;	/* Number of following arguments that are valid (0 or 1) */
+// int addr;	/* Optional breakpoint address	*/
 {
 	del_bpt( BRK_INST, addr );
 }
 
 
-delete_data( dummy, nargs, addr )
-int dummy;	/* Ignored */
-int nargs;	/* Number of following arguments that are valid (0 or 1) */
-int addr;	/* Optional breakpoint address	*/
+void
+delete_data( int dummy, int nargs, int addr )
+// int dummy;	/* Ignored */
+// int nargs;	/* Number of following arguments that are valid (0 or 1) */
+// int addr;	/* Optional breakpoint address	*/
 {
 	if ( !have_data_bpts ){
 		prtf( no_dbpts );
@@ -203,10 +204,8 @@ int addr;	/* Optional breakpoint address	*/
 	}
 }
 
-
-del_bpt( type, addr )
-char type;
-int *addr;
+void
+del_bpt( char type, int* addr )
 {
 struct bpt *bp;
 int retval;	/* Return code, needed by gdb interface */

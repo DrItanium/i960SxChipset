@@ -72,3 +72,7 @@ add_library(core break.cc
 	version.h)
 
 add_executable(nindy main.cc)
+target_link_libraries(nindy PUBLIC
+	bootsx
+	nin
+	core)

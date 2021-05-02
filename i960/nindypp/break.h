@@ -71,4 +71,7 @@ extern bpt bptable[];
 extern char have_data_bpts;	/* TRUE if there are one or more data breakpoint
 				 * entries in the table,
 				 */
+int set_bpt(char type, int addr);
+void databreak(int dummy, int nargs, int addr);
+void breakpt( int dummy, int nargs, int addr );
 #endif // end NINDY_BREAK_H__
