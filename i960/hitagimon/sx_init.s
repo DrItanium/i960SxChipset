@@ -34,15 +34,15 @@ fault, and system procedure tables, and then vectors to a user defined routine. 
 
 # declare ahead of time
 
-.globl system_address_table
-.globl prcb_ptr
-.globl _prcb_ram
-.globl start_ip
-.globl cs1
+.global system_address_table
+.global prcb_ptr
+.global _prcb_ram
+.global start_ip
+.global cs1
 
-.globl _user_stack
-.globl _sup_stack # supervisor stack
-.globl _intr_stack # interrupt stack
+.global _user_stack
+.global _sup_stack # supervisor stack
+.global _intr_stack # interrupt stack
 
 
 # Core Initialization Block (located at address 0)

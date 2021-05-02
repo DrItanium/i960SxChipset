@@ -25,4 +25,4 @@ SECTIONS
     } >ram
 }
 
-cs1 = -(system_address_table + prcb_ptr + start_ip);
+cs1 = -(system_address_table + prcb_ptr + start_ip) ;

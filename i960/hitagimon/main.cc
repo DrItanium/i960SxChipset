@@ -3,8 +3,9 @@
 //
 
 
-int
-main(int argc, char** argv) {
-
+extern "C"
+int main(int argc, char** argv) {
     return 0;
 }
+
+void
