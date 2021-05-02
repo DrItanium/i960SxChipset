@@ -3,9 +3,12 @@
 //
 
 
-extern "C"
-int main(int argc, char** argv) {
+int main() {
     return 0;
 }
 
-void
+extern "C"
+int atexit(void (*function)(void))
+{
+
+}
