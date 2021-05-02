@@ -1,21 +1,25 @@
-# TODO: adapt for my purposes
+/* 
+ * TODO: adapt for my purposes 
+ *
+ */
+
 MEMORY
 {
-    rom:   o=0x0, l=8M
-    ram:   o=0x80000000, l=16M
+    rom (rx)  : ORIGIN = 0, l = 8M
+    ram (!rx) : o = 0x80000000, l = 16M
 }
 
 SECTIONS
 {
-    .text:
+    .text :
     {
 
     } >rom
-    .data:
+    .data :
     {
 
     } >ram
-    .bss:
+    .bss :
     {
 
     } >ram
