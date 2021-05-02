@@ -17,8 +17,10 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
-add_executable(hitagimon
-		sx_init.s # this must ALWAYS be first!
+add_executable(hitagimon sx_init.s # this must ALWAYS be first!
+		Peripherals.cc
+		Peripherals.h
+        IORoutines.h
 		console.cc
 		console.h
 		brk.cc
