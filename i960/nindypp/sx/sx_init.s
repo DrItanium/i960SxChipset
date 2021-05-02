@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-// NOTE: this code is taken from the initialization code found in the i960Sx manual
+# NOTE: this code is taken from the initialization code found in the i960Sx manual
 
 /*
 Below is the system initialization code and tables.
@@ -32,7 +32,7 @@ The code builds the PRCB (PRocessor Control Block) in memory, sets up the stack 
 fault, and system procedure tables, and then vectors to a user defined routine. *main*
 */
 
-// declare ahead of time
+# declare ahead of time
 
 .globl system_address_table
 .globl prcb_ptr
@@ -41,64 +41,64 @@ fault, and system procedure tables, and then vectors to a user defined routine. 
 .globl cs1
 
 .globl _user_stack
-.globl _sup_stack // supervisor stack
-.globl _intr_stack // interrupt stack
+.globl _sup_stack # supervisor stack
+.globl _intr_stack # interrupt stack
 
 
-// Core Initialization Block (located at address 0)
-// 8 words
+# Core Initialization Block (located at address 0)
+# 8 words
 
 .text
 
 system_address_table:
-    .word system_address_table // SAT pointer
-    .word prcb_ptr // prcb pointer
+    .word system_address_table # SAT pointer
+    .word prcb_ptr # prcb pointer
     .word 0
-    .word start_ip // pointer to first ip
-    .word cs1 // calculated at link time (bind ?cs1 (- (+ ?SAT ?PRCB ?startIP)))
+    .word start_ip # pointer to first ip
+    .word cs1 # calculated at link time (bind ?cs1 (- (+ ?SAT ?PRCB ?startIP)))
     .word 0
     .word 0
     .word -1
 
-    // now reserve 88 more bytes
+    # now reserve 88 more bytes
     .space 88
 
-    .word sys_proc_table        // initialization words
+    .word sys_proc_table        # initialization words
     .word 0x304000fb
     .space 8
 
     .word system_address_table
-    .word 0x00fc00fb            // initialization words
+    .word 0x00fc00fb            # initialization words
     .space 8
 
     .word sys_proc_table
-    .word 0x304000fb            // initialization words
+    .word 0x304000fb            # initialization words
     .space 8
 
     .word fault_proc_table
-    .word 0x304000fb            // initialization words
+    .word 0x304000fb            # initialization words
 
-// initial PRCB
-// this is our startup PRCB. After initialization.
-// this will be copied to RAM
+# initial PRCB
+# this is our startup PRCB. After initialization.
+# this will be copied to RAM
 
 prcb_ptr:
-    .word 0x0 // 0 - reserved
-    .word 0xc // 4 - initialize to 0xc
-    .word 0x0 // 8 - reserved
-    .word 0x0 // 12 - reserved
-    .word 0x0 // 16 - reserved
-    .word intr_table // 20 - interrupt table address
-    .word _intr_stack // 24 - interrupt stack pointer
-    .word 0x0 // 28 - reserved
-    .word 0x000001ff  // 32 - pointer to offset zero
-    .word 0x0000027f  // 36 - system procedure table pointer
-    .word fault_table // 40 - fault table
-    .space 0x0 // 44 - reserved
-    .word 32 // 48 - reserved
-    .word 92 // 80 - scratch space
+    .word 0x0 # 0 - reserved
+    .word 0xc # 4 - initialize to 0xc
+    .word 0x0 # 8 - reserved
+    .word 0x0 # 12 - reserved
+    .word 0x0 # 16 - reserved
+    .word intr_table # 20 - interrupt table address
+    .word _intr_stack # 24 - interrupt stack pointer
+    .word 0x0 # 28 - reserved
+    .word 0x000001ff  # 32 - pointer to offset zero
+    .word 0x0000027f  # 36 - system procedure table pointer
+    .word fault_table # 40 - fault table
+    .word 0x0 # 44 - reserved
+    .space 32 # 48 - reserved
+    .space 92 # 80 - scratch space
 
-// the system procedure table will _only_ be used if the user make a supervisor procedure call
+# the system procedure table will _only_ be used if the user make a supervisor procedure call
     .align 6
 sys_proc_table:
     .word 0 # Reserved
@@ -118,10 +118,10 @@ sys_proc_table:
 	.word	(_lpt_io + 0x2)		# Calls 2 - laser printer I/O routines
     .word 0 # Calls 3
 
-// below is the fault table for calls to the fault handler.
-// this table is provided because the above table (supervisor table) will allow
-// tracing of trace-fault events (creating an endless loop), whereas this table will
-// not allow tracing of trace-fault events.
+# below is the fault table for calls to the fault handler.
+# this table is provided because the above table (supervisor table) will allow
+# tracing of trace-fault events (creating an endless loop), whereas this table will
+# not allow tracing of trace-fault events.
 
     .align 6
 fault_proc_table:
@@ -147,7 +147,7 @@ fault_proc_table:
     .word (_user_machine + 0x2)    # entry 7
     .word (_user_type + 0x2)    # entry 8
 
- // processor starts execution at this spot upon power-up after self-test.
+ # processor starts execution at this spot upon power-up after self-test.
 
  start_ip:
     mov 0, g14 # C compiler expects g14 = 0
@@ -249,7 +249,7 @@ move_data:
  */
 
 fix_stack:
-    flush_reg
+    flushreg
     or  pfp, 7, pfp     # put interrupt return code into pfp
 
     ldconst 0x1f0002, g0
