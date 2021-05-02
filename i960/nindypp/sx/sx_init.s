@@ -166,7 +166,7 @@ fault_proc_table:
     lda 176,g0 # load length of PRCB
     lda 0, g4 # initialize offset to 0
     lda prcb_ptr, g1 # load source
-    lda _prdb_ram, g2 # load destination
+    lda _prcb_ram, g2 # load destination
     bal move_data # branch to move routine
 
  # fix up the PRCB to point to a new interrupt table
