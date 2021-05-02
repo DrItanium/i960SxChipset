@@ -22,7 +22,9 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+.text 
 
+.global _user_intr
 _user_intr:
 /* -- We allocate a spot for a "register holder" on the stack
  *    and store data to that spot. We will take advantage of
@@ -46,7 +48,7 @@ _user_intr:
         ldq     -32(sp), g8
         ldq     -16(sp), g12
         ret
-
+.global _NMI_intr
 _NMI_intr:
 /* -- We allocate a spot for a "register holder" on the stack
  *    and store data to that spot. We will take advantage of

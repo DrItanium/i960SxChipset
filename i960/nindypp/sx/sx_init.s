@@ -100,6 +100,8 @@ prcb_ptr:
 
 # the system procedure table will _only_ be used if the user make a supervisor procedure call
     .align 6
+
+.global sys_proc_table
 sys_proc_table:
     .word 0 # Reserved
     .word 0 # Reserved
