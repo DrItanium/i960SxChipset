@@ -90,20 +90,16 @@ int baudtable[] = {
 
 extern int readbyte_ticks_per_second;	/* Board-specific constant */
 
-readbyte(seconds)
-int 	seconds;
-{
-char c;
-int ticks;
+int 
+readbyte(int seconds) {
+    for (int ticks = seconds*readbyte_ticks_per_second; ticks > 0; ticks--){
+        if (csts() != 0){
+            return static_cast<int>(ci());
+        }
+    }
 
-	for (ticks = seconds*readbyte_ticks_per_second; ticks > 0; ticks--){
-		if (csts() != 0){
-			return((int)ci());
-		}
-	}
-	
-	/* if timeout error, return TIMEOUT */
-	return(TIMEOUT);
+    /* if timeout error, return TIMEOUT */
+    return TIMEOUT;
 }
 
 void
