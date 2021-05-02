@@ -1,8 +1,8 @@
 # TODO: adapt for my purposes
 MEMORY
 {
-    rom:   o=0x0, l=0x4000
-    ram:   o=0x5000, l=0x35000
+    rom:   o=0x0, l=8M
+    ram:   o=0x80000000, l=16M
 }
 
 SECTIONS
