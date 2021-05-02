@@ -18,6 +18,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 add_executable(hitagimon
+		sx_init.s # this must ALWAYS be first!
 		console.cc
 		console.h
 		brk.cc
@@ -26,7 +27,6 @@ add_executable(hitagimon
 		i_handle.s
 		ISR.c
 		i_table.s
-		sx_init.s
 		main.cc)
 
 #set_target_properties(hitagimon PROPERTIES LINK_DEPENDS ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT})

@@ -26,3 +26,5 @@ SECTIONS
 }
 
 cs1 = -(system_address_table + prcb_ptr + start_ip) ;
+
+/* STARTUP ( CMakeFiles/hitagimon.dir/sx_init.s.o ) */
