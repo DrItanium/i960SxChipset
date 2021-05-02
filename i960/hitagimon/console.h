@@ -5,6 +5,6 @@
 #ifndef I960SXCHIPSET_CONSOLE_H
 #define I960SXCHIPSET_CONSOLE_H
 
-int console_io(int type, int chr);
+extern "C" int console_io(int type, int chr);
 
 #endif //I960SXCHIPSET_CONSOLE_H
