@@ -51,8 +51,15 @@ public:
     constexpr PSRAM64H(uint32_t startAddress) : RAM(startAddress, Size) { }
     ~PSRAM64H() override = default;
     void begin() override {
-        SPI.begin();
         pinMode(enable, OUTPUT);
+        digitalWrite(enable, HIGH);
+        SPI.begin();
+        // you also need to call reset enable and then reset on startup
+        digitalWrite(enable, LOW);
+        SPI.transfer(static_cast<uint8_t>(Opcodes::ResetEnable));
+        digitalWrite(enable, HIGH);
+        digitalWrite(enable, LOW);
+        SPI.transfer(static_cast<uint8_t>(Opcodes::Reset));
         digitalWrite(enable, HIGH);
     }
 protected:
@@ -60,46 +67,52 @@ protected:
         byte a = static_cast<byte>(address >> 16);
         byte b = static_cast<byte>(address >> 8);
         byte c = static_cast<byte>(address);
-        HoldPinLow<enable> transaction;
+        digitalWrite(enable, LOW);
         SPI.transfer(static_cast<byte>(Opcodes::Read));
         SPI.transfer(a);
         SPI.transfer(b);
         SPI.transfer(c);
-        return SPI.transfer(0x00);
+        auto result = SPI.transfer(0x00);
+        digitalWrite(enable, HIGH);
+        return result;
     }
     uint16_t read16(uint32_t address) override {
         byte a = static_cast<byte>(address >> 16);
         byte b = static_cast<byte>(address >> 8);
         byte c = static_cast<byte>(address);
-        HoldPinLow<enable> transaction;
+        digitalWrite(enable, LOW);
         SPI.transfer(static_cast<byte>(Opcodes::Read));
         SPI.transfer(a);
         SPI.transfer(b);
         SPI.transfer(c);
-        return SPI.transfer16(0x00);
+        auto result = SPI.transfer16(0x00);
+        digitalWrite(enable, HIGH);
+        return result;
 
     }
     void write8(uint32_t address, uint8_t value) override {
         byte a = static_cast<byte>(address >> 16);
         byte b = static_cast<byte>(address >> 8);
         byte c = static_cast<byte>(address);
-        HoldPinLow<enable> transaction;
+        digitalWrite(enable, LOW);
         SPI.transfer(static_cast<byte>(Opcodes::Write));
         SPI.transfer(a);
         SPI.transfer(b);
         SPI.transfer(c);
         SPI.transfer(value);
+        digitalWrite(enable, HIGH);
     }
     void write16(uint32_t address, uint16_t value) override {
         byte a = static_cast<byte>(address >> 16);
         byte b = static_cast<byte>(address >> 8);
         byte c = static_cast<byte>(address);
-        HoldPinLow<enable> transaction;
+        digitalWrite(enable, LOW);
         SPI.transfer(static_cast<byte>(Opcodes::Write));
         SPI.transfer(a);
         SPI.transfer(b);
         SPI.transfer(c);
         SPI.transfer16(value);
+        digitalWrite(enable, HIGH);
     }
 };
 

@@ -81,10 +81,6 @@ volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
 static constexpr Address RamStartingAddress = 0x8000'0000;
 static constexpr auto FlashStartingAddress = 0x0000'0000;
 // The four directly connected SPI devices
-PSRAM64H<i960Pinout::PSRAM_CS0> ram0(RamStartingAddress);
-PSRAM64H<i960Pinout::PSRAM_CS1> ram1(RamStartingAddress+PSRAM64H<i960Pinout::PSRAM_CS1>::Size);
-W25Q32JV<i960Pinout::FLASH0_CS> flash0(FlashStartingAddress);
-W25Q32JV<i960Pinout::FLASH1_CS> flash1(FlashStartingAddress+W25Q32JV<i960Pinout::FLASH1_CS>::Size);
 
 // ----------------------------------------------------------------
 // state machine
@@ -218,11 +214,7 @@ performWrite(Address address, uint16_t value) noexcept {
         // we are in program land for the time being so do nothing!
     } else {
         // upper half needs to be walked down further
-        if (ram0.mapsToGivenRange(address)) {
-            ram0.write(address, value, getStyle());
-        } else if (ram1.mapsToGivenRange(address)) {
-            ram1.write(address, value, getStyle());
-        } else if (address >= 0xFF00'0000) {
+        if (address >= 0xFF00'0000) {
             // cpu internal space, we should never get to this location
             Serial.println(F("Request to write into CPU internal space"));
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
@@ -238,19 +230,10 @@ performRead(Address address) noexcept {
     Serial.println(address, HEX);
     /// @todo implement
     if (address < RamStartingAddress) {
-        // we are in program land for the time being so do nothing!
-        if (flash0.mapsToGivenRange(address)) {
-            return flash0.read(address, getStyle());
-        } else if (flash1.mapsToGivenRange(address)) {
-            return flash1.read(address, getStyle());
-        }
+        // write to flash
     } else {
         // upper half needs to be walked down further
-        if (ram0.mapsToGivenRange(address)) {
-            return ram0.read(address, getStyle());
-        } else if (ram1.mapsToGivenRange(address)) {
-            return ram1.read(address, getStyle());
-        } else if (address >= 0xFF00'0000) {
+        if (address >= 0xFF00'0000) {
             // cpu internal space, we should never get to this location
             Serial.println(F("Request to read from CPU internal space?"));
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
@@ -423,15 +406,32 @@ void setupSDCard() {
         Serial.println(F("SD Card initialization successful"));
     }
 }
-void setupFlashAndPSRAM() {
-    ram0.begin();
-    ram1.begin();
-    flash0.begin();
-    flash1.begin();
+template<typename T>
+bool deviceSanityCheck(T& thing) {
+    bool outcome = true;
+    for (uint16_t i = 0; i < 0x100000; ++i ) {
+        thing.write(i, i, LoadStoreStyle::Lower8);
+        delay(1);
+    }
+    delay(5000);
+    for (uint16_t i = 0; i < 0x100000; ++i ) {
+        if (auto result = thing.read(0, LoadStoreStyle::Lower8); result != i) {
+#if 0
+            Serial.print(F("Got: "));
+            Serial.print(result, HEX);
+            Serial.print(F(" Expected: "));
+            Serial.println(result, HEX);
+            delay(10);
+#endif
+            delay(1);
+            outcome = false;
+        }
+    }
+    return outcome;
 }
+
 void setupPeripherals() {
     setupTFT();
-    setupFlashAndPSRAM();
     setupSDCard();
     setupWifi();
     setupSRAMCache();
@@ -444,7 +444,7 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
-              i960Pinout::SD_EN);
+              i960Pinout::SD_EN );
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     digitalWrite(i960Pinout::SD_EN, HIGH);
     digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
