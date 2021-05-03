@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(nindypp VERSION 0.1)
+project(hitagimon VERSION 0.1)
 enable_language(CXX C ASM-ATT)
 set(CMAKE_CXX_STANDARD 98)
 
@@ -11,12 +11,11 @@ set(CMAKE_ASM-ATT_FLAGS "${CMAKE_ASM_FLAGS} -ASB")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msb -mnumerics")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msb -mnumerics")
 set(LINKER_SCRIPT "start.ld")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed -nostdlib -static -T ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT} -msb -mnumerics")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed -nostdlib -static -T ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT} -msb -mnumerics -ffreestanding")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
-
 add_executable(hitagimon sx_init.s # this must ALWAYS be first!
 		IODevice.cc
 		IODevice.h
