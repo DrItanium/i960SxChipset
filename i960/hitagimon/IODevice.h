@@ -40,8 +40,17 @@ public:
     uint16_t getValue();
 };
 
+/**
+ * @brief Interface with the i2c unit found in the chipset
+ */
 class BuiltinI2CUnit : public BuiltinIOBaseDevice {
 public:
     BuiltinI2CUnit(uint32_t offset);
+    void beginTransmission(uint8_t address);
+    void write(uint8_t value);
+    void write(uint8_t* bytes, uint8_t length);
+    uint8_t read();
+    bool available();
+    void endTransmission();
 };
 #endif //I960SXCHIPSET_IODEVICE_H
