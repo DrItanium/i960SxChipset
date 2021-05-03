@@ -23,6 +23,15 @@ SECTIONS
     {
 
     } >ram
+    .heap : {
+        __heap_start__ = .;
+        end = __heap_start__;
+        _end = end;
+        __end = end;
+        KEEP(*(.heap))
+        __heap_end__ = .;
+        __HeapLimit = __heap_end__;
+    } >ram
 }
 
 cs1 = -(system_address_table + prcb_ptr + start_ip) ;
