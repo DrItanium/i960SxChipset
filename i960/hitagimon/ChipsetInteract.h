@@ -5,7 +5,7 @@
 #ifndef I960SXCHIPSET_PERIPHERALS_H
 #define I960SXCHIPSET_PERIPHERALS_H
 #include <stdint.h>
-inline uint32_t getIOBase0Address() { return 0xFE000000; }
-inline uint32_t getCPUInternalMemoryBaseAddress() { return 0xFF000000; }
-
+template<typename T>
+inline T* computeIOAddress(uint32_t byteOffset = 0) { return reinterpret_cast<T*>(0xFE000000 + (byteOffset & 0xFFFFFF)); }
+inline uint8_t* getLEDAddress() { return getIOBase0Address<uint8_t>(0); }
 #endif //I960SXCHIPSET_PERIPHERALS_H
