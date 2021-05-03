@@ -34,3 +34,10 @@ uint16_t
 BuiltinPWM::getValue() {
     return memory<uint16_t>(baseAddress_);
 }
+
+BuiltinAnalogInput::BuiltinAnalogInput(uint32_t offset) : offset_(offset), baseAddress_(getIOBase0Address(offset)) { }
+
+uint16_t
+BuiltinAnalogInput::getValue() {
+    return memory<uint16_t>(baseAddress_);
+}

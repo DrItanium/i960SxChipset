@@ -28,4 +28,16 @@ private:
     uint32_t offset_;
     uint32_t baseAddress_;
 };
+
+class BuiltinAnalogInput {
+public:
+    BuiltinAnalogInput(uint32_t offset);
+    inline uint32_t getOffset() const { return offset_; }
+    uint32_t getBaseAddress() const { return baseAddress_; }
+    uint16_t getValue();
+private:
+    uint32_t offset_;
+    uint32_t baseAddress_;
+
+};
 #endif //I960SXCHIPSET_IODEVICE_H
