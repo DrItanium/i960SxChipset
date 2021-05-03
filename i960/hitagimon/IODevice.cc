@@ -5,20 +5,32 @@
 #include "IODevice.h"
 #include "ChipsetInteract.h"
 
-const uint32_t ioOffset = 0;
-const uint32_t address = getIOBase0Address(ioOffset);
+const uint32_t ledAddress= getIOBase0Address(0);
 void
 BuiltinLED::toggle() {
-    volatile uint8_t& mem = memory<uint8_t>(address);
+    volatile uint8_t& mem = memory<uint8_t>(ledAddress);
     mem = (mem != 0) ? 0 : 0xFF;
 }
 
 bool
 BuiltinLED::getValue() {
-    return memory<uint8_t>(address) != 0;
+    return memory<uint8_t>(ledAddress) != 0;
 }
 
 void
 BuiltinLED::setValue(bool value) {
-    memory<uint8_t>(address) = (value ? 0xFF : 0x00);
+    memory<uint8_t>(ledAddress) = (value ? 0xFF : 0x00);
+}
+
+const uint32_t pwmAddress = getIOBase0Address(0x100);
+
+BuiltinPWM::BuiltinPWM(uint32_t offset) : offset_(offset), baseAddress_(getIOBase0Address(offset)) { }
+void
+BuiltinPWM::setValue(uint16_t value) {
+    volatile uint16_t& mem = memory<uint16_t>(baseAddress_);
+    mem = value;
+}
+uint16_t
+BuiltinPWM::getValue() {
+    return memory<uint16_t>(baseAddress_);
 }

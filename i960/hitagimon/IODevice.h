@@ -16,4 +16,16 @@ public:
     void setValue(bool value);
     void toggle();
 };
+
+class BuiltinPWM {
+public:
+    BuiltinPWM(uint32_t offset);
+    inline uint32_t getOffset() const { return offset_; }
+    uint32_t getBaseAddress() const { return baseAddress_; }
+    uint16_t getValue();
+    void setValue(uint16_t value);
+private:
+    uint32_t offset_;
+    uint32_t baseAddress_;
+};
 #endif //I960SXCHIPSET_IODEVICE_H
