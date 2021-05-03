@@ -6,5 +6,5 @@
 
 extern "C"
 int brk(void* addr) {
-    return ENOMEM;
+    return -1;
 }

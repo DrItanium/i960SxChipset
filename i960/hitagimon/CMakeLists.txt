@@ -38,7 +38,7 @@ target_link_libraries(hitagimon
 		gcc
 		c
 		m
-		nosys
+		nosys # stub library
 		stdc++
 		c
 		m
