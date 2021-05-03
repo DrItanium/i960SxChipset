@@ -7,37 +7,41 @@
 #include <stdint.h>
 #include "ChipsetInteract.h"
 
+class BuiltinIOBaseDevice {
+public:
+    BuiltinIOBaseDevice(uint32_t offset);
+    uint32_t getBaseAddress() const { return baseAddress_; }
+    uint32_t getOffset() const { return offset_; }
+protected:
+    uint32_t offset_;
+    uint32_t baseAddress_;
+};
 /**
  * @brief Manages the builtin led provided by the chipset
  */
-class BuiltinLED {
+class BuiltinLED : public BuiltinIOBaseDevice {
 public:
+    BuiltinLED(uint32_t offset);
     bool getValue();
     void setValue(bool value);
     void toggle();
 };
 
-class BuiltinPWM {
+class BuiltinPWM : public BuiltinIOBaseDevice {
 public:
     BuiltinPWM(uint32_t offset);
-    inline uint32_t getOffset() const { return offset_; }
-    uint32_t getBaseAddress() const { return baseAddress_; }
     uint16_t getValue();
     void setValue(uint16_t value);
-private:
-    uint32_t offset_;
-    uint32_t baseAddress_;
 };
 
-class BuiltinAnalogInput {
+class BuiltinAnalogInput : public BuiltinIOBaseDevice {
 public:
     BuiltinAnalogInput(uint32_t offset);
-    inline uint32_t getOffset() const { return offset_; }
-    uint32_t getBaseAddress() const { return baseAddress_; }
     uint16_t getValue();
-private:
-    uint32_t offset_;
-    uint32_t baseAddress_;
+};
 
+class BuiltinI2CUnit : public BuiltinIOBaseDevice {
+public:
+    BuiltinI2CUnit(uint32_t offset);
 };
 #endif //I960SXCHIPSET_IODEVICE_H
