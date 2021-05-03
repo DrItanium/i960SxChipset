@@ -26,46 +26,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef NINDYPP_IOROUTINES_H
 #define NINDYPP_IOROUTINES_H
 #include <stdint.h>
-
-/**
- * @brief Memory mapped I/O routine, writes a value
- * @tparam T The type of the port to write to
- * @param port The memory address to start writing at
- * @param value The value to write
- */
-template<typename T>
-void mmioWrite(T* port, T value) {
-    *port = value;
-}
-/**
- * @brief Write an 8-bit value to a specified address
- * @param port the address to write to
- * @param value the 8-bit value to write
- */
-inline void mmioWrite(uint8_t* port, uint8_t value) { mmioWrite<uint8_t>(port, value); }
-/**
- * @brief Write an 16-bit value to a specified address
- * @param port the address to write to
- * @param value the 16-bit value to write
- */
-inline void mmioWrite(uint16_t* port, uint16_t value) { mmioWrite<uint16_t>(port, value); }
-/**
- * @brief Write an 32-bit value to a specified address
- * @param port the address to write to
- * @param value the 32-bit value to write
- */
-inline void mmioWrite(uint32_t* port, uint32_t value) { mmioWrite<uint32_t>(port, value); }
-/**
- * @brief Memory mapped input routine
- * @tparam T The type of the port to read from
- * @param port The memory address to load from
- * @return 8-bit value from port
- */
-template<typename T>
-T mmioRead(T* port) {
-    return *port;
-}
-
 /**
  * @brief Get the PRCB address. Allows IO libraries to modify interrupts, control tables, etc.
  * @return The PRCB address
