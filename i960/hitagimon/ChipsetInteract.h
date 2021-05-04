@@ -5,6 +5,7 @@
 #ifndef I960SXCHIPSET_PERIPHERALS_H
 #define I960SXCHIPSET_PERIPHERALS_H
 #include <stdint.h>
+// I would love to mark these as constexpr but I don't have access to C++11 and later
 const uint32_t IOBase0Address = 0xFE000000;
 const uint32_t IOBase0Mask = 0x00FFFFFF;
 template<typename T>
