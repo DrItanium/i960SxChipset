@@ -40,14 +40,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
-#include <WiFiNINA.h> // Must be Adafruit's Fork
 #include "Pinout.h"
 #include "Device.h"
 #include "RAM.h"
 #include "SPIBus.h"
 #include "IOExpanders.h"
 #include "PSRAM64H.h"
-#include "W25Q32JV.h"
 
 
 
@@ -63,9 +61,7 @@ constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) n
 Timer t;
 Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC));
-byte macAddress[6];
 File currentFile;
-char serialBuffer[80]; // will be mapped into main memory
 // the upper 64 elements of the bus are exposed for direct processor usage
 union WordEntry {
     byte bytes[2];
@@ -417,33 +413,6 @@ void printMacAddress(byte mac[]) {
     }
     Serial.println();
 }
-void setupWifi() noexcept {
-    Serial.println(F("Trying to bring up wifi module"));
-    WiFi.setPins(static_cast<int>(i960Pinout::WIFI_EN),
-                 static_cast<int>(i960Pinout::WIFI_BUSY),
-                 static_cast<int>(i960Pinout::WIFI_RST),
-                 -1, // disable
-                 &SPI);
-
-    if (WiFi.status() == WL_NO_MODULE) {
-        Serial.println(F("Communication with WiFi module failed!"));
-        delay(1000);
-    }
-    auto fv = WiFi.firmwareVersion();
-    Serial.println(fv);
-    if (fv < "1.0.0") {
-        Serial.println(F("Please upgrade the firmware"));
-        while(1) {
-            delay(10);
-        }
-    }
-    Serial.println(F("Firmware OK"));
-
-    // cache the mac address on startup
-    WiFi.macAddress(macAddress);
-    Serial.print(F("MAC: "));
-    printMacAddress(macAddress);
-}
 
 void setupSRAMCache() {
     // 8k on board cache
@@ -499,7 +468,6 @@ bool deviceSanityCheck(T& thing) {
 void setupPeripherals() {
     setupTFT();
     setupSDCard();
-    setupWifi();
     setupSRAMCache();
 }
 // the setup routine runs once when you press reset:

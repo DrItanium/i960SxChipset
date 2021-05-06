@@ -43,10 +43,10 @@ enum class i960Pinout : decltype(A0) {
     TX0, 		  // reserved
     DEN_,	  // AVR Interrupt INT0
     AVR_INT1, 		// AVR Interrupt INT1
-    PWM0,	   // output
-    PWM1,	   // output
-    PWM2,     // output
-    PWM3,     // output
+    SPI_BUS_EN, // output
+    DC, 	 // output
+    DISPLAY_EN, // output
+    SD_EN,      // output
 // PORT C
     SCL,		  // reserved
     SDA, 		  // reserved
@@ -57,13 +57,13 @@ enum class i960Pinout : decltype(A0) {
     BLAST_, 	 // input
     FAIL, 	     // input
 // PORT A
-    SPI_BUS_EN, // output
-    DC, 	 // output
-    DISPLAY_EN, // output
-    SD_EN,      // output
-    WIFI_EN,
-    WIFI_BUSY,
-    WIFI_RST,
+    Analog0,
+    Analog1,
+    Analog2,
+    Analog3,
+    Analog4,
+    Analog5,
+    Analog6,
     Analog7,
     Count,		  // special
 };
