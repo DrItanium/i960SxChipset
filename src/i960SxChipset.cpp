@@ -67,7 +67,7 @@ union WordEntry {
     byte bytes[2];
     uint16_t word;
 };
-constexpr auto OnBoardSRAMCacheSizeInBytes = 128;
+constexpr auto OnBoardSRAMCacheSizeInBytes = 4096;
 constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
 /**
  * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
