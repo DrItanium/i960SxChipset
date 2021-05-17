@@ -28,28 +28,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 volatile byte busId = 0;
 void setSPIBusId(byte id) noexcept {
-    static bool initialized = false;
-    bool setMemoryId = false;
-    if (!initialized) {
-        initialized = true;
-        setMemoryId = true;
-    } else {
-        setMemoryId = (id != busId);
-    }
-    if (setMemoryId) {
-        busId = id;
-        extraMemoryCommit.writePortB(static_cast<uint8_t>(busId));
+    // atmega 1284p specific but so damn simple
+    if (PORTA != id) {
+        PORTA = id;
     }
 }
 
 byte getCurrentSPIBusDevice() noexcept {
-    return busId;
+    return static_cast<byte>(PORTA);
 }
 
 void setupSPIBus(byte initialBusId) noexcept {
     static bool initialized = false;
     if (!initialized) {
-        setSPIBusId(initialBusId);
-        initialized = true;
+       initialized = true;
+       DDRA = 0xFF; // make sure all pins on PORTA are outputs
     }
+    setSPIBusId(initialBusId);
 }

@@ -56,15 +56,15 @@ enum class i960Pinout : decltype(A0) {
     Reset960,		  // output
     BLAST_, 	 // input
     FAIL, 	     // input
-// PORT A
-    Analog0,
-    Analog1,
-    Analog2,
-    Analog3,
-    Analog4,
-    Analog5,
-    Analog6,
-    Analog7,
+// PORT A, used to select the spi bus address
+    SPI_BUS_A0,
+    SPI_BUS_A1,
+    SPI_BUS_A2,
+    SPI_BUS_A3,
+    SPI_BUS_A4,
+    SPI_BUS_A5,
+    SPI_BUS_A6,
+    SPI_BUS_A7,
     Count,		  // special
 };
 static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
@@ -165,6 +165,14 @@ DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_A0, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_A1, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_A2, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_A3, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_A4, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_A5, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_A6, LOW, HIGH);
+DefOutputPin(i960Pinout::SPI_BUS_A7, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
