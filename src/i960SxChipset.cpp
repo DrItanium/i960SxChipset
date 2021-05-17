@@ -444,6 +444,7 @@ void signalHaltState() {
 }
 Sd2Card theBootSDCard;
 SdVolume theBootVolume;
+SdFile rootDirectory;
 SdFile theBootROM;
 void setupSDCard() {
     if (!theBootSDCard.init(SPI_FULL_SPEED, static_cast<int>(i960Pinout::SD_EN))) {
@@ -488,6 +489,12 @@ void setupSDCard() {
         Serial.println(volumeSize / 1024);
         Serial.print(F("Volume size (Gb):\t"));
         Serial.println(static_cast<float>(volumeSize / 1024 / 1024));
+
+        Serial.println();
+        Serial.println(F("Files found on the card (name, date and size in bytes): "));
+        rootDirectory.openRoot(theBootVolume);
+        rootDirectory.ls(LS_R | LS_DATE | LS_SIZE);
+        rootDirectory.close();
     }
 #if 0
     Serial.print(F("Checking for file /boot.rom...."));
