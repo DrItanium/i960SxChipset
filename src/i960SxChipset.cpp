@@ -443,11 +443,16 @@ void setupTFT() {
 }
 [[noreturn]]
 void signalHaltState() {
+    static auto haltMsg = F("HALTING!");
     if (!tftSetup) {
-        Serial.println(F("HALTING"));
+        Serial.println(haltMsg);
         digitalWrite(i960Pinout::Led, HIGH);
     } else {
         tft.fillScreen(ST77XX_RED);
+        tft.setCursor(0,0);
+        tft.setTextSize(1);
+        tft.println(haltMsg);
+
     }
     while(true) {
         delay(1000);
