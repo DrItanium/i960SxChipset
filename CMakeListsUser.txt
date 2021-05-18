@@ -12,7 +12,7 @@ add_custom_target(
 )
 
 add_custom_target(
-    FlashBootloader ALL
+    1284p_FlashBootloader ALL
     COMMAND platformio -c clion run -e 1284p_fuses_bootloader -t bootloader
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
