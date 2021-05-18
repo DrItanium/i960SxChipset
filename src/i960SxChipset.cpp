@@ -507,29 +507,6 @@ void setupSDCard() {
     Serial.print(theBootROM.fileSize(), HEX);
     Serial.println(F(" bytes"));
 }
-template<typename T>
-bool deviceSanityCheck(T& thing) {
-    bool outcome = true;
-    for (uint16_t i = 0; i < 0x100000; ++i ) {
-        thing.write(i, i, LoadStoreStyle::Lower8);
-        delay(1);
-    }
-    delay(5000);
-    for (uint16_t i = 0; i < 0x100000; ++i ) {
-        if (auto result = thing.read(0, LoadStoreStyle::Lower8); result != i) {
-#if 0
-            Serial.print(F("Got: "));
-            Serial.print(result, HEX);
-            Serial.print(F(" Expected: "));
-            Serial.println(result, HEX);
-            delay(10);
-#endif
-            delay(1);
-            outcome = false;
-        }
-    }
-    return outcome;
-}
 
 void setupPeripherals() {
     setupTFT();
