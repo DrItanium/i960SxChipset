@@ -4,8 +4,7 @@
 
 #ifndef I960SXCHIPSET_MCUPLATFORM_H
 #define I960SXCHIPSET_MCUPLATFORM_H
-#include <cstdint>
-enum class TargetMCU : uint8_t {
+enum class TargetMCU {
     ATmega1284p,
     GrandCentralM4,
     NRF52830,

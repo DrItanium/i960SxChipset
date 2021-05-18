@@ -23,26 +23,35 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "../include/SPIBus.h"
-#include "../include/IOExpanders.h"
-
+#include "SPIBus.h"
+#include "IOExpanders.h"
+#include "MCUPlatform.h"
 volatile byte busId = 0;
 void setSPIBusId(byte id) noexcept {
-    // atmega 1284p specific but so damn simple
-    if (PORTA != id) {
-        PORTA = id;
+    if constexpr (onAtmega1284p()) {
+        // atmega 1284p specific but so damn simple
+        if (PORTA != id) {
+            PORTA = id;
+        }
     }
 }
 
 byte getCurrentSPIBusDevice() noexcept {
-    return static_cast<byte>(PORTA);
+    if constexpr (onAtmega1284p()) {
+        return static_cast<byte>(PORTA);
+    } else {
+        /// @todo this must be implemented by different targets
+        return 0;
+    }
 }
 
 void setupSPIBus(byte initialBusId) noexcept {
     static bool initialized = false;
     if (!initialized) {
        initialized = true;
-       DDRA = 0xFF; // make sure all pins on PORTA are outputs
+        if constexpr (onAtmega1284p()) {
+            DDRA = 0xFF; // make sure all pins on PORTA are outputs
+        }
     }
     setSPIBusId(initialBusId);
 }

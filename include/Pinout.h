@@ -28,46 +28,90 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include <libbonuspin.h>
 using Address = uint32_t;
-enum class i960Pinout : decltype(A0) {
-    // PORT B
-    Led = 0, 	  // output
-    CLOCK_OUT, // output, unusable
-    AS_,     // input, AVR Int2
-    PWM4, // unused
-    GPIOSelect,		// output
-    MOSI,		  // reserved
-    MISO,		  // reserved
-    SCK, 		  // reserved
+/// @todo fix this pinout for different targets
+namespace atmega1284p {
+    enum class Pinout : decltype(A0) {
+        // PORT B
+        Led = 0,      // output
+        CLOCK_OUT, // output, unusable
+        AS_,     // input, AVR Int2
+        PWM4, // unused
+        GPIOSelect,        // output
+        MOSI,          // reserved
+        MISO,          // reserved
+        SCK,          // reserved
 // PORT D
-    RX0, 		  // reserved
-    TX0, 		  // reserved
-    DEN_,	  // AVR Interrupt INT0
-    AVR_INT1, 		// AVR Interrupt INT1
-    SPI_BUS_EN, // output
-    DC, 	 // output
-    DISPLAY_EN, // output
-    SD_EN,      // output
+        RX0,          // reserved
+        TX0,          // reserved
+        DEN_,      // AVR Interrupt INT0
+        AVR_INT1,        // AVR Interrupt INT1
+        SPI_BUS_EN, // output
+        DC,     // output
+        DISPLAY_EN, // output
+        SD_EN,      // output
 // PORT C
-    SCL,		  // reserved
-    SDA, 		  // reserved
-    Ready, 	  // output
-    Int0_,		  // output
-    W_R_, 		  // input
-    Reset960,		  // output
-    BLAST_, 	 // input
-    FAIL, 	     // input
+        SCL,          // reserved
+        SDA,          // reserved
+        Ready,      // output
+        Int0_,          // output
+        W_R_,          // input
+        Reset960,          // output
+        BLAST_,     // input
+        FAIL,         // input
 // PORT A, used to select the spi bus address
-    SPI_BUS_A0,
-    SPI_BUS_A1,
-    SPI_BUS_A2,
-    SPI_BUS_A3,
-    SPI_BUS_A4,
-    SPI_BUS_A5,
-    SPI_BUS_A6,
-    SPI_BUS_A7,
-    Count,		  // special
-};
-static_assert(static_cast<decltype(HIGH)>(i960Pinout::Count) <= 32);
+        SPI_BUS_A0,
+        SPI_BUS_A1,
+        SPI_BUS_A2,
+        SPI_BUS_A3,
+        SPI_BUS_A4,
+        SPI_BUS_A5,
+        SPI_BUS_A6,
+        SPI_BUS_A7,
+        Count,          // special
+    };
+    static_assert(static_cast<decltype(HIGH)>(Pinout::Count) <= 32);
+} // end namespace atmega1284p
+
+namespace grandcentralm4 {
+    enum class Pinout : decltype(A0) {
+        Led = LED_BUILTIN,      // output
+        GPIOSelect = ::SS,        // output
+        MOSI = ::MOSI,          // reserved
+        MISO = ::MISO,          // reserved
+        SCK = ::SCK,          // reserved
+        DC = 8,     // output
+        DISPLAY_EN = 10, // output
+        AS_ = 22,     // input, AVR Int2
+        Int0_ = 23,          // output
+        DEN_ = 24,      // AVR Interrupt INT0
+        BLAST_ = 25,     // input
+        W_R_ = 26,          // input
+        Reset960 = 27,          // output
+        Ready = 28,      // output
+        FAIL = 29,         // input
+        SD_EN = SDCARD_SS_PIN,
+        SCL = ::SCL,          // reserved
+        SDA = ::SDA,          // reserved
+        // for now, it is [30, 38]
+        SPI_BUS_EN = 30, // output
+        SPI_BUS_A0,
+        SPI_BUS_A1,
+        SPI_BUS_A2,
+        SPI_BUS_A3,
+        SPI_BUS_A4,
+        SPI_BUS_A5,
+        SPI_BUS_A6,
+        SPI_BUS_A7,
+        Count,          // special
+    };
+} // end namespace grandcentralm4
+#ifdef ARDUINO_AVR_ATmega1284
+using i960Pinout = atmega1284p::Pinout;
+#elif defined(ARDUINO_GRAND_CENTRAL_M4)
+using i960Pinout = grandcentralm4::Pinout;
+#else
+#error "Pinout not defined!"
+#endif
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);
