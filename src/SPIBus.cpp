@@ -28,12 +28,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MCUPlatform.h"
 volatile byte busId = 0;
 void setSPIBusId(byte id) noexcept {
+#if 0
     if constexpr (onAtmega1284p()) {
         // atmega 1284p specific but so damn simple
         if (PORTA != id) {
             PORTA = id;
         }
     }
+#endif
 }
 
 byte getCurrentSPIBusDevice() noexcept {
@@ -49,9 +51,11 @@ void setupSPIBus(byte initialBusId) noexcept {
     static bool initialized = false;
     if (!initialized) {
        initialized = true;
+#if 0
         if constexpr (onAtmega1284p()) {
             DDRA = 0xFF; // make sure all pins on PORTA are outputs
         }
+#endif
     }
     setSPIBusId(initialBusId);
 }

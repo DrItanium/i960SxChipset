@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using Address = uint32_t;
 /// @todo fix this pinout for different targets
 namespace atmega1284p {
+    // laid out in pin id order for standard
     enum class Pinout : decltype(A0) {
         // PORT B
         Led = 0,      // output
@@ -58,7 +59,7 @@ namespace atmega1284p {
         Reset960,          // output
         BLAST_,     // input
         FAIL,         // input
-// PORT A, used to select the spi bus address
+// PORT A, used to select the spi bus address (not directly used)
         SPI_BUS_A0,
         SPI_BUS_A1,
         SPI_BUS_A2,
@@ -71,6 +72,14 @@ namespace atmega1284p {
     };
     static_assert(static_cast<decltype(HIGH)>(Pinout::Count) <= 32);
 } // end namespace atmega1284p
+#ifndef SDCARD_SS_PIN
+// no sd card built into the device so we have to mark one, as the chipset _requires_ an sdcard socket
+#ifdef ARDUINO_AVR_ATmega1284
+#define SDCARD_SS_PIN (static_cast<int>(atmega1284p::Pinout::SD_EN))
+#else
+#error "i960 Chipset requires a builtin SDCARD chip select pin"
+#endif
+#endif /* END !defined(SDCARD_SS_PIN) */
 
 namespace grandcentralm4 {
     enum class Pinout : decltype(A0) {
@@ -94,14 +103,6 @@ namespace grandcentralm4 {
         SDA = ::SDA,          // reserved
         // for now, it is [30, 38]
         SPI_BUS_EN = 30, // output
-        SPI_BUS_A0,
-        SPI_BUS_A1,
-        SPI_BUS_A2,
-        SPI_BUS_A3,
-        SPI_BUS_A4,
-        SPI_BUS_A5,
-        SPI_BUS_A6,
-        SPI_BUS_A7,
         Count,          // special
     };
 } // end namespace grandcentralm4
@@ -209,14 +210,6 @@ DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_A0, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_A1, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_A2, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_A3, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_A4, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_A5, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_A6, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_A7, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
