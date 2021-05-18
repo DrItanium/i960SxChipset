@@ -61,7 +61,11 @@ constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) n
 Timer t;
 Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC));
-File currentFile;
+// boot rom and sd card loading stuff
+Sd2Card theBootSDCard;
+SdVolume theBootVolume;
+SdFile rootDirectory;
+SdFile theBootROM;
 // the upper 64 elements of the bus are exposed for direct processor usage
 union WordEntry {
     byte bytes[2];
@@ -141,7 +145,6 @@ private:
 };
 
 DisplayCommand<decltype(tft)> displayCommandSet(tft);
-
 
 
 // ----------------------------------------------------------------
@@ -442,10 +445,6 @@ void signalHaltState() {
         delay(1000);
     }
 }
-Sd2Card theBootSDCard;
-SdVolume theBootVolume;
-SdFile rootDirectory;
-SdFile theBootROM;
 void setupSDCard() {
     if (!theBootSDCard.init(SPI_FULL_SPEED, static_cast<int>(i960Pinout::SD_EN))) {
         Serial.println(F("SD Card initialization failed"));
@@ -454,63 +453,59 @@ void setupSDCard() {
         Serial.println(F("2) Is the wiring is correct?"));
         Serial.println(F("3) Does the ~CS pin match the shield or module?"));
         signalHaltState();
-    } else {
-        Serial.println(F("SD Card initialization successful"));
-        Serial.println();
-        Serial.println(F("Card Info"));
-        Serial.println(F("Card Type:\t"));
-        switch (theBootSDCard.type()) {
-            case SD_CARD_TYPE_SD1: Serial.println(F("SD1")); break;
-            case SD_CARD_TYPE_SD2: Serial.println(F("SD2")); break;
-            case SD_CARD_TYPE_SDHC: Serial.println(F("SDHC")); break;
-            default: Serial.println(F("Unknown")); break;
-        }
-        if (!theBootVolume.init(theBootSDCard)) {
-            Serial.println(F("Could not find a valid FAT16/FAT32 parition"));
-            Serial.println(F("Make sure you've formatted the card!"));
-            signalHaltState();
-        }
-        Serial.print(F("Clusters:\t"));
-        Serial.println(theBootVolume.clusterCount());
-        Serial.print(F("Blocks x Cluster:\t"));
-        Serial.println(theBootVolume.blocksPerCluster());
-        Serial.print(F("Total Blocks:\t"));
-        Serial.println(theBootVolume.blocksPerCluster() * theBootVolume.clusterCount());
-        Serial.println();
-
-        Serial.print(F("Volume type is: FAT"));
-        Serial.println(theBootVolume.fatType(), DEC);
-        auto volumeSize = theBootVolume.blocksPerCluster(); // clusters are collections of blocks
-        volumeSize *= theBootVolume.clusterCount(); // sd cards have many clusters
-        volumeSize /= 2; // SD Card blocks are always 512 bytes
-        Serial.print(F("Volume size (Kb):\t"));
-        Serial.println(volumeSize);
-        Serial.print(F("Volume size (Mb):\t"));
-        Serial.println(volumeSize / 1024);
-        Serial.print(F("Volume size (Gb):\t"));
-        Serial.println(static_cast<float>(volumeSize / 1024 / 1024));
-
-        Serial.println();
-        Serial.println(F("Files found on the card (name, date and size in bytes): "));
-        rootDirectory.openRoot(theBootVolume);
-        rootDirectory.ls(LS_R | LS_DATE | LS_SIZE);
-        rootDirectory.close();
     }
-#if 0
+    Serial.println(F("SD Card initialization successful"));
+    Serial.println();
+    Serial.println(F("Card Info"));
+    Serial.println(F("Card Type:\t"));
+    switch (theBootSDCard.type()) {
+        case SD_CARD_TYPE_SD1: Serial.println(F("SD1")); break;
+        case SD_CARD_TYPE_SD2: Serial.println(F("SD2")); break;
+        case SD_CARD_TYPE_SDHC: Serial.println(F("SDHC")); break;
+        default: Serial.println(F("Unknown")); break;
+    }
+    if (!theBootVolume.init(theBootSDCard)) {
+        Serial.println(F("Could not find a valid FAT16/FAT32 parition"));
+        Serial.println(F("Make sure you've formatted the card!"));
+        signalHaltState();
+    }
+    Serial.print(F("Clusters:\t"));
+    Serial.println(theBootVolume.clusterCount());
+    Serial.print(F("Blocks x Cluster:\t"));
+    Serial.println(theBootVolume.blocksPerCluster());
+    Serial.print(F("Total Blocks:\t"));
+    Serial.println(theBootVolume.blocksPerCluster() * theBootVolume.clusterCount());
+    Serial.println();
+
+    Serial.print(F("Volume type is: FAT"));
+    Serial.println(theBootVolume.fatType(), DEC);
+    auto volumeSize = theBootVolume.blocksPerCluster(); // clusters are collections of blocks
+    volumeSize *= theBootVolume.clusterCount(); // sd cards have many clusters
+    volumeSize /= 2; // SD Card blocks are always 512 bytes
+    Serial.print(F("Volume size (Kb):\t"));
+    Serial.println(volumeSize);
+    Serial.print(F("Volume size (Mb):\t"));
+    Serial.println(volumeSize / 1024);
+    Serial.print(F("Volume size (Gb):\t"));
+    Serial.println(static_cast<float>(volumeSize / 1024 / 1024));
+
+    Serial.println();
+    Serial.println(F("Files found on the card (name, date and size in bytes): "));
+    rootDirectory.openRoot(theBootVolume);
+    rootDirectory.ls(LS_R | LS_DATE | LS_SIZE);
+    Serial.println();
+    Serial.println();
+    Serial.println();
+    Serial.println();
     Serial.print(F("Checking for file /boot.rom...."));
-    // the boot rom is "mapped" into memory starting at address 0, in this case it is just a file but it should work
-    // just fine for our purposes.
-    bootRom_ = SD.open(F("/boot.rom"), FILE_READ);
-    if (!bootRom_) {
+    if (!theBootROM.open(rootDirectory, "boot.rom", O_READ)) {
         Serial.println(F("NOT FOUND!"));
         signalHaltState();
-    } else {
-        Serial.println("FOUND!");
-        Serial.print(F("Size of boot.rom: 0x"));
-        Serial.print(bootRom_.size(), HEX);
-        Serial.println(F(" bytes"));
     }
-#endif
+    Serial.println("FOUND!");
+    Serial.print(F("Size of boot.rom: 0x"));
+    Serial.print(theBootROM.fileSize(), HEX);
+    Serial.println(F(" bytes"));
 }
 template<typename T>
 bool deviceSanityCheck(T& thing) {
