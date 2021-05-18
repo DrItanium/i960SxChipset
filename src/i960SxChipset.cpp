@@ -46,6 +46,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SPIBus.h"
 #include "IOExpanders.h"
 #include "PSRAM64H.h"
+#include <Adafruit_seesaw.h>
+#include <Adafruit_TFTShield18.h>
 
 
 
@@ -71,7 +73,7 @@ union WordEntry {
     byte bytes[2];
     uint16_t word;
 };
-constexpr auto OnBoardSRAMCacheSizeInBytes = 4096;
+constexpr auto OnBoardSRAMCacheSizeInBytes = 128;
 constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
 /**
  * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
@@ -403,18 +405,6 @@ void setupIOExpanders() {
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
 	setupSPIBus();
     Serial.println(F("Done setting up io expanders!"));
-}
-void printMacAddress(byte mac[]) {
-    for (int i = 5; i >= 0; --i) {
-        if (mac[i] < 16) {
-            Serial.print(F("0"));
-        }
-        Serial.print(mac[i], HEX);
-        if (i > 0) {
-            Serial.print(F(":"));
-        }
-    }
-    Serial.println();
 }
 
 void setupSRAMCache() {
