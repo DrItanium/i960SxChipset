@@ -61,6 +61,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) noexcept {
 	return - (satPtr + pcrbPtr + startIP);
 }
+volatile bool tftSetup = false;
 Timer t;
 Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
@@ -348,6 +349,7 @@ void doRecoveryState() noexcept {
 // ----------------------------------------------------------------
 
 void setupBusStateMachine() noexcept {
+    Serial.print(F("Setting up bus state machine..."));
 	fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
 	fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
 	fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
@@ -358,6 +360,7 @@ void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
 	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
 	fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
+    Serial.println(F("done"));
 }
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
@@ -426,10 +429,12 @@ void setupTFT() {
     ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
     ss.tftReset();
     tft.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
+    ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
     Serial.println(F("TFT OK!"));
     tft.fillScreen(ST77XX_CYAN);
     Serial.println(F("Screen should have cyan in it!"));
     delay(100);
+    tftSetup = true;
     tft.fillScreen(ST77XX_BLACK);
     tft.setCursor(0,0);
     tft.setTextColor(ST77XX_WHITE);
@@ -438,8 +443,12 @@ void setupTFT() {
 }
 [[noreturn]]
 void signalHaltState() {
-    Serial.println(F("HALTING"));
-    digitalWrite(i960Pinout::Led, HIGH);
+    if (!tftSetup) {
+        Serial.println(F("HALTING"));
+        digitalWrite(i960Pinout::Led, HIGH);
+    } else {
+        tft.fillScreen(ST77XX_RED);
+    }
     while(true) {
         delay(1000);
     }
@@ -501,13 +510,14 @@ void setupSDCard() {
         Serial.println(F("NOT FOUND!"));
         signalHaltState();
     }
-    Serial.println("FOUND!");
+    Serial.println(F("FOUND!"));
     Serial.print(F("Size of boot.rom: 0x"));
     Serial.print(theBootROM.fileSize(), HEX);
     Serial.println(F(" bytes"));
 }
 void
 setupSeesaw() {
+    Serial.println(F("Setting up the seesaw"));
     if (!ss.begin()) {
         Serial.println(F("seesaw could not be initialized!"));
         signalHaltState();
@@ -518,10 +528,12 @@ setupSeesaw() {
 
 }
 void setupPeripherals() {
+    Serial.println(F("Setting up peripherals..."));
     setupSeesaw();
     setupTFT();
     setupSDCard();
     setupSRAMCache();
+    Serial.println(F("Done setting up peripherals..."));
 }
 // the setup routine runs once when you press reset:
 void setup() {
