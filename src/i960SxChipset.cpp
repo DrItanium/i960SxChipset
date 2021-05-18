@@ -40,14 +40,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
+#include <Adafruit_seesaw.h>
+#include <Adafruit_TFTShield18.h>
+#include <Adafruit_ST7735.h>
 #include "Pinout.h"
 #include "Device.h"
 #include "RAM.h"
 #include "SPIBus.h"
 #include "IOExpanders.h"
 #include "PSRAM64H.h"
-#include <Adafruit_seesaw.h>
-#include <Adafruit_TFTShield18.h>
 
 
 
@@ -61,8 +62,10 @@ constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) n
 	return - (satPtr + pcrbPtr + startIP);
 }
 Timer t;
-Adafruit_ILI9341 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
-                     static_cast<int>(i960Pinout::DC));
+Adafruit_TFTShield18 ss;
+Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
+                     static_cast<int>(i960Pinout::DC),
+                     -1);
 // boot rom and sd card loading stuff
 Sd2Card theBootSDCard;
 SdVolume theBootVolume;
@@ -420,10 +423,16 @@ constexpr auto computeAddressStart(Address start, Address size, Address count) n
 // At this point it is a massive pain in the ass to program all these devices but who cares
 
 void setupTFT() {
-    tft.begin();
-    tft.fillScreen(ILI9341_BLACK);
+    ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
+    ss.tftReset();
+    tft.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
+    Serial.println(F("TFT OK!"));
+    tft.fillScreen(ST77XX_CYAN);
+    Serial.println(F("Screen should have cyan in it!"));
+    delay(100);
+    tft.fillScreen(ST77XX_BLACK);
     tft.setCursor(0,0);
-    tft.setTextColor(ILI9341_WHITE);
+    tft.setTextColor(ST77XX_WHITE);
     tft.setTextSize(3);
     tft.println(F("i960Sx!"));
 }
@@ -497,8 +506,19 @@ void setupSDCard() {
     Serial.print(theBootROM.fileSize(), HEX);
     Serial.println(F(" bytes"));
 }
+void
+setupSeesaw() {
+    if (!ss.begin()) {
+        Serial.println(F("seesaw could not be initialized!"));
+        signalHaltState();
+    }
+    Serial.println(F("seesaw started"));
+    Serial.print(F("Version: "));
+    Serial.println(ss.getVersion(), HEX);
 
+}
 void setupPeripherals() {
+    setupSeesaw();
     setupTFT();
     setupSDCard();
     setupSRAMCache();
@@ -506,12 +526,14 @@ void setupPeripherals() {
 // the setup routine runs once when you press reset:
 void setup() {
     Serial.begin(115200);
+    while (!Serial);
     Serial.println(F("i960Sx chipset bringup"));
     setupPins(OUTPUT,
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
-              i960Pinout::SD_EN );
+              i960Pinout::SD_EN);
+
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     digitalWrite(i960Pinout::SD_EN, HIGH);
     digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
