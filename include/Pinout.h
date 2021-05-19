@@ -32,6 +32,8 @@ using Address = uint32_t;
 /// @todo fix this pinout for different targets
 enum class i960Pinout : decltype(A0) {
 #ifdef ARDUINO_AVR_ATmega1284
+        // this is described in digial pin order!
+        // leave this one alone
         // PORT B
         Led = 0,      // output
         CLOCK_OUT, // output, unusable
@@ -68,36 +70,16 @@ enum class i960Pinout : decltype(A0) {
         SPI_BUS_A5,
         SPI_BUS_A6,
         SPI_BUS_A7,
-        Count,          // special
-#elif defined(ARDUINO_NRF52_ADAFRUIT) // end defined(ARDUINO_AVR_ATmega1284)
-    RedLed = LED_RED,
-    BlueLed = LED_BLUE,
-    Led = RedLed,
+#else
+// in other cases we want to use LED_BUILTIN and anything already pre defined
+    Led = LED_BUILTIN,
     MOSI = ::MOSI,          // reserved
     MISO = ::MISO,          // reserved
     SCK = ::SCK,          // reserved
-    SDA = PIN_WIRE_SDA,          // reserved
     SCL = PIN_WIRE_SCL,          // reserved
-    Reset960 = ::A1,          // output
-    SPI_BUS_EN = ::A2, // output
-    Int0_ = ::A3,          // output
-    DEN_ = ::A4,
-    W_R_ = ::A5,          // input
-    GPIOSelect = 27,        // output
-    Ready = 30,      // output
-    FAIL = 7,         // input
-    SD_EN = 11,      // output
-    AS_ = 15,
-    BLAST_ = 16,     // input
-    DISPLAY_EN = SDA, // done over i2c
-    DC = SDA, // done over i2c
-    Count,
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)// end defined(NRF52832_XXAA)
-        Led = LED_BUILTIN,      // output
+    SDA = PIN_WIRE_SDA,          // reserved
+#ifdef ARDUINO_GRAND_CENTRAL_M4
         GPIOSelect = ::SS,        // output
-        MOSI = ::MOSI,          // reserved
-        MISO = ::MISO,          // reserved
-        SCK = ::SCK,          // reserved
         DC = 8,     // output
         DISPLAY_EN = 10, // output
         AS_ = 22,     // input, AVR Int2
@@ -109,18 +91,9 @@ enum class i960Pinout : decltype(A0) {
         Ready = 28,      // output
         FAIL = 29,         // input
         SD_EN = SDCARD_SS_PIN,
-        SCL = ::SCL,          // reserved
-        SDA = ::SDA,          // reserved
         // for now, it is [30, 38]
         SPI_BUS_EN = 30, // output
-        Count,          // special
 #elif defined(ADAFRUIT_FEATHER_M0)
-    Led = LED_BUILTIN,
-    MOSI = ::MOSI,          // reserved
-    MISO = ::MISO,          // reserved
-    SCK = ::SCK,          // reserved
-    SDA = PIN_WIRE_SDA,          // reserved
-    SCL = PIN_WIRE_SCL,          // reserved
     Reset960 = ::A1,          // output
     SPI_BUS_EN = ::A2, // output
     Int0_ = ::A3,          // output
@@ -138,10 +111,11 @@ enum class i960Pinout : decltype(A0) {
     BLAST_ = 13,     // input
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
-    Count,
-
 #else
+#warning "PLEASE DEFINE BOARD's PINOUT"
 #endif
+#endif
+    Count,          // special, must be last
 };
 
 /**

@@ -15,7 +15,6 @@
 enum class TargetMCU {
     ATmega1284p,
     GrandCentralM4,
-    FeatherNRF52830,
     FeatherM0Basic,
     FeatherM0Adalogger,
     Unknown,
@@ -36,9 +35,6 @@ enum class TargetMCU {
     return TargetMCU::ATmega1284p;
 #elif defined(ARDUINO_GRAND_CENTRAL_M4)
     return TargetMCU::GrandCentralM4;
-#elif defined(ARDUINO_NRF52_ADAFRUIT)
-    return TargetMCU::FeatherNRF52830;
-    // @todo add more targets here
 #elif defined(ADAFRUIT_FEATHER_M0_ADALOGGER)
     return TargetMCU::FeatherM0Adalogger;
 #elif defined(ADAFRUIT_FEATHER_M0_BASIC)
@@ -52,10 +48,6 @@ enum class TargetMCU {
 }
 [[nodiscard]] constexpr auto onGrandCentralM4() noexcept {
     return getMCUTarget() == TargetMCU::GrandCentralM4;
-}
-
-[[nodiscard]] constexpr auto onFeatherNRF52830() noexcept {
-    return getMCUTarget() == TargetMCU::FeatherNRF52830;
 }
 
 [[nodiscard]] constexpr auto onUnknownTarget() noexcept {
@@ -80,8 +72,7 @@ enum class TargetMCU {
 }
 
 [[nodiscard]] constexpr auto onFeatherBoard() noexcept {
-    return onFeatherM0() ||
-           onFeatherNRF52830();
+    return onFeatherM0();
 }
 
 #endif //I960SXCHIPSET_MCUPLATFORM_H

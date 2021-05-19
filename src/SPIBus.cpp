@@ -33,7 +33,7 @@ void setSPIBusId(byte id) noexcept {
     if (PORTA != id) {
         PORTA = id;
     }
-#elif defined(ARDUINO_NRF52_ADAFRUIT)
+#elif defined(ADAFRUIT_FEATHER_M0)
     if (busId != id) {
         extraMemoryCommit.writePortB(id);
         busId = id;
@@ -48,7 +48,7 @@ void setSPIBusId(byte id) noexcept {
 byte getCurrentSPIBusDevice() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
         return static_cast<byte>(PORTA);
-#elif defined(ARDUINO_NRF52_ADAFRUIT)
+#elif defined(ADAFRUIT_FEATHER_M0)
     return extraMemoryCommit.readPortB();
 #elif defined(ARDUINO_GRAND_CENTRAL_M4)
     /// @todo implement
