@@ -5,6 +5,7 @@
 #ifndef I960SXCHIPSET_MCUPLATFORM_H
 #define I960SXCHIPSET_MCUPLATFORM_H
 #ifdef ARDUINO_SAMD_FEATHER_M0
+#define ADAFRUIT_FEATHER_M0
 #ifdef HAS_BUILTIN_SDCARD
 #define ADAFRUIT_FEATHER_M0_ADALOGGER
 #else /* !defined(HAS_BUILTIN_SDCARD) */
@@ -19,6 +20,17 @@ enum class TargetMCU {
     FeatherM0Adalogger,
     Unknown,
 };
+/**
+ * @brief Is there an onboard sdcard slot?
+ * @return True if defined via the command line
+ */
+[[nodiscard]] constexpr auto hasBuiltinSDCard() noexcept {
+#ifdef HAS_BUILTIN_SDCARD
+    return true;
+#else
+    return false;
+#endif
+}
 [[nodiscard]] constexpr auto getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
     return TargetMCU::ATmega1284p;
@@ -65,6 +77,11 @@ enum class TargetMCU {
 
 [[nodiscard]] constexpr auto getCPUFrequency() noexcept {
     return F_CPU;
+}
+
+[[nodiscard]] constexpr auto onFeatherBoard() noexcept {
+    return onFeatherM0() ||
+           onFeatherNRF52830();
 }
 
 #endif //I960SXCHIPSET_MCUPLATFORM_H

@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ARDUINO_PINOUT_H
 #include <Arduino.h>
 #include <libbonuspin.h>
+#include "MCUPlatform.h"
 using Address = uint32_t;
 /// @todo fix this pinout for different targets
 enum class i960Pinout : decltype(A0) {
@@ -113,11 +114,8 @@ enum class i960Pinout : decltype(A0) {
         // for now, it is [30, 38]
         SPI_BUS_EN = 30, // output
         Count,          // special
-#elif defined(ADAFRUIT_FEATHER_M0_BASIC)
-#elif defined(ADAFRUIT_FEATHER_M0_ADALOGGER)
-    RedLed = LED_RED,
-    BlueLed = LED_BLUE,
-    Led = RedLed,
+#elif defined(ADAFRUIT_FEATHER_M0)
+    Led = LED_BUILTIN,
     MOSI = ::MOSI,          // reserved
     MISO = ::MISO,          // reserved
     SCK = ::SCK,          // reserved
@@ -128,12 +126,16 @@ enum class i960Pinout : decltype(A0) {
     Int0_ = ::A3,          // output
     DEN_ = ::A4,
     W_R_ = ::A5,          // input
-    GPIOSelect = 27,        // output
-    Ready = 30,      // output
-    FAIL = 7,         // input
-    SD_EN = 11,      // output
-    AS_ = 15,
-    BLAST_ = 16,     // input
+#ifdef ADAFRUIT_FEATHER_M0_ADALOGGER
+    SD_EN = 4,      // output
+#else
+    SD_EN = 10,  // output
+#endif
+    GPIOSelect = 5,        // output
+    Ready = 6,      // output
+    FAIL = 11,         // input
+    AS_ = 12,
+    BLAST_ = 13,     // input
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
     Count,
