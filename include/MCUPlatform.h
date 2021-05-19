@@ -63,4 +63,8 @@ enum class TargetMCU {
            onFeatherM0Adalogger();
 }
 
+[[nodiscard]] constexpr auto getCPUFrequency() noexcept {
+    return F_CPU;
+}
+
 #endif //I960SXCHIPSET_MCUPLATFORM_H

@@ -113,6 +113,31 @@ enum class i960Pinout : decltype(A0) {
         // for now, it is [30, 38]
         SPI_BUS_EN = 30, // output
         Count,          // special
+#elif defined(ADAFRUIT_FEATHER_M0_BASIC)
+#elif defined(ADAFRUIT_FEATHER_M0_ADALOGGER)
+    RedLed = LED_RED,
+    BlueLed = LED_BLUE,
+    Led = RedLed,
+    MOSI = ::MOSI,          // reserved
+    MISO = ::MISO,          // reserved
+    SCK = ::SCK,          // reserved
+    SDA = PIN_WIRE_SDA,          // reserved
+    SCL = PIN_WIRE_SCL,          // reserved
+    Reset960 = ::A1,          // output
+    SPI_BUS_EN = ::A2, // output
+    Int0_ = ::A3,          // output
+    DEN_ = ::A4,
+    W_R_ = ::A5,          // input
+    GPIOSelect = 27,        // output
+    Ready = 30,      // output
+    FAIL = 7,         // input
+    SD_EN = 11,      // output
+    AS_ = 15,
+    BLAST_ = 16,     // input
+    DISPLAY_EN = SDA, // done over i2c
+    DC = SDA, // done over i2c
+    Count,
+
 #else
 #endif
 };
