@@ -121,7 +121,7 @@ enum class i960Pinout : decltype(A0) {
 /**
  * @brief If both the display en and dc pins are bound to sda or scl then communication is taking place over i2c
  */
-constexpr auto talksToDisplayOverI2C() noexcept {
+[[nodiscard]] constexpr auto talksToDisplayOverI2C() noexcept {
     return (i960Pinout::DISPLAY_EN == i960Pinout::SDA || i960Pinout::DISPLAY_EN == i960Pinout::SCL) &&
             (i960Pinout::DC == i960Pinout::SDA || i960Pinout::DC == i960Pinout::SCL );
 }
@@ -129,7 +129,7 @@ constexpr auto talksToDisplayOverI2C() noexcept {
 /**
  * @brief If both the display and dc pins are bound to non i2c pins then assume it is talking over spi
  */
-constexpr auto talksToDisplayOverSPI() noexcept {
+[[nodiscard]] constexpr auto talksToDisplayOverSPI() noexcept {
     return (i960Pinout::DISPLAY_EN != i960Pinout::SDA) &&
            (i960Pinout::DISPLAY_EN != i960Pinout::SCL) &&
            (i960Pinout::DC != i960Pinout::SDA) &&
