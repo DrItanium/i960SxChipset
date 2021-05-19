@@ -29,9 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libbonuspin.h>
 using Address = uint32_t;
 /// @todo fix this pinout for different targets
-namespace atmega1284p {
-    // laid out in pin id order for standard
-    enum class Pinout : decltype(A0) {
+enum class i960Pinout : decltype(A0) {
+#ifdef ARDUINO_AVR_ATmega1284
         // PORT B
         Led = 0,      // output
         CLOCK_OUT, // output, unusable
@@ -69,20 +68,30 @@ namespace atmega1284p {
         SPI_BUS_A6,
         SPI_BUS_A7,
         Count,          // special
-    };
-    static_assert(static_cast<decltype(HIGH)>(Pinout::Count) <= 32);
-} // end namespace atmega1284p
-#ifndef SDCARD_SS_PIN
-// no sd card built into the device so we have to mark one, as the chipset _requires_ an sdcard socket
-#ifdef ARDUINO_AVR_ATmega1284
-#define SDCARD_SS_PIN (static_cast<int>(atmega1284p::Pinout::SD_EN))
-#else
-#error "i960 Chipset requires a builtin SDCARD chip select pin"
-#endif
-#endif /* END !defined(SDCARD_SS_PIN) */
-
-namespace grandcentralm4 {
-    enum class Pinout : decltype(A0) {
+#elif defined(ARDUINO_NRF52_ADAFRUIT) // end defined(ARDUINO_AVR_ATmega1284)
+    RedLed = LED_RED,
+    BlueLed = LED_BLUE,
+    Led = RedLed,
+    MOSI = ::MOSI,          // reserved
+    MISO = ::MISO,          // reserved
+    SCK = ::SCK,          // reserved
+    SDA = PIN_WIRE_SDA,          // reserved
+    SCL = PIN_WIRE_SCL,          // reserved
+    Reset960 = ::A1,          // output
+    SPI_BUS_EN = ::A2, // output
+    Int0_ = ::A3,          // output
+    DEN_ = ::A4,
+    W_R_ = ::A5,          // input
+    GPIOSelect = 27,        // output
+    Ready = 30,      // output
+    FAIL = 7,         // input
+    SD_EN = 11,      // output
+    AS_ = 15,
+    BLAST_ = 16,     // input
+    DISPLAY_EN = SDA, // done over i2c
+    DC = SDA, // done over i2c
+    Count,
+#elif defined(ARDUINO_GRAND_CENTRAL_M4)// end defined(NRF52832_XXAA)
         Led = LED_BUILTIN,      // output
         GPIOSelect = ::SS,        // output
         MOSI = ::MOSI,          // reserved
@@ -104,15 +113,27 @@ namespace grandcentralm4 {
         // for now, it is [30, 38]
         SPI_BUS_EN = 30, // output
         Count,          // special
-    };
-} // end namespace grandcentralm4
-#ifdef ARDUINO_AVR_ATmega1284
-using i960Pinout = atmega1284p::Pinout;
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)
-using i960Pinout = grandcentralm4::Pinout;
 #else
-#error "Pinout not defined!"
 #endif
+};
+
+/**
+ * @brief If both the display en and dc pins are bound to sda or scl then communication is taking place over i2c
+ */
+constexpr auto talksToDisplayOverI2C() noexcept {
+    return (i960Pinout::DISPLAY_EN == i960Pinout::SDA || i960Pinout::DISPLAY_EN == i960Pinout::SCL) &&
+            (i960Pinout::DC == i960Pinout::SDA || i960Pinout::DC == i960Pinout::SCL );
+}
+
+/**
+ * @brief If both the display and dc pins are bound to non i2c pins then assume it is talking over spi
+ */
+constexpr auto talksToDisplayOverSPI() noexcept {
+    return (i960Pinout::DISPLAY_EN != i960Pinout::SDA) &&
+           (i960Pinout::DISPLAY_EN != i960Pinout::SCL) &&
+           (i960Pinout::DC != i960Pinout::SDA) &&
+           (i960Pinout::DC != i960Pinout::SCL);
+}
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);

@@ -15,7 +15,7 @@ enum class TargetMCU {
     return TargetMCU::ATmega1284p;
 #elif defined(ARDUINO_GRAND_CENTRAL_M4)
     return TargetMCU::GrandCentralM4;
-#elif defined(NRF52832_XXAA)
+#elif defined(ARDUINO_NRF52_ADAFRUIT)
     return TargetMCU::NRF52830;
     // @todo add more targets here
 #else

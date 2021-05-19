@@ -279,8 +279,14 @@ class MCP23x17 {
                 writeGPIOsDirection((~maskedValue) & dirmask);
             }
         }
-        void writePortB(uint8_t value) {
+        void writePortB(uint8_t value) noexcept {
             write(getGPIOBAddress(), value);
+        }
+        [[nodiscard]] uint8_t readPortB() noexcept {
+            return read(getGPIOBAddress());
+        }
+        void setPortBDirection(uint8_t value) noexcept {
+            write(getIODIRBAddress(), value);
         }
     private:
         bool _registersAreSequential = true;

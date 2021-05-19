@@ -28,33 +28,48 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MCUPlatform.h"
 volatile byte busId = 0;
 void setSPIBusId(byte id) noexcept {
-#if 0
-    if constexpr (onAtmega1284p()) {
-        // atmega 1284p specific but so damn simple
-        if (PORTA != id) {
-            PORTA = id;
-        }
+#ifdef ARDUINO_AVR_ATmega1284
+    // atmega 1284p specific but so damn simple
+    if (PORTA != id) {
+        PORTA = id;
     }
+#elif defined(ARDUINO_NRF52_ADAFRUIT)
+    if (busId != id) {
+        extraMemoryCommit.writePortB(id);
+        busId = id;
+    }
+#elif defined(ARDUINO_GRAND_CENTRAL_M4)
+    /// @todo implement
+#else
+    // do nothing
 #endif
 }
 
 byte getCurrentSPIBusDevice() noexcept {
-    if constexpr (onAtmega1284p()) {
+#ifdef ARDUINO_AVR_ATmega1284
         return static_cast<byte>(PORTA);
-    } else {
-        /// @todo this must be implemented by different targets
-        return 0;
-    }
+#elif defined(ARDUINO_NRF52_ADAFRUIT)
+    return extraMemoryCommit.readPortB();
+#elif defined(ARDUINO_GRAND_CENTRAL_M4)
+    /// @todo implement
+    return 0;
+#else
+    return 0;
+#endif
 }
 
 void setupSPIBus(byte initialBusId) noexcept {
     static bool initialized = false;
     if (!initialized) {
        initialized = true;
-#if 0
-        if constexpr (onAtmega1284p()) {
-            DDRA = 0xFF; // make sure all pins on PORTA are outputs
-        }
+#ifdef ARDUINO_AVR_ATmega1284
+        DDRA = 0xFF; // make sure all pins on PORTA are outputs
+#elif defined(ARDUINO_NRF52_ADAFRUIT)
+        extraMemoryCommit.setPortBDirection(0xFF); // make these output
+#elif defined(ARDUINO_GRAND_CENTRAL_M4)
+        // this will be completely different and could even be ignored because
+        // the grand central has so many pins
+#else
 #endif
     }
     setSPIBusId(initialBusId);
