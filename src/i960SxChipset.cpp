@@ -65,6 +65,7 @@ Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
                      -1);
+constexpr bool displaySDCardStatsDuringInit = true;
 // boot rom and sd card loading stuff
 Sd2Card theBootSDCard;
 SdVolume theBootVolume;
@@ -561,18 +562,15 @@ void setupTFT() {
     tft.setTextSize(3);
     tft.println(F("i960Sx!"));
 }
-[[noreturn]]
-void signalHaltState() {
-    static auto haltMsg = F("HALTING!");
+template<typename T>
+[[noreturn]] void signalHaltState(T haltMsg) {
     if (!tftSetup) {
         Serial.println(haltMsg);
-        digitalWrite(i960Pinout::Led, HIGH);
-    } else {
+    } {
         tft.fillScreen(ST77XX_RED);
         tft.setCursor(0,0);
         tft.setTextSize(1);
         tft.println(haltMsg);
-
     }
     while(true) {
         delay(1000);
@@ -580,11 +578,14 @@ void signalHaltState() {
 }
 
 void setupSDCard() {
-    Serial.print(F("SD Card Enable Pin: "));
-    Serial.println(static_cast<int>(i960Pinout::SD_EN));
-    Serial.println(static_cast<int>(i960Pinout::SD_MOSI));
-            Serial.println(static_cast<int>(i960Pinout::SD_MISO));
-            Serial.println(static_cast<int>(i960Pinout::SD_SCK));
+    Serial.println(F("Bringing up SD CARD"));
+    if constexpr (displaySDCardStatsDuringInit) {
+        Serial.print(F("SD Card Enable Pin: "));
+        Serial.println(static_cast<int>(i960Pinout::SD_EN));
+        Serial.println(static_cast<int>(i960Pinout::SD_MOSI));
+        Serial.println(static_cast<int>(i960Pinout::SD_MISO));
+        Serial.println(static_cast<int>(i960Pinout::SD_SCK));
+    }
         // the sd card is on a separate SPI Bus in some cases
     if (!theBootSDCard.init(SPI_FULL_SPEED,
                             static_cast<int>(i960Pinout::SD_EN)
@@ -600,55 +601,69 @@ void setupSDCard() {
         Serial.println(F("1) Is an SD Card is inserted?"));
         Serial.println(F("2) Is the wiring is correct?"));
         Serial.println(F("3) Does the ~CS pin match the shield or module?"));
-        signalHaltState();
+        signalHaltState(F("NO SD CARD"));
     }
     Serial.println(F("SD Card initialization successful"));
-    Serial.println();
-    Serial.println(F("Card Info"));
-    Serial.println(F("Card Type:\t"));
-    switch (theBootSDCard.type()) {
-        case SD_CARD_TYPE_SD1: Serial.println(F("SD1")); break;
-        case SD_CARD_TYPE_SD2: Serial.println(F("SD2")); break;
-        case SD_CARD_TYPE_SDHC: Serial.println(F("SDHC")); break;
-        default: Serial.println(F("Unknown")); break;
+    if constexpr (displaySDCardStatsDuringInit) {
+        Serial.println();
+        Serial.println(F("Card Info"));
+        Serial.println(F("Card Type:\t"));
+        switch (theBootSDCard.type()) {
+            case SD_CARD_TYPE_SD1:
+                Serial.println(F("SD1"));
+                break;
+            case SD_CARD_TYPE_SD2:
+                Serial.println(F("SD2"));
+                break;
+            case SD_CARD_TYPE_SDHC:
+                Serial.println(F("SDHC"));
+                break;
+            default:
+                Serial.println(F("Unknown"));
+                break;
+        }
     }
     if (!theBootVolume.init(theBootSDCard)) {
         Serial.println(F("Could not find a valid FAT16/FAT32 parition"));
         Serial.println(F("Make sure you've formatted the card!"));
-        signalHaltState();
+        signalHaltState(F("BAD SD FORMAT"));
     }
-    Serial.print(F("Clusters:\t"));
-    Serial.println(theBootVolume.clusterCount());
-    Serial.print(F("Blocks x Cluster:\t"));
-    Serial.println(theBootVolume.blocksPerCluster());
-    Serial.print(F("Total Blocks:\t"));
-    Serial.println(theBootVolume.blocksPerCluster() * theBootVolume.clusterCount());
-    Serial.println();
+    if constexpr (displaySDCardStatsDuringInit) {
+        Serial.print(F("Clusters:\t"));
+        Serial.println(theBootVolume.clusterCount());
+        Serial.print(F("Blocks x Cluster:\t"));
+        Serial.println(theBootVolume.blocksPerCluster());
+        Serial.print(F("Total Blocks:\t"));
+        Serial.println(theBootVolume.blocksPerCluster() * theBootVolume.clusterCount());
+        Serial.println();
 
-    Serial.print(F("Volume type is: FAT"));
-    Serial.println(theBootVolume.fatType(), DEC);
-    auto volumeSize = theBootVolume.blocksPerCluster(); // clusters are collections of blocks
-    volumeSize *= theBootVolume.clusterCount(); // sd cards have many clusters
-    volumeSize /= 2; // SD Card blocks are always 512 bytes
-    Serial.print(F("Volume size (Kb):\t"));
-    Serial.println(volumeSize);
-    Serial.print(F("Volume size (Mb):\t"));
-    Serial.println(volumeSize / 1024);
-    Serial.print(F("Volume size (Gb):\t"));
-    Serial.println(static_cast<float>(volumeSize / 1024 / 1024));
+        Serial.print(F("Volume type is: FAT"));
+        Serial.println(theBootVolume.fatType(), DEC);
+        uint32_t volumeSize = theBootVolume.blocksPerCluster(); // clusters are collections of blocks
+        volumeSize *= theBootVolume.clusterCount(); // sd cards have many clusters
+        volumeSize /= 2; // SD Card blocks are always 512 bytes
+        Serial.print(F("Volume size (Kb):\t"));
+        Serial.println(volumeSize);
+        Serial.print(F("Volume size (Mb):\t"));
+        Serial.println(volumeSize / 1024);
+        Serial.print(F("Volume size (Gb):\t"));
+        Serial.println(static_cast<float>(volumeSize / 1024 / 1024));
 
-    Serial.println();
-    Serial.println(F("Files found on the card (name, date and size in bytes): "));
+        Serial.println();
+        Serial.println(F("Files found on the card (name, date and size in bytes): "));
+    }
     rootDirectory.openRoot(theBootVolume);
-    rootDirectory.ls(LS_R | LS_DATE | LS_SIZE);
-    Serial.println();
-    Serial.println();
-    Serial.println();
-    Serial.println();
+    if constexpr (displaySDCardStatsDuringInit) {
+        rootDirectory.ls(LS_R | LS_DATE | LS_SIZE);
+        Serial.println();
+        Serial.println();
+        Serial.println();
+        Serial.println();
+    }
     Serial.print(F("Checking for file /boot.rom...."));
     if (!theBootROM.open(rootDirectory, "boot.rom", O_READ)) {
-        Serial.println(F("NOT FOUND!"));
-        signalHaltState();
+        Serial.println(F("FAILED!"));
+        signalHaltState(F("NO BOOT.ROM"));
     }
     Serial.println(F("FOUND!"));
     Serial.print(F("Size of boot.rom: 0x"));
@@ -657,7 +672,7 @@ void setupSDCard() {
     Serial.print(F("Checking for file /ram.bin...."));
     if (!theRAM.open(rootDirectory, "ram.bin", O_RDWR)) {
         Serial.println(F("NOT FOUND!"));
-        signalHaltState();
+        signalHaltState(F("NO RAM.BIN"));
     }
     /// @todo lookup the sdcard map information
     Serial.println(F("FOUND!"));
@@ -665,13 +680,15 @@ void setupSDCard() {
     Serial.print(theRAM.fileSize(), HEX);
     Serial.println(F(" bytes"));
     rootDirectory.close();
+
+    Serial.println(F("Successfully setup SD card"));
 }
 void
 setupSeesaw() {
     Serial.println(F("Setting up the seesaw"));
     if (!ss.begin()) {
         Serial.println(F("seesaw could not be initialized!"));
-        signalHaltState();
+        signalHaltState("NO SEESAW");
     }
     Serial.println(F("seesaw started"));
     Serial.print(F("Version: "));
