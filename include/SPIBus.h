@@ -32,7 +32,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // use but is stupid simple to layout physically. These IDs have _no_ direct correlation to the memory map exposed to the i960 itself.
 // This is only used internally. The idea is to use the SDCard to define the memory mapping bound to a given SPIBusDevice.
 
-void setupSPIBus(byte initialBusId = 0) noexcept;
-void setSPIBusId(byte id) noexcept;
-byte getCurrentSPIBusDevice() noexcept;
+/**
+ * @brief Common interface to the SPIBus
+ */
+class SPIBus {
+public:
+    void setup() noexcept;
+    void setId(byte id) noexcept;
+    [[nodiscard]] byte getId() const noexcept;
+private:
+    byte _id = 0;
+    bool _initialized = false;
+};
 #endif //ARDUINO_SPIBUS_H

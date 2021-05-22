@@ -87,6 +87,7 @@ volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
 static constexpr Address RamStartingAddress = 0x8000'0000;
 static constexpr auto FlashStartingAddress = 0x0000'0000;
 
+SPIBus theSPIBus;
 // with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
 // set a single pixel in the display, storage area
 // we map these pixel values to specific storage cells on the microcontroller
@@ -410,7 +411,7 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
-	setupSPIBus();
+	theSPIBus.setup();
     Serial.println(F("Done setting up io expanders!"));
 }
 

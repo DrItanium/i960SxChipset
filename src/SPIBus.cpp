@@ -26,42 +26,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SPIBus.h"
 #include "IOExpanders.h"
 #include "MCUPlatform.h"
-volatile byte busId = 0;
-void setSPIBusId(byte id) noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
-    // atmega 1284p specific but so damn simple
-    if (PORTA != id) {
-        PORTA = id;
-    }
-#elif defined(ADAFRUIT_FEATHER_M0)
-    if (busId != id) {
-        extraMemoryCommit.writePortB(id);
-        busId = id;
-    }
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)
-    /// @todo implement
-#else
-    // do nothing
-#endif
-}
-
-byte getCurrentSPIBusDevice() noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
-        return static_cast<byte>(PORTA);
-#elif defined(ADAFRUIT_FEATHER_M0)
-    return extraMemoryCommit.readPortB();
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)
-    /// @todo implement
-    return 0;
-#else
-    return 0;
-#endif
-}
-
-void setupSPIBus(byte initialBusId) noexcept {
-    static bool initialized = false;
-    if (!initialized) {
-       initialized = true;
+void
+SPIBus::setup() noexcept {
+    if (!_initialized) {
+        _initialized = true;
 #ifdef ARDUINO_AVR_ATmega1284
         DDRA = 0xFF; // make sure all pins on PORTA are outputs
 #elif defined(ARDUINO_NRF52_ADAFRUIT)
@@ -71,6 +39,36 @@ void setupSPIBus(byte initialBusId) noexcept {
         // the grand central has so many pins
 #else
 #endif
+        setId(_id);
     }
-    setSPIBusId(initialBusId);
+}
+void
+SPIBus::setId(byte id) noexcept {
+    setup();
+#ifdef ARDUINO_AVR_ATmega1284
+    // atmega 1284p specific but so damn simple
+    if (PORTA != id) {
+        PORTA = id;
+    }
+#elif defined(ARDUINO_GRAND_CENTRAL_M4)
+    /// @todo implement
+#else
+    // use the IO Expander by Default
+    if (_id != id) {
+        extraMemoryCommit.writePortB(id);
+        _id = id;
+    }
+#endif
+}
+byte
+SPIBus::getId() const noexcept {
+#ifdef ARDUINO_AVR_ATmega1284
+    return static_cast<byte>(PORTA);
+#elif defined(ARDUINO_GRAND_CENTRAL_M4)
+    /// @todo implement
+    return _id;
+#else
+    // by default just read from the extra memory commit io expander
+    return extraMemoryCommit.readPortB();
+#endif
 }

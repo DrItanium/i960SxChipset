@@ -93,6 +93,11 @@ enum class i960Pinout : decltype(A0) {
         SD_EN = SDCARD_SS_PIN, // don't use onboard sd card slot...
         // for now, it is [30, 38]
         SPI_BUS_EN = 30, // output
+        // the display shield I'm using has an SD Card slot as well
+        SD2_EN = 4,
+        SD2_MOSI = MOSI,
+        SD2_MISO = MISO,
+        SD2_SCK = SCK,
 #elif defined(ADAFRUIT_FEATHER_M0)
     Reset960 = ::A1,          // output
     SPI_BUS_EN = ::A2, // output
