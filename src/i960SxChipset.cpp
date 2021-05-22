@@ -32,7 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <libbonuspin.h>
 #include <Fsm.h>
-#include <Timer.h>
 #include <SD.h>
 #include <Wire.h>
 
@@ -62,7 +61,6 @@ constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) n
 	return - (satPtr + pcrbPtr + startIP);
 }
 volatile bool tftSetup = false;
-Timer t;
 Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
@@ -275,7 +273,6 @@ enteringDataState() noexcept {
 	performingRead = isReadOperation();
 }
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
-
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
@@ -292,6 +289,7 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
     switch (offset) {
         case 0: // and 1
             digitalWrite(i960Pinout::Led, (value & 0xFF) > 0 ? HIGH : LOW);
+            /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
         default:
@@ -648,7 +646,6 @@ void setup() {
     digitalWrite(i960Pinout::SD_EN, HIGH);
     digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
     pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
-    t.oscillate(static_cast<int>(i960Pinout::Led), 1000, HIGH);
     Wire.begin();
     SPI.begin();
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
@@ -662,7 +659,6 @@ void setup() {
 }
 void loop() {
 	fsm.run_machine();
-    t.update();
 }
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
