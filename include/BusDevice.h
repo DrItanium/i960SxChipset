@@ -38,10 +38,10 @@ enum class LoadStoreStyle : uint8_t {
 /**
  * @brief Describes an arbitrary device of an arbitrary size that is mapped into memory at a given location
  */
-class Device {
+class BusDevice {
 public:
-    constexpr Device(uint32_t start, uint32_t len) noexcept : startAddress_(start), length_(len) {}
-    virtual ~Device() = default;
+    constexpr BusDevice(uint32_t start, uint32_t len) noexcept : startAddress_(start), length_(len) {}
+    virtual ~BusDevice() = default;
     constexpr auto getStartAddress() const noexcept { return startAddress_; }
     constexpr auto getLength() const noexcept { return length_; }
     constexpr auto getEndAddress() const noexcept { return length_ + startAddress_; }

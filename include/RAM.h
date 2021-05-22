@@ -25,11 +25,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef ARDUINO_RAM_H
 #define ARDUINO_RAM_H
-#include "Device.h"
+#include "BusDevice.h"
 
-class RAM : public Device{
+class RAM : public BusDevice {
 public:
-    constexpr RAM(uint32_t start, uint32_t ramSize) : Device(start, ramSize) { }
+    constexpr RAM(uint32_t start, uint32_t ramSize) : BusDevice(start, ramSize) { }
     ~RAM() override = default;
     uint16_t read(uint32_t address, LoadStoreStyle style) noexcept override {
         switch (style) {

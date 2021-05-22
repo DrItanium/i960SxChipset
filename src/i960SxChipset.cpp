@@ -44,7 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
 #include "Pinout.h"
-#include "Device.h"
+#include "BusDevice.h"
 #include "RAM.h"
 #include "SPIBus.h"
 #include "IOExpanders.h"
@@ -96,7 +96,7 @@ static constexpr auto FlashStartingAddress = 0x0000'0000;
 template<typename DisplayType>
 class DisplayCommand {
 public:
-    /// @todo extend Device and take in a base address
+    /// @todo extend BusDevice and take in a base address
     DisplayCommand(DisplayType& display) : display_(display) { }
     [[nodiscard]] constexpr auto getCommand() const noexcept { return command_; }
     [[nodiscard]] constexpr auto getX() const noexcept { return x_; }
@@ -315,6 +315,7 @@ performRead(Address address) noexcept {
     return 0;
 }
 void processDataRequest() noexcept {
+    extraMemoryCommit.writePortB(0xFF);
     auto burstAddress = getBurstAddress(baseAddress);
 	if (performingRead) {
 		setDataBits(performRead(burstAddress));
@@ -459,6 +460,8 @@ void signalHaltState() {
     }
 }
 void setupSDCard() {
+    Serial.print(F("SD Card Enable Pin: "));
+    Serial.println(static_cast<int>(i960Pinout::SD_EN));
     if (!theBootSDCard.init(SPI_FULL_SPEED, static_cast<int>(i960Pinout::SD_EN))) {
         Serial.println(F("SD Card initialization failed"));
         Serial.println(F("Make sure of the following:"));

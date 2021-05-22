@@ -90,7 +90,7 @@ enum class i960Pinout : decltype(A0) {
         Reset960 = 27,          // output
         Ready = 28,      // output
         FAIL = 29,         // input
-        SD_EN = SDCARD_SS_PIN,
+        SD_EN = 4, // don't use onboard sd card slot...
         // for now, it is [30, 38]
         SPI_BUS_EN = 30, // output
 #elif defined(ADAFRUIT_FEATHER_M0)

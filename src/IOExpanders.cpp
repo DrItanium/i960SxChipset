@@ -61,7 +61,9 @@ decltype(LOW) getByteEnable1() noexcept {
 }
 
 uint8_t getBurstAddressBits() noexcept {
-    return (extraMemoryCommit.readGPIOs() & 0b111) << 1;
+    auto gpios = extraMemoryCommit.readGPIOs();
+    Serial.println(gpios, HEX);
+    return (gpios & 0b111) << 1;
 }
 
 Address getBurstAddress(Address base) noexcept {
