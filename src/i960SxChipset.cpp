@@ -277,7 +277,47 @@ enteringDataState() noexcept {
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
 
 void
-performWrite(Address address, uint16_t value) noexcept {
+ioSpaceWrite8(Address offset, uint8_t value) noexcept {
+    switch (offset) {
+        case 0: // builtin led
+            digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
+            break;
+        default:
+            break;
+    }
+}
+void
+ioSpaceWrite16(Address offset, uint16_t value) noexcept {
+    // we are writing to two separate addresses
+    switch (offset) {
+        case 0: // and 1
+            digitalWrite(i960Pinout::Led, (value & 0xFF) > 0 ? HIGH : LOW);
+            /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
+            break;
+        default:
+            break;
+    }
+}
+void
+ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
+    auto offset = 0x00FF'FFFF & address;
+    switch (style) {
+        case LoadStoreStyle::Upper8:
+            // it is the next byte address over
+            ioSpaceWrite8(offset + 1, value >> 8);
+            break;
+        case LoadStoreStyle::Lower8:
+            ioSpaceWrite8(offset, value);
+            break;
+        case LoadStoreStyle::Full16:
+            ioSpaceWrite16(offset, value);
+            break;
+        default:
+            break;
+    }
+}
+void
+performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
     Serial.print(F("Write 0x"));
     Serial.print(value, HEX);
     Serial.print(F(" to 0x"));
@@ -292,25 +332,68 @@ performWrite(Address address, uint16_t value) noexcept {
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
             // this is the internal IO space
             Serial.println(F("Request to write into IO space"));
+            ioSpaceWrite(address, value, style);
+        } else {
+
         }
     }
     /// @todo implement
 }
+uint8_t
+ioSpaceRead8(Address offset) noexcept {
+    switch (offset) {
+        case 0:
+            return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
+        default:
+            return 0;
+    }
+}
 uint16_t
-performRead(Address address) noexcept {
+ioSpaceRead16(Address offset) noexcept {
+    switch (offset) {
+        case 0:
+            /// @todo this would be an amalgamation of the contents addresses zero and one
+            /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
+            return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
+        default:
+            return 0;
+    }
+}
+
+uint16_t
+ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
+    auto offset = 0x00FF'FFFF & address;
+    switch (style) {
+        case LoadStoreStyle::Full16:
+            return ioSpaceRead16(offset);
+        case LoadStoreStyle::Upper8:
+            // next address over
+            // then make sure it is returned in the upper portion
+            return static_cast<uint16_t>(ioSpaceRead8(offset + 1)) << 8;
+        case LoadStoreStyle::Lower8:
+            return static_cast<uint16_t>(ioSpaceRead8(offset));
+        default:
+            return 0;
+    }
+}
+uint16_t
+performRead(Address address, LoadStoreStyle style) noexcept {
     Serial.print(F("Read from 0x"));
     Serial.println(address, HEX);
     /// @todo implement
     if (address < RamStartingAddress) {
-        // write to flash
+        // read from flash
     } else {
         // upper half needs to be walked down further
         if (address >= 0xFF00'0000) {
             // cpu internal space, we should never get to this location
             Serial.println(F("Request to read from CPU internal space?"));
+            return ioSpaceRead(address, style);
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
             // this is the internal IO space
             Serial.println(F("Request to read from IO space"));
+        } else {
+
         }
     }
     return 0;
@@ -319,9 +402,9 @@ void processDataRequest() noexcept {
     extraMemoryCommit.writePortB(0xFF);
     auto burstAddress = getBurstAddress(baseAddress);
 	if (performingRead) {
-		setDataBits(performRead(burstAddress));
+		setDataBits(performRead(burstAddress, getStyle()));
 	} else {
-	    performWrite(burstAddress, getDataBits());
+	    performWrite(burstAddress, getDataBits(), getStyle());
 	}
 	// setup the proper address and emit this over serial
 	auto blastPin = getBlastPin();
