@@ -65,7 +65,7 @@ Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
                      -1);
-constexpr bool displaySDCardStatsDuringInit = true;
+constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 // boot rom and sd card loading stuff
@@ -310,6 +310,8 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
         case 0x10:
             pwm4Value = value;
             analogWrite(static_cast<int>(i960Pinout::PWM4), pwm4Value);
+            Serial.print("Analog Write: ");
+            Serial.println(pwm4Value, HEX);
             break;
         default:
             break;

@@ -16,13 +16,8 @@ int main() {
     BuiltinPWM thePWM(0x10);
     while(true) {
         theLed.toggle();
-        for (int i = 0; i < 1024; ++i) {
-            thePWM.setValue(i);
-        }
+        wait(1000);
         theLed.toggle();
-        for (int i = 1023; i >= 0; ++i) {
-            thePWM.setValue(i);
-        }
     }
     return 0;
 }
