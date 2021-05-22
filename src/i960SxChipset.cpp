@@ -286,6 +286,7 @@ enteringDataState() noexcept {
 	performingRead = isReadOperation();
 }
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
+volatile uint16_t pwm4Value = 0;
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
@@ -305,6 +306,10 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
             digitalWrite(i960Pinout::Led, (value & 0xFF) > 0 ? HIGH : LOW);
             /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
+            break;
+        case 0x10:
+            pwm4Value = value;
+            analogWrite(static_cast<int>(i960Pinout::PWM4), pwm4Value);
             break;
         default:
             break;
@@ -395,6 +400,8 @@ ioSpaceRead16(Address offset) noexcept {
             /// @todo this would be an amalgamation of the contents addresses zero and one
             /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
+        case 0x10:
+            return pwm4Value;
         default:
             return 0;
     }

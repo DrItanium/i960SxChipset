@@ -7,32 +7,32 @@
 
 
 BuiltinIOBaseDevice::BuiltinIOBaseDevice(uint32_t offset) : offset_(offset), baseAddress_(getIOBase0Address(offset)) { }
-BuiltinLED::BuiltinLED(uint32_t offset) : BuiltinIOBaseDevice(offset) { }
+BuiltinLED::BuiltinLED(uint32_t offset) : BuiltinIOBaseDevice(offset), _memory(memory<uint8_t>(baseAddress_)) {
+
+}
 void
 BuiltinLED::toggle() {
-    volatile uint8_t& mem = memory<uint8_t>(baseAddress_);
-    mem = (mem != 0) ? 0 : 0xFF;
+    _memory = (_memory != 0) ? 0 : 0xFF;
 }
 
 bool
 BuiltinLED::getValue() {
-    return memory<uint8_t>(baseAddress_) != 0;
+    return _memory != 0;
 }
 
 void
 BuiltinLED::setValue(bool value) {
-    memory<uint8_t>(baseAddress_) = (value ? 0xFF : 0x00);
+    _memory = (value ? 0xFF : 0x00);
 }
 
-BuiltinPWM::BuiltinPWM(uint32_t offset) : BuiltinIOBaseDevice(offset) { }
+BuiltinPWM::BuiltinPWM(uint32_t offset) : BuiltinIOBaseDevice(offset), _memory(memory<uint16_t>(baseAddress_)) { }
 void
 BuiltinPWM::setValue(uint16_t value) {
-    volatile uint16_t& mem = memory<uint16_t>(baseAddress_);
-    mem = value;
+    _memory = value;
 }
 uint16_t
 BuiltinPWM::getValue() {
-    return memory<uint16_t>(baseAddress_);
+    return _memory;
 }
 
 BuiltinAnalogInput::BuiltinAnalogInput(uint32_t offset) : BuiltinIOBaseDevice(offset) { }

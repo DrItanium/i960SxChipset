@@ -25,6 +25,8 @@ public:
     bool getValue();
     void setValue(bool value);
     void toggle();
+private:
+    volatile uint8_t& _memory;
 };
 
 class BuiltinPWM : public BuiltinIOBaseDevice {
@@ -32,6 +34,8 @@ public:
     BuiltinPWM(uint32_t offset);
     uint16_t getValue();
     void setValue(uint16_t value);
+private:
+    volatile uint16_t& _memory;
 };
 
 class BuiltinAnalogInput : public BuiltinIOBaseDevice {
