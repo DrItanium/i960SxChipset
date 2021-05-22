@@ -550,7 +550,7 @@ void setupSDCard() {
                             static_cast<int>(i960Pinout::SD_EN),
                             static_cast<int>(i960Pinout::SD_MOSI),
                             static_cast<int>(i960Pinout::SD_MISO),
-                            static_cast<int>(i960Pinout::SCK))) {
+                            static_cast<int>(i960Pinout::SD_SCK))) {
         Serial.println(F("SD Card initialization failed"));
         Serial.println(F("Make sure of the following:"));
         Serial.println(F("1) Is an SD Card is inserted?"));
