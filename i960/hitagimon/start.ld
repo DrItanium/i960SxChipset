@@ -5,8 +5,8 @@
 
 MEMORY
 {
-    rom (rx)  : ORIGIN = 0, l = 8M
-    ram (!rx) : o = 0x80000000, l = 16M
+    rom (rx)  : ORIGIN = 0, l = 64M
+    ram (!rx) : o = 0x80000000, l = 64M
 }
 
 SECTIONS
