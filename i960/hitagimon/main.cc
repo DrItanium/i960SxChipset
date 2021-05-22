@@ -15,7 +15,7 @@ int main() {
     BuiltinLED theLed(0);
     while(true) {
         theLed.toggle();
-        wait(1000000);
+        wait(1000);
     }
     return 0;
 }
