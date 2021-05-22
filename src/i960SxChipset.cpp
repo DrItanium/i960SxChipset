@@ -221,6 +221,7 @@ void doAddressState() noexcept;
 void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
+void enteringChecksumFailure() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
@@ -236,7 +237,7 @@ State tData(enteringDataState,
 State tRecovery(nullptr,
 		doRecoveryState,
 		nullptr);
-State tChecksumFailure(nullptr, nullptr, nullptr);
+State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
 
 
 void startupState() noexcept {
@@ -434,7 +435,6 @@ performRead(Address address, LoadStoreStyle style) noexcept {
     return 0;
 }
 void processDataRequest() noexcept {
-    extraMemoryCommit.writePortB(0xFF);
     auto burstAddress = getBurstAddress(baseAddress);
 	if (performingRead) {
 		setDataBits(performRead(burstAddress, getStyle()));
@@ -582,12 +582,19 @@ void signalHaltState() {
 void setupSDCard() {
     Serial.print(F("SD Card Enable Pin: "));
     Serial.println(static_cast<int>(i960Pinout::SD_EN));
-    // the sd card is on a separate SPI Bus in some cases
+    Serial.println(static_cast<int>(i960Pinout::SD_MOSI));
+            Serial.println(static_cast<int>(i960Pinout::SD_MISO));
+            Serial.println(static_cast<int>(i960Pinout::SD_SCK));
+        // the sd card is on a separate SPI Bus in some cases
     if (!theBootSDCard.init(SPI_FULL_SPEED,
-                            static_cast<int>(i960Pinout::SD_EN),
+                            static_cast<int>(i960Pinout::SD_EN)
+#ifdef ARDUINO_GRAND_CENTRAL_M4
+,
                             static_cast<int>(i960Pinout::SD_MOSI),
                             static_cast<int>(i960Pinout::SD_MISO),
-                            static_cast<int>(i960Pinout::SD_SCK))) {
+                            static_cast<int>(i960Pinout::SD_SCK)
+#endif
+    )) {
         Serial.println(F("SD Card initialization failed"));
         Serial.println(F("Make sure of the following:"));
         Serial.println(F("1) Is an SD Card is inserted?"));
@@ -652,9 +659,10 @@ void setupSDCard() {
         Serial.println(F("NOT FOUND!"));
         signalHaltState();
     }
+    /// @todo lookup the sdcard map information
     Serial.println(F("FOUND!"));
     Serial.print(F("Size of ram.bin: 0x"));
-    Serial.print(theBootROM.fileSize(), HEX);
+    Serial.print(theRAM.fileSize(), HEX);
     Serial.println(F(" bytes"));
     rootDirectory.close();
 }
@@ -706,6 +714,13 @@ void setup() {
 }
 void loop() {
 	fsm.run_machine();
+}
+
+void enteringChecksumFailure() noexcept {
+    tft.fillScreen(ST77XX_RED);
+    tft.setCursor(0,0);
+    tft.setTextSize(2);
+    tft.println(F("CHECKSUM FAILURE"));
 }
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
