@@ -460,31 +460,21 @@ void signalHaltState() {
     }
 }
 
-[[noreturn]]
-void noSDCardFoundHalt() {
-    Serial.println(F("SD Card initialization failed"));
-    Serial.println(F("Make sure of the following:"));
-    Serial.println(F("1) Is an SD Card is inserted?"));
-    Serial.println(F("2) Is the wiring is correct?"));
-    Serial.println(F("3) Does the ~CS pin match the shield or module?"));
-    signalHaltState();
-}
 void setupSDCard() {
     Serial.print(F("SD Card Enable Pin: "));
     Serial.println(static_cast<int>(i960Pinout::SD_EN));
-    if constexpr (onGrandCentralM4())  {
-        // the sd card is on a separate SPI Bus
-        if (!theBootSDCard.init(SPI_FULL_SPEED,
-                                static_cast<int>(i960Pinout::SD_EN),
-                                SDCARD_MOSI_PIN,
-                                SDCARD_MISO_PIN,
-                                SDCARD_SCK_PIN)) {
-            noSDCardFoundHalt();
-        }
-    } else {
-        if (!theBootSDCard.init(SPI_FULL_SPEED, static_cast<int>(i960Pinout::SD_EN))) {
-            noSDCardFoundHalt();
-        }
+    // the sd card is on a separate SPI Bus in some cases
+    if (!theBootSDCard.init(SPI_FULL_SPEED,
+                            static_cast<int>(i960Pinout::SD_EN),
+                            static_cast<int>(i960Pinout::SD_MOSI),
+                            static_cast<int>(i960Pinout::SD_MISO),
+                            static_cast<int>(i960Pinout::SCK))) {
+        Serial.println(F("SD Card initialization failed"));
+        Serial.println(F("Make sure of the following:"));
+        Serial.println(F("1) Is an SD Card is inserted?"));
+        Serial.println(F("2) Is the wiring is correct?"));
+        Serial.println(F("3) Does the ~CS pin match the shield or module?"));
+        signalHaltState();
     }
     Serial.println(F("SD Card initialization successful"));
     Serial.println();

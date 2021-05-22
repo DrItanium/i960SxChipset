@@ -116,6 +116,28 @@ enum class i960Pinout : decltype(A0) {
 #endif
 #endif
     Count,          // special, must be last
+    SD_MOSI =
+#ifdef SDCARD_MOSI_PIN
+        SDCARD_MOSI_PIN
+#else
+        MOSI
+#endif
+        ,
+    SD_MISO =
+#ifdef SDCARD_MISO_PIN
+    SDCARD_MISO_PIN
+#else
+    MISO
+#endif
+    ,
+    SD_SCK =
+#ifdef SDCARD_SCK_PIN
+    SDCARD_SCK_PIN
+#else
+    SCK
+#endif
+    ,
+
 };
 
 /**
@@ -163,69 +185,69 @@ struct DigitalPin {
 };
 
 #define DefOutputPin(pin, asserted, deasserted) \
-	template<> \
-	struct DigitalPin< pin > { \
-	static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-		DigitalPin() = delete; \
-		~DigitalPin() = delete; \
-		DigitalPin(const DigitalPin&) = delete; \
-		DigitalPin(DigitalPin&&) = delete; \
-		DigitalPin& operator=(const DigitalPin&) = delete; \
-		DigitalPin& operator=(DigitalPin&&) = delete; \
-		static constexpr auto isInputPin() noexcept { return false; } \
-		static constexpr auto isOutputPin() noexcept { return true; } \
-		static constexpr auto getPin() noexcept { return pin; } \
-		static constexpr auto getDirection() noexcept { return OUTPUT; } \
-		static constexpr auto getAssertionState() noexcept { return asserted; } \
-		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		inline static void assertPin() noexcept { digitalWrite(pin, getAssertionState()); } \
-		inline static void deassertPin() noexcept { digitalWrite(pin, getDeassertionState()); } \
-		inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
-		inline static void pulse() noexcept { \
-			assertPin(); \
-			deassertPin(); \
-		} \
-	}
+    template<> \
+    struct DigitalPin< pin > { \
+    static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
+        DigitalPin() = delete; \
+        ~DigitalPin() = delete; \
+        DigitalPin(const DigitalPin&) = delete; \
+        DigitalPin(DigitalPin&&) = delete; \
+        DigitalPin& operator=(const DigitalPin&) = delete; \
+        DigitalPin& operator=(DigitalPin&&) = delete; \
+        static constexpr auto isInputPin() noexcept { return false; } \
+        static constexpr auto isOutputPin() noexcept { return true; } \
+        static constexpr auto getPin() noexcept { return pin; } \
+        static constexpr auto getDirection() noexcept { return OUTPUT; } \
+        static constexpr auto getAssertionState() noexcept { return asserted; } \
+        static constexpr auto getDeassertionState() noexcept { return deasserted; } \
+        inline static void assertPin() noexcept { digitalWrite(pin, getAssertionState()); } \
+        inline static void deassertPin() noexcept { digitalWrite(pin, getDeassertionState()); } \
+        inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
+        inline static void pulse() noexcept { \
+            assertPin(); \
+            deassertPin(); \
+        } \
+    }
 #define DefInputPin(pin, asserted, deasserted) \
-	template<> \
-	struct DigitalPin< pin > { \
-		static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-		DigitalPin() = delete; \
-		~DigitalPin() = delete; \
-		DigitalPin(const DigitalPin&) = delete; \
-		DigitalPin(DigitalPin&&) = delete; \
-		DigitalPin& operator=(const DigitalPin&) = delete; \
-		DigitalPin& operator=(DigitalPin&&) = delete; \
-		static constexpr auto isInputPin() noexcept { return true; } \
-		static constexpr auto isOutputPin() noexcept { return false; } \
-		static constexpr auto getPin() noexcept { return pin; } \
-		static constexpr auto getDirection() noexcept { return INPUT; } \
-		static constexpr auto getAssertionState() noexcept { return asserted; } \
-		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		inline static auto read() noexcept { return digitalRead(pin); } \
-		inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
-		inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
-	}
+    template<> \
+    struct DigitalPin< pin > { \
+        static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
+        DigitalPin() = delete; \
+        ~DigitalPin() = delete; \
+        DigitalPin(const DigitalPin&) = delete; \
+        DigitalPin(DigitalPin&&) = delete; \
+        DigitalPin& operator=(const DigitalPin&) = delete; \
+        DigitalPin& operator=(DigitalPin&&) = delete; \
+        static constexpr auto isInputPin() noexcept { return true; } \
+        static constexpr auto isOutputPin() noexcept { return false; } \
+        static constexpr auto getPin() noexcept { return pin; } \
+        static constexpr auto getDirection() noexcept { return INPUT; } \
+        static constexpr auto getAssertionState() noexcept { return asserted; } \
+        static constexpr auto getDeassertionState() noexcept { return deasserted; } \
+        inline static auto read() noexcept { return digitalRead(pin); } \
+        inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
+        inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
+    }
 #define DefInputPullupPin(pin, asserted, deasserted) \
-	template<> \
-	struct DigitalPin< pin > { \
-		static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-		DigitalPin() = delete; \
-		~DigitalPin() = delete; \
-		DigitalPin(const DigitalPin&) = delete; \
-		DigitalPin(DigitalPin&&) = delete; \
-		DigitalPin& operator=(const DigitalPin&) = delete; \
-		DigitalPin& operator=(DigitalPin&&) = delete; \
-		static constexpr auto isInputPin() noexcept { return true; } \
-		static constexpr auto isOutputPin() noexcept { return false; } \
-		static constexpr auto getPin() noexcept { return pin; } \
-		static constexpr auto getDirection() noexcept { return INPUT_PULLUP; } \
-		static constexpr auto getAssertionState() noexcept { return asserted; } \
-		static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-		inline static bool isAsserted() noexcept { return digitalRead(pin) == getAssertionState(); } \
-		inline static bool isDeasserted() noexcept { return digitalRead(pin) == getDeassertionState(); } \
-		inline static auto read() noexcept { return digitalRead(pin); } \
-	}
+    template<> \
+    struct DigitalPin< pin > { \
+        static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
+        DigitalPin() = delete; \
+        ~DigitalPin() = delete; \
+        DigitalPin(const DigitalPin&) = delete; \
+        DigitalPin(DigitalPin&&) = delete; \
+        DigitalPin& operator=(const DigitalPin&) = delete; \
+        DigitalPin& operator=(DigitalPin&&) = delete; \
+        static constexpr auto isInputPin() noexcept { return true; } \
+        static constexpr auto isOutputPin() noexcept { return false; } \
+        static constexpr auto getPin() noexcept { return pin; } \
+        static constexpr auto getDirection() noexcept { return INPUT_PULLUP; } \
+        static constexpr auto getAssertionState() noexcept { return asserted; } \
+        static constexpr auto getDeassertionState() noexcept { return deasserted; } \
+        inline static bool isAsserted() noexcept { return digitalRead(pin) == getAssertionState(); } \
+        inline static bool isDeasserted() noexcept { return digitalRead(pin) == getDeassertionState(); } \
+        inline static auto read() noexcept { return digitalRead(pin); } \
+    }
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
