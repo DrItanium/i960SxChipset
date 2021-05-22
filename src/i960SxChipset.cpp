@@ -289,6 +289,7 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
         case 0: // builtin led
             digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
+            Serial.println(F("LED WRITE!"));
             break;
         default:
             break;
@@ -342,6 +343,7 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
             // this is the internal IO space
             Serial.println(F("Request to write into IO space"));
             ioSpaceWrite(address, value, style);
+            delay(100);
         } else if (address < RamEndingAddress){
            // we are writing to "RAM" at this point, what it consists of at this point is really inconsequential
            // for the initial design it is just going to be straight off of the SDCard itself, slow but a great test
@@ -373,6 +375,7 @@ uint8_t
 ioSpaceRead8(Address offset) noexcept {
     switch (offset) {
         case 0:
+            Serial.println(F("LED READ!"));
             return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
         default:
             return 0;
@@ -425,10 +428,12 @@ performRead(Address address, LoadStoreStyle style) noexcept {
         if (address >= 0xFF00'0000) {
             // cpu internal space, we should never get to this location
             Serial.println(F("Request to read from CPU internal space?"));
-            return ioSpaceRead(address, style);
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
             // this is the internal IO space
             Serial.println(F("Request to read from IO space"));
+            auto q = ioSpaceRead(address, style);
+            delay(100);
+            return q;
         } else if (address < RamEndingAddress){
             uint16_t output = 0;
             // in the ram section
