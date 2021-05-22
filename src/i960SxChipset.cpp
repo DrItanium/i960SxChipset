@@ -72,6 +72,7 @@ SdVolume theBootVolume;
 SdFile rootDirectory;
 SdFile theBootROM;
 SdFile theRAM; // use an SDCard as ram for the time being
+uint32_t bootRomSize = 0;
 // the upper 64 elements of the bus are exposed for direct processor usage
 union WordEntry {
     byte bytes[2];
@@ -411,6 +412,13 @@ performRead(Address address, LoadStoreStyle style) noexcept {
     Serial.println(address, HEX);
     /// @todo implement
     if (address < RamStartingAddress) {
+        if (address < bootRomSize) {
+            uint16_t result = 0;
+            // okay cool beans, we can load from the boot rom
+            theBootROM.seekSet(address);
+            theBootROM.read(&result, 2);
+            return result;
+        }
         // read from flash
     } else {
         // upper half needs to be walked down further
@@ -667,6 +675,15 @@ void setupSDCard() {
     }
     Serial.println(F("FOUND!"));
     Serial.print(F("Size of boot.rom: 0x"));
+    bootRomSize = theBootROM.fileSize();
+    if (bootRomSize >= RamStartingAddress) {
+        Serial.println(F("BOOT.ROM is too large!"));
+        signalHaltState(F("BOOT.ROM TOO LARGE!"));
+    }
+    if (bootRomSize == 0) {
+        Serial.println(F("BOOT.ROM is empty!"));
+        signalHaltState(F("BOOT.ROM EMPTY!"));
+    }
     Serial.print(theBootROM.fileSize(), HEX);
     Serial.println(F(" bytes"));
     Serial.print(F("Checking for file /ram.bin...."));
