@@ -70,6 +70,7 @@ Sd2Card theBootSDCard;
 SdVolume theBootVolume;
 SdFile rootDirectory;
 SdFile theBootROM;
+SdFile theRAM; // use an SDCard as ram for the time being
 // the upper 64 elements of the bus are exposed for direct processor usage
 union WordEntry {
     byte bytes[2];
@@ -82,8 +83,15 @@ constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (Word
  */
 volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
 
-static constexpr Address RamStartingAddress = 0x8000'0000;
 static constexpr auto FlashStartingAddress = 0x0000'0000;
+static constexpr Address OneMemorySpace = 0x100'0000; // 16 megabytes
+// the upper 2G is for non-program related stuff, according to my memory map information, we support a maximum of 512 Megs of RAM
+// so the "ram" file is 512 megs in size. If the range is between 0x8000'0000 and
+static constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
+static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
+static constexpr auto RamMask = MaxRamSize - 1;
+static constexpr Address RamStartingAddress = 0x8000'0000;
+static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
 
 SPIBus theSPIBus;
 // with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
@@ -331,8 +339,29 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
             // this is the internal IO space
             Serial.println(F("Request to write into IO space"));
             ioSpaceWrite(address, value, style);
-        } else {
-
+        } else if (address < RamEndingAddress){
+           // we are writing to "RAM" at this point, what it consists of at this point is really inconsequential
+           // for the initial design it is just going to be straight off of the SDCard itself, slow but a great test
+            // in the ram section
+            // now we need to make it relative to 512 megabytes
+            auto actualAddress = RamMask & address;
+            theRAM.seekSet(actualAddress);
+            /// @todo figure out what to do if we couldn't read enough?
+            switch (style) {
+                case LoadStoreStyle::Upper8:
+                    theRAM.seekCur(1); // jump ahead by one
+                    theRAM.write(value >> 8);
+                    break;
+                case LoadStoreStyle::Lower8:
+                    theRAM.write(&value, 1);
+                    break;
+                case LoadStoreStyle::Full16:
+                    theRAM.write(&value, 2);
+                    break;
+                default:
+                    break;
+            }
+            theRAM.flush();
         }
     }
     /// @todo implement
@@ -390,8 +419,16 @@ performRead(Address address, LoadStoreStyle style) noexcept {
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
             // this is the internal IO space
             Serial.println(F("Request to read from IO space"));
-        } else {
-
+        } else if (address < RamEndingAddress){
+            uint16_t output = 0;
+            // in the ram section
+            // now we need to make it relative to 512 megabytes
+            auto actualAddress = RamMask & address;
+            theRAM.seekSet(actualAddress); // jump to that point in memory
+            /// @todo figure out what to do if we couldn't read enough?
+            theRAM.read(&output, 2);
+            // do not evaluate the load store style in this case because the processor will do the ignoring
+            return output;
         }
     }
     return 0;
@@ -610,6 +647,16 @@ void setupSDCard() {
     Serial.print(F("Size of boot.rom: 0x"));
     Serial.print(theBootROM.fileSize(), HEX);
     Serial.println(F(" bytes"));
+    Serial.print(F("Checking for file /ram.bin...."));
+    if (!theRAM.open(rootDirectory, "ram.bin", O_RDWR)) {
+        Serial.println(F("NOT FOUND!"));
+        signalHaltState();
+    }
+    Serial.println(F("FOUND!"));
+    Serial.print(F("Size of ram.bin: 0x"));
+    Serial.print(theBootROM.fileSize(), HEX);
+    Serial.println(F(" bytes"));
+    rootDirectory.close();
 }
 void
 setupSeesaw() {
