@@ -66,6 +66,8 @@ Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
                      -1);
 constexpr bool displaySDCardStatsDuringInit = true;
+/// Set to false to prevent the console from displaying every single read and write
+constexpr bool displayMemoryReadsAndWrites = false;
 // boot rom and sd card loading stuff
 Sd2Card theBootSDCard;
 SdVolume theBootVolume;
@@ -328,22 +330,27 @@ ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
 }
 void
 performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-    Serial.print(F("Write 0x"));
-    Serial.print(value, HEX);
-    Serial.print(F(" to 0x"));
-    Serial.println(address, HEX);
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.print(F("Write 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" to 0x"));
+        Serial.println(address, HEX);
+    }
     if (address < RamStartingAddress) {
         // we are in program land for the time being so do nothing!
     } else {
         // upper half needs to be walked down further
         if (address >= 0xFF00'0000) {
             // cpu internal space, we should never get to this location
-            Serial.println(F("Request to write into CPU internal space"));
+            if (displayMemoryReadsAndWrites) {
+                Serial.println(F("Request to write into CPU internal space"));
+            }
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
-            // this is the internal IO space
-            Serial.println(F("Request to write into IO space"));
+            if constexpr (displayMemoryReadsAndWrites) {
+                // this is the internal IO space
+                Serial.println(F("Request to write into IO space"));
+            }
             ioSpaceWrite(address, value, style);
-            delay(100);
         } else if (address < RamEndingAddress){
            // we are writing to "RAM" at this point, what it consists of at this point is really inconsequential
            // for the initial design it is just going to be straight off of the SDCard itself, slow but a great test
@@ -411,8 +418,10 @@ ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
 }
 uint16_t
 performRead(Address address, LoadStoreStyle style) noexcept {
-    Serial.print(F("Read from 0x"));
-    Serial.println(address, HEX);
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.print(F("Read from 0x"));
+        Serial.println(address, HEX);
+    }
     /// @todo implement
     if (address < RamStartingAddress) {
         if (address < bootRomSize) {
@@ -427,13 +436,15 @@ performRead(Address address, LoadStoreStyle style) noexcept {
         // upper half needs to be walked down further
         if (address >= 0xFF00'0000) {
             // cpu internal space, we should never get to this location
-            Serial.println(F("Request to read from CPU internal space?"));
+            if constexpr (displayMemoryReadsAndWrites) {
+                Serial.println(F("Request to read from CPU internal space?"));
+            }
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
             // this is the internal IO space
-            Serial.println(F("Request to read from IO space"));
-            auto q = ioSpaceRead(address, style);
-            delay(100);
-            return q;
+            if constexpr (displayMemoryReadsAndWrites) {
+                Serial.println(F("Request to read from IO space"));
+            }
+            return ioSpaceRead(address, style);
         } else if (address < RamEndingAddress){
             uint16_t output = 0;
             // in the ram section
