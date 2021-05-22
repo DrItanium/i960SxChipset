@@ -750,7 +750,8 @@ void setup() {
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     digitalWrite(i960Pinout::SD_EN, HIGH);
     digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
-    pinMode(static_cast<int>(i960Pinout::Led), OUTPUT);
+    pinMode(i960Pinout::Led, OUTPUT);
+    digitalWrite(i960Pinout::Led, LOW);
     Wire.begin();
     SPI.begin();
 	PinAsserter<i960Pinout::Reset960> holdi960InReset;
