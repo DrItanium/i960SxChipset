@@ -313,8 +313,8 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
             break;
         case 0x200:
             pwm4Value = value;
-            analogWrite(static_cast<int>(i960Pinout::PWM4), pwm4Value);
-            Serial.print("Analog Write: ");
+            //analogWrite(static_cast<int>(i960Pinout::PWM4), pwm4Value);
+            Serial.print("Analog Write: 0x");
             Serial.println(pwm4Value, HEX);
             break;
         default:

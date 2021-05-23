@@ -39,83 +39,40 @@ extern "C" void user_type(void);
 extern "C"
 void
 user_reserved(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user reserved fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
 }
 
 extern "C"
 void
 user_trace(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user trace fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
 }
 
 extern "C"
 void
 user_operation(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user operation fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
 }
 extern "C"
 void
 user_arithmetic(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user arithmetic fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
 }
 extern "C"
 void
 user_real_arithmetic(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user real arithmetic fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
 }
 extern "C"
 void
 user_constraint(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user constraint fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
 }
 extern "C"
 void
 user_protection(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user protection fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
 }
 extern "C"
 void
 user_machine(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user machine fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
+
 }
 extern "C"
 void
 user_type(void) {
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    const char* msg = "user type fault triggered\n";
-    for (const char* ptr = msg; *ptr; ++ptr) {
-        con = *ptr;
-    }
+
 }
