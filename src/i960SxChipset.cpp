@@ -475,6 +475,12 @@ performRead(Address address, LoadStoreStyle style) noexcept {
 }
 void processDataRequest() noexcept {
     auto burstAddress = getBurstAddress(baseAddress);
+    Serial.print(F("Burst Address 1: 0x"));
+    Serial.println(burstAddress, HEX);
+    delay(1000);
+    burstAddress = getBurstAddress(baseAddress);
+    Serial.print(F("Burst Address 2: 0x"));
+    Serial.println(burstAddress, HEX);
 	if (performingRead) {
 		setDataBits(performRead(burstAddress, getStyle()));
 	} else {
@@ -786,10 +792,13 @@ void loop() {
 }
 
 void enteringChecksumFailure() noexcept {
+    Serial.println(F("CHECKSUM FAILURE!"));
+#if 0
     tft.fillScreen(ST77XX_RED);
     tft.setCursor(0,0);
     tft.setTextSize(2);
     tft.println(F("CHECKSUM FAILURE"));
+#endif
 }
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
