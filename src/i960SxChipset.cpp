@@ -307,7 +307,11 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
             /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
-        case 0x10:
+        case 0x100:
+            Serial.printf(F("%c"), static_cast<char>(value));
+            //Serial.flush();
+            break;
+        case 0x200:
             pwm4Value = value;
             analogWrite(static_cast<int>(i960Pinout::PWM4), pwm4Value);
             Serial.print("Analog Write: ");
@@ -319,6 +323,8 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
 }
 void
 ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
+    Serial.print("IO Address: 0x");
+    Serial.println(address, HEX);
     auto offset = 0x00FF'FFFF & address;
     switch (style) {
         case LoadStoreStyle::Upper8:
@@ -404,6 +410,8 @@ ioSpaceRead16(Address offset) noexcept {
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
         case 0x10:
             return pwm4Value;
+        case 0x100:
+            return static_cast<int16_t>(Serial.read());
         default:
             return 0;
     }
@@ -411,6 +419,8 @@ ioSpaceRead16(Address offset) noexcept {
 
 uint16_t
 ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
+    Serial.print("IO Address: 0x");
+    Serial.println(address, HEX);
     auto offset = 0x00FF'FFFF & address;
     switch (style) {
         case LoadStoreStyle::Full16:
@@ -754,7 +764,8 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
-              i960Pinout::SD_EN);
+              i960Pinout::SD_EN,
+              i960Pinout::PWM4);
 
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     digitalWrite(i960Pinout::SD_EN, HIGH);

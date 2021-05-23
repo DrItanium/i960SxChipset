@@ -1,7 +1,6 @@
 //
 // Created by jwscoggins on 5/2/21.
 //
-#include <string>
 #include <iostream>
 #include "IODevice.h"
 int wait(int count) {
@@ -13,11 +12,22 @@ int wait(int count) {
 }
 int main() {
     BuiltinLED theLed(0);
-    BuiltinPWM thePWM(0x10);
-    uint8_t pwmIndex = 0;
-    std::cout << "donuts" << std::endl;
+    uint8_t pwmIndex = 127;
+    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
+    volatile uint16_t& pwm = memory<uint16_t>(getIOBase0Address(0x200));
+    const char* msg = "hello, world\n";
+    for(const char* ptr = msg; *ptr; ++ptr) {
+        con = *ptr;
+    }
+    con = 'd';
+    con = 'o';
+    con = 'n';
+    con = 'u';
+    con = 't';
+    con = 's';
+    con = '\n';
     while(true) {
-        thePWM.setValue(pwmIndex);
+        pwm = pwmIndex;
         theLed.toggle();
         wait(1000);
         theLed.toggle();
@@ -34,20 +44,11 @@ int atexit(void (*function)(void))
 }
 
 extern "C"
-void abort() {
-    std::cout << "Aborting Execution!" << std::endl;
-    while (true) {
-        // do thing
-    }
-    // do nothing
-}
-
-extern "C"
 ssize_t write(int fildes, const void* buf, size_t nbyte) {
     const char* theBuf = (const char*)buf;
-    volatile uint16_t& con = memory<uint16_t>(0xFE000100);
+    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
     for (size_t i = 0; i < nbyte; ++i) {
-        con = theBuf[i];
+        con = (uint16_t)theBuf[i];
     }
     return nbyte;
 }
@@ -55,13 +56,27 @@ ssize_t write(int fildes, const void* buf, size_t nbyte) {
 extern "C"
 ssize_t read(int fildes, void* buf, size_t nbyte) {
     char* theBuf = (char*)buf;
-    volatile uint16_t& con = memory<uint16_t>(0xFE000100);
+    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
     for (int i = 0; i < nbyte; ++i) {
-        theBuf[i] = con;
+        theBuf[i] = (char)con;
     }
     return nbyte;
 }
+extern "C"
+int open(const char* path, int oflag, ...) {
+    // fake it for now
+    return 0;
+}
 
+#if 0
+extern "C"
+void abort() {
+    std::cout << "Aborting Execution!" << std::endl;
+    while (true) {
+        // do thing
+    }
+    // do nothing
+}
 extern "C"
 off_t lseek(int fildes, off_t offset, int whence) {
     return 0;
@@ -72,11 +87,6 @@ int fstat(int fildes, struct stat* buf) {
    return 0;
 }
 
-extern "C"
-int open(const char* path, int oflag, ...) {
-    // fake it for now
-    return 0;
-}
 
 extern "C"
 void* sbrk(intptr_t increment) {
@@ -92,3 +102,4 @@ extern "C"
 int isatty(int fd) {
     return 0;
 }
+#endif

@@ -22,39 +22,42 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
 /*
  * Fault handler routines
  */
+extern "C" void user_reserved(void);
+extern "C" void user_trace(void);
+extern "C" void user_operation(void);
+extern "C" void user_arithmetic(void);
+extern "C" void user_real_arithmetic(void);
+extern "C" void user_constraint(void);
+extern "C" void user_protection(void);
+extern "C" void user_machine(void);
+extern "C" void user_type(void);
 
-extern void user_reserved(void);
-extern void user_trace(void);
-extern void user_operation(void);
-extern void user_arithmetic(void);
-extern void user_real_arithmetic(void);
-extern void user_constraint(void);
-extern void user_protection(void);
-extern void user_machine(void);
-extern void user_type(void);
-
+extern "C"
 void
 user_reserved(void) {
 
 }
 
+extern "C"
 void
 user_trace(void) {
 
 }
 
+extern "C"
 void
 user_operation(void) {
 
 }
+extern "C"
 void
 user_arithmetic(void) {
 
 }
+extern "C"
 void
 user_real_arithmetic(void) {
 
