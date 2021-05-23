@@ -22,7 +22,7 @@ add_executable(hitagimon
 		i_handle.s
 		i_table.s
 		f_handle.cc
-		ISR.c
+		ISR.cc
         # interface libraries
 		IODevice.cc
 		IODevice.h
