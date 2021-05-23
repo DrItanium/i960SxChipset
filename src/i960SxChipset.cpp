@@ -734,7 +734,6 @@ void setupSDCard() {
 }
 void
 setupSeesaw() {
-#ifndef ARDUINO_GRAND_CENTRAL_M4
     Serial.println(F("Setting up the seesaw"));
     if (!ss.begin()) {
         Serial.println(F("seesaw could not be initialized!"));
@@ -743,13 +742,14 @@ setupSeesaw() {
     Serial.println(F("seesaw started"));
     Serial.print(F("Version: "));
     Serial.println(ss.getVersion(), HEX);
-#endif
 
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
+#ifndef ARDUINO_GRAND_CENTRAL_M4
     setupSeesaw();
     setupTFT();
+#endif
     setupSDCard();
     setupSRAMCache();
     Serial.println(F("Done setting up peripherals..."));
