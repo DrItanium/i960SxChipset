@@ -307,7 +307,7 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
         case 0x100:
-            Serial.printf(F("%c"), static_cast<char>(value));
+            Serial.print(static_cast<char>(value));
             Serial.flush();
             break;
         default:
@@ -761,8 +761,7 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
-              i960Pinout::SD_EN,
-              i960Pinout::PWM4);
+              i960Pinout::SD_EN);
 
 	digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     digitalWrite(i960Pinout::SD_EN, HIGH);
