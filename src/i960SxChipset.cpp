@@ -67,7 +67,7 @@ Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      -1);
 constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayMemoryReadsAndWrites = true;
 // boot rom and sd card loading stuff
 Sd2Card theBootSDCard;
 SdVolume theBootVolume;
@@ -286,7 +286,6 @@ enteringDataState() noexcept {
 	performingRead = isReadOperation();
 }
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
-volatile uint16_t pwm4Value = 0;
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
@@ -309,13 +308,7 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
             break;
         case 0x100:
             Serial.printf(F("%c"), static_cast<char>(value));
-            //Serial.flush();
-            break;
-        case 0x200:
-            pwm4Value = value;
-            //analogWrite(static_cast<int>(i960Pinout::PWM4), pwm4Value);
-            Serial.print("Analog Write: 0x");
-            Serial.println(pwm4Value, HEX);
+            Serial.flush();
             break;
         default:
             break;
@@ -408,8 +401,6 @@ ioSpaceRead16(Address offset) noexcept {
             /// @todo this would be an amalgamation of the contents addresses zero and one
             /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
-        case 0x10:
-            return pwm4Value;
         case 0x100:
             return static_cast<int16_t>(Serial.read());
         default:
@@ -448,6 +439,10 @@ performRead(Address address, LoadStoreStyle style) noexcept {
             // okay cool beans, we can load from the boot rom
             theBootROM.seekSet(address);
             theBootROM.read(&result, 2);
+            if constexpr (displayMemoryReadsAndWrites) {
+                Serial.print(F("\tGot value: 0x"));
+                Serial.println(result, HEX);
+            }
             return result;
         }
         // read from flash
@@ -487,7 +482,9 @@ void processDataRequest() noexcept {
 	}
 	// setup the proper address and emit this over serial
 	auto blastPin = getBlastPin();
-	DigitalPin<i960Pinout::Ready>::pulse();
+	digitalWrite(i960Pinout::Ready, LOW);
+	digitalWrite(i960Pinout::Ready, HIGH);
+	//DigitalPin<i960Pinout::Ready>::pulse();
 	if (blastPin == LOW) {
 		// we not in burst mode
 		fsm.trigger(ReadyAndNoBurst);

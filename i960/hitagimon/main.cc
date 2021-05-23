@@ -1,7 +1,6 @@
 //
 // Created by jwscoggins on 5/2/21.
 //
-#include <iostream>
 #include "IODevice.h"
 int wait(int count) {
     int result = 0;
@@ -14,7 +13,6 @@ int main() {
     BuiltinLED theLed(0);
     uint8_t pwmIndex = 127;
     volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
-    volatile uint16_t& pwm = memory<uint16_t>(getIOBase0Address(0x200));
     const char* msg = "hello, world\n";
     for(const char* ptr = msg; *ptr; ++ptr) {
         con = *ptr;
@@ -27,7 +25,6 @@ int main() {
     con = 's';
     con = '\n';
     while(true) {
-        pwm = pwmIndex;
         theLed.toggle();
         wait(1000);
         theLed.toggle();
@@ -42,7 +39,7 @@ int atexit(void (*function)(void))
 {
 
 }
-
+#if 0
 extern "C"
 ssize_t write(int fildes, const void* buf, size_t nbyte) {
     const char* theBuf = (const char*)buf;
@@ -68,7 +65,6 @@ int open(const char* path, int oflag, ...) {
     return 0;
 }
 
-#if 0
 extern "C"
 void abort() {
     std::cout << "Aborting Execution!" << std::endl;
