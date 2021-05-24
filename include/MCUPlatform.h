@@ -18,6 +18,7 @@ enum class TargetMCU {
     FeatherM0Basic,
     FeatherM0Adalogger,
     MetroM4,
+    ArduinoUno,
     Unknown,
 };
 /**
@@ -42,6 +43,8 @@ enum class TargetMCU {
     return TargetMCU::FeatherM0Basic;
 #elif defined(ADAFRUIT_METRO_M4_EXPRESS)
     return TargetMCU::MetroM4;
+#elif defined(ARDUINO_AVR_UNO)
+    return TargetMCU::ArduinoUno;
 #else
     return TargetMCU::Unknown;
 #endif
@@ -67,6 +70,10 @@ enum class TargetMCU {
 
 [[nodiscard]] constexpr auto onMetroM4() noexcept {
     return getMCUTarget() == TargetMCU::MetroM4;
+}
+
+[[nodiscard]] constexpr auto onArduinoUno() noexcept {
+    return getMCUTarget() == TargetMCU::ArduinoUno;
 }
 
 [[nodiscard]] constexpr auto onFeatherM0() noexcept {
