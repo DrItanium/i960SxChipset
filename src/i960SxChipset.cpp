@@ -758,6 +758,7 @@ void setup() {
     pinMode(i960Pinout::Reset960, OUTPUT);
     PinAsserter<i960Pinout::Reset960> holdi960InReset;
 #ifdef ARDUINO_GRAND_CENTRAL_M4
+#if 0
     // pins on the digital block with access to the GCLK are:
     // 36 - GCLK / IO3
     // 37 - GCLK / IO2
@@ -773,6 +774,7 @@ void setup() {
     PORT->Group[g_APinDescription[39].ulPort].PINCFG[g_APinDescription[39].ulPin].bit.PMUXEN = 1;
     // enable on pin 39 or PB14
     PORT->Group[g_APinDescription[39].ulPort].PMUX[g_APinDescription[39].ulPin >> 1].reg |= PORT_PMUX_PMUXE(MUX_PB14M_GCLK_IO0);
+#endif
 #endif // end ARDUINO_GRAND_CENTRAL_M4
     Serial.begin(115200);
     while (!Serial);
