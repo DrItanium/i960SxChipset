@@ -35,8 +35,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SD.h>
 #include <Wire.h>
 
-#include <ArduinoJson.h>
-
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
 #include <Adafruit_seesaw.h>
@@ -47,7 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "RAM.h"
 #include "SPIBus.h"
 #include "IOExpanders.h"
-#include "PSRAM64H.h"
 
 
 
@@ -78,18 +75,6 @@ SdFile theBootROM;
 SdFile theRAM; // use an SDCard as ram for the time being
 uint32_t bootRomSize = 0;
 // the upper 64 elements of the bus are exposed for direct processor usage
-#ifndef ARDUINO_AVR_UNO
-union WordEntry {
-    byte bytes[2];
-    uint16_t word;
-};
-constexpr auto OnBoardSRAMCacheSizeInBytes = 8;
-constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
-/**
- * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
- */
-volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
-#endif
 
 static constexpr auto FlashStartingAddress = 0x0000'0000;
 static constexpr Address OneMemorySpace = 0x100'0000; // 16 megabytes
@@ -100,7 +85,6 @@ static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces o
 static constexpr auto RamMask = MaxRamSize - 1;
 static constexpr Address RamStartingAddress = 0x8000'0000;
 static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
-
 #ifndef ARDUINO_AVR_UNO
 SPIBus theSPIBus;
 #endif
@@ -294,13 +278,17 @@ enteringDataState() noexcept {
 }
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
 void
+writeLed(uint8_t value) noexcept {
+    digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("LED WRITE!"));
+    }
+}
+void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
         case 0: // builtin led
-            digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
-#ifndef ARDUINO_AVR_UNO
-            Serial.println(F("LED WRITE!"));
-#endif
+            writeLed(value);
             break;
         default:
             break;
@@ -311,7 +299,7 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
     // we are writing to two separate addresses
     switch (offset) {
         case 0: // and 1
-            digitalWrite(i960Pinout::Led, (value & 0xFF) > 0 ? HIGH : LOW);
+            writeLed(value & 0xFF);
             /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
@@ -396,13 +384,17 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
     /// @todo implement
 }
 uint8_t
+readLed() noexcept {
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("LED READ!"));
+    }
+    return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
+}
+uint8_t
 ioSpaceRead8(Address offset) noexcept {
     switch (offset) {
         case 0:
-#ifndef ARDUINO_AVR_UNO
-            Serial.println(F("LED READ!"));
-#endif
-            return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
+            return readLed();
         default:
             return 0;
     }
@@ -413,7 +405,7 @@ ioSpaceRead16(Address offset) noexcept {
         case 0:
             /// @todo this would be an amalgamation of the contents addresses zero and one
             /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
-            return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
+            return static_cast<uint16_t>(readLed());
         case 0x100:
             return static_cast<int16_t>(Serial.read());
         default:
@@ -423,10 +415,10 @@ ioSpaceRead16(Address offset) noexcept {
 
 uint16_t
 ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
-#ifndef ARDUINO_AVR_UNO
-    Serial.print("IO Address: 0x");
-    Serial.println(address, HEX);
-#endif
+    if constexpr (!onArduinoUno()) {
+        Serial.print("IO Address: 0x");
+        Serial.println(address, HEX);
+    }
     auto offset = 0x00FF'FFFF & address;
     switch (style) {
         case LoadStoreStyle::Full16:
@@ -523,7 +515,9 @@ void doRecoveryState() noexcept {
 // ----------------------------------------------------------------
 
 void setupBusStateMachine() noexcept {
-    Serial.print(F("Setting up bus state machine..."));
+    if constexpr (!onArduinoUno()) {
+        Serial.print(F("Setting up bus state machine..."));
+    }
 	fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
 	fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
 	fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
@@ -534,12 +528,16 @@ void setupBusStateMachine() noexcept {
 	fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
 	fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
 	fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
-    Serial.println(F("done"));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("done"));
+    }
 }
 //State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
 //as we have no concept of waiting inside of the mcu
 void setupCPUInterface() {
-    Serial.println(F("Setting up interrupts!"));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("Setting up interrupts!"));
+    }
 	setupPins(OUTPUT,
 			i960Pinout::Ready,
 			i960Pinout::GPIOSelect,
@@ -558,45 +556,43 @@ void setupCPUInterface() {
 			i960Pinout::FAIL);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-    Serial.println(F("Done setting up interrupts!"));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("Done setting up interrupts!"));
+    }
 }
 void setupIOExpanders() {
-    Serial.println(F("Setting up IOExpanders!"));
-	// at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
-	// disabled. We can send out a single IOCON.HAEN enable message and all
-	// should receive it. 
-	// so do a begin operation on all chips (0b000)
-	dataLines.begin(); 
-	// set IOCON.HAEN on all chips
-	dataLines.enableHardwareAddressPins();
-	// now we have to refresh our on mcu flags for each io expander
-	lower16.refreshIOCon();
-	upper16.refreshIOCon();
-	extraMemoryCommit.refreshIOCon();
-	// now all devices tied to this ~CS pin have separate addresses
-	// make each of these inputs
-	lower16.writeGPIOsDirection(0xFFFF);
-	upper16.writeGPIOsDirection(0xFFFF);
-	dataLines.writeGPIOsDirection(0xFFFF);
-	// set lower eight to inputs and upper eight to outputs
-	extraMemoryCommit.writeGPIOsDirection(0x00FF);
-	// then indirectly mark the outputs
-	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
-	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("Setting up IOExpanders!"));
+    }
+    // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
+    // disabled. We can send out a single IOCON.HAEN enable message and all
+    // should receive it.
+    // so do a begin operation on all chips (0b000)
+    dataLines.begin();
+    // set IOCON.HAEN on all chips
+    dataLines.enableHardwareAddressPins();
+    // now we have to refresh our on mcu flags for each io expander
+    lower16.refreshIOCon();
+    upper16.refreshIOCon();
+    extraMemoryCommit.refreshIOCon();
+    // now all devices tied to this ~CS pin have separate addresses
+    // make each of these inputs
+    lower16.writeGPIOsDirection(0xFFFF);
+    upper16.writeGPIOsDirection(0xFFFF);
+    dataLines.writeGPIOsDirection(0xFFFF);
+    // set lower eight to inputs and upper eight to outputs
+    extraMemoryCommit.writeGPIOsDirection(0x00FF);
+    // then indirectly mark the outputs
+    pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
+    pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
 #ifndef ARDUINO_AVR_UNO
-	theSPIBus.setup();
+        theSPIBus.setup();
 #endif
-    Serial.println(F("Done setting up io expanders!"));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("Done setting up io expanders!"));
+    }
 }
 
-void setupSRAMCache() {
-#ifndef ARDUINO_AVR_UNO
-        // 8k on board cache
-        for (uint32_t i = 0; i < OnBoardSRAMCacheSize; ++i) {
-            OnBoardSRAMCache[i].word = 0;
-        }
-#endif
-}
 constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
     return start + (size * count);
 }
@@ -623,12 +619,12 @@ void setupTFT() {
 }
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
-#ifdef ARDUINO_AVR_UNO
-    Serial.println(haltMsg);
-#else
+#ifndef ARDUINO_AVR_UNO
     if (!tftSetup) {
+#endif
         Serial.println(haltMsg);
-    } {
+#ifndef ARDUINO_AVR_UNO
+    } else {
         tft.fillScreen(ST77XX_RED);
         tft.setCursor(0,0);
         tft.setTextSize(1);
@@ -641,7 +637,9 @@ template<typename T>
 }
 
 void setupSDCard() {
-    Serial.println(F("Bringing up SD CARD"));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("Bringing up SD CARD"));
+    }
     if constexpr (displaySDCardStatsDuringInit) {
         Serial.print(F("SD Card Enable Pin: "));
         Serial.println(static_cast<int>(i960Pinout::SD_EN));
@@ -649,27 +647,25 @@ void setupSDCard() {
         Serial.println(static_cast<int>(i960Pinout::SD_MISO));
         Serial.println(static_cast<int>(i960Pinout::SD_SCK));
     }
-        // the sd card is on a separate SPI Bus in some cases
+    // the sd card is on a separate SPI Bus in some cases
     if (!theBootSDCard.init(SPI_FULL_SPEED,
-                            static_cast<int>(i960Pinout::SD_EN)
-#ifndef ARDUINO_AVR_UNO
-,
+                            static_cast<int>(i960Pinout::SD_EN),
                             static_cast<int>(i960Pinout::SD_MOSI),
                             static_cast<int>(i960Pinout::SD_MISO),
-                            static_cast<int>(i960Pinout::SD_SCK)
-#endif
-    )) {
-#ifndef ARDUINO_AVR_UNO
-        // save space
-        Serial.println(F("SD Card initialization failed"));
-        Serial.println(F("Make sure of the following:"));
-        Serial.println(F("1) Is an SD Card is inserted?"));
-        Serial.println(F("2) Is the wiring is correct?"));
-        Serial.println(F("3) Does the ~CS pin match the shield or module?"));
-#endif
+                            static_cast<int>(i960Pinout::SD_SCK))) {
+        if constexpr (!onArduinoUno()) {
+            // save space
+            Serial.println(F("SD Card initialization failed"));
+            Serial.println(F("Make sure of the following:"));
+            Serial.println(F("1) Is an SD Card is inserted?"));
+            Serial.println(F("2) Is the wiring is correct?"));
+            Serial.println(F("3) Does the ~CS pin match the shield or module?"));
+        }
         signalHaltState(F("NO SD CARD"));
     }
-    Serial.println(F("SD Card initialization successful"));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("SD Card initialization successful"));
+    }
     if constexpr (displaySDCardStatsDuringInit) {
         Serial.println();
         Serial.println(F("Card Info"));
@@ -690,10 +686,10 @@ void setupSDCard() {
         }
     }
     if (!theBootVolume.init(theBootSDCard)) {
-#ifndef ARDUINO_AVR_UNO
-        Serial.println(F("Could not find a valid FAT16/FAT32 parition"));
-        Serial.println(F("Make sure you've formatted the card!"));
-#endif
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("Could not find a valid FAT16/FAT32 parition"));
+            Serial.println(F("Make sure you've formatted the card!"));
+        }
         signalHaltState(F("BAD SD FORMAT"));
     }
     if constexpr (displaySDCardStatsDuringInit) {
@@ -728,76 +724,88 @@ void setupSDCard() {
         Serial.println();
         Serial.println();
     }
-#ifndef ARDUINO_AVR_UNO
-    Serial.print(F("Checking for file /boot.rom...."));
-#endif
+    if constexpr (!onArduinoUno()) {
+        Serial.print(F("Checking for file /boot.rom...."));
+    }
     if (!theBootROM.open(rootDirectory, "boot.rom", O_READ)) {
-#ifndef ARDUINO_AVR_UNO
-        Serial.println(F("FAILED!"));
-#endif
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("FAILED!"));
+        }
         signalHaltState(F("NO BOOT.ROM"));
     }
-#ifndef ARDUINO_AVR_UNO
-    Serial.println(F("FOUND!"));
-    Serial.print(F("Size of boot.rom: 0x"));
-#endif
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("FOUND!"));
+        Serial.print(F("Size of boot.rom: 0x"));
+    }
     bootRomSize = theBootROM.fileSize();
     if (bootRomSize >= RamStartingAddress) {
-#ifndef ARDUINO_AVR_UNO
-        Serial.println(F("BOOT.ROM is too large!"));
-#endif
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("BOOT.ROM is too large!"));
+        }
         signalHaltState(F("BOOT.ROM TOO LARGE!"));
     }
     if (bootRomSize == 0) {
-#ifndef ARDUINO_AVR_UNO
-        Serial.println(F("BOOT.ROM is empty!"));
-#endif
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("BOOT.ROM is empty!"));
+        }
         signalHaltState(F("BOOT.ROM EMPTY!"));
     }
-#ifndef ARDUINO_AVR_UNO
-    Serial.print(theBootROM.fileSize(), HEX);
-    Serial.println(F(" bytes"));
-    Serial.print(F("Checking for file /ram.bin...."));
-#endif
+    if constexpr (!onArduinoUno()) {
+        Serial.print(theBootROM.fileSize(), HEX);
+        Serial.println(F(" bytes"));
+        Serial.print(F("Checking for file /ram.bin...."));
+    }
     if (!theRAM.open(rootDirectory, "ram.bin", O_RDWR)) {
-#ifndef ARDUINO_AVR_UNO
-        Serial.println(F("NOT FOUND!"));
-#endif
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("NOT FOUND!"));
+        }
         signalHaltState(F("NO RAM.BIN"));
     }
     /// @todo lookup the sdcard map information
-#ifndef ARDUINO_AVR_UNO
-    Serial.println(F("FOUND!"));
-    Serial.print(F("Size of ram.bin: 0x"));
-    Serial.print(theRAM.fileSize(), HEX);
-    Serial.println(F(" bytes"));
-#endif
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("FOUND!"));
+        Serial.print(F("Size of ram.bin: 0x"));
+        Serial.print(theRAM.fileSize(), HEX);
+        Serial.println(F(" bytes"));
+    }
     rootDirectory.close();
-
-    Serial.println(F("Successfully setup SD card"));
+    if constexpr (onArduinoUno()) {
+        Serial.println(F("SD OK!"));
+    } else {
+        Serial.println(F("Successfully setup SD card"));
+    }
 }
 void
 setupSeesaw() {
 #ifndef ARDUINO_AVR_UNO
-    Serial.println(F("Setting up the seesaw"));
-    if (!ss.begin()) {
-        Serial.println(F("seesaw could not be initialized!"));
-        signalHaltState("NO SEESAW");
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("Setting up the seesaw"));
     }
-    Serial.println(F("seesaw started"));
-    Serial.print(F("Version: "));
-    Serial.println(ss.getVersion(), HEX);
+    if (!ss.begin()) {
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("seesaw could not be initialized!"));
+        }
+        signalHaltState(F("NO SEESAW"));
+    }
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("seesaw started"));
+        Serial.print(F("Version: "));
+        Serial.println(ss.getVersion(), HEX);
+    }
 #endif
 }
 void setupPeripherals() {
-    Serial.println(F("Setting up peripherals..."));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("Setting up peripherals..."));
+    }
     if constexpr (!onGrandCentralM4() && !onMetroM4()) {
         setupSeesaw();
         setupTFT();
     }
     setupSDCard();
-    setupSRAMCache();
-    Serial.println(F("Done setting up peripherals..."));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("Done setting up peripherals..."));
+    }
 }
 // the setup routine runs once when you press reset:
 void setup() {
@@ -825,7 +833,9 @@ void setup() {
 #endif // end ARDUINO_GRAND_CENTRAL_M4
     Serial.begin(115200);
     while (!Serial);
-    Serial.println(F("i960Sx chipset bringup"));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("i960Sx chipset bringup"));
+    }
     setupPins(OUTPUT,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
@@ -844,22 +854,26 @@ void setup() {
 	setupPeripherals();
 	delay(1000);
 	// we want to jump into the code as soon as possible after this point
-	Serial.println(F("i960Sx chipset brought up fully!"));
+	if constexpr (!onArduinoUno()) {
+        Serial.println(F("i960Sx chipset brought up fully!"));
+    }
 }
 void loop() {
 	fsm.run_machine();
 }
 
 void enteringChecksumFailure() noexcept {
-    Serial.println(F("CHECKSUM FAILURE!"));
 #ifndef ARDUINO_AVR_UNO
     if (tftSetup) {
         tft.fillScreen(ST77XX_RED);
         tft.setCursor(0,0);
         tft.setTextSize(2);
         tft.println(F("CHECKSUM FAILURE"));
-    }
+    } else
 #endif
+    {
+        Serial.println(F("CHECKSUM FAILURE!"));
+    }
 }
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
