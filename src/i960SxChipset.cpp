@@ -337,10 +337,10 @@ ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
 void
 performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("Write 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" to 0x"));
-        Serial.println(address, HEX);
+        Serial.print(F("Write 0b"));
+        Serial.print(value, BIN);
+        Serial.print(F(" to 0b"));
+        Serial.println(address, BIN);
     }
     if (address < RamStartingAddress) {
         // we are in program land for the time being so do nothing!
@@ -429,8 +429,8 @@ ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
 uint16_t
 performRead(Address address, LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("Read from 0x"));
-        Serial.println(address, HEX);
+        Serial.print(F("Read from 0b"));
+        Serial.println(address, BIN);
     }
     /// @todo implement
     if (address < RamStartingAddress) {
@@ -440,8 +440,8 @@ performRead(Address address, LoadStoreStyle style) noexcept {
             theBootROM.seekSet(address);
             theBootROM.read(&result, 2);
             if constexpr (displayMemoryReadsAndWrites) {
-                Serial.print(F("\tGot value: 0x"));
-                Serial.println(result, HEX);
+                Serial.print(F("\tGot value: 0b"));
+                Serial.println(result, BIN);
             }
             return result;
         }
