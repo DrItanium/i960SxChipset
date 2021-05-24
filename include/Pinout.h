@@ -130,7 +130,7 @@ enum class i960Pinout : decltype(A0) {
     SD_EN = ::A2,
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
-#elif defined(ARDUINO_UNO)
+#elif defined(ARDUINO_AVR_UNO)
     AS_ = 2,
     DEN_ = 3,
     Ready = 4,      // output
@@ -142,6 +142,8 @@ enum class i960Pinout : decltype(A0) {
     GPIOSelect = 10,        // output
     SPI_BUS_EN = ::A0, // output
     SD_EN = ::A2,
+    DISPLAY_EN = SDA, // done over i2c
+    DC = SDA, // done over i2c
 #else
 #error "PLEASE DEFINE BOARD's PINOUT"
 #endif

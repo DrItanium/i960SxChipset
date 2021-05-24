@@ -60,14 +60,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) noexcept {
 	return - (satPtr + pcrbPtr + startIP);
 }
+#ifndef ARDUINO_AVR_UNO
 volatile bool tftSetup = false;
 Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
                      -1);
+#endif
 constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = true;
+constexpr bool displayMemoryReadsAndWrites = false;
 // boot rom and sd card loading stuff
 Sd2Card theBootSDCard;
 SdVolume theBootVolume;
@@ -76,16 +78,18 @@ SdFile theBootROM;
 SdFile theRAM; // use an SDCard as ram for the time being
 uint32_t bootRomSize = 0;
 // the upper 64 elements of the bus are exposed for direct processor usage
+#ifndef ARDUINO_AVR_UNO
 union WordEntry {
     byte bytes[2];
     uint16_t word;
 };
-constexpr auto OnBoardSRAMCacheSizeInBytes = 128;
+constexpr auto OnBoardSRAMCacheSizeInBytes = 8;
 constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
 /**
  * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
  */
 volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
+#endif
 
 static constexpr auto FlashStartingAddress = 0x0000'0000;
 static constexpr Address OneMemorySpace = 0x100'0000; // 16 megabytes
@@ -160,8 +164,9 @@ private:
     int16_t x2_ = 0;
     int16_t y2_ = 0;
 };
-
+#ifndef ARDUINO_AVR_UNO
 DisplayCommand<decltype(tft)> displayCommandSet(tft);
+#endif
 
 
 // ----------------------------------------------------------------
@@ -573,10 +578,12 @@ void setupIOExpanders() {
 }
 
 void setupSRAMCache() {
-    // 8k on board cache
-    for (uint32_t i = 0; i < OnBoardSRAMCacheSize; ++i) {
-        OnBoardSRAMCache[i].word = 0;
-    }
+#ifndef ARDUINO_AVR_UNO
+        // 8k on board cache
+        for (uint32_t i = 0; i < OnBoardSRAMCacheSize; ++i) {
+            OnBoardSRAMCache[i].word = 0;
+        }
+#endif
 }
 constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
     return start + (size * count);
@@ -585,23 +592,28 @@ constexpr auto computeAddressStart(Address start, Address size, Address count) n
 // At this point it is a massive pain in the ass to program all these devices but who cares
 
 void setupTFT() {
-    ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
-    ss.tftReset();
-    tft.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
-    ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
-    Serial.println(F("TFT OK!"));
-    tft.fillScreen(ST77XX_CYAN);
-    Serial.println(F("Screen should have cyan in it!"));
-    delay(100);
-    tftSetup = true;
-    tft.fillScreen(ST77XX_BLACK);
-    tft.setCursor(0,0);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setTextSize(3);
-    tft.println(F("i960Sx!"));
+#ifndef ARDUINO_AVR_UNO
+        ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
+        ss.tftReset();
+        tft.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
+        ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
+        Serial.println(F("TFT OK!"));
+        tft.fillScreen(ST77XX_CYAN);
+        Serial.println(F("Screen should have cyan in it!"));
+        delay(100);
+        tftSetup = true;
+        tft.fillScreen(ST77XX_BLACK);
+        tft.setCursor(0, 0);
+        tft.setTextColor(ST77XX_WHITE);
+        tft.setTextSize(3);
+        tft.println(F("i960Sx!"));
+#endif
 }
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
+#ifdef ARDUINO_AVR_UNO
+    Serial.println(haltMsg);
+#else
     if (!tftSetup) {
         Serial.println(haltMsg);
     } {
@@ -610,6 +622,7 @@ template<typename T>
         tft.setTextSize(1);
         tft.println(haltMsg);
     }
+#endif
     while(true) {
         delay(1000);
     }
@@ -626,16 +639,22 @@ void setupSDCard() {
     }
         // the sd card is on a separate SPI Bus in some cases
     if (!theBootSDCard.init(SPI_FULL_SPEED,
-                            static_cast<int>(i960Pinout::SD_EN),
+                            static_cast<int>(i960Pinout::SD_EN)
+#ifndef ARDUINO_AVR_UNO
+,
                             static_cast<int>(i960Pinout::SD_MOSI),
                             static_cast<int>(i960Pinout::SD_MISO),
                             static_cast<int>(i960Pinout::SD_SCK)
+#endif
     )) {
+#ifndef ARDUINO_AVR_UNO
+        // save space
         Serial.println(F("SD Card initialization failed"));
         Serial.println(F("Make sure of the following:"));
         Serial.println(F("1) Is an SD Card is inserted?"));
         Serial.println(F("2) Is the wiring is correct?"));
         Serial.println(F("3) Does the ~CS pin match the shield or module?"));
+#endif
         signalHaltState(F("NO SD CARD"));
     }
     Serial.println(F("SD Card initialization successful"));
@@ -659,8 +678,10 @@ void setupSDCard() {
         }
     }
     if (!theBootVolume.init(theBootSDCard)) {
+#ifndef ARDUINO_AVR_UNO
         Serial.println(F("Could not find a valid FAT16/FAT32 parition"));
         Serial.println(F("Make sure you've formatted the card!"));
+#endif
         signalHaltState(F("BAD SD FORMAT"));
     }
     if constexpr (displaySDCardStatsDuringInit) {
@@ -729,6 +750,7 @@ void setupSDCard() {
 }
 void
 setupSeesaw() {
+#ifndef ARDUINO_AVR_UNO
     Serial.println(F("Setting up the seesaw"));
     if (!ss.begin()) {
         Serial.println(F("seesaw could not be initialized!"));
@@ -737,7 +759,7 @@ setupSeesaw() {
     Serial.println(F("seesaw started"));
     Serial.print(F("Version: "));
     Serial.println(ss.getVersion(), HEX);
-
+#endif
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
@@ -802,11 +824,13 @@ void loop() {
 
 void enteringChecksumFailure() noexcept {
     Serial.println(F("CHECKSUM FAILURE!"));
-#if 0
-    tft.fillScreen(ST77XX_RED);
-    tft.setCursor(0,0);
-    tft.setTextSize(2);
-    tft.println(F("CHECKSUM FAILURE"));
+#ifndef ARDUINO_AVR_UNO
+    if (tftSetup) {
+        tft.fillScreen(ST77XX_RED);
+        tft.setCursor(0,0);
+        tft.setTextSize(2);
+        tft.println(F("CHECKSUM FAILURE"));
+    }
 #endif
 }
 /// @todo Eliminate after MightyCore update
