@@ -762,11 +762,30 @@ void setupPeripherals() {
 }
 // the setup routine runs once when you press reset:
 void setup() {
+    // before we do anything else, make sure that we pull the i960 into a reset state
+    pinMode(i960Pinout::Reset960, OUTPUT);
+    PinAsserter<i960Pinout::Reset960> holdi960InReset;
+#ifdef ARDUINO_GRAND_CENTRAL_M4
+    // pins on the digital block with access to the GCLK are:
+    // 36 - GCLK / IO3
+    // 37 - GCLK / IO2
+    // 38 - GCLK / IO1
+    // 39 - GCLK / IO0
+    // let's choose pin 39 for this purpose
+    GCLK->GENCTRL[0].reg = GCLK_GENCTRL_DIV(6) |
+                           GCLK_GENCTRL_IDC |
+                           GCLK_GENCTRL_GENEN |
+                           GCLK_GENCTRL_OE |
+                           GCLK_GENCTRL_SRC_DPLL0;
+    while(GCLK->SYNCBUSY.bit.GENCTRL0);
+    PORT->Group[g_APinDescription[39].ulPort].PINCFG[g_APinDescription[39].ulPin].bit.PMUXEN = 1;
+    // enable on pin 39 or PB14
+    PORT->Group[g_APinDescription[39].ulPort].PMUX[g_APinDescription[39].ulPin >> 1].reg |= PORT_PMUX_PMUXE(MUX_PB14M_GCLK_IO0);
+#endif // end ARDUINO_GRAND_CENTRAL_M4
     Serial.begin(115200);
     while (!Serial);
     Serial.println(F("i960Sx chipset bringup"));
     setupPins(OUTPUT,
-              i960Pinout::Reset960,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
               i960Pinout::SD_EN);
@@ -778,7 +797,6 @@ void setup() {
     digitalWrite(i960Pinout::Led, LOW);
     Wire.begin();
     SPI.begin();
-	PinAsserter<i960Pinout::Reset960> holdi960InReset;
 	setupIOExpanders();
 	setupCPUInterface();
 	setupBusStateMachine();
