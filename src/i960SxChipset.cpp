@@ -626,13 +626,10 @@ void setupSDCard() {
     }
         // the sd card is on a separate SPI Bus in some cases
     if (!theBootSDCard.init(SPI_FULL_SPEED,
-                            static_cast<int>(i960Pinout::SD_EN)
-#ifdef ARDUINO_GRAND_CENTRAL_M4
-,
+                            static_cast<int>(i960Pinout::SD_EN),
                             static_cast<int>(i960Pinout::SD_MOSI),
                             static_cast<int>(i960Pinout::SD_MISO),
                             static_cast<int>(i960Pinout::SD_SCK)
-#endif
     )) {
         Serial.println(F("SD Card initialization failed"));
         Serial.println(F("Make sure of the following:"));
@@ -744,10 +741,10 @@ setupSeesaw() {
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-#ifndef ARDUINO_GRAND_CENTRAL_M4
-    setupSeesaw();
-    setupTFT();
-#endif
+    if constexpr (!onGrandCentralM4() && !onMetroM4()) {
+        setupSeesaw();
+        setupTFT();
+    }
     setupSDCard();
     setupSRAMCache();
     Serial.println(F("Done setting up peripherals..."));

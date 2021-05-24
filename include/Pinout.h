@@ -127,9 +127,7 @@ enum class i960Pinout : decltype(A0) {
     FAIL = 9,         // input
     GPIOSelect = 10,        // output
     SPI_BUS_EN = ::A0, // output
-    SD_EN = ::A5,
-    WIFI_BUSY = ::A4,
-    WIFI_EN = ::A3,
+    SD_EN = ::A2,
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
 #else
