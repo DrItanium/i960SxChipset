@@ -477,10 +477,6 @@ void processDataRequest() noexcept {
     auto burstAddress = getBurstAddress(baseAddress);
     Serial.print(F("Burst Address 1: 0x"));
     Serial.println(burstAddress, HEX);
-    delay(1000);
-    burstAddress = getBurstAddress(baseAddress);
-    Serial.print(F("Burst Address 2: 0x"));
-    Serial.println(burstAddress, HEX);
 	if (performingRead) {
 		setDataBits(performRead(burstAddress, getStyle()));
 	} else {
