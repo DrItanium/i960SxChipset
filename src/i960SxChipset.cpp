@@ -101,7 +101,9 @@ static constexpr auto RamMask = MaxRamSize - 1;
 static constexpr Address RamStartingAddress = 0x8000'0000;
 static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
 
+#ifndef ARDUINO_AVR_UNO
 SPIBus theSPIBus;
+#endif
 // with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
 // set a single pixel in the display, storage area
 // we map these pixel values to specific storage cells on the microcontroller
@@ -296,7 +298,9 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
         case 0: // builtin led
             digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
+#ifndef ARDUINO_AVR_UNO
             Serial.println(F("LED WRITE!"));
+#endif
             break;
         default:
             break;
@@ -321,8 +325,10 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
 }
 void
 ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-    Serial.print("IO Address: 0x");
-    Serial.println(address, HEX);
+    if constexpr (!onArduinoUno()) {
+        Serial.print("IO Address: 0x");
+        Serial.println(address, HEX);
+    }
     auto offset = 0x00FF'FFFF & address;
     switch (style) {
         case LoadStoreStyle::Upper8:
@@ -393,7 +399,9 @@ uint8_t
 ioSpaceRead8(Address offset) noexcept {
     switch (offset) {
         case 0:
+#ifndef ARDUINO_AVR_UNO
             Serial.println(F("LED READ!"));
+#endif
             return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
         default:
             return 0;
@@ -415,8 +423,10 @@ ioSpaceRead16(Address offset) noexcept {
 
 uint16_t
 ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
+#ifndef ARDUINO_AVR_UNO
     Serial.print("IO Address: 0x");
     Serial.println(address, HEX);
+#endif
     auto offset = 0x00FF'FFFF & address;
     switch (style) {
         case LoadStoreStyle::Full16:
@@ -573,7 +583,9 @@ void setupIOExpanders() {
 	// then indirectly mark the outputs
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
 	pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
+#ifndef ARDUINO_AVR_UNO
 	theSPIBus.setup();
+#endif
     Serial.println(F("Done setting up io expanders!"));
 }
 
@@ -716,34 +728,50 @@ void setupSDCard() {
         Serial.println();
         Serial.println();
     }
+#ifndef ARDUINO_AVR_UNO
     Serial.print(F("Checking for file /boot.rom...."));
+#endif
     if (!theBootROM.open(rootDirectory, "boot.rom", O_READ)) {
+#ifndef ARDUINO_AVR_UNO
         Serial.println(F("FAILED!"));
+#endif
         signalHaltState(F("NO BOOT.ROM"));
     }
+#ifndef ARDUINO_AVR_UNO
     Serial.println(F("FOUND!"));
     Serial.print(F("Size of boot.rom: 0x"));
+#endif
     bootRomSize = theBootROM.fileSize();
     if (bootRomSize >= RamStartingAddress) {
+#ifndef ARDUINO_AVR_UNO
         Serial.println(F("BOOT.ROM is too large!"));
+#endif
         signalHaltState(F("BOOT.ROM TOO LARGE!"));
     }
     if (bootRomSize == 0) {
+#ifndef ARDUINO_AVR_UNO
         Serial.println(F("BOOT.ROM is empty!"));
+#endif
         signalHaltState(F("BOOT.ROM EMPTY!"));
     }
+#ifndef ARDUINO_AVR_UNO
     Serial.print(theBootROM.fileSize(), HEX);
     Serial.println(F(" bytes"));
     Serial.print(F("Checking for file /ram.bin...."));
+#endif
     if (!theRAM.open(rootDirectory, "ram.bin", O_RDWR)) {
+#ifndef ARDUINO_AVR_UNO
         Serial.println(F("NOT FOUND!"));
+#endif
         signalHaltState(F("NO RAM.BIN"));
     }
     /// @todo lookup the sdcard map information
+#ifndef ARDUINO_AVR_UNO
     Serial.println(F("FOUND!"));
     Serial.print(F("Size of ram.bin: 0x"));
     Serial.print(theRAM.fileSize(), HEX);
     Serial.println(F(" bytes"));
+#endif
     rootDirectory.close();
 
     Serial.println(F("Successfully setup SD card"));
