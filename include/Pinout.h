@@ -116,6 +116,22 @@ enum class i960Pinout : decltype(A0) {
     BLAST_ = 13,     // input
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
+#elif defined(ARDUINO_METRO_M4)
+    AS_ = 2,
+    DEN_ = 3,
+    Ready = 4,      // output
+    Int0_ = 5,          // output
+    W_R_ = 6,          // input
+    Reset960 = 7,
+    BLAST_ = 8,     // input
+    FAIL = 9,         // input
+    GPIOSelect = 10,        // output
+    SPI_BUS_EN = ::A0, // output
+    SD_EN = ::A5,
+    WIFI_BUSY = ::A4,
+    WIFI_EN = ::A3,
+    DISPLAY_EN = SDA, // done over i2c
+    DC = SDA, // done over i2c
 #else
 #error "PLEASE DEFINE BOARD's PINOUT"
 #endif

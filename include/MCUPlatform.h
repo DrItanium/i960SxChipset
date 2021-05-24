@@ -17,6 +17,7 @@ enum class TargetMCU {
     GrandCentralM4,
     FeatherM0Basic,
     FeatherM0Adalogger,
+    MetroM4,
     Unknown,
 };
 /**
@@ -39,6 +40,8 @@ enum class TargetMCU {
     return TargetMCU::FeatherM0Adalogger;
 #elif defined(ADAFRUIT_FEATHER_M0_BASIC)
     return TargetMCU::FeatherM0Basic;
+#elif defined(ADAFRUIT_METRO_M4_EXPRESS)
+    return TargetMCU::MetroM4;
 #else
     return TargetMCU::Unknown;
 #endif
@@ -60,6 +63,10 @@ enum class TargetMCU {
 
 [[nodiscard]] constexpr auto onFeatherM0Adalogger() noexcept {
     return getMCUTarget() == TargetMCU::FeatherM0Adalogger;
+}
+
+[[nodiscard]] constexpr auto onMetroM4() noexcept {
+    return getMCUTarget() == TargetMCU::MetroM4;
 }
 
 [[nodiscard]] constexpr auto onFeatherM0() noexcept {
