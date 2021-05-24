@@ -475,18 +475,14 @@ performRead(Address address, LoadStoreStyle style) noexcept {
 }
 void processDataRequest() noexcept {
     auto burstAddress = getBurstAddress(baseAddress);
-    Serial.print(F("Burst Address 1: 0x"));
-    Serial.println(burstAddress, HEX);
 	if (performingRead) {
 		setDataBits(performRead(burstAddress, getStyle()));
 	} else {
 	    performWrite(burstAddress, getDataBits(), getStyle());
 	}
 	// setup the proper address and emit this over serial
-	auto blastPin = getBlastPin();
-	digitalWrite(i960Pinout::Ready, LOW);
-	digitalWrite(i960Pinout::Ready, HIGH);
-	//DigitalPin<i960Pinout::Ready>::pulse();
+	auto blastPin = DigitalPin<i960Pinout::BLAST_>::read();
+	DigitalPin<i960Pinout::Ready>::pulse();
 	if (blastPin == LOW) {
 		// we not in burst mode
 		fsm.trigger(ReadyAndNoBurst);
