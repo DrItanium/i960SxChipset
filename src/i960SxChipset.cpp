@@ -55,7 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) noexcept {
     return - (satPtr + pcrbPtr + startIP);
 }
-volatile bool tftSetup = false;
+bool tftSetup = false;
 Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                     static_cast<int>(i960Pinout::DC),
@@ -64,7 +64,6 @@ constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 // boot rom and sd card loading stuff
-Sd2Card theBootSDCard;
 File theBootROM;
 File theRAM; // use an SDCard as ram for the time being
 uint32_t bootRomSize = 0;
@@ -530,9 +529,11 @@ void setupTFT() {
     ss.tftReset();
     tft.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
     ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
-    Serial.println(F("TFT OK!"));
-    tft.fillScreen(ST77XX_CYAN);
-    Serial.println(F("Screen should have cyan in it!"));
+    if constexpr (!onArduinoUno()) {
+        Serial.println(F("TFT OK!"));
+        tft.fillScreen(ST77XX_CYAN);
+        Serial.println(F("Screen should have cyan in it!"));
+    }
     delay(100);
     tftSetup = true;
     tft.fillScreen(ST77XX_BLACK);
@@ -558,32 +559,46 @@ template<typename T>
 
 void setupSDCard() {
     if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-        Serial.println(F("SD CARD INIT FAILED!"));
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("SD CARD INIT FAILED!"));
+        }
         signalHaltState(F("SDCARD INIT FAIL"));
     }
     if (!SD.exists("boot.rom")) {
-        Serial.println(F("NO BOOT.ROM FOUND"));
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("NO BOOT.ROM FOUND"));
+        }
         signalHaltState(F("NO BOOT.ROM!"));
     } else {
         theBootROM = SD.open("boot.rom", FILE_READ);
-        Serial.println(F("BOOT.ROM OPEN SUCCESS!"));
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("BOOT.ROM OPEN SUCCESS!"));
+        }
         bootRomSize = theBootROM.size();
         if (bootRomSize == 0) {
-            Serial.println(F("BOOT.ROM EMPTY"));
+            if constexpr (!onArduinoUno()) {
+                Serial.println(F("BOOT.ROM EMPTY"));
+            }
             signalHaltState(F("EMPTY BOOT.ROM"));
         } else if (bootRomSize > 0x8000'0000) {
-            Serial.println(F("BOOT.ROM TOO LARGE")) ;
+            if constexpr (!onArduinoUno()) {
+                Serial.println(F("BOOT.ROM TOO LARGE"));
+            }
             signalHaltState(F("BOOT.ROM TOO LARGE")) ;
         }
 
     }
 
     if (!SD.exists("ram.bin")) {
-        Serial.println(F("NO RAM.BIN FOUND!"));
-        signalHaltState(F("NO RAM.BIN FOUND!"));
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("NO RAM.BIN FOUND!"));
+        }
+            signalHaltState(F("NO RAM.BIN FOUND!"));
     } else {
         theRAM = SD.open("ram.bin", FILE_WRITE);
-        Serial.println(F("RAM.BIN OPEN SUCCESS!"));
+        if constexpr (!onArduinoUno()) {
+            Serial.println(F("RAM.BIN OPEN SUCCESS!"));
+        }
     }
 
 
