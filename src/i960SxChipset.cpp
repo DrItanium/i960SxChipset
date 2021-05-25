@@ -43,7 +43,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "BusDevice.h"
 #include "RAM.h"
-#include "SPIBus.h"
 #include "IOExpanders.h"
 
 
@@ -57,13 +56,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) noexcept {
 	return - (satPtr + pcrbPtr + startIP);
 }
-#ifndef ARDUINO_AVR_UNO
 volatile bool tftSetup = false;
 Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
                      -1);
-#endif
 constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
@@ -85,9 +82,6 @@ static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces o
 static constexpr auto RamMask = MaxRamSize - 1;
 static constexpr Address RamStartingAddress = 0x8000'0000;
 static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
-#ifndef ARDUINO_AVR_UNO
-SPIBus theSPIBus;
-#endif
 // with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
 // set a single pixel in the display, storage area
 // we map these pixel values to specific storage cells on the microcontroller
@@ -585,9 +579,6 @@ void setupIOExpanders() {
     // then indirectly mark the outputs
     pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
     pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
-#ifndef ARDUINO_AVR_UNO
-        theSPIBus.setup();
-#endif
     if constexpr (!onArduinoUno()) {
         Serial.println(F("Done setting up io expanders!"));
     }
