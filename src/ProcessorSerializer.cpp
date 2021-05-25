@@ -25,59 +25,101 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 
-IOExpander<IOExpanderAddress::DataLines> DataLinesCapture;
-IOExpander<IOExpanderAddress::Lower16Lines> Lower16Capture;
-IOExpander<IOExpanderAddress::Upper16Lines> Upper16Capture;
-IOExpander<IOExpanderAddress::MemoryCommitExtras> ExtraCapture;
 Address
-getAddress() noexcept {
-    auto lower16Addr = static_cast<Address>(Lower16Capture.readGPIOs());
-    auto upper16Addr = static_cast<Address>(Upper16Capture.readGPIOs()) << 16;
+ProcessorInterface::getAddress() noexcept {
+    auto lower16Addr = static_cast<Address>(lower16_.readGPIOs());
+    auto upper16Addr = static_cast<Address>(upper16_.readGPIOs()) << 16;
     return lower16Addr | upper16Addr;
 }
 uint16_t
-getDataBits() noexcept {
-    DataLinesCapture.writeGPIOsDirection(0xFFFF);
-    return static_cast<uint16_t>(DataLinesCapture.readGPIOs());
+ProcessorInterface::getDataBits() noexcept {
+    dataLines_.writeGPIOsDirection(0xFFFF);
+    return static_cast<uint16_t>(dataLines_.readGPIOs());
 }
 
 void
-setDataBits(uint16_t value) noexcept {
-    DataLinesCapture.writeGPIOsDirection(0);
-    DataLinesCapture.writeGPIOs(value);
+ProcessorInterface::setDataBits(uint16_t value) noexcept {
+    dataLines_.writeGPIOsDirection(0);
+    dataLines_.writeGPIOs(value);
 }
 
 
 
-uint8_t getByteEnableBits() noexcept {
-    return (ExtraCapture.readGPIOs() & 0b11000) >> 3;
+uint8_t
+ProcessorInterface::getByteEnableBits() noexcept {
+    return (extra_.readGPIOs() & 0b11000) >> 3;
 }
 
-decltype(LOW) getByteEnable0() noexcept {
+decltype(LOW)
+ProcessorInterface::getByteEnable0() noexcept {
     return (getByteEnableBits() & 1) == 0 ? LOW : HIGH;
 }
-decltype(LOW) getByteEnable1() noexcept {
+decltype(LOW)
+ProcessorInterface::getByteEnable1() noexcept {
     return (getByteEnableBits() & 0b10) == 0 ? LOW : HIGH;
 }
 
-uint8_t getBurstAddressBits() noexcept {
-    auto gpios = ExtraCapture.readGPIOs();
+uint8_t
+ProcessorInterface::getBurstAddressBits() noexcept {
+    auto gpios = extra_.readGPIOs();
     return (gpios & 0b111) << 1;
 }
 
-Address getBurstAddress(Address base) noexcept {
+Address
+ProcessorInterface::getBurstAddress(Address base) noexcept {
     return getBurstAddress(base, static_cast<Address>(getBurstAddressBits()));
 }
-Address getBurstAddress() noexcept {
+Address
+ProcessorInterface::getBurstAddress() noexcept {
     return getBurstAddress(getAddress());
 }
 
-bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
-bool isWriteOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isDeasserted(); }
-decltype(LOW) getBlastPin() noexcept { return DigitalPin<i960Pinout::BLAST_>::read(); }
-void setHOLDPin(decltype(LOW) value) noexcept {
-    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, ExtraCapture);
+bool
+ProcessorInterface::isReadOperation() const noexcept {
+    return DigitalPin<i960Pinout::W_R_>::isAsserted();
 }
-void setLOCKPin(decltype(LOW) value) noexcept {
-    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, ExtraCapture);
+bool
+ProcessorInterface::isWriteOperation() const noexcept {
+    return DigitalPin<i960Pinout::W_R_>::isDeasserted();
+}
+
+void
+ProcessorInterface::setHOLDPin(decltype(LOW) value) noexcept {
+    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, extra_);
+}
+void
+ProcessorInterface::setLOCKPin(decltype(LOW) value) noexcept {
+    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extra_);
+}
+
+void
+ProcessorInterface::begin() noexcept {
+    if (!initialized_) {
+        initialized_ = true;
+        // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
+        // disabled. We can send out a single IOCON.HAEN enable message and all
+        // should receive it.
+        // so do a begin operation on all chips (0b000)
+        dataLines_.begin();
+        // set IOCON.HAEN on all chips
+        dataLines_.enableHardwareAddressPins();
+        // now we have to refresh our on mcu flags for each io expander
+        lower16_.refreshIOCon();
+        upper16_.refreshIOCon();
+        extra_.refreshIOCon();
+        // now all devices tied to this ~CS pin have separate addresses
+        // make each of these inputs
+        lower16_.writeGPIOsDirection(0xFFFF);
+        upper16_.writeGPIOsDirection(0xFFFF);
+        dataLines_.writeGPIOsDirection(0xFFFF);
+        // set lower eight to inputs and upper eight to outputs
+        extra_.writeGPIOsDirection(0x00FF);
+        // then indirectly mark the outputs
+        pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extra_);
+        pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extra_);
+    }
+}
+ProcessorInterface::LoadStoreStyle
+ProcessorInterface::getStyle() noexcept {
+    return static_cast<LoadStoreStyle>(getByteEnableBits());
 }
