@@ -26,7 +26,5 @@
 #error "C++17 required!"
 #endif
 #include "core/concepts.h"
-#include "core/leds.h"
-#include "ics/x74Series.h"
 #include "ics/MCP23S17.h"
 #endif // end LIB_BONUSPIN_H__

@@ -35,9 +35,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SD.h>
 #include <Wire.h>
 
-#include <Adafruit_GFX.h>
-#include <Adafruit_ILI9341.h>
-#include <Adafruit_seesaw.h>
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
 #include "Pinout.h"
