@@ -104,11 +104,7 @@ enum class i960Pinout : decltype(A0) {
     Int0_ = ::A3,          // output
     DEN_ = ::A4,
     W_R_ = ::A5,          // input
-#ifdef ADAFRUIT_FEATHER_M0_ADALOGGER
     SD_EN = 4,      // output
-#else
-    SD_EN = 10,  // output
-#endif
     GPIOSelect = 5,        // output
     Ready = 6,      // output
     FAIL = 11,         // input
@@ -117,20 +113,6 @@ enum class i960Pinout : decltype(A0) {
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
 #elif defined(ARDUINO_METRO_M4)
-    AS_ = 2,
-    DEN_ = 3,
-    Ready = 4,      // output
-    Int0_ = 5,          // output
-    W_R_ = 6,          // input
-    Reset960 = 7,
-    BLAST_ = 8,     // input
-    FAIL = 9,         // input
-    GPIOSelect = 10,        // output
-    SPI_BUS_EN = ::A0, // output
-    SD_EN = ::A2,
-    DISPLAY_EN = SDA, // done over i2c
-    DC = SDA, // done over i2c
-#elif defined(ARDUINO_AVR_UNO)
     AS_ = 2,
     DEN_ = 3,
     Ready = 4,      // output
