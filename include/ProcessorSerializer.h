@@ -118,12 +118,22 @@ public:
     static constexpr auto computeCS1(uint32_t satPtr, uint32_t pcrbPtr, uint32_t startIP) noexcept {
         return - (satPtr + pcrbPtr + startIP);
     }
+
+    [[nodiscard]] constexpr auto asTriggered() const noexcept { return asTriggered_; }
+    [[nodiscard]] constexpr auto denTriggered() const noexcept { return denTriggered_; }
+    void clearASTrigger() noexcept { asTriggered_ = false; }
+    void clearDENTrigger() noexcept { denTriggered_ = false; }
+    void triggerAS() noexcept { asTriggered_ = true; }
+    void triggerDEN() noexcept { denTriggered_ = true; }
+
 private:
     IOExpander<IOExpanderAddress::DataLines> dataLines_;
     IOExpander<IOExpanderAddress::Lower16Lines> lower16_;
     IOExpander<IOExpanderAddress::Upper16Lines> upper16_;
     IOExpander<IOExpanderAddress::MemoryCommitExtras> extra_;
     bool initialized_ = false;
+    bool asTriggered_ = false;
+    bool denTriggered_ = false;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

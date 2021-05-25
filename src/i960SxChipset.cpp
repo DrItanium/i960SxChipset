@@ -106,8 +106,6 @@ static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
 // Tr -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
-volatile bool asTriggered = false;
-volatile bool denTriggered = false;
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
 constexpr auto NoRequest = 0;
@@ -134,7 +132,7 @@ Fsm fsm(&tStart);
 State tIdle(nullptr,
             idleState,
             nullptr);
-State tAddr([]() { asTriggered = false; },
+State tAddr([]() { processorInterface.clearASTrigger(); },
             doAddressState,
             nullptr);
 State tData(enteringDataState,
@@ -157,23 +155,23 @@ void systemTestState() noexcept {
     }
 }
 void onASAsserted() {
-    asTriggered = true;
+    processorInterface.triggerAS();
 }
 void onDENAsserted() {
-    denTriggered = true;
+    processorInterface.triggerDEN();
 }
 
 void idleState() noexcept {
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         fsm.trigger(ChecksumFailure);
     } else {
-        if (asTriggered) {
+        if (processorInterface.asTriggered()) {
             fsm.trigger(NewRequest);
         }
     }
 }
 void doAddressState() noexcept {
-    if (denTriggered) {
+    if (processorInterface.denTriggered()) {
         fsm.trigger(ToDataState);
     }
 }
@@ -183,7 +181,7 @@ void doAddressState() noexcept {
 void
 enteringDataState() noexcept {
     // when we do the transition, record the information we need
-    denTriggered = false;
+    processorInterface.clearDENTrigger();
     baseAddress = processorInterface.getAddress();
     performingRead = processorInterface.isReadOperation();
 }
@@ -405,7 +403,7 @@ void doRecoveryState() noexcept {
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         fsm.trigger(ChecksumFailure);
     } else {
-        if (asTriggered) {
+        if (processorInterface.asTriggered()) {
             fsm.trigger(RequestPending);
         } else {
             fsm.trigger(NoRequest);
