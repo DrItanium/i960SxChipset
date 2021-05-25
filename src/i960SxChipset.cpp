@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
 #include "Pinout.h"
-#include "IOExpanders.h"
+#include "ProcessorSerializer.h"
 
 /**
  * @brief Sx Load/Store styles that the processor will request
@@ -500,23 +500,23 @@ void setupIOExpanders() {
     // disabled. We can send out a single IOCON.HAEN enable message and all
     // should receive it.
     // so do a begin operation on all chips (0b000)
-    dataLines.begin();
+    DataLinesCapture.begin();
     // set IOCON.HAEN on all chips
-    dataLines.enableHardwareAddressPins();
+    DataLinesCapture.enableHardwareAddressPins();
     // now we have to refresh our on mcu flags for each io expander
-    lower16.refreshIOCon();
-    upper16.refreshIOCon();
-    extraMemoryCommit.refreshIOCon();
+    Lower16Capture.refreshIOCon();
+    Upper16Capture.refreshIOCon();
+    ExtraCapture.refreshIOCon();
     // now all devices tied to this ~CS pin have separate addresses
     // make each of these inputs
-    lower16.writeGPIOsDirection(0xFFFF);
-    upper16.writeGPIOsDirection(0xFFFF);
-    dataLines.writeGPIOsDirection(0xFFFF);
+    Lower16Capture.writeGPIOsDirection(0xFFFF);
+    Upper16Capture.writeGPIOsDirection(0xFFFF);
+    DataLinesCapture.writeGPIOsDirection(0xFFFF);
     // set lower eight to inputs and upper eight to outputs
-    extraMemoryCommit.writeGPIOsDirection(0x00FF);
+    ExtraCapture.writeGPIOsDirection(0x00FF);
     // then indirectly mark the outputs
-    pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extraMemoryCommit);
-    pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extraMemoryCommit);
+    pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, ExtraCapture);
+    pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, ExtraCapture);
     if constexpr (!onArduinoUno()) {
         Serial.println(F("Done setting up io expanders!"));
     }

@@ -23,34 +23,34 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "IOExpanders.h"
+#include "ProcessorSerializer.h"
 
-IOExpander<IOExpanderAddress::DataLines> dataLines;
-IOExpander<IOExpanderAddress::Lower16Lines> lower16;
-IOExpander<IOExpanderAddress::Upper16Lines> upper16;
-IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
+IOExpander<IOExpanderAddress::DataLines> DataLinesCapture;
+IOExpander<IOExpanderAddress::Lower16Lines> Lower16Capture;
+IOExpander<IOExpanderAddress::Upper16Lines> Upper16Capture;
+IOExpander<IOExpanderAddress::MemoryCommitExtras> ExtraCapture;
 Address
 getAddress() noexcept {
-    auto lower16Addr = static_cast<Address>(lower16.readGPIOs());
-    auto upper16Addr = static_cast<Address>(upper16.readGPIOs()) << 16;
+    auto lower16Addr = static_cast<Address>(Lower16Capture.readGPIOs());
+    auto upper16Addr = static_cast<Address>(Upper16Capture.readGPIOs()) << 16;
     return lower16Addr | upper16Addr;
 }
 uint16_t
 getDataBits() noexcept {
-    dataLines.writeGPIOsDirection(0xFFFF);
-    return static_cast<uint16_t>(dataLines.readGPIOs());
+    DataLinesCapture.writeGPIOsDirection(0xFFFF);
+    return static_cast<uint16_t>(DataLinesCapture.readGPIOs());
 }
 
 void
 setDataBits(uint16_t value) noexcept {
-    dataLines.writeGPIOsDirection(0);
-    dataLines.writeGPIOs(value);
+    DataLinesCapture.writeGPIOsDirection(0);
+    DataLinesCapture.writeGPIOs(value);
 }
 
 
 
 uint8_t getByteEnableBits() noexcept {
-    return (extraMemoryCommit.readGPIOs() & 0b11000) >> 3;
+    return (ExtraCapture.readGPIOs() & 0b11000) >> 3;
 }
 
 decltype(LOW) getByteEnable0() noexcept {
@@ -61,7 +61,7 @@ decltype(LOW) getByteEnable1() noexcept {
 }
 
 uint8_t getBurstAddressBits() noexcept {
-    auto gpios = extraMemoryCommit.readGPIOs();
+    auto gpios = ExtraCapture.readGPIOs();
     return (gpios & 0b111) << 1;
 }
 
@@ -76,8 +76,8 @@ bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserte
 bool isWriteOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isDeasserted(); }
 decltype(LOW) getBlastPin() noexcept { return DigitalPin<i960Pinout::BLAST_>::read(); }
 void setHOLDPin(decltype(LOW) value) noexcept {
-    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, extraMemoryCommit);
+    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, ExtraCapture);
 }
 void setLOCKPin(decltype(LOW) value) noexcept {
-    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extraMemoryCommit);
+    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, ExtraCapture);
 }

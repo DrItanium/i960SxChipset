@@ -75,10 +75,10 @@ using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr), enablePin>;
 
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
-extern IOExpander<IOExpanderAddress::DataLines> dataLines;
-extern IOExpander<IOExpanderAddress::Lower16Lines> lower16;
-extern IOExpander<IOExpanderAddress::Upper16Lines> upper16;
-extern IOExpander<IOExpanderAddress::MemoryCommitExtras> extraMemoryCommit;
+extern IOExpander<IOExpanderAddress::DataLines> DataLinesCapture;
+extern IOExpander<IOExpanderAddress::Lower16Lines> Lower16Capture;
+extern IOExpander<IOExpanderAddress::Upper16Lines> Upper16Capture;
+extern IOExpander<IOExpanderAddress::MemoryCommitExtras> ExtraCapture;
 
 Address getAddress() noexcept;
 uint16_t getDataBits() noexcept;
