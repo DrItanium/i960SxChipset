@@ -37,6 +37,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
+#include <Adafruit_LSM6DSOX.h>
+#include <Adafruit_LIS3MDL.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_ADT7410.h>
+#include <Adafruit_ADXL343.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
 #include "Pinout.h"
 #include "ProcessorSerializer.h"
 
@@ -64,6 +72,16 @@ static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces o
 static constexpr auto RamMask = MaxRamSize - 1;
 static constexpr Address RamStartingAddress = 0x8000'0000;
 static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
+
+
+// for the feather m0 only
+// LIS3MDL + LSM6DSOX featherwing
+Adafruit_LSM6DSOX lsm6ds;
+Adafruit_LIS3MDL lis3mdl;
+// adxl343 + adt7410 featherwing
+Adafruit_ADT7410 tempSensor;
+Adafruit_ADXL343 accel1 = Adafruit_ADXL343(12345);
+Adafruit_SSD1306 display(128,32,&Wire);
 
 
 // ----------------------------------------------------------------
@@ -458,22 +476,6 @@ void setupCPUInterface() {
 // we have access to 12 Winbond Flash Modules, which hold onto common program code, This gives us access to 96 megabytes of Flash.
 // At this point it is a massive pain in the ass to program all these devices but who cares
 
-void setupTFT() {
-    ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
-    ss.tftReset();
-    tft.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
-    ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
-    Serial.println(F("TFT OK!"));
-    tft.fillScreen(ST77XX_CYAN);
-    Serial.println(F("Screen should have cyan in it!"));
-    delay(100);
-    tftSetup = true;
-    tft.fillScreen(ST77XX_BLACK);
-    tft.setCursor(0, 0);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setTextSize(3);
-    tft.println(F("i960Sx!"));
-}
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
     if (!tftSetup) {
@@ -522,8 +524,7 @@ void setupSDCard() {
 
     // the sd card is on a separate SPI Bus in some cases
 }
-void
-setupSeesaw() {
+void setupTFTShield() {
     Serial.println(F("Setting up the seesaw"));
     if (!ss.begin()) {
         Serial.println(F("seesaw could not be initialized!"));
@@ -532,12 +533,69 @@ setupSeesaw() {
     Serial.println(F("seesaw started"));
     Serial.print(F("Version: "));
     Serial.println(ss.getVersion(), HEX);
+    ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
+    ss.tftReset();
+    tft.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
+    ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
+    Serial.println(F("TFT OK!"));
+    tft.fillScreen(ST77XX_CYAN);
+    Serial.println(F("Screen should have cyan in it!"));
+    delay(100);
+    tftSetup = true;
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(0, 0);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setTextSize(3);
+    tft.println(F("i960Sx!"));
+}
+void bringupAnalogDevicesFeatherWing() {
+    if (!accel1.begin()) {
+        display.println(F("ADXL343 Bringup Failed!"));
+        display.display();
+        signalHaltState(F("ADXL343 Bringup Failure"));
+    }
+    // configure for your project
+    accel1.setRange(ADXL343_RANGE_16_G);
+    if (!tempSensor.begin()) {
+        display.println(F("ADT7410 Bringup Failed!"));
+        display.display();
+        signalHaltState(F("ADT7410 Bringup Failure"));
+    }
+    // sensor takes 250 ms to get readings
+    delay(250);
+}
+void bringupOLEDFeatherWing() {
+    Serial.println(F("OLED Featherwing Test")) ;
+    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+    Serial.println(F("OLED begun"));
+    display.display();
+    // I have cut the pins for the buttons on the featherwing display
+    display.setTextSize(1);
+    display.setTextSize(SSD1306_WHITE);
+    display.setCursor(0,0);
+    display.println(F("i960Sx!"));
+    display.display();
+}
+void bringupLIS3MDLAndLSM6DS() {
+    Serial.println(F("Bringing up LIS3MDL"));
+    if (!lis3mdl.begin_I2C()) {
+        Serial.println(F("FAILED TO BRING UP LIS3MDL"));
+        signalHaltState(F("FAILED TO BRING UP LIS3MDL"));
+    }
+    if (!lsm6ds.begin_I2C()) {
+        Serial.println(F("FAILED TO BRING UP LSM6DS")) ;
+        signalHaltState(F("FAILED TO BRING UP LSM6DS")) ;
+    }
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-    if constexpr (!onGrandCentralM4() && !onMetroM4()) {
-        setupSeesaw();
-        setupTFT();
+    if (onFeatherBoard()) {
+        bringupOLEDFeatherWing();
+        bringupAnalogDevicesFeatherWing();
+        bringupLIS3MDLAndLSM6DS();
+    } else {
+        setupTFTShield();
+
     }
     setupSDCard();
     Serial.println(F("Done setting up peripherals..."));
