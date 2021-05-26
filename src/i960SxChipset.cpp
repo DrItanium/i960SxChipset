@@ -83,6 +83,8 @@ Adafruit_ADT7410 tempSensor;
 Adafruit_ADXL343 accel1 = Adafruit_ADXL343(12345);
 Adafruit_SSD1306 display(128,32,&Wire);
 
+bool oledDisplaySetup = false;
+
 
 // ----------------------------------------------------------------
 // state machine
@@ -478,13 +480,19 @@ void setupCPUInterface() {
 
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
-    if (!tftSetup) {
-        Serial.println(haltMsg);
-    } else {
+    if (tftSetup) {
         tft.fillScreen(ST77XX_RED);
         tft.setCursor(0,0);
         tft.setTextSize(1);
         tft.println(haltMsg);
+    } else if (oledDisplaySetup) {
+        display.clearDisplay();
+        display.display();
+        display.setCursor(0,0);
+        display.println(haltMsg);
+        display.display();
+    } else {
+        Serial.println(haltMsg);
     }
     while(true) {
         delay(1000);
@@ -565,16 +573,21 @@ void bringupAnalogDevicesFeatherWing() {
     delay(250);
 }
 void bringupOLEDFeatherWing() {
-    Serial.println(F("OLED Featherwing Test")) ;
+    Serial.println(F("Setting up OLED Featherwing")) ;
     display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
     Serial.println(F("OLED begun"));
     display.display();
+    delay(1000);
+    display.clearDisplay();
+    display.display();
     // I have cut the pins for the buttons on the featherwing display
-    display.setTextSize(1);
-    display.setTextSize(SSD1306_WHITE);
+    display.setTextSize(2);
+    display.setTextColor(SSD1306_WHITE);
     display.setCursor(0,0);
     display.println(F("i960Sx!"));
     display.display();
+    Serial.println(F("Done setting up OLED Featherwing"));
+    oledDisplaySetup = true;
 }
 void bringupLIS3MDLAndLSM6DS() {
     Serial.println(F("Bringing up LIS3MDL"));
@@ -654,9 +667,15 @@ void loop() {
 void enteringChecksumFailure() noexcept {
     if (tftSetup) {
         tft.fillScreen(ST77XX_RED);
-        tft.setCursor(0,0);
+        tft.setCursor(0, 0);
         tft.setTextSize(2);
         tft.println(F("CHECKSUM FAILURE"));
+    } else if (oledDisplaySetup) {
+        display.clearDisplay();
+        display.display();
+        display.setCursor(0, 0);
+        display.println(F("CHECKSUM FAILURE"));
+        display.display();
     } else {
         Serial.println(F("CHECKSUM FAILURE!"));
     }
