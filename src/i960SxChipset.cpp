@@ -128,18 +128,6 @@ bool oledDisplaySetup = false;
 // NOTE: Tw may turn out to be synthetic
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
-enum class SystemStates : int {
-    NoRequest = 0,
-    NewRequest,
-    ReadyAndBurst,
-    NotReady,
-    ReadyAndNoBurst,
-    RequestPending,
-    ToDataState,
-    PerformSelfTest,
-    SelfTestComplete,
-    ChecksumFailure,
-};
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -432,7 +420,7 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
-    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+    if (processorInterface.failTriggered()) {
         fsm.trigger(ChecksumFailure);
     } else {
         if (processorInterface.asTriggered()) {
@@ -615,8 +603,14 @@ void setupPeripherals() {
 // the setup routine runs once when you press reset:
 void setup() {
     // before we do anything else, make sure that we pull the i960 into a reset state
-    pinMode(i960Pinout::Reset960, OUTPUT);
+    setupPins(OUTPUT,
+              i960Pinout::SPI_BUS_EN,
+              i960Pinout::DISPLAY_EN,
+              i960Pinout::SD_EN,
+              i960Pinout::Reset960,
+              i960Pinout::Led);
     PinAsserter<i960Pinout::Reset960> holdi960InReset;
+    digitalWrite(i960Pinout::Led, LOW);
 #ifdef ARDUINO_GRAND_CENTRAL_M4
     #if 0
     // pins on the digital block with access to the GCLK are:
@@ -639,16 +633,10 @@ void setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.println(F("i960Sx chipset bringup"));
-    setupPins(OUTPUT,
-              i960Pinout::SPI_BUS_EN,
-              i960Pinout::DISPLAY_EN,
-              i960Pinout::SD_EN);
 
     digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
     digitalWrite(i960Pinout::SD_EN, HIGH);
     digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
-    pinMode(i960Pinout::Led, OUTPUT);
-    digitalWrite(i960Pinout::Led, LOW);
     Wire.begin();
     SPI.begin();
     processorInterface.begin();
