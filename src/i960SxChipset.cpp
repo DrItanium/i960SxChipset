@@ -603,6 +603,8 @@ void setup() {
               i960Pinout::W_R_,
               i960Pinout::DEN_,
               i960Pinout::FAIL);
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
 #ifdef ARDUINO_GRAND_CENTRAL_M4
     #if 0
     // pins on the digital block with access to the GCLK are:
@@ -631,8 +633,6 @@ void setup() {
     // setup the CPU Interface
     processorInterface.setHOLDPin(LOW);
     processorInterface.setLOCKPin(HIGH);
-    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     setupBusStateMachine();
     setupPeripherals();
     delay(1000);
