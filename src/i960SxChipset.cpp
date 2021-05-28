@@ -606,25 +606,6 @@ void setup() {
               i960Pinout::FAIL);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-#ifdef ARDUINO_GRAND_CENTRAL_M4
-    #if 0
-    // pins on the digital block with access to the GCLK are:
-    // 36 - GCLK / IO3
-    // 37 - GCLK / IO2
-    // 38 - GCLK / IO1
-    // 39 - GCLK / IO0
-    // let's choose pin 39 for this purpose
-    GCLK->GENCTRL[0].reg = GCLK_GENCTRL_DIV(6) |
-                           GCLK_GENCTRL_IDC |
-                           GCLK_GENCTRL_GENEN |
-                           GCLK_GENCTRL_OE |
-                           GCLK_GENCTRL_SRC_DPLL0;
-    while(GCLK->SYNCBUSY.bit.GENCTRL0);
-    PORT->Group[g_APinDescription[39].ulPort].PINCFG[g_APinDescription[39].ulPin].bit.PMUXEN = 1;
-    // enable on pin 39 or PB14
-    PORT->Group[g_APinDescription[39].ulPort].PMUX[g_APinDescription[39].ulPin >> 1].reg |= PORT_PMUX_PMUXE(MUX_PB14M_GCLK_IO0);
-#endif
-#endif // end ARDUINO_GRAND_CENTRAL_M4
     Serial.begin(115200);
     while (!Serial);
     Serial.println(F("i960Sx chipset bringup"));

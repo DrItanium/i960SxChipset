@@ -74,3 +74,4 @@ namespace {
 }
 }
 static_assert(compileTimeSanityCheck<TargetMCU>(), "Sanity Check FAILED");
+

@@ -123,7 +123,7 @@ public:
     [[nodiscard]] static constexpr auto getSPISCKPin() noexcept { return PIN_SPI_SCK; }
     [[nodiscard]] static constexpr auto getSDAPin() noexcept { return PIN_WIRE_SDA; }
     [[nodiscard]] static constexpr auto getSCLPin() noexcept { return PIN_WIRE_SCL; }
-private:
+public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
     TargetBoard(const TargetBoard&) = delete;
