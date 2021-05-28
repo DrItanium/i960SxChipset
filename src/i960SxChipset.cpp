@@ -450,33 +450,6 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
     Serial.println(F("done"));
 }
-//State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
-//as we have no concept of waiting inside of the mcu
-void setupCPUInterface() {
-    Serial.println(F("Setting up interrupts!"));
-    setupPins(OUTPUT,
-              i960Pinout::Ready,
-              i960Pinout::GPIOSelect,
-              i960Pinout::Int0_);
-    digitalWriteBlock(HIGH,
-                      i960Pinout::Ready,
-                      i960Pinout::GPIOSelect,
-                      i960Pinout::Int0_);
-    processorInterface.setHOLDPin(LOW);
-    processorInterface.setLOCKPin(HIGH);
-    setupPins(INPUT,
-              i960Pinout::BLAST_,
-              i960Pinout::AS_,
-              i960Pinout::W_R_,
-              i960Pinout::DEN_,
-              i960Pinout::FAIL);
-    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-    Serial.println(F("Done setting up interrupts!"));
-}
-
-// we have access to 12 Winbond Flash Modules, which hold onto common program code, This gives us access to 96 megabytes of Flash.
-// At this point it is a massive pain in the ass to program all these devices but who cares
 
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
@@ -602,15 +575,34 @@ void setupPeripherals() {
 }
 // the setup routine runs once when you press reset:
 void setup() {
-    // before we do anything else, make sure that we pull the i960 into a reset state
+    // before we do anything else, configure as many pins as possible and then
+    // pull the i960 into a reset state, it will remain this for the entire
+    // duration of the setup function
     setupPins(OUTPUT,
               i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
               i960Pinout::SD_EN,
               i960Pinout::Reset960,
-              i960Pinout::Led);
+              i960Pinout::Led,
+              i960Pinout::Ready,
+              i960Pinout::GPIOSelect,
+              i960Pinout::Int0_);
     PinAsserter<i960Pinout::Reset960> holdi960InReset;
     digitalWrite(i960Pinout::Led, LOW);
+    // all of these pins need to be pulled high
+    digitalWriteBlock(HIGH,
+                      i960Pinout::SPI_BUS_EN,
+                      i960Pinout::SD_EN,
+                      i960Pinout::DISPLAY_EN,
+                      i960Pinout::Ready,
+                      i960Pinout::GPIOSelect,
+                      i960Pinout::Int0_);
+    setupPins(INPUT,
+              i960Pinout::BLAST_,
+              i960Pinout::AS_,
+              i960Pinout::W_R_,
+              i960Pinout::DEN_,
+              i960Pinout::FAIL);
 #ifdef ARDUINO_GRAND_CENTRAL_M4
     #if 0
     // pins on the digital block with access to the GCLK are:
@@ -633,14 +625,14 @@ void setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.println(F("i960Sx chipset bringup"));
-
-    digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-    digitalWrite(i960Pinout::SD_EN, HIGH);
-    digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
     Wire.begin();
     SPI.begin();
     processorInterface.begin();
-    setupCPUInterface();
+    // setup the CPU Interface
+    processorInterface.setHOLDPin(LOW);
+    processorInterface.setLOCKPin(HIGH);
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     setupBusStateMachine();
     setupPeripherals();
     delay(1000);
