@@ -135,7 +135,7 @@ private:
 static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been defined, please define to continue");
 template<typename T>
 constexpr bool sanityCheck() noexcept {
-#define ERR_STATE(msg) static_assert(false_v< T > , msg )
+#define ERR_STATE(msg) static_assert(false_v< T > , msg ); return false
 
     if constexpr (TargetBoard::onAtmega1284p()) {
         if constexpr (!TargetBoard::usesDisplayShield()) {
