@@ -25,10 +25,30 @@ enum class TargetMCU {
     MetroM4,
     Unknown,
 };
-
+[[nodiscard]] constexpr auto inDebugMode() noexcept {
+#if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
+    return true;
+#else
+    return false;
+#endif
+}
 
 class TargetBoard {
 public:
+    [[nodiscard]] static constexpr auto cpuIsARMArchitecture() noexcept {
+#ifdef __arm__
+        return true;
+#else
+        return false;
+#endif
+    }
+    [[nodiscard]] static constexpr auto cpuIsAVRArchitecture() noexcept {
+#if defined(__AVR) || defined(__AVR__)
+        return true;
+#else
+        return false;
+#endif
+    }
     [[nodiscard]] static constexpr auto getCPUFrequency() noexcept { return F_CPU; }
     [[nodiscard]] static constexpr auto getDigitalPinCount() noexcept { return NUM_DIGITAL_PINS; }
     [[nodiscard]] static constexpr auto getAnalogInputCount() noexcept { return NUM_ANALOG_INPUTS; }
@@ -67,6 +87,11 @@ public:
         return false;
 #endif
     }
+    [[nodiscard]] static constexpr auto getSPIMOSIPin() noexcept { return PIN_SPI_MOSI; }
+    [[nodiscard]] static constexpr auto getSPIMISOPin() noexcept { return PIN_SPI_MISO; }
+    [[nodiscard]] static constexpr auto getSPISCKPin() noexcept { return PIN_SPI_SCK; }
+    [[nodiscard]] static constexpr auto getSDAPin() noexcept { return PIN_WIRE_SDA; }
+    [[nodiscard]] static constexpr auto getSCLPin() noexcept { return PIN_WIRE_SCL; }
 private:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
