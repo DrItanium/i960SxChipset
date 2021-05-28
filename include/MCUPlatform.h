@@ -29,6 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_MCUPLATFORM_H
 #include <Arduino.h>
 #include "DependentFalse.h"
+
+constexpr unsigned long long int operator "" _KHz(unsigned long long int value) noexcept { return value * 1000; }
+constexpr unsigned long long int operator "" _MHz(unsigned long long int value) noexcept { return value * 1000 * 1000; }
+static_assert(2_KHz == 2'000);
+static_assert(2_MHz == 2'000'000);
+static_assert(20_MHz == 20'000'000);
 #ifdef ARDUINO_SAMD_FEATHER_M0
 #define ADAFRUIT_FEATHER_M0
 #ifdef HAS_BUILTIN_SDCARD
