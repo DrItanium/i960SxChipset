@@ -83,4 +83,5 @@ enum class TargetMCU {
     return onFeatherM0();
 }
 
+static_assert(!onUnknownTarget(), "ERROR: Target Board has not been defined, please define to continue");
 #endif //I960SXCHIPSET_MCUPLATFORM_H
