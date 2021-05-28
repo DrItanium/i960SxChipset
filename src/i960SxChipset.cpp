@@ -128,6 +128,18 @@ bool oledDisplaySetup = false;
 // NOTE: Tw may turn out to be synthetic
 volatile uint32_t baseAddress = 0;
 volatile bool performingRead = false;
+enum class SystemStates : int {
+    NoRequest = 0,
+    NewRequest,
+    ReadyAndBurst,
+    NotReady,
+    ReadyAndNoBurst,
+    RequestPending,
+    ToDataState,
+    PerformSelfTest,
+    SelfTestComplete,
+    ChecksumFailure,
+};
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -165,12 +177,12 @@ State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
 
 
 void startupState() noexcept {
-    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+    if (processorInterface.failTriggered()) {
         fsm.trigger(PerformSelfTest);
     }
 }
 void systemTestState() noexcept {
-    if (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
+    if (processorInterface.failTriggered()) {
         fsm.trigger(SelfTestComplete);
     }
 }
@@ -182,7 +194,7 @@ void onDENAsserted() {
 }
 
 void idleState() noexcept {
-    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+    if (processorInterface.failTriggered()) {
         fsm.trigger(ChecksumFailure);
     } else {
         if (processorInterface.asTriggered()) {

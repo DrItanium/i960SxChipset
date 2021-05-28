@@ -123,3 +123,4 @@ ProcessorInterface::LoadStoreStyle
 ProcessorInterface::getStyle() noexcept {
     return static_cast<LoadStoreStyle>(getByteEnableBits());
 }
+
