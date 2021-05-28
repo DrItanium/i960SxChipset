@@ -2,7 +2,7 @@
  * @file 
  * Additional classes and functions that make working with pins easier
  * @copyright
- * Copyright (c) 2019 Joshua Scoggins 
+ * Copyright (c) 2019-2021 Joshua Scoggins
  * 
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages

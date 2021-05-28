@@ -626,6 +626,12 @@ void setup() {
 #endif // end ARDUINO_GRAND_CENTRAL_M4
     Serial.begin(115200);
     while (!Serial);
+    if constexpr (TargetBoard::onAtmega1284p()) {
+        if constexpr (!TargetBoard::usesDisplayShield()) {
+            static_assert()
+            Serial.println(F("ASSERTION FAILURE"));
+        }
+    }
     Serial.println(F("i960Sx chipset bringup"));
     Wire.begin();
     SPI.begin();
