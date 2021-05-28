@@ -223,6 +223,7 @@ struct DigitalPin {
             deassertPin(); \
         } \
     }
+
 #define DefInputPin(pin, asserted, deasserted) \
     template<> \
     struct DigitalPin< pin > { \
@@ -243,6 +244,7 @@ struct DigitalPin {
         inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
         inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
     }
+
 #define DefInputPullupPin(pin, asserted, deasserted) \
     template<> \
     struct DigitalPin< pin > { \
@@ -263,6 +265,7 @@ struct DigitalPin {
         inline static bool isDeasserted() noexcept { return digitalRead(pin) == getDeassertionState(); } \
         inline static auto read() noexcept { return digitalRead(pin); } \
     }
+
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
@@ -288,19 +291,6 @@ void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
     (digitalWrite(pins, value), ...);
 }
 
-template<i960Pinout pinId, decltype(HIGH) onConstruction, decltype(LOW) onDestruction>
-class PinToggler {
-public:
-    PinToggler() { digitalWrite(pinId, onConstruction); }
-    ~PinToggler() { digitalWrite(pinId, onDestruction); }
-};
-
-template<i960Pinout pinId>
-using HoldPinLow = PinToggler<pinId, LOW, HIGH>;
-
-template<i960Pinout pinId>
-using HoldPinHigh = PinToggler<pinId, HIGH, LOW>;
-
 template<i960Pinout pinId>
 class PinAsserter {
 public:
@@ -308,5 +298,6 @@ public:
     PinAsserter() { DigitalPin<pinId>::assertPin(); }
     ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
 };
+
 
 #endif //ARDUINO_PINOUT_H
