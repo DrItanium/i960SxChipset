@@ -80,7 +80,7 @@ Adafruit_LSM6DSOX lsm6ds;
 Adafruit_LIS3MDL lis3mdl;
 // adxl343 + adt7410 featherwing
 Adafruit_ADT7410 tempSensor;
-Adafruit_ADXL343 accel1 = Adafruit_ADXL343(12345);
+Adafruit_ADXL343 accel1(12345);
 Adafruit_SSD1306 display(128,32,&Wire);
 
 bool oledDisplaySetup = false;
@@ -422,9 +422,9 @@ void processDataRequest() noexcept {
         performWrite(burstAddress, processorInterface.getDataBits(), processorInterface.getStyle());
     }
     // setup the proper address and emit this over serial
-    auto blastPin = DigitalPin<i960Pinout::BLAST_>::read();
-    DigitalPin<i960Pinout::Ready>::pulse();
-    if (blastPin == LOW) {
+    auto blastAsserted = processorInterface.blastTriggered();
+    processorInterface.signalReady();
+    if (blastAsserted) {
         // we not in burst mode
         fsm.trigger(ReadyAndNoBurst);
     }
@@ -503,9 +503,8 @@ template<typename T>
         display.setCursor(0,0);
         display.println(haltMsg);
         display.display();
-    } else {
-        Serial.println(haltMsg);
     }
+    Serial.println(haltMsg);
     while(true) {
         delay(1000);
     }
@@ -513,28 +512,23 @@ template<typename T>
 
 void setupSDCard() {
     if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-        Serial.println(F("SD CARD INIT FAILED!"));
-        signalHaltState(F("SDCARD INIT FAIL"));
+        signalHaltState(F("SD CARD INIT FAILed"));
     }
     if (!SD.exists("boot.rom")) {
-        Serial.println(F("NO BOOT.ROM FOUND"));
         signalHaltState(F("NO BOOT.ROM!"));
     } else {
         theBootROM = SD.open("boot.rom", FILE_READ);
         Serial.println(F("BOOT.ROM OPEN SUCCESS!"));
         bootRomSize = theBootROM.size();
         if (bootRomSize == 0) {
-            Serial.println(F("BOOT.ROM EMPTY"));
             signalHaltState(F("EMPTY BOOT.ROM"));
         } else if (bootRomSize > 0x8000'0000) {
-            Serial.println(F("BOOT.ROM TOO LARGE"));
             signalHaltState(F("BOOT.ROM TOO LARGE")) ;
         }
 
     }
 
     if (!SD.exists("ram.bin")) {
-        Serial.println(F("NO RAM.BIN FOUND!"));
         signalHaltState(F("NO RAM.BIN FOUND!"));
     } else {
         theRAM = SD.open("ram.bin", FILE_WRITE);
@@ -547,7 +541,6 @@ void setupSDCard() {
 void setupTFTShield() {
     Serial.println(F("Setting up the seesaw"));
     if (!ss.begin()) {
-        Serial.println(F("seesaw could not be initialized!"));
         signalHaltState(F("NO SEESAW"));
     }
     Serial.println(F("seesaw started"));
@@ -570,15 +563,11 @@ void setupTFTShield() {
 }
 void bringupAnalogDevicesFeatherWing() {
     if (!accel1.begin()) {
-        display.println(F("ADXL343 Bringup Failed!"));
-        display.display();
         signalHaltState(F("ADXL343 Bringup Failure"));
     }
     // configure for your project
     accel1.setRange(ADXL343_RANGE_16_G);
     if (!tempSensor.begin()) {
-        display.println(F("ADT7410 Bringup Failed!"));
-        display.display();
         signalHaltState(F("ADT7410 Bringup Failure"));
     }
     // sensor takes 250 ms to get readings
@@ -604,11 +593,9 @@ void bringupOLEDFeatherWing() {
 void bringupLIS3MDLAndLSM6DS() {
     Serial.println(F("Bringing up LIS3MDL"));
     if (!lis3mdl.begin_I2C()) {
-        Serial.println(F("FAILED TO BRING UP LIS3MDL"));
         signalHaltState(F("FAILED TO BRING UP LIS3MDL"));
     }
     if (!lsm6ds.begin_I2C()) {
-        Serial.println(F("FAILED TO BRING UP LSM6DS")) ;
         signalHaltState(F("FAILED TO BRING UP LSM6DS")) ;
     }
 }
@@ -677,20 +664,20 @@ void loop() {
 }
 
 void enteringChecksumFailure() noexcept {
+    auto msg = F("CHECKSUM FAILURE");
     if (tftSetup) {
         tft.fillScreen(ST77XX_RED);
         tft.setCursor(0, 0);
         tft.setTextSize(2);
-        tft.println(F("CHECKSUM FAILURE"));
+        tft.println(msg);
     } else if (oledDisplaySetup) {
         display.clearDisplay();
         display.display();
         display.setCursor(0, 0);
-        display.println(F("CHECKSUM FAILURE"));
+        display.println(msg);
         display.display();
-    } else {
-        Serial.println(F("CHECKSUM FAILURE!"));
     }
+    Serial.println(msg);
 }
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
