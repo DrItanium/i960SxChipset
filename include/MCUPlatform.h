@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef I960SXCHIPSET_MCUPLATFORM_H
 #define I960SXCHIPSET_MCUPLATFORM_H
 #include <Arduino.h>
+#include "DependentFalse.h"
 #ifdef ARDUINO_SAMD_FEATHER_M0
 #define ADAFRUIT_FEATHER_M0
 #ifdef HAS_BUILTIN_SDCARD
@@ -132,5 +133,31 @@ private:
 };
 
 static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been defined, please define to continue");
+template<typename T>
+constexpr bool sanityCheck() noexcept {
+#define ERR_STATE(msg) static_assert(false_v< T > , msg )
+
+    if constexpr (TargetBoard::onAtmega1284p()) {
+        if constexpr (!TargetBoard::usesDisplayShield()) {
+            ERR_STATE( "Sanity check failed, expected 1284p to use the tft shield");
+        }
+    } else if constexpr (TargetBoard::onGrandCentralM4()) {
+        if constexpr (!TargetBoard::hasBuiltinSDCard()) {
+            ERR_STATE("Sanity check failed, Grand Central M4 has an onboard SD CARD slot");
+        }
+    } else if constexpr (TargetBoard::onMetroM4()) {
+        if constexpr (!TargetBoard::usesDisplayShield()) {
+            ERR_STATE( "Sanity check failed, expected the Metro M4 Express to use the tft shield");
+        }
+    } else if constexpr (TargetBoard::onFeatherM0Adalogger()) {
+        if constexpr (!TargetBoard::hasBuiltinSDCard()) {
+            ERR_STATE("Sanity check failed, Feather M0 Adalogger has an onboard SD CARD slot");
+        }
+    }
+#undef ERR_STATE
+    return true;
+}
+
+static_assert(sanityCheck<TargetMCU>(), "Sanity Check FAILED");
 
 #endif //I960SXCHIPSET_MCUPLATFORM_H
