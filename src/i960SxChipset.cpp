@@ -614,7 +614,7 @@ void bringupLIS3MDLAndLSM6DS() {
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-    if (onFeatherBoard()) {
+    if (TargetBoard::onFeatherBoard()) {
         bringupOLEDFeatherWing();
         bringupAnalogDevicesFeatherWing();
         bringupLIS3MDLAndLSM6DS();
