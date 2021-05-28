@@ -282,12 +282,12 @@ DefInputPin(i960Pinout::W_R_, LOW, HIGH);
 #undef DefInputPullupPin
 
 template<typename ... Pins>
-void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
+inline void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
     (pinMode(pins, direction), ...);
 }
 
 template<typename ... Pins>
-void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
+inline void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
     (digitalWrite(pins, value), ...);
 }
 
