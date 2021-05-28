@@ -123,10 +123,3 @@ ProcessorInterface::LoadStoreStyle
 ProcessorInterface::getStyle() noexcept {
     return static_cast<LoadStoreStyle>(getByteEnableBits());
 }
-
-void
-ProcessorInterface::signalReady() noexcept {
-
-    DigitalPin<i960Pinout::Ready>::pulse();
-}
-

@@ -127,7 +127,7 @@ public:
     void triggerDEN() noexcept { denTriggered_ = true; }
     [[nodiscard]] bool failTriggered() const noexcept { return DigitalPin<i960Pinout::FAIL>::isAsserted(); }
     [[nodiscard]] bool blastTriggered() const noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
-    void signalReady() noexcept;
+    void signalReady() noexcept { DigitalPin<i960Pinout::Ready>::pulse(); }
 private:
     IOExpander<IOExpanderAddress::DataLines> dataLines_;
     IOExpander<IOExpanderAddress::Lower16Lines> lower16_;
