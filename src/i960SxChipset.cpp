@@ -48,6 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "ProcessorSerializer.h"
 #include "DependentFalse.h"
+#include "AddressDecodeTable.h"
 
 bool tftSetup = false;
 Adafruit_TFTShield18 ss;
@@ -574,6 +575,17 @@ void setupPeripherals() {
     setupSDCard();
     Serial.println(F("Done setting up peripherals..."));
 }
+void displayDecodeTable() {
+    for (int i = 0; i < 256; ++i) {
+        Serial.print("0x");
+        Serial.print(i, HEX);
+        Serial.print(": 0x"); Serial.print(DecodeTable[0][i], HEX);
+        Serial.print(", 0x"); Serial.print(DecodeTable[1][i], HEX);
+        Serial.print(", 0x"); Serial.print(DecodeTable[2][i], HEX);
+        Serial.print(", 0x"); Serial.print(DecodeTable[3][i], HEX);
+        Serial.println();
+    }
+}
 // the setup routine runs once when you press reset:
 void setup() {
     // before we do anything else, configure as many pins as possible and then
@@ -608,6 +620,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     Serial.begin(115200);
     while (!Serial);
+    displayDecodeTable();
     Serial.println(F("i960Sx chipset bringup"));
     Wire.begin();
     SPI.begin();
