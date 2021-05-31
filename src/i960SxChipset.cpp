@@ -62,7 +62,7 @@ Adafruit_ILI9341 externalTFT(static_cast<uint8_t>(i960Pinout::DISPLAY_EN),
                              static_cast<uint8_t>(i960Pinout::DC));
 constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayMemoryReadsAndWrites = true;
 // boot rom and sd card loading stuff
 File theBootROM;
 File theRAM; // use an SDCard as ram for the time being
@@ -267,10 +267,14 @@ ioSpaceWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle
 void
 performWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("Write 0b"));
-        Serial.print(value, BIN);
-        Serial.print(F(" to 0b"));
-        Serial.println(address, BIN);
+        Serial.print(F("Write 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" to 0x"));
+        Serial.println(address, HEX);
+    }
+    if constexpr (TargetBoard::onMega2560()) {
+        // stub code out for now
+        return;
     }
     if (address < RamStartingAddress) {
         // we are in program land for the time being so do nothing!
@@ -365,8 +369,12 @@ ioSpaceRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept 
 uint16_t
 performRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("Read from 0b"));
-        Serial.println(address, BIN);
+        Serial.print(F("Read from 0x"));
+        Serial.println(address, HEX);
+    }
+    if constexpr (TargetBoard::onMega2560()) {
+        // short circuit for now
+        return 0;
     }
     /// @todo implement
     if (address < RamStartingAddress) {
@@ -486,7 +494,10 @@ template<typename T>
 }
 
 void setupSDCard() {
-    if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+    if (!SD.begin(static_cast<uint8_t>(i960Pinout::SD_EN),
+                  static_cast<uint8_t>(i960Pinout::MOSI),
+                  static_cast<uint8_t>(i960Pinout::MISO),
+                  static_cast<uint8_t>(i960Pinout::SCK))) {
         signalHaltState(F("SD CARD INIT FAILED"));
     }
     if (!SD.exists("boot.rom")) {
@@ -605,7 +616,9 @@ void setupPeripherals() {
             setupTFTShield();
         }
     }
-    setupSDCard();
+    if constexpr (!TargetBoard::onMega2560()) {
+        setupSDCard();
+    }
     Serial.println(F("Done setting up peripherals..."));
 }
 void displayDecodeTable() {

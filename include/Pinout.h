@@ -127,10 +127,11 @@ enum class i960Pinout : decltype(A0) {
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
 #elif defined(ARDUINO_AVR_MEGA2560)
-    GPIOSelect = ::SS,        // output
+    //GPIOSelect = ::SS,        // output
+    GPIOSelect = 4,
     AS_ = 2,     // input, AVR Int2
     DEN_ = 3,      // AVR Interrupt INT0
-    SD_EN = 4,
+    SD_EN = ::SS,
     Ready = 5,      // output
     LOCK_ = 6, // output
     ADR28 = 7, // pulled from port reads
