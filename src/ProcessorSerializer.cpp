@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Address
 ProcessorInterface::getAddress() noexcept {
-    if constexpr (TargetBoard::onMega2560()) {
+#ifdef ARDUINO_AVR_MEGA2560
         // the address is made up of several ports on the mega2560
         // PORTA - x,1,2,3,4,5,6,7
         // PORTC - 8:15
@@ -41,22 +41,41 @@ ProcessorInterface::getAddress() noexcept {
         auto higher = static_cast<Address>(PORTL) << 16;
         auto highest = static_cast<Address>((PORTH & 0b0001'0011) | (PORTD & 0b0000'1100) | (PORTB & 0b1110'0000) ) << 24;
         return lowest | lower | higher | highest;
-    } else {
+#else
         auto lower16Addr = static_cast<Address>(lower16_.readGPIOs());
         auto upper16Addr = static_cast<Address>(upper16_.readGPIOs()) << 16;
         return lower16Addr | upper16Addr;
-    }
+#endif
+}
+void
+ProcessorInterface::setDataLinesDirection(uint16_t direction) {
+#ifdef ARDUINO_AVR_MEGA2560
+    // set the direction registers
+    DDRF = static_cast<uint8_t>(direction & 0xFF);
+    DDRK = static_cast<uint8_t>((direction & 0xFF00) >> 8);
+#else
+    dataLines_.writeGPIOsDirection(direction);
+#endif
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
-    dataLines_.writeGPIOsDirection(0xFFFF);
+    setDataLinesDirection(0xFFFF);
+#ifdef ARDUINO_AVR_MEGA2560
+    auto lower = static_cast<uint16_t>(PORTF);
+    auto upper = static_cast<uint16_t>(PORTK) << 8;
+    return lower | upper;
+#else
     return static_cast<uint16_t>(dataLines_.readGPIOs());
+#endif
 }
 
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    dataLines_.writeGPIOsDirection(0);
+    setDataLinesDirection(0);
+#ifdef ARDUINO_AVR_MEGA2560
+#else
     dataLines_.writeGPIOs(value);
+#endif
 }
 
 
@@ -112,6 +131,11 @@ void
 ProcessorInterface::begin() noexcept {
     if (!initialized_) {
         initialized_ = true;
+#ifdef ARDUINO_AVR_MEGA2560
+        DDRF = 0xFF;
+        DDRK = 0xFF;
+
+#else
         // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
         // disabled. We can send out a single IOCON.HAEN enable message and all
         // should receive it.
@@ -133,6 +157,7 @@ ProcessorInterface::begin() noexcept {
         // then indirectly mark the outputs
         pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extra_);
         pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extra_);
+#endif
     }
 }
 ProcessorInterface::LoadStoreStyle

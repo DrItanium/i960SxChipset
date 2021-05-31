@@ -129,6 +129,8 @@ public:
     [[nodiscard]] bool blastTriggered() const noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
     void signalReady() noexcept { DigitalPin<i960Pinout::Ready>::pulse(); }
 private:
+    void setDataLinesDirection(uint16_t direction);
+private:
     IOExpander<IOExpanderAddress::DataLines> dataLines_;
     IOExpander<IOExpanderAddress::Lower16Lines> lower16_;
     IOExpander<IOExpanderAddress::Upper16Lines> upper16_;
