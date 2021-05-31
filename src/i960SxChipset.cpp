@@ -44,6 +44,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_ADXL343.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Adafruit_ILI9341.h>
 
 #include "Pinout.h"
 #include "ProcessorSerializer.h"
@@ -57,6 +58,8 @@ Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                     static_cast<int>(i960Pinout::DC),
                     -1);
+Adafruit_ILI9341 externalTFT(static_cast<uint8_t>(i960Pinout::DISPLAY_EN),
+                             static_cast<uint8_t>(i960Pinout::DC));
 constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
@@ -458,10 +461,17 @@ void setupBusStateMachine() noexcept {
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
     if (tftSetup) {
-        tft.fillScreen(ST77XX_RED);
-        tft.setCursor(0,0);
-        tft.setTextSize(1);
-        tft.println(haltMsg);
+        if constexpr (TargetBoard::onMega2560()) {
+            externalTFT.fillScreen(ILI9341_RED);
+            externalTFT.setCursor(0,0);
+            externalTFT.setTextSize(1);
+            externalTFT.println(haltMsg);
+        } else {
+            tft.fillScreen(ST77XX_RED);
+            tft.setCursor(0,0);
+            tft.setTextSize(1);
+            tft.println(haltMsg);
+        }
     } else if (oledDisplaySetup) {
         display.clearDisplay();
         display.display();
@@ -526,6 +536,24 @@ void setupTFTShield() {
     tft.setTextSize(3);
     tft.println(F("i960Sx!"));
 }
+
+void setupExternalTFT() {
+    Serial.println(F("Bringing up External TFT"));
+    externalTFT.begin();
+    externalTFT.fillScreen(ILI9341_BLACK);
+    externalTFT.setCursor(0, 0);
+    externalTFT.setTextSize(3);
+    externalTFT.println(F("DONUTS!!!"));
+    delay(1000);
+    externalTFT.fillScreen(ILI9341_CYAN);
+    delay(1000);
+    externalTFT.fillScreen(ILI9341_BLACK);
+    externalTFT.setCursor(0, 0);
+    externalTFT.setTextSize(3);
+    externalTFT.println(F("i960Sx!"));
+    tftSetup = true;
+    Serial.println(F("Done Bringing up External TFT"));
+}
 void bringupAnalogDevicesFeatherWing() {
     if (!accel1.begin()) {
         signalHaltState(F("ADXL343 Bringup Failure"));
@@ -566,13 +594,16 @@ void bringupLIS3MDLAndLSM6DS() {
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-    if (TargetBoard::onFeatherBoard()) {
+    if constexpr (TargetBoard::onFeatherBoard()) {
         bringupOLEDFeatherWing();
         bringupAnalogDevicesFeatherWing();
         bringupLIS3MDLAndLSM6DS();
     } else {
-        setupTFTShield();
-
+        if constexpr (TargetBoard::onMega2560()) {
+            setupExternalTFT();
+        } else {
+            setupTFTShield();
+        }
     }
     setupSDCard();
     Serial.println(F("Done setting up peripherals..."));
@@ -652,10 +683,17 @@ void loop() {
 void enteringChecksumFailure() noexcept {
     auto msg = F("CHECKSUM FAILURE");
     if (tftSetup) {
-        tft.fillScreen(ST77XX_RED);
-        tft.setCursor(0, 0);
-        tft.setTextSize(2);
-        tft.println(msg);
+        if constexpr (TargetBoard::onMega2560()) {
+            externalTFT.fillScreen(ILI9341_RED);
+            externalTFT.setCursor(0, 0);
+            externalTFT.setTextSize(2);
+            externalTFT.println(msg);
+        } else {
+            tft.fillScreen(ST77XX_RED);
+            tft.setCursor(0, 0);
+            tft.setTextSize(2);
+            tft.println(msg);
+        }
     } else if (oledDisplaySetup) {
         display.clearDisplay();
         display.display();
