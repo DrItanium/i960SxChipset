@@ -53,6 +53,7 @@ enum class TargetMCU {
     FeatherM0Basic,
     FeatherM0Adalogger,
     MetroM4,
+    ArduinoMega2560,
     Unknown,
 };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
@@ -94,18 +95,23 @@ public:
     return TargetMCU::FeatherM0Basic;
 #elif defined(ADAFRUIT_METRO_M4_EXPRESS)
     return TargetMCU::MetroM4;
+#elif defined(ARDUINO_AVR_MEGA2560)
+    return TargetMCU::ArduinoMega2560;
 #else
     return TargetMCU::Unknown;
 #endif
     }
-    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
-    [[nodiscard]] static constexpr auto onGrandCentralM4() noexcept { return getMCUTarget() == TargetMCU::GrandCentralM4; }
-    [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
-    [[nodiscard]] static constexpr auto onFeatherM0Basic() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Basic; }
-    [[nodiscard]] static constexpr auto onFeatherM0Adalogger() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Adalogger; }
-    [[nodiscard]] static constexpr auto onMetroM4() noexcept { return getMCUTarget() == TargetMCU::MetroM4; }
+    template<TargetMCU target>
+    [[nodiscard]] static constexpr auto expectingBoard() noexcept { return getMCUTarget() == target; }
+    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return expectingBoard<TargetMCU::ATmega1284p>(); }
+    [[nodiscard]] static constexpr auto onGrandCentralM4() noexcept { return expectingBoard<TargetMCU::GrandCentralM4>(); }
+    [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return expectingBoard<TargetMCU::Unknown>(); }
+    [[nodiscard]] static constexpr auto onFeatherM0Basic() noexcept { return expectingBoard<TargetMCU::FeatherM0Basic>(); }
+    [[nodiscard]] static constexpr auto onFeatherM0Adalogger() noexcept { return expectingBoard<TargetMCU::FeatherM0Adalogger>(); }
+    [[nodiscard]] static constexpr auto onMetroM4() noexcept { return expectingBoard<TargetMCU::MetroM4>(); }
     [[nodiscard]] static constexpr auto onFeatherM0() noexcept { return onFeatherM0Basic() || onFeatherM0Adalogger(); }
     [[nodiscard]] static constexpr auto onFeatherBoard() noexcept { return onFeatherM0(); }
+    [[nodiscard]] static constexpr auto onMega2560() noexcept { return expectingBoard<TargetMCU::ArduinoMega2560>(); }
 /**
  * @brief Is there an onboard sdcard slot?
  * @return True if defined via the command line
