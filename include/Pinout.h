@@ -126,6 +126,74 @@ enum class i960Pinout : decltype(A0) {
     SD_EN = ::A2,
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
+#elif defined(ARDUINO_AVR_MEGA2560)
+    GPIOSelect = ::SS,        // output
+    AS_ = 2,     // input, AVR Int2
+    DEN_ = 3,      // AVR Interrupt INT0
+    SD_EN = 4,
+    Ready = 5,      // output
+    PH3 = 6, // unused
+    ADR28 = 7, // pulled from port reads
+    DC = 8,     // output
+    HLDA = 9,
+    DISPLAY_EN = 10, // output
+    ADR29 = 11, // pulled from port reads
+    ADR30 = 12, // pulled from port reads
+    ADR31 = 13, // pulled from port reads
+    Int0_ = 14,          // output
+    HOLD = 15,           //
+    ADR25 = 16,
+    ADR24 = 17,
+    ADR27 = 18,
+    ADR26 = 19,
+    W_R_ = 22,          // input
+    BA1,
+    BA2,
+    BA3,
+    ADR4,
+    ADR5,
+    ADR6,
+    ADR7,
+    // PORT C
+    ADR8,
+    ADR9,
+    ADR10,
+    ADR11,
+    ADR12,
+    ADR13,
+    ADR14,
+    ADR15,
+    Reset960,          // output
+    BLAST_,     // input
+    BE1_,
+    BE0_,
+    // PORT L
+    ADR23,
+    ADR22,
+    ADR21,
+    ADR20,
+    ADR19,
+    ADR18,
+    ADR17,
+    ADR16,
+    // PORT F
+    DA0 = A0,
+    DA1 = A1,
+    DA2 = A2,
+    DA3 = A3,
+    DA4 = A4,
+    DA5 = A5,
+    DA6 = A6,
+    DA7 = A7,
+    // PORT K
+    DA8 = A8,
+    DA9 = A9,
+    DA10 = A10,
+    DA11 = A11,
+    DA12 = A12,
+    DA13 = A13,
+    DA14 = A14,
+    DA15 = A15,
 #else
 #error "PLEASE DEFINE BOARD's PINOUT"
 #endif
@@ -269,10 +337,14 @@ struct DigitalPin {
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
+#ifndef ARDUINO_AVR_MEGA2560
 DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
+#endif
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
+#ifndef ARDUINO_AVR_MEGA2560
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
+#endif
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);

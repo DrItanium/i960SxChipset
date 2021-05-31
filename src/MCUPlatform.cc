@@ -69,6 +69,14 @@ namespace {
         {
             ERR_STATE("Feather M0 Adalogger cannot use the display shield");
         }
+    } else if constexpr (TargetBoard::onMega2560()) {
+        if constexpr (TargetBoard::hasBuiltinSDCard()) {
+            ERR_STATE("Mega2560 has no onboard SD Card slot")   ;
+        }
+
+        if constexpr (TargetBoard::usesDisplayShield()) {
+            ERR_STATE("Mega2560 must not use the display shield") ;
+        }
     }
 #undef ERR_STATE
     return true;
