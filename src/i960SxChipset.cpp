@@ -487,7 +487,7 @@ template<typename T>
 
 void setupSDCard() {
     if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-        signalHaltState(F("SD CARD INIT FAILed"));
+        signalHaltState(F("SD CARD INIT FAILED"));
     }
     if (!SD.exists("boot.rom")) {
         signalHaltState(F("NO BOOT.ROM!"));
