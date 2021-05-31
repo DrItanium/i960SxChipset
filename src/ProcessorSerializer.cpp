@@ -24,12 +24,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ProcessorSerializer.h"
+#include "MCUPlatform.h"
 
 Address
 ProcessorInterface::getAddress() noexcept {
-    auto lower16Addr = static_cast<Address>(lower16_.readGPIOs());
-    auto upper16Addr = static_cast<Address>(upper16_.readGPIOs()) << 16;
-    return lower16Addr | upper16Addr;
+    if constexpr (TargetBoard::onMega2560()) {
+        // the address is made up of several ports on the mega2560
+        // PORTA - x,1,2,3,4,5,6,7
+        // PORTC - 8:15
+        // PORTL - 16:23
+        // PORTH - 24,25,x,x,28,x,x,x
+        // PORTD - x,x,26,27,x,x,x,x
+        // PORTB - x,x,x,x,x,29,30,31
+        auto lowest = static_cast<Address>(PORTA & 0b1111'1110);
+        auto lower = static_cast<Address>(PORTC) << 8;
+        auto higher = static_cast<Address>(PORTL) << 16;
+        auto highest = static_cast<Address>((PORTH & 0b0001'0011) | (PORTD & 0b0000'1100) | (PORTB & 0b1110'0000) ) << 24;
+        return lowest | lower | higher | highest;
+    } else {
+        auto lower16Addr = static_cast<Address>(lower16_.readGPIOs());
+        auto upper16Addr = static_cast<Address>(upper16_.readGPIOs()) << 16;
+        return lower16Addr | upper16Addr;
+    }
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
@@ -122,4 +138,15 @@ ProcessorInterface::begin() noexcept {
 ProcessorInterface::LoadStoreStyle
 ProcessorInterface::getStyle() noexcept {
     return static_cast<LoadStoreStyle>(getByteEnableBits());
+}
+bool
+ProcessorInterface::failTriggered() const noexcept {
+#ifdef ARDUINO_AVR_MEGA2560
+    // read from  PORTG and mask out the bits for the pattern we are looking for
+    // fail is defined as: (and (not BLAST_) (and BE0_ BE1_))
+    // This translates to 0b011
+    return (PORTG & 0b111) == 0b011;
+#else
+    return DigitalPin<i960Pinout::FAIL>::isAsserted();
+#endif
 }

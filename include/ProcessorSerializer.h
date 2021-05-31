@@ -125,7 +125,7 @@ public:
     void clearDENTrigger() noexcept { denTriggered_ = false; }
     void triggerAS() noexcept { asTriggered_ = true; }
     void triggerDEN() noexcept { denTriggered_ = true; }
-    [[nodiscard]] bool failTriggered() const noexcept { return DigitalPin<i960Pinout::FAIL>::isAsserted(); }
+    [[nodiscard]] bool failTriggered() const noexcept;
     [[nodiscard]] bool blastTriggered() const noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
     void signalReady() noexcept { DigitalPin<i960Pinout::Ready>::pulse(); }
 private:
