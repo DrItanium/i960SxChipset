@@ -132,7 +132,7 @@ enum class i960Pinout : decltype(A0) {
     DEN_ = 3,      // AVR Interrupt INT0
     SD_EN = 4,
     Ready = 5,      // output
-    PH3 = 6, // unused
+    LOCK_ = 6, // output
     ADR28 = 7, // pulled from port reads
     DC = 8,     // output
     HLDA = 9,
@@ -337,18 +337,23 @@ struct DigitalPin {
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-#ifndef ARDUINO_AVR_MEGA2560
-DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
-#endif
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
+DefOutputPin(i960Pinout::Int0_, LOW, HIGH);
 #ifndef ARDUINO_AVR_MEGA2560
+DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 #endif
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
+#ifdef ARDUINO_AVR_MEGA2560
+DefOutputPin(i960Pinout::LOCK_, LOW, HIGH);
+DefOutputPin(i960Pinout::HOLD, HIGH, LOW);
+DefInputPin(i960Pinout::HLDA, HIGH, LOW);
+// the ports are directly read to query values
+#endif
 #undef DefInputPin
 #undef DefOutputPin
 #undef DefInputPullupPin
