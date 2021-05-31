@@ -5,6 +5,7 @@
 #ifndef I960SXCHIPSET_ADDRESSDECODETABLE_H
 #define I960SXCHIPSET_ADDRESSDECODETABLE_H
 #include <Arduino.h>
+
 constexpr uint32_t DecodeTable[4][256] = {
 {
 0x0,

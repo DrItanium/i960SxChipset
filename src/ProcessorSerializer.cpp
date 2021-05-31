@@ -73,6 +73,8 @@ void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
     setDataLinesDirection(0);
 #ifdef ARDUINO_AVR_MEGA2560
+    PORTF = static_cast<uint8_t>(value);
+    PORTK = static_cast<uint8_t>(value >> 8);
 #else
     dataLines_.writeGPIOs(value);
 #endif
@@ -82,7 +84,11 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
 
 uint8_t
 ProcessorInterface::getByteEnableBits() noexcept {
+#ifdef ARDUINO_AVR_MEGA2560
+    return PORTG & 0b11;
+#else
     return (extra_.readGPIOs() & 0b11000) >> 3;
+#endif
 }
 
 decltype(LOW)
@@ -96,8 +102,12 @@ ProcessorInterface::getByteEnable1() noexcept {
 
 uint8_t
 ProcessorInterface::getBurstAddressBits() noexcept {
+#ifdef ARDUINO_AVR_MEGA2560
+    return PORTA & 0b1110;
+#else
     auto gpios = extra_.readGPIOs();
     return (gpios & 0b111) << 1;
+#endif
 }
 
 Address
@@ -106,7 +116,13 @@ ProcessorInterface::getBurstAddress(Address base) noexcept {
 }
 Address
 ProcessorInterface::getBurstAddress() noexcept {
+#ifdef ARDUINO_AVR_MEGA2560
+    // by default, on the mega2560, the pins are automatically laid out to make this function the same
+    // as get address
+    return getAddress();
+#else
     return getBurstAddress(getAddress());
+#endif
 }
 
 bool
@@ -120,11 +136,19 @@ ProcessorInterface::isWriteOperation() const noexcept {
 
 void
 ProcessorInterface::setHOLDPin(decltype(LOW) value) noexcept {
+#ifdef ARDUINO_AVR_MEGA2560
+    digitalWrite(i960Pinout::HOLD, value);
+#else
     digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, extra_);
+#endif
 }
 void
 ProcessorInterface::setLOCKPin(decltype(LOW) value) noexcept {
+#ifdef ARDUINO_AVR_MEGA2560
+    digitalWrite(i960Pinout::LOCK_, value);
+#else
     digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extra_);
+#endif
 }
 
 void
@@ -132,9 +156,33 @@ ProcessorInterface::begin() noexcept {
     if (!initialized_) {
         initialized_ = true;
 #ifdef ARDUINO_AVR_MEGA2560
-        DDRF = 0xFF;
-        DDRK = 0xFF;
-
+        // PORTA - x,1,2,3,4,5,6,7
+        // PORTC - 8:15
+        // PORTL - 16:23
+        // PORTH - 24,25,x,x,28,x,x,x
+        // PORTD - x,x,26,27,x,x,x,x
+        // PORTB - x,x,x,x,x,29,30,31
+        DDRA = 0; // all are inputs
+        DDRC = 0; // Address 8:15
+        DDRF = 0; // DATA LOWER
+        DDRK = 0; // DATA UPPER
+        DDRL = 0; // Address 16:23
+        setupPins(INPUT,
+                  i960Pinout::ADR24,
+                  i960Pinout::ADR25,
+                  i960Pinout::ADR26,
+                  i960Pinout::ADR27,
+                  i960Pinout::ADR28,
+                  i960Pinout::ADR29,
+                  i960Pinout::ADR30,
+                  i960Pinout::ADR31,
+                  i960Pinout::BE0_,
+                  i960Pinout::BE1_,
+                  i960Pinout::BLAST_,
+                  i960Pinout::HLDA);
+        setupPins(OUTPUT,
+                  i960Pinout::HOLD,
+                  i960Pinout::LOCK_);
 #else
         // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
         // disabled. We can send out a single IOCON.HAEN enable message and all

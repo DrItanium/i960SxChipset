@@ -48,7 +48,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "ProcessorSerializer.h"
 #include "DependentFalse.h"
+#ifndef ARDUINO_AVR_MEGA2560
 #include "AddressDecodeTable.h"
+#endif
 
 bool tftSetup = false;
 Adafruit_TFTShield18 ss;
@@ -576,6 +578,7 @@ void setupPeripherals() {
     Serial.println(F("Done setting up peripherals..."));
 }
 void displayDecodeTable() {
+#ifndef ARDUINO_AVR_MEGA2560
     for (int i = 0; i < 256; ++i) {
         Serial.print("0x");
         Serial.print(i, HEX);
@@ -585,6 +588,7 @@ void displayDecodeTable() {
         Serial.print(", 0x"); Serial.print(DecodeTable[3][i], HEX);
         Serial.println();
     }
+#endif
 }
 // the setup routine runs once when you press reset:
 void setup() {
@@ -592,7 +596,9 @@ void setup() {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     setupPins(OUTPUT,
+#ifndef ARDUINO_AVR_MEGA2560
               i960Pinout::SPI_BUS_EN,
+#endif
               i960Pinout::DISPLAY_EN,
               i960Pinout::SD_EN,
               i960Pinout::Reset960,
@@ -604,7 +610,9 @@ void setup() {
     digitalWrite(i960Pinout::Led, LOW);
     // all of these pins need to be pulled high
     digitalWriteBlock(HIGH,
+#ifndef ARDUINO_AVR_MEGA2560
                       i960Pinout::SPI_BUS_EN,
+#endif
                       i960Pinout::SD_EN,
                       i960Pinout::DISPLAY_EN,
                       i960Pinout::Ready,
@@ -614,8 +622,11 @@ void setup() {
               i960Pinout::BLAST_,
               i960Pinout::AS_,
               i960Pinout::W_R_,
-              i960Pinout::DEN_,
-              i960Pinout::FAIL);
+              i960Pinout::DEN_
+#ifndef ARDUINO_AVR_MEGA2560
+              ,i960Pinout::FAIL
+#endif
+              );
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     Serial.begin(115200);
