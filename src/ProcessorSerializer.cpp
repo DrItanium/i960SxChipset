@@ -145,7 +145,7 @@ ProcessorInterface::setHOLDPin(decltype(LOW) value) noexcept {
 void
 ProcessorInterface::setLOCKPin(decltype(LOW) value) noexcept {
 #ifdef ARDUINO_AVR_MEGA2560
-    digitalWrite(i960Pinout::LOCK_, value);
+    //digitalWrite(i960Pinout::LOCK_, value);
 #else
     digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extra_);
 #endif
@@ -179,10 +179,10 @@ ProcessorInterface::begin() noexcept {
                   i960Pinout::BE0_,
                   i960Pinout::BE1_,
                   i960Pinout::BLAST_,
-                  i960Pinout::HLDA);
-        setupPins(OUTPUT,
-                  i960Pinout::HOLD,
-                  i960Pinout::LOCK_);
+                  i960Pinout::HLDA,
+                  i960Pinout::FAIL);
+        setupPins(OUTPUT, i960Pinout::HOLD);
+        digitalWrite(i960Pinout::HOLD, LOW);
 #else
         // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
         // disabled. We can send out a single IOCON.HAEN enable message and all
@@ -214,12 +214,5 @@ ProcessorInterface::getStyle() noexcept {
 }
 bool
 ProcessorInterface::failTriggered() const noexcept {
-#ifdef ARDUINO_AVR_MEGA2560
-    // read from  PORTG and mask out the bits for the pattern we are looking for
-    // fail is defined as: (and (not BLAST_) (and BE0_ BE1_))
-    // This translates to 0b011
-    return (PORTG & 0b111) == 0b011;
-#else
     return DigitalPin<i960Pinout::FAIL>::isAsserted();
-#endif
 }

@@ -170,7 +170,6 @@ State tRecovery(nullptr,
                 nullptr);
 State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
 
-
 void startupState() noexcept {
     if (processorInterface.failTriggered()) {
         fsm.trigger(PerformSelfTest);
@@ -666,23 +665,24 @@ void setup() {
               i960Pinout::BLAST_,
               i960Pinout::AS_,
               i960Pinout::W_R_,
-              i960Pinout::DEN_
-#ifndef ARDUINO_AVR_MEGA2560
-              ,i960Pinout::FAIL
-#endif
-              );
+              i960Pinout::DEN_,
+              i960Pinout::FAIL);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     Serial.begin(115200);
     while (!Serial);
-    displayDecodeTable();
+    if constexpr (!TargetBoard::onMega2560()) {
+        displayDecodeTable();
+    }
     Serial.println(F("i960Sx chipset bringup"));
     Wire.begin();
     SPI.begin();
     processorInterface.begin();
     // setup the CPU Interface
-    processorInterface.setHOLDPin(LOW);
-    processorInterface.setLOCKPin(HIGH);
+    if constexpr (!TargetBoard::onMega2560()) {
+        processorInterface.setHOLDPin(LOW);
+        processorInterface.setLOCKPin(HIGH);
+    }
     setupBusStateMachine();
     setupPeripherals();
     delay(1000);
