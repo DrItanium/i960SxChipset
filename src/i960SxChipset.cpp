@@ -58,7 +58,7 @@ Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      -1);
 constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayMemoryReadsAndWrites = true;
 // boot rom and sd card loading stuff
 File theBootROM;
 File theRAM; // use an SDCard as ram for the time being
@@ -409,10 +409,10 @@ ioSpaceWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle
 void
 performWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("Write 0b"));
-        Serial.print(value, BIN);
-        Serial.print(F(" to 0b"));
-        Serial.println(address, BIN);
+        Serial.print(F("Write 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" to 0x"));
+        Serial.println(address, HEX);
     }
     if (address < RamStartingAddress) {
         // we are in program land for the time being so do nothing!
@@ -498,8 +498,8 @@ ioSpaceRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept 
 uint16_t
 performRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("Read from 0b"));
-        Serial.println(address, BIN);
+        Serial.print(F("Read from 0x"));
+        Serial.println(address, HEX);
     }
     /// @todo implement
     if (address < RamStartingAddress) {
@@ -509,8 +509,8 @@ performRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept 
             theBootROM.seek(address);
             theBootROM.read(&result, 2);
             if constexpr (displayMemoryReadsAndWrites) {
-                Serial.print(F("\tGot value: 0b"));
-                Serial.println(result, BIN);
+                Serial.print(F("\tGot value: 0x"));
+                Serial.println(result, HEX);
             }
             return result;
         }
