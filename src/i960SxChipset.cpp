@@ -74,15 +74,21 @@ SdFile theBootROM;
 SdFile theRAM; // use an SDCard as ram for the time being
 uint32_t bootRomSize = 0;
 
-static constexpr auto FlashStartingAddress = 0x0000'0000;
-static constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
+constexpr auto FlashStartingAddress = 0x0000'0000;
+constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
 // the upper 2G is for non-program related stuff, according to my memory map information, we support a maximum of 512 Megs of RAM
 // so the "ram" file is 512 megs in size. If the range is between 0x8000'0000 and
-static constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
-static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
-static constexpr auto RamMask = MaxRamSize - 1;
-static constexpr Address RamStartingAddress = 0x8000'0000;
-static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
+constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
+constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
+constexpr auto RamMask = MaxRamSize - 1;
+constexpr Address RamStartingAddress = 0x8000'0000;
+constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
+
+constexpr Address AbsoluteConsoleBaseAddress = 0xFE00'0100;
+constexpr Address ConsoleOffsetBaseAddress = 0x0100;
+constexpr Address ConsoleReadWriteBaseAddress = ConsoleOffsetBaseAddress + 0x2;
+constexpr Address ConsoleFlushPort = ConsoleOffsetBaseAddress + 0x0;
+constexpr Address ConsoleAvailableForWrite = ConsoleOffsetBaseAddress + 0x4;
 
 SPIBus theSPIBus;
 // with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
@@ -274,8 +280,6 @@ enteringDataState() noexcept {
 	performingRead = isReadOperation();
 }
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
-constexpr Address AbsoluteConsoleBaseAddress = 0xFE00'0100;
-constexpr Address ConsoleOffsetBaseAddress = 0x0100;
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
@@ -298,10 +302,10 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
             /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
-        case ConsoleOffsetBaseAddress:
+        case ConsoleFlushPort:
             Serial.flush();
             break;
-        case ConsoleOffsetBaseAddress+2:
+        case ConsoleReadWriteBaseAddress:
             Serial.write(static_cast<uint8_t>(value));
             break;
 
@@ -396,8 +400,10 @@ ioSpaceRead16(Address offset) noexcept {
             /// @todo this would be an amalgamation of the contents addresses zero and one
             /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
-        case ConsoleOffsetBaseAddress:
+        case ConsoleReadWriteBaseAddress:
             return static_cast<uint16_t>(Serial.read());
+        case ConsoleAvailableForWrite:
+            return static_cast<uint16_t>(Serial.availableForWrite());
         default:
             return 0;
     }
