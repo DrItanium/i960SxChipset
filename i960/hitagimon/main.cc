@@ -1,9 +1,7 @@
 //
 // Created by jwscoggins on 5/2/21.
 //
-#include <iostream>
 #include "IODevice.h"
-BuiltinLED theLed(0);
 int wait(int count) {
     int result = 0;
     for (int i = 0; i < count; ++i) {
@@ -31,6 +29,7 @@ void conPrintln(const char* ptr) {
     conPrint(ptr, true);
 }
 int main() {
+    BuiltinLED theLed(0);
     uint8_t pwmIndex = 127;
     conPrint("hello, world\n");
     conPrintln("donuts");
