@@ -757,7 +757,6 @@ void setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.println(F("i960Sx chipset bringup"));
-    Wire.begin();
     SPI.begin();
     processorInterface.begin();
     // setup the CPU Interface
