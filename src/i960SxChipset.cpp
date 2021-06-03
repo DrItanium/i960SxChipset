@@ -194,127 +194,9 @@ Adafruit_ADXL343 accel1(12345);
 Adafruit_SSD1306 display(128,32,&Wire);
 
 bool oledDisplaySetup = false;
-
-
 // ----------------------------------------------------------------
-// state machine
+// Load/Store routines
 // ----------------------------------------------------------------
-// The bootup process has a separate set of states
-// TStart - Where we start
-// TSystemTest - Processor performs self test
-//
-// TStart -> TSystemTest via FAIL being asserted
-// TSystemTest -> Ti via FAIL being deasserted
-// 
-// State machine will stay here for the duration
-// State diagram based off of i960SA/SB Reference manual
-// Basic Bus States
-// Ti - Idle State
-// Ta - Address State
-// Td - Data State
-// Tr - Recovery State
-// Tw - Wait State
-// TChecksumFailure - Checksum Failure State
-
-// READY - ~READY asserted
-// NOT READY - ~READY not asserted
-// BURST - ~BLAST not asserted
-// NO BURST - ~BLAST asserted
-// NEW REQUEST - ~AS asserted
-// NO REQUEST - ~AS not asserted when in 
-
-// Ti -> Ti via no request
-// Tr -> Ti via no request
-// Tr -> Ta via request pending
-// Ti -> Ta via new request
-// on enter of Ta, set address state to false
-// on enter of Td, burst is sampled
-// Ta -> Td
-// Td -> Tr after signaling ready and no burst (blast low)
-// Td -> Td after signaling ready and burst (blast high)
-// Ti -> TChecksumFailure if FAIL is asserted
-// Tr -> TChecksumFailure if FAIL is asserted
-
-// NOTE: Tw may turn out to be synthetic
-volatile uint32_t baseAddress = 0;
-volatile bool performingRead = false;
-constexpr auto NoRequest = 0;
-constexpr auto NewRequest = 1;
-constexpr auto ReadyAndBurst = 2;
-constexpr auto NotReady = 3;
-constexpr auto ReadyAndNoBurst = 4;
-constexpr auto RequestPending = 5;
-constexpr auto ToDataState = 6;
-constexpr auto PerformSelfTest = 7;
-constexpr auto SelfTestComplete = 8;
-constexpr auto ChecksumFailure = 9;
-void startupState() noexcept;
-void systemTestState() noexcept;
-void idleState() noexcept;
-void doAddressState() noexcept;
-void processDataRequest() noexcept;
-void doRecoveryState() noexcept;
-void enteringDataState() noexcept;
-void enteringChecksumFailure() noexcept;
-State tStart(nullptr, startupState, nullptr);
-State tSystemTest(nullptr, systemTestState, nullptr);
-Fsm fsm(&tStart);
-State tIdle(nullptr,
-            idleState,
-            nullptr);
-State tAddr([]() { processorInterface.clearASTrigger(); },
-            doAddressState,
-            nullptr);
-State tData(enteringDataState,
-            processDataRequest,
-            nullptr);
-State tRecovery(nullptr,
-                doRecoveryState,
-                nullptr);
-State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
-
-
-void startupState() noexcept {
-    if (processorInterface.failTriggered()) {
-        fsm.trigger(PerformSelfTest);
-    }
-}
-void systemTestState() noexcept {
-    if (!processorInterface.failTriggered()) {
-        fsm.trigger(SelfTestComplete);
-    }
-}
-void onASAsserted() {
-    processorInterface.triggerAS();
-}
-void onDENAsserted() {
-    processorInterface.triggerDEN();
-}
-
-void idleState() noexcept {
-    if (processorInterface.failTriggered()) {
-        fsm.trigger(ChecksumFailure);
-    } else {
-        if (processorInterface.asTriggered()) {
-            fsm.trigger(NewRequest);
-        }
-    }
-}
-void doAddressState() noexcept {
-    if (processorInterface.denTriggered()) {
-        fsm.trigger(ToDataState);
-    }
-}
-
-
-
-void
-enteringDataState() noexcept {
-    // when we do the transition, record the information we need
-    processorInterface.clearDENTrigger();
-    baseAddress = processorInterface.getAddress();
-    performingRead = processorInterface.isReadOperation();
-}
 void
 writeLed(uint8_t value) noexcept {
     digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
@@ -541,6 +423,126 @@ performRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept 
         }
     }
     return 0;
+}
+
+// ----------------------------------------------------------------
+// state machine
+// ----------------------------------------------------------------
+// The bootup process has a separate set of states
+// TStart - Where we start
+// TSystemTest - Processor performs self test
+//
+// TStart -> TSystemTest via FAIL being asserted
+// TSystemTest -> Ti via FAIL being deasserted
+// 
+// State machine will stay here for the duration
+// State diagram based off of i960SA/SB Reference manual
+// Basic Bus States
+// Ti - Idle State
+// Ta - Address State
+// Td - Data State
+// Tr - Recovery State
+// Tw - Wait State
+// TChecksumFailure - Checksum Failure State
+
+// READY - ~READY asserted
+// NOT READY - ~READY not asserted
+// BURST - ~BLAST not asserted
+// NO BURST - ~BLAST asserted
+// NEW REQUEST - ~AS asserted
+// NO REQUEST - ~AS not asserted when in 
+
+// Ti -> Ti via no request
+// Tr -> Ti via no request
+// Tr -> Ta via request pending
+// Ti -> Ta via new request
+// on enter of Ta, set address state to false
+// on enter of Td, burst is sampled
+// Ta -> Td
+// Td -> Tr after signaling ready and no burst (blast low)
+// Td -> Td after signaling ready and burst (blast high)
+// Ti -> TChecksumFailure if FAIL is asserted
+// Tr -> TChecksumFailure if FAIL is asserted
+
+// NOTE: Tw may turn out to be synthetic
+volatile uint32_t baseAddress = 0;
+volatile bool performingRead = false;
+constexpr auto NoRequest = 0;
+constexpr auto NewRequest = 1;
+constexpr auto ReadyAndBurst = 2;
+constexpr auto NotReady = 3;
+constexpr auto ReadyAndNoBurst = 4;
+constexpr auto RequestPending = 5;
+constexpr auto ToDataState = 6;
+constexpr auto PerformSelfTest = 7;
+constexpr auto SelfTestComplete = 8;
+constexpr auto ChecksumFailure = 9;
+void startupState() noexcept;
+void systemTestState() noexcept;
+void idleState() noexcept;
+void doAddressState() noexcept;
+void processDataRequest() noexcept;
+void doRecoveryState() noexcept;
+void enteringDataState() noexcept;
+void enteringChecksumFailure() noexcept;
+State tStart(nullptr, startupState, nullptr);
+State tSystemTest(nullptr, systemTestState, nullptr);
+Fsm fsm(&tStart);
+State tIdle(nullptr,
+            idleState,
+            nullptr);
+State tAddr([]() { processorInterface.clearASTrigger(); },
+            doAddressState,
+            nullptr);
+State tData(enteringDataState,
+            processDataRequest,
+            nullptr);
+State tRecovery(nullptr,
+                doRecoveryState,
+                nullptr);
+State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
+
+
+void startupState() noexcept {
+    if (processorInterface.failTriggered()) {
+        fsm.trigger(PerformSelfTest);
+    }
+}
+void systemTestState() noexcept {
+    if (!processorInterface.failTriggered()) {
+        fsm.trigger(SelfTestComplete);
+    }
+}
+void onASAsserted() {
+    processorInterface.triggerAS();
+}
+void onDENAsserted() {
+    processorInterface.triggerDEN();
+}
+
+void idleState() noexcept {
+    if (processorInterface.failTriggered()) {
+        fsm.trigger(ChecksumFailure);
+    } else {
+        if (processorInterface.asTriggered()) {
+            fsm.trigger(NewRequest);
+        }
+    }
+}
+void doAddressState() noexcept {
+    if (processorInterface.denTriggered()) {
+        fsm.trigger(ToDataState);
+    }
+}
+
+
+
+void
+enteringDataState() noexcept {
+    // when we do the transition, record the information we need
+    processorInterface.clearDENTrigger();
+    baseAddress = processorInterface.getAddress();
+    performingRead = processorInterface.isReadOperation();
 }
 void processDataRequest() noexcept {
     auto burstAddress = processorInterface.getBurstAddress(baseAddress);
