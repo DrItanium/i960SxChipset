@@ -30,7 +30,7 @@ void conPrintln(const char* ptr) {
 }
 int main() {
     BuiltinLED theLed(0);
-    uint8_t pwmIndex = 127;
+    volatile uint8_t pwmIndex = 127;
     conPrint("hello, world\n");
     conPrintln("donuts");
     //printf("%s!\n", "Printf test");
@@ -38,10 +38,9 @@ int main() {
     //std::cout << "0x" << std::hex << 0xFDED << std::endl;
     while(true) {
         theLed.toggle();
-        wait(10000);
+        pwmIndex += wait(1000000);
         theLed.toggle();
-        wait(10000);
-        ++pwmIndex;
+        pwmIndex += wait(1000000);
     }
     return 0;
 }
