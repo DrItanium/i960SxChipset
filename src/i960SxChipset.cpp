@@ -89,6 +89,15 @@ constexpr Address ConsoleOffsetBaseAddress = 0x0100;
 constexpr Address ConsoleReadWriteBaseAddress = ConsoleOffsetBaseAddress + 0x2;
 constexpr Address ConsoleFlushPort = ConsoleOffsetBaseAddress + 0x0;
 constexpr Address ConsoleAvailableForWrite = ConsoleOffsetBaseAddress + 0x4;
+constexpr Address DisplayBaseOffset = 0x0200;
+constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
+constexpr Address DisplayBacklightPort = TFTShieldFeaturesBaseOffset + 0x00;
+constexpr Address DisplayBacklightFrequencyPort = TFTShieldFeaturesBaseOffset + 0x02;
+constexpr Address DisplayButtonsPort = TFTShieldFeaturesBaseOffset + 0x04; // 32-bits
+
+uint16_t backlightFrequency = 0;
+uint16_t backlightStatus = TFTSHIELD_BACKLIGHT_ON;
+uint32_t buttonsCache = 0;
 
 SPIBus theSPIBus;
 // with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
@@ -100,6 +109,34 @@ SPIBus theSPIBus;
 
 template<typename DisplayType>
 class DisplayCommand {
+public:
+    enum class Opcodes : uint16_t {
+        None = 0,
+        SetRotation,
+        InvertDisplay,
+        FillRect,
+        FillScreen,
+        DrawLine,
+        DrawRect,
+        DrawCircle,
+        FillCircle,
+        DrawTriangle,
+        FillTriangle,
+        SetTextSize,
+        SetCursor,
+        SetTextColor0,
+        SetTextColor1,
+        SetTextWrap,
+        GetWidth,
+        GetHeight,
+        GetRotation,
+        GetCursorX,
+        GetCursorY,
+        WritePixel,
+        WriteColor,
+        WriteFillRect,
+        DrawPixel,
+    };
 public:
     /// @todo extend BusDevice and take in a base address
     DisplayCommand(DisplayType& display) : display_(display) { }
@@ -116,7 +153,7 @@ public:
     [[nodiscard]] constexpr auto getY1() const noexcept { return y1_; }
     [[nodiscard]] constexpr auto getX2() const noexcept { return x2_; }
     [[nodiscard]] constexpr auto getY2() const noexcept { return y2_; }
-    void setCommand(uint16_t command) noexcept { command_ = command; }
+    void setCommand(Opcodes command) noexcept { command_ = command; }
     void setX(int16_t x) noexcept { x_ = x; }
     void setY(int16_t y) noexcept { y_ = y; }
     void setW(int16_t w) noexcept { w_ = w; }
@@ -140,7 +177,7 @@ public:
     }
 private:
     DisplayType& display_;
-    uint16_t command_ = 0;
+    Opcodes command_;
     int16_t x_ = 0;
     int16_t y_ = 0;
     int16_t w_ = 0;
@@ -285,9 +322,6 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
         case 0: // builtin led
             digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
-            if constexpr (displayMemoryReadsAndWrites) {
-                Serial.println(F("LED WRITE!"));
-            }
             break;
         default:
             break;
@@ -308,9 +342,49 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
         case ConsoleReadWriteBaseAddress:
             Serial.write(static_cast<uint8_t>(value));
             break;
-
+        case DisplayBacklightPort:
+            backlightStatus = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
+            ss.setBacklight(backlightStatus);
+            break;
+        case DisplayBacklightFrequencyPort:
+            backlightFrequency = value;
+            ss.setBacklightFreq(backlightFrequency);
+            break;
         default:
             break;
+    }
+}
+uint8_t
+ioSpaceRead8(Address offset) noexcept {
+    switch (offset) {
+        case 0:
+            return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
+        default:
+            return 0;
+    }
+}
+uint16_t
+ioSpaceRead16(Address offset) noexcept {
+    switch (offset) {
+        case 0:
+            /// @todo this would be an amalgamation of the contents addresses zero and one
+            /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
+            return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
+        case ConsoleReadWriteBaseAddress:
+            return static_cast<uint16_t>(Serial.read());
+        case ConsoleAvailableForWrite:
+            return static_cast<uint16_t>(Serial.availableForWrite());
+        case DisplayBacklightPort:
+            return backlightStatus;
+        case DisplayBacklightFrequencyPort:
+            return backlightFrequency;
+        case DisplayButtonsPort + 0x00: // lower two bytes
+            buttonsCache = ss.readButtons();
+            return static_cast<uint16_t>(buttonsCache & 0x0000'FFFF);
+        case DisplayButtonsPort + 0x02: // upper two bytes
+            return static_cast<uint16_t>((buttonsCache >> 16) & 0x0000'FFFF);
+        default:
+            return 0;
     }
 }
 void
@@ -380,33 +454,6 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
         }
     }
     /// @todo implement
-}
-uint8_t
-ioSpaceRead8(Address offset) noexcept {
-    switch (offset) {
-        case 0:
-            if constexpr (displayMemoryReadsAndWrites) {
-                Serial.println(F("LED READ!"));
-            }
-            return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
-        default:
-            return 0;
-    }
-}
-uint16_t
-ioSpaceRead16(Address offset) noexcept {
-    switch (offset) {
-        case 0:
-            /// @todo this would be an amalgamation of the contents addresses zero and one
-            /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
-            return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
-        case ConsoleReadWriteBaseAddress:
-            return static_cast<uint16_t>(Serial.read());
-        case ConsoleAvailableForWrite:
-            return static_cast<uint16_t>(Serial.availableForWrite());
-        default:
-            return 0;
-    }
 }
 
 uint16_t
