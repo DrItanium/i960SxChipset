@@ -12,7 +12,7 @@ int wait(int count) {
 int main() {
     BuiltinLED theLed(0);
     uint8_t pwmIndex = 127;
-    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x100));
+    volatile uint16_t& con = memory<uint16_t>(getIOBase0Address(0x102));
     const char* msg = "hello, world\n";
     for(const char* ptr = msg; *ptr; ++ptr) {
         con = *ptr;
