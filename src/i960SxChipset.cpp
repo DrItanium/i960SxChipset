@@ -44,10 +44,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_ST7735.h>
 #include "Pinout.h"
 #include "BusDevice.h"
-#include "RAM.h"
 #include "SPIBus.h"
 #include "IOExpanders.h"
-#include "PSRAM64H.h"
 
 
 
@@ -65,7 +63,7 @@ Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
                      -1);
-constexpr bool displaySDCardStatsDuringInit = true;
+constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 // boot rom and sd card loading stuff
@@ -75,14 +73,9 @@ SdFile rootDirectory;
 SdFile theBootROM;
 SdFile theRAM; // use an SDCard as ram for the time being
 uint32_t bootRomSize = 0;
-// the upper 64 elements of the bus are exposed for direct processor usage
-union WordEntry {
-    byte bytes[2];
-    uint16_t word;
-};
 
 static constexpr auto FlashStartingAddress = 0x0000'0000;
-static constexpr Address OneMemorySpace = 0x100'0000; // 16 megabytes
+static constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
 // the upper 2G is for non-program related stuff, according to my memory map information, we support a maximum of 512 Megs of RAM
 // so the "ram" file is 512 megs in size. If the range is between 0x8000'0000 and
 static constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
@@ -281,6 +274,8 @@ enteringDataState() noexcept {
 	performingRead = isReadOperation();
 }
 LoadStoreStyle getStyle() noexcept { return static_cast<LoadStoreStyle>(getByteEnableBits()); }
+constexpr Address AbsoluteConsoleBaseAddress = 0xFE00'0100;
+constexpr Address ConsoleOffsetBaseAddress = 0x0100;
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
@@ -303,6 +298,13 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
             /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
+        case ConsoleOffsetBaseAddress:
+            Serial.flush();
+            break;
+        case ConsoleOffsetBaseAddress+2:
+            Serial.write(static_cast<uint8_t>(value));
+            break;
+
         default:
             break;
     }
@@ -394,6 +396,8 @@ ioSpaceRead16(Address offset) noexcept {
             /// @todo this would be an amalgamation of the contents addresses zero and one
             /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
+        case ConsoleOffsetBaseAddress:
+            return static_cast<uint16_t>(Serial.read());
         default:
             return 0;
     }
