@@ -26,9 +26,9 @@ int main() {
     con = '\n';
     while(true) {
         theLed.toggle();
-        wait(1000);
+        wait(10000);
         theLed.toggle();
-        wait(1000);
+        wait(10000);
         ++pwmIndex;
     }
     return 0;
