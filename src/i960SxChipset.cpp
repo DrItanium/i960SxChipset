@@ -673,41 +673,47 @@ void setupTFTShield() {
     tft.println(F("i960Sx!"));
 }
 void bringupAnalogDevicesFeatherWing() {
-    if (!accel1.begin()) {
-        signalHaltState(F("ADXL343 Bringup Failure"));
+    if constexpr (TargetBoard::onFeatherBoard()) {
+        if (!accel1.begin()) {
+            signalHaltState(F("ADXL343 Bringup Failure"));
+        }
+        // configure for your project
+        accel1.setRange(ADXL343_RANGE_16_G);
+        if (!tempSensor.begin()) {
+            signalHaltState(F("ADT7410 Bringup Failure"));
+        }
+        // sensor takes 250 ms to get readings
+        delay(250);
     }
-    // configure for your project
-    accel1.setRange(ADXL343_RANGE_16_G);
-    if (!tempSensor.begin()) {
-        signalHaltState(F("ADT7410 Bringup Failure"));
-    }
-    // sensor takes 250 ms to get readings
-    delay(250);
 }
 void bringupOLEDFeatherWing() {
-    Serial.println(F("Setting up OLED Featherwing")) ;
-    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-    Serial.println(F("OLED begun"));
-    display.display();
-    delay(1000);
-    display.clearDisplay();
-    display.display();
-    // I have cut the pins for the buttons on the featherwing display
-    display.setTextSize(2);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0,0);
-    display.println(F("i960Sx!"));
-    display.display();
-    Serial.println(F("Done setting up OLED Featherwing"));
-    oledDisplaySetup = true;
+    if constexpr (TargetBoard::onFeatherBoard()) {
+        Serial.println(F("Setting up OLED Featherwing"));
+        display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+        Serial.println(F("OLED begun"));
+        display.display();
+        delay(1000);
+        display.clearDisplay();
+        display.display();
+        // I have cut the pins for the buttons on the featherwing display
+        display.setTextSize(2);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.println(F("i960Sx!"));
+        display.display();
+        Serial.println(F("Done setting up OLED Featherwing"));
+        oledDisplaySetup = true;
+    }
 }
 void bringupLIS3MDLAndLSM6DS() {
-    Serial.println(F("Bringing up LIS3MDL"));
-    if (!lis3mdl.begin_I2C()) {
-        signalHaltState(F("FAILED TO BRING UP LIS3MDL"));
-    }
-    if (!lsm6ds.begin_I2C()) {
-        signalHaltState(F("FAILED TO BRING UP LSM6DS")) ;
+    if constexpr (TargetBoard::onFeatherBoard()) {
+        Serial.println(F("Bringing up LIS3MDL"));
+        if (!lis3mdl.begin_I2C()) {
+            signalHaltState(F("FAILED TO BRING UP LIS3MDL"));
+        }
+        if (!lsm6ds.begin_I2C()) {
+            signalHaltState(F("FAILED TO BRING UP LSM6DS"));
+        }
     }
 }
 void setupPeripherals() {
