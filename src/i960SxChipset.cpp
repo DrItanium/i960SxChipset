@@ -710,13 +710,12 @@ void bringupLIS3MDLAndLSM6DS() {
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-    if (TargetBoard::onFeatherBoard()) {
+    if constexpr (TargetBoard::onFeatherBoard()) {
         bringupOLEDFeatherWing();
         bringupAnalogDevicesFeatherWing();
         bringupLIS3MDLAndLSM6DS();
     } else {
         setupTFTShield();
-
     }
     setupSDCard();
     Serial.println(F("Done setting up peripherals..."));
