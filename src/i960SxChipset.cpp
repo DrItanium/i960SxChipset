@@ -478,8 +478,10 @@ ioSpaceRead8(Address offset) noexcept {
 
 uint16_t
 ioSpaceRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept {
-    Serial.print("IO Address: 0x");
-    Serial.println(address, HEX);
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.print("IO Address: 0x");
+        Serial.println(address, HEX);
+    }
     auto offset = 0x00FF'FFFF & address;
     switch (style) {
         case ProcessorInterface::LoadStoreStyle::Full16:
