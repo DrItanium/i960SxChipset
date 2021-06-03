@@ -182,7 +182,7 @@ private:
     int16_t y2_ = 0;
 };
 
-DisplayCommand<decltype(tft)> displayCommandSet(tft);
+//DisplayCommand<decltype(tft)> displayCommandSet(tft);
 
 // for the feather m0 only
 // LIS3MDL + LSM6DSOX featherwing
@@ -197,12 +197,14 @@ bool oledDisplaySetup = false;
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
+
 void
 writeLed(uint8_t value) noexcept {
     digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.println(F("LED WRITE!"));
-    }
+}
+uint8_t
+readLed() noexcept {
+    return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
 }
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
@@ -339,13 +341,6 @@ performWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle
         }
     }
     /// @todo implement
-}
-uint8_t
-readLed() noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.println(F("LED READ!"));
-    }
-    return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
 }
 uint8_t
 ioSpaceRead8(Address offset) noexcept {
