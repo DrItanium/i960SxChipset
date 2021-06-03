@@ -22,26 +22,56 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
-#ifndef ARDUINO_SPIBUS_H
-#define ARDUINO_SPIBUS_H
-#include <Arduino.h>
-// The upper eight lines of the Extra GPIO expander is used as an SPI address selector
-// This provides up to 256 devices to be present on the SPI address bus and controlable through the single SPI_BUS_EN pin from the 1284p
-// The "SPI Address" is used to select which CS line to pull low when ~SPI_BUS_EN is pulled low by the MCU. It requires some extra logic to
-// use but is stupid simple to layout physically. These IDs have _no_ direct correlation to the memory map exposed to the i960 itself.
-// This is only used internally. The idea is to use the SDCard to define the memory mapping bound to a given SPIBusDevice.
-
-/**
- * @brief Common interface to the SPIBus
+/*
+ * Fault handler routines
  */
-class SPIBus {
-public:
-    void setup() noexcept;
-    void setId(byte id) noexcept;
-    [[nodiscard]] byte getId() const noexcept;
-private:
-    byte _id = 0;
-    bool _initialized = false;
-};
-#endif //ARDUINO_SPIBUS_H
+extern "C" void user_reserved(void);
+extern "C" void user_trace(void);
+extern "C" void user_operation(void);
+extern "C" void user_arithmetic(void);
+extern "C" void user_real_arithmetic(void);
+extern "C" void user_constraint(void);
+extern "C" void user_protection(void);
+extern "C" void user_machine(void);
+extern "C" void user_type(void);
+
+extern "C"
+void
+user_reserved(void) {
+}
+
+extern "C"
+void
+user_trace(void) {
+}
+
+extern "C"
+void
+user_operation(void) {
+}
+extern "C"
+void
+user_arithmetic(void) {
+}
+extern "C"
+void
+user_real_arithmetic(void) {
+}
+extern "C"
+void
+user_constraint(void) {
+}
+extern "C"
+void
+user_protection(void) {
+}
+extern "C"
+void
+user_machine(void) {
+
+}
+extern "C"
+void
+user_type(void) {
+
+}

@@ -8,8 +8,8 @@ set(CMAKE_C_COMPILER ${tools}/bin/i960-elf-gcc)
 set(CMAKE_CXX_COMPILER ${tools}/bin/i960-elf-g++)
 set(CMAKE_ASM-ATT_COMPILER ${tools}/bin/i960-elf-as)
 set(CMAKE_ASM-ATT_FLAGS "${CMAKE_ASM_FLAGS} -ASB")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msb -mnumerics")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msb -mnumerics")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msb -mnumerics -O1")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msb -mnumerics -O1")
 set(LINKER_SCRIPT "start.ld")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed -nostdlib -static -T ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT} -msb -mnumerics -ffreestanding")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
@@ -21,8 +21,8 @@ add_executable(hitagimon
 		f_table.s
 		i_handle.s
 		i_table.s
-		f_handle.c
-		ISR.c
+		f_handle.cc
+		ISR.cc
         # interface libraries
 		IODevice.cc
 		IODevice.h

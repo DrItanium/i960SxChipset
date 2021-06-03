@@ -6,7 +6,7 @@
 MEMORY
 {
     rom (rx)  : ORIGIN = 0, l = 64M
-    ram (!rx) : o = 0x80000000, l = 64M
+    ram (!rx) : o = 0x80000000, l = 512M
 }
 
 SECTIONS

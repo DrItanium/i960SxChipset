@@ -88,20 +88,5 @@ void shiftOutMultiple(int dataPin, int clockPin, decltype(MSBFIRST) order, T val
     }
 }
 
-/**
- * Mixin class for adding potentiometer interfacing functionality
- */
-template<decltype(A0) potPin>
-struct HasPotentiometer {
-    using PotResult = decltype(analogRead(potPin));
-    PotResult readPot() const noexcept { return analogRead(potPin); }
-    PotResult readPot(int mapRangeStart, int mapRangeEnd) const noexcept { return map(readPot(), 0, 1023, mapRangeStart, mapRangeEnd); }
-};
-template<int pin, decltype(LOW) startAs = LOW>
-void setupDigitalPin() noexcept {
-    pinMode(pin, OUTPUT);
-    digitalWrite(pin, startAs);
-}
-
 } // end namespace bonuspin
 #endif // end LIB_CORE_CONCEPTS_H__

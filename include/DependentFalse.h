@@ -23,52 +23,10 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "SPIBus.h"
-#include "IOExpanders.h"
-#include "MCUPlatform.h"
-void
-SPIBus::setup() noexcept {
-    if (!_initialized) {
-        _initialized = true;
-#ifdef ARDUINO_AVR_ATmega1284
-        DDRA = 0xFF; // make sure all pins on PORTA are outputs
-#elif defined(ARDUINO_NRF52_ADAFRUIT)
-        extraMemoryCommit.setPortBDirection(0xFF); // make these output
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)
-        // this will be completely different and could even be ignored because
-        // the grand central has so many pins
-#else
-#endif
-        setId(_id);
-    }
-}
-void
-SPIBus::setId(byte id) noexcept {
-    setup();
-#ifdef ARDUINO_AVR_ATmega1284
-    // atmega 1284p specific but so damn simple
-    if (PORTA != id) {
-        PORTA = id;
-    }
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)
-    /// @todo implement
-#else
-    // use the IO Expander by Default
-    if (_id != id) {
-        extraMemoryCommit.writePortB(id);
-        _id = id;
-    }
-#endif
-}
-byte
-SPIBus::getId() const noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
-    return static_cast<byte>(PORTA);
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)
-    /// @todo implement
-    return _id;
-#else
-    // by default just read from the extra memory commit io expander
-    return extraMemoryCommit.readPortB();
-#endif
-}
+#ifndef I960SXCHIPSET_DEPENDENTFALSE_H
+#define I960SXCHIPSET_DEPENDENTFALSE_H
+
+template<typename...>
+inline constexpr bool false_v = false;
+
+#endif //I960SXCHIPSET_DEPENDENTFALSE_H
