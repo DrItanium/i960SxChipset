@@ -172,7 +172,7 @@ void startupState() noexcept {
     }
 }
 void systemTestState() noexcept {
-    if (processorInterface.failTriggered()) {
+    if (!processorInterface.failTriggered()) {
         fsm.trigger(SelfTestComplete);
     }
 }
