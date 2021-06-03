@@ -80,12 +80,6 @@ union WordEntry {
     byte bytes[2];
     uint16_t word;
 };
-constexpr auto OnBoardSRAMCacheSizeInBytes = 128;
-constexpr auto OnBoardSRAMCacheSize = OnBoardSRAMCacheSizeInBytes / sizeof (WordEntry);
-/**
- * @brief Allocate a portion of on board sram as accessible to the i960 without having to walk out onto the separate busses
- */
-volatile WordEntry OnBoardSRAMCache[OnBoardSRAMCacheSize];
 
 static constexpr auto FlashStartingAddress = 0x0000'0000;
 static constexpr Address OneMemorySpace = 0x100'0000; // 16 megabytes
@@ -104,6 +98,7 @@ SPIBus theSPIBus;
 // A four address is used to act as a door bell!
 // storage area for the display + a doorbell address as well
 // the command is setup to send off to the display
+
 template<typename DisplayType>
 class DisplayCommand {
 public:
@@ -291,7 +286,9 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
         case 0: // builtin led
             digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
-            Serial.println(F("LED WRITE!"));
+            if constexpr (displayMemoryReadsAndWrites) {
+                Serial.println(F("LED WRITE!"));
+            }
             break;
         default:
             break;
@@ -382,7 +379,9 @@ uint8_t
 ioSpaceRead8(Address offset) noexcept {
     switch (offset) {
         case 0:
-            Serial.println(F("LED READ!"));
+            if constexpr (displayMemoryReadsAndWrites) {
+                Serial.println(F("LED READ!"));
+            }
             return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
         default:
             return 0;
@@ -558,12 +557,6 @@ void setupIOExpanders() {
     Serial.println(F("Done setting up io expanders!"));
 }
 
-void setupSRAMCache() {
-    // 8k on board cache
-    for (uint32_t i = 0; i < OnBoardSRAMCacheSize; ++i) {
-        OnBoardSRAMCache[i].word = 0;
-    }
-}
 constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
     return start + (size * count);
 }
@@ -733,7 +726,6 @@ void setupPeripherals() {
     setupSeesaw();
     setupTFT();
     setupSDCard();
-    setupSRAMCache();
     Serial.println(F("Done setting up peripherals..."));
 }
 // the setup routine runs once when you press reset:
