@@ -109,10 +109,6 @@ enum class ConsoleAddresses : uint32_t {
     Available = getConsoleMemoryAddress(2),
     AvailableForWrite = getConsoleMemoryAddress(3),
 };
-void foo() {
-    //tft.drawCircle(x0, y0, r, color);
-    //tft.drawLine(x0,y0, x1, y1, color);
-}
 constexpr Address DisplayBaseOffset = 0x0200;
 constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
 
@@ -144,7 +140,8 @@ public:
         FillCircle,
         DrawTriangle,
         FillTriangle,
-        SetTextSize,
+        SetTextSizeSquare,
+        SetTextSizeRectangle,
         SetCursor,
         SetTextColor0,
         SetTextColor1,
@@ -159,13 +156,16 @@ public:
         WriteFillRect,
         DrawPixel,
         Color565,
+        DrawRoundRect,
+        FillRoundRect,
     };
 public:
     /**
      * @brief Invoke on doorbell write
      * @param value the value written to the doorbell
+     * @return the value to return to the i960 if it makes sense (otherwise it will be zero)
      */
-    void invoke(uint16_t value) {
+    uint16_t invoke(uint16_t /* unused */) {
         // perhaps we'll do nothing with the value but hold onto it for now
         switch (command_) {
             case Opcodes::SetRotation:
@@ -174,7 +174,71 @@ public:
             case Opcodes::InvertDisplay:
                 display_.invertDisplay(x_ != 0);
                 break;
+            case Opcodes::DrawPixel:
+                display_.drawPixel(x_, y_, color_);
+                break;
+            case Opcodes::FillRect:
+                display_.fillRect(x_, y_, w_, h_, color_);
+                break;
+            case Opcodes::FillScreen:
+                display_.fillScreen(color_);
+                break;
+            case Opcodes::Color565:
+                return display_.color565(r_, g_, b_);
+            case Opcodes::DrawLine:
+                display_.drawLine(x0_, y0_, x1_, y1_, color_);
+                break;
+            case Opcodes::DrawRect:
+                display_.drawRect(x_, y_, w_, h_, color_);
+                break;
+            case Opcodes::DrawCircle:
+                display_.drawCircle(x0_, y0_, r_, color_);
+                break;
+            case Opcodes::FillCircle:
+                display_.fillCircle(x0_, y0_, r_, color_);
+                break;
+            case Opcodes::DrawTriangle:
+                display_.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
+                break;
+            case Opcodes::FillTriangle:
+                display_.fillCircle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
+                break;
+            case Opcodes::DrawRoundRect:
+                display_.drawRoundRect(x_, y_, w_, h_, r_, color_);
+                break;
+            case Opcodes::FillRoundRect:
+                display_.fillRoundRect(x_, y_, w_, h_, r_, color_);
+                break;
+            case Opcodes::SetTextSizeSquare:
+                display_.setTextSize(x_);
+                break;
+            case Opcodes::SetTextSizeRectangle:
+                display_.setTextSize(x_, y_);
+                break;
+            case Opcodes::SetCursor:
+                display_.setCursor(x_, y_);
+                break;
+            case Opcodes::SetTextColor0:
+                display_.setTextColor(color_);
+                break;
+            case Opcodes::SetTextColor1:
+                display_.setTextColor(color_, bgcolor_);
+                break;
+            case Opcodes::SetTextWrap:
+                display_.setTextWrap(x_ != 0);
+                break;
+            case Opcodes::GetWidth:
+                return display_.width();
+            case Opcodes::GetHeight:
+                return display_.height();
+            case Opcodes::GetRotation:
+                return display_.getRotation();
+            case Opcodes::GetCursorX:
+                return display_.getCursorX();
+            case Opcodes::GetCursorY:
+                return display_.getCursorY();
         }
+        return 0;
     }
 public:
     /// @todo extend BusDevice and take in a base address
@@ -186,6 +250,7 @@ public:
     [[nodiscard]] constexpr auto getH() const noexcept { return h_; }
     [[nodiscard]] constexpr auto getRadius() const noexcept { return radius_; }
     [[nodiscard]] constexpr uint16_t getColor() const noexcept { return color_; }
+    [[nodiscard]] constexpr uint16_t getBackgroundColor() const noexcept { return bgcolor_; }
     [[nodiscard]] constexpr auto getX0() const noexcept { return x0_; }
     [[nodiscard]] constexpr auto getY0() const noexcept { return y0_; }
     [[nodiscard]] constexpr auto getX1() const noexcept { return x1_; }
@@ -202,6 +267,7 @@ public:
     void setH(int16_t h) noexcept { h_ = h; }
     void setRadius(int16_t radius) noexcept { radius_ = radius; }
     void setColor(uint16_t color) noexcept { color_ = color; }
+    void setBackgroundColor(uint16_t color) noexcept { bgcolor_ = color; }
     void setX0(int16_t value) noexcept { x0_ = value; }
     void setY0(int16_t value) noexcept { y0_ = value; }
     void setX1(int16_t value) noexcept { x1_ = value; }
@@ -213,6 +279,10 @@ public:
     void setB(int16_t value) noexcept { b_ = value; }
     const DisplayType& getAssociatedDisplay() const noexcept { return display_; }
     DisplayType& getAssociatedDisplay() noexcept { return display_; }
+    void flush() { display_.flush(); }
+    void print(char c) { display_.print(c); }
+    [[nodiscard]] bool available() noexcept { return display_.available(); }
+    [[nodiscard]] bool availableForWriting() noexcept { return display_.availableForWriting(); }
 private:
     DisplayType& display_;
     Opcodes command_;
@@ -222,6 +292,7 @@ private:
     int16_t h_ = 0;
     int16_t radius_ = 0;
     uint16_t color_ = 0;
+    uint16_t bgcolor_ = 0;
     int16_t x0_ = 0;
     int16_t y0_ = 0;
     int16_t x1_ = 0;
@@ -234,7 +305,6 @@ private:
     uint16_t resultLower_ = 0;
     uint16_t resultUpper_ = 0;
 };
-
 
 enum class TFTShieldAddresses : uint32_t {
     // display tweakables
@@ -259,14 +329,16 @@ enum class TFTShieldAddresses : uint32_t {
     G,
     B,
     Doorbell,
-    ResultLower,
-    ResultUpper,
     Backlight,
     BacklightFrequency,
     ButtonsLower,
     ButtonsUpper,
     /// @todo implement constexpr offset calculation
 };
+
+constexpr Address tftShieldAddress(TFTShieldAddresses address) noexcept {
+    return shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, static_cast<Address>(address));
+}
 
 DisplayCommand<decltype(tft)> displayCommandSet(tft);
 
@@ -310,6 +382,12 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
             break;
         case static_cast<Address>(PortZAddresses::GPIO):
             processorInterface.writePortZGPIORegister(value);
+            break;
+        case tftShieldAddress(TFTShieldAddresses::Flush):
+            displayCommandSet.flush();
+            break;
+        case tftShieldAddress(TFTShieldAddresses::IO):
+            displayCommandSet.print(static_cast<char>(value));
             break;
         default:
             break;
