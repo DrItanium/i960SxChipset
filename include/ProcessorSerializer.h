@@ -128,6 +128,16 @@ public:
     [[nodiscard]] bool failTriggered() const noexcept { return DigitalPin<i960Pinout::FAIL>::isAsserted(); }
     [[nodiscard]] bool blastTriggered() const noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
     void signalReady() noexcept { DigitalPin<i960Pinout::Ready>::pulse(); }
+public:
+    void setPortZDirectionRegister(byte value) noexcept;
+    byte getPortZDirectionRegister() noexcept;
+    void setPortZPolarityRegister(byte value) noexcept;
+    byte getPortZPolarityRegister() noexcept;
+    void setPortZPullupResistorRegister(byte value) noexcept;
+    byte getPortZPullupResistorRegister() noexcept;
+    byte readPortZGPIORegister() noexcept;
+    void writePortZGPIORegister(byte value) noexcept;
+
 private:
     IOExpander<IOExpanderAddress::DataLines> dataLines_;
     IOExpander<IOExpanderAddress::Lower16Lines> lower16_;

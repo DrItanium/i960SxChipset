@@ -288,6 +288,23 @@ class MCP23x17 {
         void setPortBDirection(uint8_t value) noexcept {
             write(getIODIRBAddress(), value);
         }
+        [[nodiscard]] uint8_t getPortBDirection() noexcept {
+            return read(getIODIRBAddress());
+        }
+        void setPortBPolarity(uint8_t value) noexcept {
+            write(getIOPOLBAddress(), value);
+        }
+        [[nodiscard]] uint8_t getPortBPolarity() noexcept {
+            return read(getIOPOLBAddress());
+        }
+
+        void setPortBPullupResistorRegister(uint8_t value) noexcept {
+            write(getGPPUBAddress(), value);
+        }
+        [[nodiscard]] uint8_t getPortBPullupResistorRegister() noexcept {
+            return read(getGPPUBAddress());
+        }
+
     private:
         bool _registersAreSequential = true;
         bool _polarityIsActiveLow = true;

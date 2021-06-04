@@ -123,3 +123,30 @@ ProcessorInterface::LoadStoreStyle
 ProcessorInterface::getStyle() noexcept {
     return static_cast<LoadStoreStyle>(getByteEnableBits());
 }
+void
+ProcessorInterface::setPortZDirectionRegister(byte value) noexcept {
+    extra_.setPortBDirection(value);
+}
+byte
+ProcessorInterface::getPortZDirectionRegister() noexcept {
+    return extra_.getPortBDirection();
+}
+void ProcessorInterface::setPortZPolarityRegister(byte value) noexcept {
+    extra_.setPortBPolarity(value);
+
+}
+byte ProcessorInterface::getPortZPolarityRegister() noexcept {
+    return extra_.getPortBPolarity();
+}
+void ProcessorInterface::setPortZPullupResistorRegister(byte value) noexcept {
+    extra_.setPortBPullupResistorRegister(value);
+}
+byte ProcessorInterface::getPortZPullupResistorRegister() noexcept {
+    return extra_.getPortBPullupResistorRegister();
+}
+byte ProcessorInterface::readPortZGPIORegister() noexcept {
+    return extra_.readPortB();
+}
+void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
+    extra_.writePortB(value);
+}
