@@ -477,7 +477,7 @@ public:
 };
 class BuiltinLedThing : public IOSpaceThing {
 public:
-    BuiltinLedThing() : IOSpaceThing(memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress)) { }
+    explicit BuiltinLedThing(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase) { }
     ~BuiltinLedThing() override = default;
     [[nodiscard]] uint8_t read8(Address address) noexcept override { return readLed(); }
     [[nodiscard]] uint16_t read16(Address address) noexcept override { return static_cast<uint16_t>(readLed()); }
@@ -502,6 +502,73 @@ private:
 
 BuiltinLedThing theLed;
 
+class PortZThing : public IOSpaceThing {
+public:
+    enum class Registers : uint32_t {
+        GPIO, // one byte wide
+        Direction, // one byte wide
+        Polarity,
+        Pullup,
+        Unused0,
+        Unused1,
+        Unused2,
+        Unused3,
+        Unused4,
+        Unused5,
+        Unused6,
+        Unused7,
+        Unused8,
+        Unused9,
+        Unused10,
+        Unused11,
+        Count,
+    };
+public:
+    explicit PortZThing(Address base) noexcept : IOSpaceThing(base, base + 16) { }
+    ~PortZThing() override = default;
+    [[nodiscard]] uint8_t read8(Address offset) noexcept override {
+        switch (static_cast<Registers>(offset)) {
+            case Registers::GPIO:
+                return processorInterface.readPortZGPIORegister();
+            case Registers::Pullup:
+                return processorInterface.getPortZPullupResistorRegister();
+            case Registers::Polarity:
+                return processorInterface.getPortZPolarityRegister();
+            case Registers::Direction:
+                return processorInterface.getPortZDirectionRegister();
+            default:
+                return 0;
+        }
+    }
+    [[nodiscard]] uint16_t read16(Address offset) noexcept override {
+        // do nothing at this point as it doesn't make sense!
+        return 0;
+    }
+    void write8(Address offset, uint8_t value) noexcept override {
+        switch (static_cast<Registers>(offset)) {
+            case Registers::GPIO:
+                processorInterface.writePortZGPIORegister(value);
+                break;
+            case Registers::Pullup:
+                processorInterface.setPortZPullupResistorRegister(value);
+                break;
+            case Registers::Polarity:
+                processorInterface.setPortZPolarityRegister(value);
+                break;
+            case Registers::Direction:
+                processorInterface.setPortZDirectionRegister(value);
+                break;
+            default:
+                break;
+        }
+    }
+    void write16(Address offset, uint16_t value) noexcept override {
+        // 16-bit writes are ignored
+    }
+};
+
+PortZThing portZThing(BuiltinPortZBaseAddress);
+
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
@@ -509,23 +576,7 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
         Serial.println(offset, HEX);
         Serial.println(memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress), HEX);
     }
-    if (theLed.respondsTo(offset)) {
-        theLed.write8(offset, value);
-        return;
-    }
     switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::PortZDirectionRegister):
-            processorInterface.setPortZDirectionRegister(value);
-            break;
-        case memoryMapAddress(MemoryMapAddresses::PortZPolarityRegister):
-            processorInterface.setPortZPolarityRegister(value);
-            break;
-        case memoryMapAddress(MemoryMapAddresses::PortZPullupRegister):
-            processorInterface.setPortZPullupResistorRegister(value);
-            break;
-        case memoryMapAddress(MemoryMapAddresses::PortZGPIORegister):
-            processorInterface.writePortZGPIORegister(value);
-            break;
         case memoryMapAddress(MemoryMapAddresses::DisplayFlush):
             displayCommandSet.flush();
             break;
@@ -542,18 +593,7 @@ ioSpaceRead8(Address offset) noexcept {
         Serial.print(F("ioSpaceRead8 to Offset: 0x"));
         Serial.println(offset, HEX);
     }
-    if (theLed.respondsTo(offset)) {
-        return theLed.read8(offset);
-    }
     switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::PortZDirectionRegister):
-            return processorInterface.getPortZDirectionRegister();
-        case memoryMapAddress(MemoryMapAddresses::PortZPolarityRegister):
-            return processorInterface.getPortZPolarityRegister();
-        case memoryMapAddress(MemoryMapAddresses::PortZPullupRegister):
-            return processorInterface.getPortZPullupResistorRegister();
-        case memoryMapAddress(MemoryMapAddresses::PortZGPIORegister):
-            return processorInterface.readPortZGPIORegister();
         case memoryMapAddress(MemoryMapAddresses::DisplayAvailable):
             return static_cast<uint16_t>(displayCommandSet.available());
         case memoryMapAddress(MemoryMapAddresses::DisplayAvailableForWrite):
@@ -624,6 +664,8 @@ ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
     }
     if (theLed.respondsTo(address, style)) {
         theLed.write(address, value, style);
+    } else if (portZThing.respondsTo(address, style)) {
+        portZThing.write(address, value, style);
     } else {
         auto offset = 0x00FF'FFFF & address;
         switch (style) {

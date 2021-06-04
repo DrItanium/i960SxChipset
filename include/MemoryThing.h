@@ -60,28 +60,31 @@ public:
     virtual void write16(Address address, uint16_t value) noexcept = 0;
     [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return base_; }
     [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
+    [[nodiscard]] virtual Address makeAddressRelative(Address input) const noexcept { return input - base_; }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept {
+        auto offset = makeAddressRelative(address);
         switch (style) {
             case LoadStoreStyle::Full16:
-                return read16(address);
+                return read16(offset);
             case LoadStoreStyle::Lower8:
-                return read8(address);
+                return read8(offset);
             case LoadStoreStyle::Upper8:
-                return read8(address + 1);
+                return read8(offset + 1);
             default:
                 return 0;
         }
     }
     void write(Address address, uint16_t value, LoadStoreStyle style) noexcept {
+        auto offset = makeAddressRelative(address);
         switch (style) {
             case LoadStoreStyle::Full16:
-                write16(address, value);
+                write16(offset, value);
                 break;
             case LoadStoreStyle::Upper8:
-                write8(address+1, (value >> 8) );
+                write8(offset+1, (value >> 8) );
                 break;
             case LoadStoreStyle::Lower8:
-                write8(address, value);
+                write8(offset, value);
                 break;
             default:
                 break;
