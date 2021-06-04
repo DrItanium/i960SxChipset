@@ -58,7 +58,7 @@ Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
                      -1);
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = true;
+constexpr bool displayMemoryReadsAndWrites = false;
 // boot rom and sd card loading stuff
 File theBootROM;
 File theRAM; // use an SDCard as ram for the time being
@@ -98,7 +98,21 @@ enum class PortZAddresses : uint32_t {
     Direction, // one byte wide
     Polarity,
     Pullup,
+    Unused0,
+    Unused1,
+    Unused2,
+    Unused3,
+    Unused4,
+    Unused5,
+    Unused6,
+    Unused7,
+    Unused8,
+    Unused9,
+    Unused10,
+    Unused11,
+    Count,
 };
+static_assert(static_cast<int>(PortZAddresses::Count) == 0x10, "PortZRegister space must be exactly 16 entries wide!");
 constexpr Address computePortZAddresses(PortZAddresses offset) noexcept {
     return BuiltinPortZBaseAddress + static_cast<uint32_t>(offset);
 }
@@ -484,6 +498,10 @@ private:
         }
         return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
     }
+};
+class PortZDevice : public IOSpaceThing {
+public:
+    BuiltinLedThing
 };
 
 BuiltinLedThing theLed;
