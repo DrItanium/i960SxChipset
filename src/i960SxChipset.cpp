@@ -558,11 +558,6 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
 
     // we are writing to two separate addresses
     switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
-            writeLed(value & 0xFF);
-            /// @todo figure out if writes like this should be ignored?
-            /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
-            break;
         case memoryMapAddress(MemoryMapAddresses::ConsoleFlushRegisterAddress):
             Serial.flush();
             break;
@@ -589,8 +584,6 @@ ioSpaceRead16(Address offset) noexcept {
         Serial.println(offset, HEX);
     }
     switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
-            return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
         case memoryMapAddress(MemoryMapAddresses::ConsoleIOPort):
             return static_cast<uint16_t>(Serial.read());
         case memoryMapAddress(MemoryMapAddresses::ConsoleAvailablePort):
@@ -611,29 +604,33 @@ ioSpaceRead16(Address offset) noexcept {
     }
 }
 void
-ioSpaceWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle style) noexcept {
+ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
         Serial.print("IO Address: 0x");
         Serial.println(address, HEX);
     }
-    auto offset = 0x00FF'FFFF & address;
-    switch (style) {
-        case ProcessorInterface::LoadStoreStyle::Upper8:
-            // it is the next byte address over
-            ioSpaceWrite8(offset + 1, value >> 8);
-            break;
-        case ProcessorInterface::LoadStoreStyle::Lower8:
-            ioSpaceWrite8(offset, value);
-            break;
-        case ProcessorInterface::LoadStoreStyle::Full16:
-            ioSpaceWrite16(offset, value);
-            break;
-        default:
-            break;
+    if (theLed.respondsTo(address, style)) {
+        theLed.write(address, value, style);
+    } else {
+        auto offset = 0x00FF'FFFF & address;
+        switch (style) {
+            case LoadStoreStyle::Upper8:
+                // it is the next byte address over
+                ioSpaceWrite8(offset + 1, value >> 8);
+                break;
+            case LoadStoreStyle::Lower8:
+                ioSpaceWrite8(offset, value);
+                break;
+            case LoadStoreStyle::Full16:
+                ioSpaceWrite16(offset, value);
+                break;
+            default:
+                break;
+        }
     }
 }
 void
-performWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle style) noexcept {
+performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
         Serial.print(F("Write 0x"));
         Serial.print(value, HEX);
@@ -660,15 +657,15 @@ performWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle
             auto actualAddress = RamMask & address;
             /// @todo figure out what to do if we couldn't read enough?
             switch (style) {
-                case ProcessorInterface::LoadStoreStyle::Upper8:
+                case LoadStoreStyle::Upper8:
                     theRAM.seek(actualAddress + 1);
                     theRAM.write(value >> 8);
                     break;
-                case ProcessorInterface::LoadStoreStyle::Lower8:
+                case LoadStoreStyle::Lower8:
                     theRAM.seek(actualAddress);
                     theRAM.write(static_cast<uint8_t>(value));
                     break;
-                case ProcessorInterface::LoadStoreStyle::Full16:
+                case LoadStoreStyle::Full16:
                     theRAM.seek(actualAddress);
                     theRAM.write(thePtr, 2);
                     break;
@@ -682,27 +679,31 @@ performWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle
 }
 
 uint16_t
-ioSpaceRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept {
+ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
         Serial.print("IO Address: 0x");
         Serial.println(address, HEX);
     }
-    auto offset = 0x00FF'FFFF & address;
-    switch (style) {
-        case ProcessorInterface::LoadStoreStyle::Full16:
-            return ioSpaceRead16(offset);
-        case ProcessorInterface::LoadStoreStyle::Upper8:
-            // next address over
-            // then make sure it is returned in the upper portion
-            return static_cast<uint16_t>(ioSpaceRead8(offset + 1)) << 8;
-        case ProcessorInterface::LoadStoreStyle::Lower8:
-            return static_cast<uint16_t>(ioSpaceRead8(offset));
-        default:
-            return 0;
+    if (theLed.respondsTo(address, style)) {
+        return theLed.read(address, style);
+    } else {
+        auto offset = 0x00FF'FFFF & address;
+        switch (style) {
+            case LoadStoreStyle::Full16:
+                return ioSpaceRead16(offset);
+            case LoadStoreStyle::Upper8:
+                // next address over
+                // then make sure it is returned in the upper portion
+                return static_cast<uint16_t>(ioSpaceRead8(offset + 1)) << 8;
+            case LoadStoreStyle::Lower8:
+                return static_cast<uint16_t>(ioSpaceRead8(offset));
+            default:
+                return 0;
+        }
     }
 }
 uint16_t
-performRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept {
+performRead(Address address, LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
         Serial.print(F("Read from 0x"));
         Serial.println(address, HEX);

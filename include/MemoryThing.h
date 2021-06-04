@@ -41,6 +41,20 @@ public:
     [[nodiscard]] virtual uint8_t read8(Address address) noexcept = 0;
     [[nodiscard]] virtual uint16_t read16(Address address) noexcept = 0;
     [[nodiscard]] virtual bool respondsTo(Address address) const noexcept { return base_ <= address && address < end_; }
+    [[nodiscard]] bool respondsTo(Address address, LoadStoreStyle style) const noexcept {
+        switch (style) {
+            case LoadStoreStyle::Upper8:
+                // we need to see if it is legal to write to the upper 8 bits by itself
+                return respondsTo(address + 1);
+            case LoadStoreStyle::Lower8:
+            case LoadStoreStyle::Full16:
+                // while a hack, if the default check passes then it is safe to write 8 or 16 bits!
+                // this may need to expanded out later to disallow 16-bit writes and lock to 8-bit writes only, etc, etc
+                return respondsTo(address);
+            case LoadStoreStyle::None:
+                return false;
+        }
+    }
     virtual void write8(Address address, uint8_t value) noexcept = 0;
     virtual void write16(Address address, uint16_t value) noexcept = 0;
     [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return base_; }
