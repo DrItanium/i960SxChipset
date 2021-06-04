@@ -347,6 +347,7 @@ constexpr Address tftShieldAddress(TFTShieldAddresses address) noexcept {
     return shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, static_cast<Address>(address));
 }
 /// The base address which describes the different memory map aspects, it is accessible from the i960's memory map
+#if 0
 constexpr Address MemoryMapBase = 0xFD00'0000;
 union MemoryMapEntry {
     constexpr MemoryMapEntry(Address value) : value_(value) {}
@@ -446,8 +447,8 @@ constexpr MemoryMapEntry getMemoryMapEntry(MemoryMapAddresses address) noexcept 
 constexpr Address memoryMapAddress(MemoryMapAddresses address) noexcept {
     return getMemoryMapEntry(address).value_;
 }
+#endif
 DisplayCommand<decltype(tft)> displayCommandSet(tft);
-
 
 bool oledDisplaySetup = false;
 template<typename T>
