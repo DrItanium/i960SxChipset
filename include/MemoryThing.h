@@ -51,8 +51,9 @@ public:
                 // while a hack, if the default check passes then it is safe to write 8 or 16 bits!
                 // this may need to expanded out later to disallow 16-bit writes and lock to 8-bit writes only, etc, etc
                 return respondsTo(address);
-            case LoadStoreStyle::None:
+            default:
                 return false;
+
         }
     }
     virtual void write8(Address address, uint8_t value) noexcept = 0;

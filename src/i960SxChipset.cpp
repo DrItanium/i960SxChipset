@@ -57,9 +57,8 @@ Adafruit_TFTShield18 ss;
 Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      static_cast<int>(i960Pinout::DC),
                      -1);
-constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayMemoryReadsAndWrites = true;
 // boot rom and sd card loading stuff
 File theBootROM;
 File theRAM; // use an SDCard as ram for the time being
@@ -1088,7 +1087,7 @@ void setup() {
     while (!Serial);
     Serial.println(F("i960Sx chipset bringup"));
     Serial.println(F("Memory Map Information: "));
-    for (int i = 0; i < (sizeof(FixedMemoryMap) / sizeof(MemoryMapEntry)) ;++i) {
+    for (unsigned int i = 0; i < (sizeof(FixedMemoryMap) / sizeof(MemoryMapEntry)) ;++i) {
         Serial.print(i);
         Serial.print(F(": 0x"));
         Serial.println(FixedMemoryMap[i].value_, HEX);
