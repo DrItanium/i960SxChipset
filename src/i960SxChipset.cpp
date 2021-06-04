@@ -126,6 +126,11 @@ constexpr Address DisplayBaseOffset = 0x0200;
 constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
 
 
+// for the feather m0 only
+// adxl343 + adt7410 featherwing
+Adafruit_ADT7410 tempSensor;
+Adafruit_ADXL343 accel1(12345);
+Adafruit_SSD1306 display(128,32,&Wire);
 uint16_t backlightFrequency = 0;
 uint16_t backlightStatus = TFTSHIELD_BACKLIGHT_ON;
 uint32_t buttonsCache = 0;
@@ -449,14 +454,6 @@ constexpr Address memoryMapAddress(MemoryMapAddresses address) noexcept {
 }
 DisplayCommand<decltype(tft)> displayCommandSet(tft);
 
-// for the feather m0 only
-// LIS3MDL + LSM6DSOX featherwing
-Adafruit_LSM6DSOX lsm6ds;
-Adafruit_LIS3MDL lis3mdl;
-// adxl343 + adt7410 featherwing
-Adafruit_ADT7410 tempSensor;
-Adafruit_ADXL343 accel1(12345);
-Adafruit_SSD1306 display(128,32,&Wire);
 
 bool oledDisplaySetup = false;
 template<typename T>
@@ -747,6 +744,38 @@ private:
     File theBootROM_;
     uint32_t size_ = 0;
 
+};
+
+class AdafruitLSM6DSOXThing : public IOSpaceThing {
+public:
+    AdafruitLSM6DSOXThing(Address base) : IOSpaceThing(base, base + 0x100) {
+        /// @todo implement registers
+    }
+    ~AdafruitLSM6DSOXThing() override = default;
+    void
+    begin() noexcept override {
+        if (!lsm6ds_.begin_I2C()) {
+            signalHaltState(F("FAILED TO BRING UP LSM6DS"));
+        }
+    }
+private:
+    Adafruit_LSM6DSOX lsm6ds_;
+};
+
+class AdafruitLIS3MDLThing : public IOSpaceThing {
+public:
+    AdafruitLIS3MDLThing(Address base) : IOSpaceThing(base, base + 0x100) {
+
+    }
+    ~AdafruitLIS3MDLThing() override = default;
+    void
+    begin() noexcept override {
+        if (!lis3mdl_.begin_I2C()) {
+            signalHaltState(F("FAILED TO BRING UP LIS3MDL"));
+        }
+    }
+private:
+    Adafruit_LIS3MDL lis3mdl_;
 };
 
 class CPUInternalMemorySpace : public MemoryThing {
@@ -1059,12 +1088,6 @@ void bringupOLEDFeatherWing() {
 void bringupLIS3MDLAndLSM6DS() {
     if constexpr (TargetBoard::onFeatherBoard()) {
         Serial.println(F("Bringing up LIS3MDL"));
-        if (!lis3mdl.begin_I2C()) {
-            signalHaltState(F("FAILED TO BRING UP LIS3MDL"));
-        }
-        if (!lsm6ds.begin_I2C()) {
-            signalHaltState(F("FAILED TO BRING UP LSM6DS"));
-        }
     }
 }
 void setupPeripherals() {
