@@ -744,116 +744,36 @@ private:
     uint32_t size_ = 0;
 
 };
+
+class CPUInternalMemorySpace : public MemoryThing {
+public:
+    CPUInternalMemorySpace() noexcept : MemoryThing(0xFF00'0000) { }
+    ~CPUInternalMemorySpace() override  = default;
+    [[nodiscard]] bool
+    respondsTo(Address address) const noexcept override {
+        return address > 0xFF00'0000;
+    }
+    uint8_t read8(Address address) noexcept override { return 0; }
+    uint16_t read16(Address address) noexcept override { return 0; }
+    void write8(Address address, uint8_t value) noexcept override { }
+    void write16(Address address, uint16_t value) noexcept override { }
+};
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 RAMThing ram;
 ROMThing rom;
+CPUInternalMemorySpace internalMemorySpaceSink;
+// list of memory devices to walk through
+MemoryThing* things[] {
+        &rom,
+        &ram,
+        &theLed,
+        &portZThing,
+        &theConsole,
+        &internalMemorySpaceSink,
+};
 
-void
-ioSpaceWrite8(Address offset, uint8_t value) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("ioSpaceWrite8 to Offset: 0x"));
-        Serial.println(offset, HEX);
-        Serial.println(memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress), HEX);
-    }
-    switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::DisplayFlush):
-            displayCommandSet.flush();
-            break;
-        case memoryMapAddress(MemoryMapAddresses::DisplayIO):
-            displayCommandSet.print(static_cast<char>(value));
-            break;
-        default:
-            break;
-    }
-}
-uint8_t
-ioSpaceRead8(Address offset) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("ioSpaceRead8 to Offset: 0x"));
-        Serial.println(offset, HEX);
-    }
-    switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::DisplayAvailable):
-            return static_cast<uint16_t>(displayCommandSet.available());
-        case memoryMapAddress(MemoryMapAddresses::DisplayAvailableForWrite):
-            return static_cast<uint16_t>(displayCommandSet.availableForWriting());
-        default:
-            return 0;
-    }
-}
-void
-ioSpaceWrite16(Address offset, uint16_t value) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("ioSpaceWrite16 to Offset: 0x"));
-        Serial.println(offset, HEX);
-    }
-
-    // we are writing to two separate addresses
-    switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::DisplayBacklight):
-            backlightStatus = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
-            ss.setBacklight(backlightStatus);
-            break;
-        case memoryMapAddress(MemoryMapAddresses::DisplayBacklightFrequency):
-            backlightFrequency = value;
-            ss.setBacklightFreq(backlightFrequency);
-            break;
-        default:
-            break;
-    }
-}
-uint16_t
-ioSpaceRead16(Address offset) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("ioSpaceRead16 to Offset: 0x"));
-        Serial.println(offset, HEX);
-    }
-    switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::DisplayBacklight):
-            return backlightStatus;
-        case memoryMapAddress(MemoryMapAddresses::DisplayBacklightFrequency):
-            return backlightFrequency;
-        case memoryMapAddress(MemoryMapAddresses::DisplayButtonsLower):
-            buttonsCache = ss.readButtons();
-            return static_cast<uint16_t>(buttonsCache & 0x0000'FFFF);
-        case memoryMapAddress(MemoryMapAddresses::DisplayButtonsUpper):
-            return static_cast<uint16_t>((buttonsCache >> 16) & 0x0000'FFFF);
-        default:
-            return 0;
-    }
-}
-void
-ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print("IO Address: 0x");
-        Serial.println(address, HEX);
-    }
-    if (theLed.respondsTo(address, style)) {
-        theLed.write(address, value, style);
-    } else if (portZThing.respondsTo(address, style)) {
-        portZThing.write(address, value, style);
-    } else if (theConsole.respondsTo(address, style)) {
-        theConsole.write(address, value, style);
-    } else {
-        auto offset = 0x00FF'FFFF & address;
-        switch (style) {
-            case LoadStoreStyle::Upper8:
-                // it is the next byte address over
-                ioSpaceWrite8(offset + 1, value >> 8);
-                break;
-            case LoadStoreStyle::Lower8:
-                ioSpaceWrite8(offset, value);
-                break;
-            case LoadStoreStyle::Full16:
-                ioSpaceWrite16(offset, value);
-                break;
-            default:
-                break;
-        }
-    }
-}
 void
 performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
@@ -862,100 +782,29 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
         Serial.print(F(" to 0x"));
         Serial.println(address, HEX);
     }
-    if (address < RamStartingAddress) {
-        // we are in program land for the time being so do nothing!
-    } else {
-        // upper half needs to be walked down further
-        if (address >= 0xFF00'0000) {
-            // cpu internal space, we should never get to this location
-            if (displayMemoryReadsAndWrites) {
-                Serial.println(F("Request to write into CPU internal space"));
-            }
-        } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
-            ioSpaceWrite(address, value, style);
-        } else if (address < RamEndingAddress){
-            ram.write(address, value, style);
-#if 0
-            auto thePtr = reinterpret_cast<uint8_t*>(&value);
-            // we are writing to "RAM" at this point, what it consists of at this point is really inconsequential
-            // for the initial design it is just going to be straight off of the SDCard itself, slow but a great test
-            // in the ram section
-            // now we need to make it relative to 512 megabytes
-            auto actualAddress = RamMask & address;
-            /// @todo figure out what to do if we couldn't read enough?
-            switch (style) {
-                case LoadStoreStyle::Upper8:
-                    theRAM.seek(actualAddress + 1);
-                    theRAM.write(value >> 8);
-                    break;
-                case LoadStoreStyle::Lower8:
-                    theRAM.seek(actualAddress);
-                    theRAM.write(static_cast<uint8_t>(value));
-                    break;
-                case LoadStoreStyle::Full16:
-                    theRAM.seek(actualAddress);
-                    theRAM.write(thePtr, 2);
-                    break;
-                default:
-                    break;
-            }
-            theRAM.flush();
-#endif
+    for (auto* currentThing : things) {
+        if (!currentThing) {
+            continue;
+        }
+        if (currentThing->respondsTo(address, style)) {
+            currentThing->write(address, value, style);
+            break;
         }
     }
-    /// @todo implement
 }
 
-uint16_t
-ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print("IO Address: 0x");
-        Serial.println(address, HEX);
-    }
-    if (theLed.respondsTo(address, style)) {
-        return theLed.read(address, style);
-    } else if (portZThing.respondsTo(address, style)) {
-        return portZThing.read(address, style);
-    } else if (theConsole.respondsTo(address, style)) {
-        return theConsole.read(address, style);
-    } else {
-        auto offset = 0x00FF'FFFF & address;
-        switch (style) {
-            case LoadStoreStyle::Full16:
-                return ioSpaceRead16(offset);
-            case LoadStoreStyle::Upper8:
-                // next address over
-                // then make sure it is returned in the upper portion
-                return static_cast<uint16_t>(ioSpaceRead8(offset + 1)) << 8;
-            case LoadStoreStyle::Lower8:
-                return static_cast<uint16_t>(ioSpaceRead8(offset));
-            default:
-                return 0;
-        }
-    }
-}
 uint16_t
 performRead(Address address, LoadStoreStyle style) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
         Serial.print(F("Read from 0x"));
         Serial.println(address, HEX);
     }
-    /// @todo implement
-    if (address < RamStartingAddress) {
-        // read from flash
-    } else {
-        // upper half needs to be walked down further
-        if (address >= 0xFF00'0000) {
-            // cpu internal space, we should never get to this location
-            if constexpr (displayMemoryReadsAndWrites) {
-                Serial.println(F("Request to read from CPU internal space?"));
-            }
-        } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
-            // this is the internal IO space
-            return ioSpaceRead(address, style);
-        } else if ((address >= MemoryMapBase) && (address < IOSpaceBaseAddress)) {
-        } else if (address < RamEndingAddress){
-            return ram.read(address, style);
+    for (auto* currentThing : things) {
+        if (!currentThing) {
+            continue;
+        }
+        if (currentThing->respondsTo(address, style)) {
+            return currentThing->read(address, style);
         }
     }
     return 0;
