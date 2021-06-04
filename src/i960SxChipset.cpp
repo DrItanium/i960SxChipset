@@ -501,6 +501,11 @@ public:
     [[nodiscard]] uint16_t read16(Address address) noexcept override { return static_cast<uint16_t>(readLed()); }
     void write8(Address /*address*/, uint8_t value) noexcept override { writeLed(value); }
     void write16(Address /*address*/, uint16_t value) noexcept override { writeLed(static_cast<uint8_t>(value)); }
+    void
+    begin() noexcept override {
+        pinMode(i960Pinout::Led, OUTPUT);
+        digitalWrite(i960Pinout::Led, LOW);
+    }
 private:
     static void
     writeLed(uint8_t value) noexcept {
@@ -628,13 +633,21 @@ public:
                 break;
         }
     }
+    void
+    begin() noexcept override {
+        Serial.begin(115200);
+        while(!Serial);
+    }
 
 };
 
 class RAMThing : public MemoryThing {
 public:
     RAMThing() noexcept : MemoryThing(RamStartingAddress, RamEndingAddress) { }
-    ~RAMThing() override = default;
+    ~RAMThing() override {
+        // while this will never get called, it is still a good idea to be complete
+        theRAM_.close();
+    }
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
         theRAM_.seek(offset); // jump to that point in memory
@@ -671,19 +684,18 @@ public:
         if (!SD.exists("ram.bin")) {
             signalHaltState(F("NO RAM.BIN FOUND!"));
         } else {
-            theRAM = SD.open("ram.bin", FILE_WRITE);
+            theRAM_ = SD.open("ram.bin", FILE_WRITE);
             Serial.println(F("RAM.BIN OPEN SUCCESS!"));
         }
     }
 private:
     File theRAM_; // use an SDCard as ram for the time being
-
-
 };
 
 BuiltinLedThing theLed;
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
+RAMThing ram;
 
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
@@ -809,6 +821,8 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
             ioSpaceWrite(address, value, style);
         } else if (address < RamEndingAddress){
+            ram.write(address, value, style);
+#if 0
             auto thePtr = reinterpret_cast<uint8_t*>(&value);
             // we are writing to "RAM" at this point, what it consists of at this point is really inconsequential
             // for the initial design it is just going to be straight off of the SDCard itself, slow but a great test
@@ -833,6 +847,7 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
                     break;
             }
             theRAM.flush();
+#endif
         }
     }
     /// @todo implement
@@ -898,15 +913,7 @@ performRead(Address address, LoadStoreStyle style) noexcept {
             return ioSpaceRead(address, style);
         } else if ((address >= MemoryMapBase) && (address < IOSpaceBaseAddress)) {
         } else if (address < RamEndingAddress){
-            uint16_t output = 0;
-            // in the ram section
-            // now we need to make it relative to 512 megabytes
-            auto actualAddress = RamMask & address;
-            theRAM.seek(actualAddress); // jump to that point in memory
-            /// @todo figure out what to do if we couldn't read enough?
-            theRAM.read(&output, 2);
-            // do not evaluate the load store style in this case because the processor will do the ignoring
-            return output;
+            return ram.read(address, style);
         }
     }
     return 0;
@@ -1106,14 +1113,7 @@ void setupSDCard() {
         }
 
     }
-
-    if (!SD.exists("ram.bin")) {
-        signalHaltState(F("NO RAM.BIN FOUND!"));
-    } else {
-        theRAM = SD.open("ram.bin", FILE_WRITE);
-        Serial.println(F("RAM.BIN OPEN SUCCESS!"));
-    }
-
+    ram.begin();
 
     // the sd card is on a separate SPI Bus in some cases
 }
@@ -1194,6 +1194,7 @@ void setupPeripherals() {
         setupTFTShield();
     }
     setupSDCard();
+    // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
 
@@ -1207,12 +1208,10 @@ void setup() {
               i960Pinout::DISPLAY_EN,
               i960Pinout::SD_EN,
               i960Pinout::Reset960,
-              i960Pinout::Led,
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
               i960Pinout::Int0_);
     PinAsserter<i960Pinout::Reset960> holdi960InReset;
-    digitalWrite(i960Pinout::Led, LOW);
     // all of these pins need to be pulled high
     digitalWriteBlock(HIGH,
                       i960Pinout::SPI_BUS_EN,
@@ -1229,15 +1228,9 @@ void setup() {
               i960Pinout::FAIL);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-    Serial.begin(115200);
-    while (!Serial);
+    theLed.begin();
+    theConsole.begin();
     Serial.println(F("i960Sx chipset bringup"));
-    Serial.println(F("Memory Map Information: "));
-    for (unsigned int i = 0; i < (sizeof(FixedMemoryMap) / sizeof(MemoryMapEntry)) ;++i) {
-        Serial.print(i);
-        Serial.print(F(": 0x"));
-        Serial.println(FixedMemoryMap[i].value_, HEX);
-    }
     SPI.begin();
     processorInterface.begin();
     // setup the CPU Interface
