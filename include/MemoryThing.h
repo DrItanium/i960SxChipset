@@ -143,5 +143,16 @@ private:
 
 };
 
+/**
+ * @brief An intermediate type which automatically adds the IOBaseAddress to the start and end addresses
+ */
+class IOSpaceThing : public MemoryThing {
+public:
+    static constexpr Address SpaceBaseAddress = 0xFE00'0000;
+public:
+    IOSpaceThing(Address base, Address end) : MemoryThing(base + SpaceBaseAddress, end + SpaceBaseAddress) { }
+    explicit IOSpaceThing(Address base) : MemoryThing(base + SpaceBaseAddress) { }
+    ~IOSpaceThing() override = default;
+};
 
 #endif //I960SXCHIPSET_MEMORYTHING_H

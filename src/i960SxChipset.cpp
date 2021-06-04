@@ -82,7 +82,6 @@ constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 M
 constexpr auto RamMask = MaxRamSize - 1;
 constexpr Address RamStartingAddress = 0x8000'0000;
 constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
-constexpr Address IOSpaceBaseAddress = 0xFE00'0000;
 constexpr Address BaseMCUPeripheralsBaseAddress = 0;
 constexpr Address BuiltinLedOffsetBaseAddress = BaseMCUPeripheralsBaseAddress;
 constexpr Address BuiltinPortZBaseAddress = BaseMCUPeripheralsBaseAddress + 0x10;
@@ -476,15 +475,6 @@ template<typename T>
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
-/**
- * @brief An intermediate type which automatically adds the IOBaseAddress to the start and end addresses
- */
-class IOSpaceThing : public MemoryThing {
-public:
-    IOSpaceThing(Address base, Address end) : MemoryThing(base + IOSpaceBaseAddress, end + IOSpaceBaseAddress) { }
-    explicit IOSpaceThing(Address base) : MemoryThing(base + IOSpaceBaseAddress) { }
-    ~IOSpaceThing() override = default;
-};
 class BuiltinLedThing : public IOSpaceThing {
 public:
     explicit BuiltinLedThing(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase) { }
@@ -744,99 +734,6 @@ private:
 
 };
 
-class AdafruitLSM6DSOXThing : public IOSpaceThing {
-public:
-    AdafruitLSM6DSOXThing(Address base) : IOSpaceThing(base, base + 0x100) {
-        /// @todo implement registers
-    }
-    ~AdafruitLSM6DSOXThing() override = default;
-    void
-    begin() noexcept override {
-        if (!lsm6ds_.begin_I2C()) {
-            signalHaltState(F("FAILED TO BRING UP LSM6DS"));
-        }
-    }
-private:
-    Adafruit_LSM6DSOX lsm6ds_;
-};
-
-class AdafruitLIS3MDLThing : public IOSpaceThing {
-public:
-    AdafruitLIS3MDLThing(Address base) : IOSpaceThing(base, base + 0x100) {
-
-    }
-    ~AdafruitLIS3MDLThing() override = default;
-    void
-    begin() noexcept override {
-        if (!lis3mdl_.begin_I2C()) {
-            signalHaltState(F("FAILED TO BRING UP LIS3MDL"));
-        }
-    }
-private:
-    Adafruit_LIS3MDL lis3mdl_;
-};
-
-// for the feather m0 only
-
-class AdafruitADT7410Thing : public IOSpaceThing {
-public:
-    AdafruitADT7410Thing(Address base) : IOSpaceThing(base, base + 0x100) { }
-    ~AdafruitADT7410Thing() override = default;
-    void
-    begin() noexcept override {
-        if (!tempSensor_.begin()) {
-            signalHaltState(F("ADT7410 Bringup Failure"));
-        }
-        // sensor takes 250 ms to get readings
-        delay(250);
-    }
-private:
-    Adafruit_ADT7410 tempSensor_;
-};
-
-class AdafruitADXL343Thing : public IOSpaceThing {
-public:
-    explicit AdafruitADXL343Thing(Address base) : IOSpaceThing(base, base + 0x100), accel1_(12345) { }
-    ~AdafruitADXL343Thing() override = default;
-    void
-    begin() noexcept override {
-        if (!accel1_.begin()) {
-            signalHaltState(F("ADXL343 Bringup Failure"));
-        }
-        // configure for your project
-        accel1_.setRange(ADXL343_RANGE_16_G);
-        // sensor takes 250 ms to get readings
-        delay(250);
-    }
-private:
-    Adafruit_ADXL343 accel1_;
-};
-class AdafruitFeatherWingDisplay128x32Thing : public IOSpaceThing {
-public:
-    explicit AdafruitFeatherWingDisplay128x32Thing(Address base) : IOSpaceThing(base, base + 0x100), display_(128, 32, &Wire) { }
-    ~AdafruitFeatherWingDisplay128x32Thing() override = default;
-    void
-    begin() noexcept override {
-        // sensor takes 250 ms to get readings
-        Serial.println(F("Setting up OLED Featherwing"));
-        display_.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-        Serial.println(F("OLED begun"));
-        display_.display();
-        delay(1000);
-        display_.clearDisplay();
-        display_.display();
-        // I have cut the pins for the buttons on the featherwing display
-        display_.setTextSize(2);
-        display_.setTextColor(SSD1306_WHITE);
-        display_.setCursor(0, 0);
-        display_.println(F("i960Sx!"));
-        display_.display();
-        Serial.println(F("Done setting up OLED Featherwing"));
-        oledDisplaySetup = true;
-    }
-private:
-    Adafruit_SSD1306 display_;
-};
 
 class CPUInternalMemorySpace : public MemoryThing {
 public:
@@ -1112,28 +1009,9 @@ void setupTFTShield() {
     tft.setTextSize(3);
     tft.println(F("i960Sx!"));
 }
-void bringupAnalogDevicesFeatherWing() {
-    if constexpr (TargetBoard::onFeatherBoard()) {
-    }
-}
-void bringupOLEDFeatherWing() {
-    if constexpr (TargetBoard::onFeatherBoard()) {
-    }
-}
-void bringupLIS3MDLAndLSM6DS() {
-    if constexpr (TargetBoard::onFeatherBoard()) {
-        Serial.println(F("Bringing up LIS3MDL"));
-    }
-}
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-    if constexpr (TargetBoard::onFeatherBoard()) {
-        bringupOLEDFeatherWing();
-        bringupAnalogDevicesFeatherWing();
-        bringupLIS3MDLAndLSM6DS();
-    } else {
-        setupTFTShield();
-    }
+    setupTFTShield();
     internalMemorySpaceSink.begin();
     setupSDCard();
     // setup the bus things
