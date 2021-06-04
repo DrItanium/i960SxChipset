@@ -393,7 +393,7 @@ constexpr MemoryMapEntry FixedMemoryMap[] {
         0x0000'0000, RamStartingAddress, // Program Space Range [start, end)
         MaxRamSize, RamStartingAddress, RamEndingAddress,  // ram data: size, start, end values
         0x100'0000, IOSpaceBaseAddress, 0xFF00'0000, // IO Space [Start, End)
-        BuiltinLedOffsetBaseAddress, // address of the builtin-led
+        BuiltinLedOffsetBaseAddress + IOSpaceBaseAddress, // address of the builtin-led
         // Console addresses
         computeConsoleAddress(ConsoleAddresses::Flush),
         computeConsoleAddress(ConsoleAddresses::IO),
