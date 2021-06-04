@@ -109,14 +109,13 @@ enum class ConsoleAddresses : uint32_t {
     Available = getConsoleMemoryAddress(2),
     AvailableForWrite = getConsoleMemoryAddress(3),
 };
+void foo() {
+    //tft.drawCircle(x0, y0, r, color);
+    //tft.drawLine(x0,y0, x1, y1, color);
+}
 constexpr Address DisplayBaseOffset = 0x0200;
 constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
-enum class TFTShieldAddresses : uint32_t {
-    Backlight = shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, 0),
-    BacklightFrequency = shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, 1),
-    ButtonsLower = shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, 2),
-    ButtonsUpper = shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, 3),
-};
+
 
 
 uint16_t backlightFrequency = 0;
@@ -159,7 +158,24 @@ public:
         WriteColor,
         WriteFillRect,
         DrawPixel,
+        Color565,
     };
+public:
+    /**
+     * @brief Invoke on doorbell write
+     * @param value the value written to the doorbell
+     */
+    void invoke(uint16_t value) {
+        // perhaps we'll do nothing with the value but hold onto it for now
+        switch (command_) {
+            case Opcodes::SetRotation:
+                display_.setRotation(x_);
+                break;
+            case Opcodes::InvertDisplay:
+                display_.invertDisplay(x_ != 0);
+                break;
+        }
+    }
 public:
     /// @todo extend BusDevice and take in a base address
     DisplayCommand(DisplayType& display) : display_(display) { }
@@ -176,6 +192,9 @@ public:
     [[nodiscard]] constexpr auto getY1() const noexcept { return y1_; }
     [[nodiscard]] constexpr auto getX2() const noexcept { return x2_; }
     [[nodiscard]] constexpr auto getY2() const noexcept { return y2_; }
+    [[nodiscard]] constexpr auto getRed() const noexcept { return r_; }
+    [[nodiscard]] constexpr auto getGreen() const noexcept { return g_; }
+    [[nodiscard]] constexpr auto getBlue() const noexcept { return b_; }
     void setCommand(Opcodes command) noexcept { command_ = command; }
     void setX(int16_t x) noexcept { x_ = x; }
     void setY(int16_t y) noexcept { y_ = y; }
@@ -189,15 +208,11 @@ public:
     void setY1(int16_t value) noexcept { y1_ = value; }
     void setX2(int16_t value) noexcept { x2_ = value; }
     void setY2(int16_t value) noexcept { y2_ = value; }
+    void setR(int16_t value) noexcept { r_ = value; }
+    void setG(int16_t value) noexcept { g_ = value; }
+    void setB(int16_t value) noexcept { b_ = value; }
     const DisplayType& getAssociatedDisplay() const noexcept { return display_; }
     DisplayType& getAssociatedDisplay() noexcept { return display_; }
-    /**
-     * @brief Invoke on doorbell write
-     * @param value the value written to the doorbell
-     */
-    void invoke(uint16_t value) {
-        // perhaps we'll do nothing with the value but hold onto it for now
-    }
 private:
     DisplayType& display_;
     Opcodes command_;
@@ -213,9 +228,47 @@ private:
     int16_t y1_ = 0;
     int16_t x2_ = 0;
     int16_t y2_ = 0;
+    int16_t r_ = 0;
+    int16_t g_ = 0;
+    int16_t b_ = 0;
+    uint16_t resultLower_ = 0;
+    uint16_t resultUpper_ = 0;
 };
 
-//DisplayCommand<decltype(tft)> displayCommandSet(tft);
+
+enum class TFTShieldAddresses : uint32_t {
+    // display tweakables
+    Flush,
+    IO,
+    Available,
+    AvailableForWrite,
+    Command,
+    X,
+    Y,
+    W,
+    H,
+    Radius,
+    Color,
+    X0,
+    Y0,
+    X1,
+    Y1,
+    X2,
+    Y2,
+    R,
+    G,
+    B,
+    Doorbell,
+    ResultLower,
+    ResultUpper,
+    Backlight,
+    BacklightFrequency,
+    ButtonsLower,
+    ButtonsUpper,
+    /// @todo implement constexpr offset calculation
+};
+
+DisplayCommand<decltype(tft)> displayCommandSet(tft);
 
 // for the feather m0 only
 // LIS3MDL + LSM6DSOX featherwing
