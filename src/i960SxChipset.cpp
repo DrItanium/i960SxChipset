@@ -499,10 +499,6 @@ private:
         return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
     }
 };
-class PortZDevice : public IOSpaceThing {
-public:
-    BuiltinLedThing
-};
 
 BuiltinLedThing theLed;
 
