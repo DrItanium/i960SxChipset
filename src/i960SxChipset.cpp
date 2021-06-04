@@ -354,6 +354,9 @@ enum class MemoryMapAddresses : uint32_t {
     RamSpaceSize,
     RamSpaceStart,
     RamSpaceEnd,
+    IOSpaceSize,
+    IOSpaceStart,
+    IOSpaceEnd,
     BuiltinLEDAddress,
     ConsoleFlushRegisterAddress,
     ConsoleIOPort,
@@ -474,6 +477,7 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     if constexpr (displayMemoryReadsAndWrites) {
         Serial.print(F("ioSpaceWrite8 to Offset: 0x"));
         Serial.println(offset, HEX);
+        Serial.println(memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress), HEX);
     }
     switch (offset) {
         case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
