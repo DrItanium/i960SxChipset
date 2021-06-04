@@ -343,7 +343,53 @@ constexpr Address tftShieldAddress(TFTShieldAddresses address) noexcept {
 }
 /// The base address which describes the different memory map aspects, it is accessible from the i960's memory map
 constexpr Address MemoryMapBase = 0xFD00'0000;
-constexpr Address FixedMemoryMap[] {
+union MemoryMapEntry {
+    constexpr MemoryMapEntry(Address value) : value_(value) {}
+    Address value_;
+    uint16_t shorts[2];
+};
+enum class MemoryMapAddresses : uint32_t {
+    ProgramSpaceStart,
+    ProgramSpaceEnd,
+    RamSpaceSize,
+    RamSpaceStart,
+    RamSpaceEnd,
+    BuiltinLEDAddress,
+    ConsoleFlushRegisterAddress,
+    ConsoleIOPort,
+    ConsoleAvailablePort,
+    ConsoleAvailableForWritePort,
+    PortZGPIORegister,
+    PortZDirectionRegister,
+    PortZPolarityRegister,
+    PortZPullupRegister,
+    DisplayFlush,
+    DisplayIO,
+    DisplayAvailable,
+    DisplayAvailableForWrite,
+    DisplayCommand,
+    DisplayX,
+    DisplayY,
+    DisplayW,
+    DisplayH,
+    DisplayRadius,
+    DisplayColor,
+    DisplayX0,
+    DisplayY0,
+    DisplayX1,
+    DisplayY1,
+    DisplayX2,
+    DisplayY2,
+    DisplayR,
+    DisplayG,
+    DisplayB,
+    DisplayDoorbell,
+    DisplayBacklight,
+    DisplayBacklightFrequency,
+    DisplayButtonsLower,
+    DisplayButtonsUpper,
+};
+constexpr MemoryMapEntry FixedMemoryMap[] {
         0x0000'0000, RamStartingAddress, // Program Space Range [start, end)
         MaxRamSize, RamStartingAddress, RamEndingAddress,  // ram data: size, start, end values
         0x100'0000, IOSpaceBaseAddress, 0xFF00'0000, // IO Space [Start, End)
@@ -385,6 +431,13 @@ constexpr Address FixedMemoryMap[] {
         tftShieldAddress(TFTShieldAddresses::ButtonsLower),
         tftShieldAddress(TFTShieldAddresses::ButtonsUpper),
 };
+
+constexpr MemoryMapEntry getMemoryMapEntry(MemoryMapAddresses address) noexcept {
+    return FixedMemoryMap[static_cast<uint32_t>(address)];
+}
+constexpr Address memoryMapAddress(MemoryMapAddresses address) noexcept {
+    return getMemoryMapEntry(address).value_;
+}
 DisplayCommand<decltype(tft)> displayCommandSet(tft);
 
 // for the feather m0 only
@@ -413,25 +466,25 @@ readLed() noexcept {
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
-        case BuiltinLedOffsetBaseAddress: // builtin led
+        case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
             writeLed(value);
             break;
-        case computePortZAddresses(PortZAddresses::Direction):
+        case memoryMapAddress(MemoryMapAddresses::PortZDirectionRegister):
             processorInterface.setPortZDirectionRegister(value);
             break;
-        case computePortZAddresses(PortZAddresses::Polarity):
+        case memoryMapAddress(MemoryMapAddresses::PortZPolarityRegister):
             processorInterface.setPortZPolarityRegister(value);
             break;
-        case computePortZAddresses(PortZAddresses::Pullup):
+        case memoryMapAddress(MemoryMapAddresses::PortZPullupRegister):
             processorInterface.setPortZPullupResistorRegister(value);
             break;
-        case computePortZAddresses(PortZAddresses::GPIO):
+        case memoryMapAddress(MemoryMapAddresses::PortZGPIORegister):
             processorInterface.writePortZGPIORegister(value);
             break;
-        case tftShieldAddress(TFTShieldAddresses::Flush):
+        case memoryMapAddress(MemoryMapAddresses::DisplayFlush):
             displayCommandSet.flush();
             break;
-        case tftShieldAddress(TFTShieldAddresses::IO):
+        case memoryMapAddress(MemoryMapAddresses::DisplayIO):
             displayCommandSet.print(static_cast<char>(value));
             break;
         default:
@@ -441,19 +494,19 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
 uint8_t
 ioSpaceRead8(Address offset) noexcept {
     switch (offset) {
-        case BuiltinLedOffsetBaseAddress:
+        case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
             return readLed();
-        case computePortZAddresses(PortZAddresses::Direction):
+        case memoryMapAddress(MemoryMapAddresses::PortZDirectionRegister):
             return processorInterface.getPortZDirectionRegister();
-        case computePortZAddresses(PortZAddresses::Polarity):
+        case memoryMapAddress(MemoryMapAddresses::PortZPolarityRegister):
             return processorInterface.getPortZPolarityRegister();
-        case computePortZAddresses(PortZAddresses::Pullup):
+        case memoryMapAddress(MemoryMapAddresses::PortZPullupRegister):
             return processorInterface.getPortZPullupResistorRegister();
-        case computePortZAddresses(PortZAddresses::GPIO):
+        case memoryMapAddress(MemoryMapAddresses::PortZGPIORegister):
             return processorInterface.readPortZGPIORegister();
-        case tftShieldAddress(TFTShieldAddresses::Available):
+        case memoryMapAddress(MemoryMapAddresses::DisplayAvailable):
             return static_cast<uint16_t>(displayCommandSet.available());
-        case tftShieldAddress(TFTShieldAddresses::AvailableForWrite):
+        case memoryMapAddress(MemoryMapAddresses::DisplayAvailableForWrite):
             return static_cast<uint16_t>(displayCommandSet.availableForWriting());
         default:
             return 0;
@@ -463,23 +516,23 @@ void
 ioSpaceWrite16(Address offset, uint16_t value) noexcept {
     // we are writing to two separate addresses
     switch (offset) {
-        case BuiltinLedOffsetBaseAddress: // and 1
+        case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
             writeLed(value & 0xFF);
             /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
-        case computeConsoleAddress(ConsoleAddresses::Flush):
+        case memoryMapAddress(MemoryMapAddresses::ConsoleFlushRegisterAddress):
             Serial.flush();
             break;
-        case computeConsoleAddress(ConsoleAddresses::IO):
+        case memoryMapAddress(MemoryMapAddresses::ConsoleIOPort):
             Serial.write(static_cast<uint8_t>(value));
             Serial.flush();
             break;
-        case tftShieldAddress(TFTShieldAddresses::Backlight):
+        case memoryMapAddress(MemoryMapAddresses::DisplayBacklight):
             backlightStatus = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
             ss.setBacklight(backlightStatus);
             break;
-        case tftShieldAddress(TFTShieldAddresses::BacklightFrequency):
+        case memoryMapAddress(MemoryMapAddresses::DisplayBacklightFrequency):
             backlightFrequency = value;
             ss.setBacklightFreq(backlightFrequency);
             break;
@@ -490,24 +543,22 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
 uint16_t
 ioSpaceRead16(Address offset) noexcept {
     switch (offset) {
-        case BuiltinLedOffsetBaseAddress:
-            /// @todo this would be an amalgamation of the contents addresses zero and one
-            /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
+        case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
-        case computeConsoleAddress(ConsoleAddresses::IO):
+        case memoryMapAddress(MemoryMapAddresses::ConsoleIOPort):
             return static_cast<uint16_t>(Serial.read());
-        case computeConsoleAddress(ConsoleAddresses::Available):
+        case memoryMapAddress(MemoryMapAddresses::ConsoleAvailablePort):
             return static_cast<uint16_t>(Serial.available());
-        case computeConsoleAddress(ConsoleAddresses::AvailableForWrite):
+        case memoryMapAddress(MemoryMapAddresses::ConsoleAvailableForWritePort):
             return static_cast<uint16_t>(Serial.availableForWrite());
-        case tftShieldAddress(TFTShieldAddresses::Backlight):
+        case memoryMapAddress(MemoryMapAddresses::DisplayBacklight):
             return backlightStatus;
-        case tftShieldAddress(TFTShieldAddresses::BacklightFrequency):
+        case memoryMapAddress(MemoryMapAddresses::DisplayBacklightFrequency):
             return backlightFrequency;
-        case tftShieldAddress(TFTShieldAddresses::ButtonsLower):
+        case memoryMapAddress(MemoryMapAddresses::DisplayButtonsLower):
             buttonsCache = ss.readButtons();
             return static_cast<uint16_t>(buttonsCache & 0x0000'FFFF);
-        case tftShieldAddress(TFTShieldAddresses::ButtonsUpper):
+        case memoryMapAddress(MemoryMapAddresses::DisplayButtonsUpper):
             return static_cast<uint16_t>((buttonsCache >> 16) & 0x0000'FFFF);
         default:
             return 0;
@@ -641,6 +692,8 @@ performRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept 
                 Serial.println(F("Request to read from IO space"));
             }
             return ioSpaceRead(address, style);
+        } else if ((address >= MemoryMapBase) && (address < IOSpaceBaseAddress)) {
+
         } else if (address < RamEndingAddress){
             uint16_t output = 0;
             // in the ram section
