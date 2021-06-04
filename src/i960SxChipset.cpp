@@ -1234,8 +1234,6 @@ void setup() {
     SPI.begin();
     processorInterface.begin();
     // setup the CPU Interface
-    processorInterface.setHOLDPin(LOW);
-    processorInterface.setLOCKPin(HIGH);
     setupBusStateMachine();
     setupPeripherals();
     delay(1000);

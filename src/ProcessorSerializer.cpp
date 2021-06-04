@@ -117,6 +117,8 @@ ProcessorInterface::begin() noexcept {
         // then indirectly mark the outputs
         pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extra_);
         pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extra_);
+        setHOLDPin(LOW);
+        setLOCKPin(HIGH);
     }
 }
 LoadStoreStyle
