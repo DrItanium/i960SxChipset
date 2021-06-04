@@ -126,11 +126,6 @@ constexpr Address DisplayBaseOffset = 0x0200;
 constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
 
 
-// for the feather m0 only
-// adxl343 + adt7410 featherwing
-Adafruit_ADT7410 tempSensor;
-Adafruit_ADXL343 accel1(12345);
-Adafruit_SSD1306 display(128,32,&Wire);
 uint16_t backlightFrequency = 0;
 uint16_t backlightStatus = TFTSHIELD_BACKLIGHT_ON;
 uint32_t buttonsCache = 0;
@@ -463,13 +458,16 @@ template<typename T>
         tft.setCursor(0,0);
         tft.setTextSize(1);
         tft.println(haltMsg);
-    } else if (oledDisplaySetup) {
+    }
+#if 0
+    else if (oledDisplaySetup) {
         display.clearDisplay();
         display.display();
         display.setCursor(0,0);
         display.println(haltMsg);
         display.display();
     }
+#endif
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
@@ -778,6 +776,68 @@ private:
     Adafruit_LIS3MDL lis3mdl_;
 };
 
+// for the feather m0 only
+
+class AdafruitADT7410Thing : public IOSpaceThing {
+public:
+    AdafruitADT7410Thing(Address base) : IOSpaceThing(base, base + 0x100) { }
+    ~AdafruitADT7410Thing() override = default;
+    void
+    begin() noexcept override {
+        if (!tempSensor_.begin()) {
+            signalHaltState(F("ADT7410 Bringup Failure"));
+        }
+        // sensor takes 250 ms to get readings
+        delay(250);
+    }
+private:
+    Adafruit_ADT7410 tempSensor_;
+};
+
+class AdafruitADXL343Thing : public IOSpaceThing {
+public:
+    explicit AdafruitADXL343Thing(Address base) : IOSpaceThing(base, base + 0x100), accel1_(12345) { }
+    ~AdafruitADXL343Thing() override = default;
+    void
+    begin() noexcept override {
+        if (!accel1_.begin()) {
+            signalHaltState(F("ADXL343 Bringup Failure"));
+        }
+        // configure for your project
+        accel1_.setRange(ADXL343_RANGE_16_G);
+        // sensor takes 250 ms to get readings
+        delay(250);
+    }
+private:
+    Adafruit_ADXL343 accel1_;
+};
+class AdafruitFeatherWingDisplay128x32Thing : public IOSpaceThing {
+public:
+    explicit AdafruitFeatherWingDisplay128x32Thing(Address base) : IOSpaceThing(base, base + 0x100), display_(128, 32, &Wire) { }
+    ~AdafruitFeatherWingDisplay128x32Thing() override = default;
+    void
+    begin() noexcept override {
+        // sensor takes 250 ms to get readings
+        Serial.println(F("Setting up OLED Featherwing"));
+        display_.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+        Serial.println(F("OLED begun"));
+        display_.display();
+        delay(1000);
+        display_.clearDisplay();
+        display_.display();
+        // I have cut the pins for the buttons on the featherwing display
+        display_.setTextSize(2);
+        display_.setTextColor(SSD1306_WHITE);
+        display_.setCursor(0, 0);
+        display_.println(F("i960Sx!"));
+        display_.display();
+        Serial.println(F("Done setting up OLED Featherwing"));
+        oledDisplaySetup = true;
+    }
+private:
+    Adafruit_SSD1306 display_;
+};
+
 class CPUInternalMemorySpace : public MemoryThing {
 public:
     CPUInternalMemorySpace() noexcept : MemoryThing(0xFF00'0000) { }
@@ -1054,35 +1114,10 @@ void setupTFTShield() {
 }
 void bringupAnalogDevicesFeatherWing() {
     if constexpr (TargetBoard::onFeatherBoard()) {
-        if (!accel1.begin()) {
-            signalHaltState(F("ADXL343 Bringup Failure"));
-        }
-        // configure for your project
-        accel1.setRange(ADXL343_RANGE_16_G);
-        if (!tempSensor.begin()) {
-            signalHaltState(F("ADT7410 Bringup Failure"));
-        }
-        // sensor takes 250 ms to get readings
-        delay(250);
     }
 }
 void bringupOLEDFeatherWing() {
     if constexpr (TargetBoard::onFeatherBoard()) {
-        Serial.println(F("Setting up OLED Featherwing"));
-        display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-        Serial.println(F("OLED begun"));
-        display.display();
-        delay(1000);
-        display.clearDisplay();
-        display.display();
-        // I have cut the pins for the buttons on the featherwing display
-        display.setTextSize(2);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(0, 0);
-        display.println(F("i960Sx!"));
-        display.display();
-        Serial.println(F("Done setting up OLED Featherwing"));
-        oledDisplaySetup = true;
     }
 }
 void bringupLIS3MDLAndLSM6DS() {
@@ -1158,13 +1193,16 @@ void enteringChecksumFailure() noexcept {
         tft.setCursor(0, 0);
         tft.setTextSize(2);
         tft.println(msg);
-    } else if (oledDisplaySetup) {
+    }
+#if 0
+    else if (oledDisplaySetup) {
         display.clearDisplay();
         display.display();
         display.setCursor(0, 0);
         display.println(msg);
         display.display();
     }
+#endif
     Serial.println(msg);
 }
 /// @todo Eliminate after MightyCore update
