@@ -680,6 +680,7 @@ class ROMThing : public MemoryThing {
 public:
     static constexpr Address ROMStart = 0;
     static constexpr Address ROMEnd = 0x8000'0000;
+    static constexpr Address ROMMask = ROMEnd - 1;
 public:
     ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd) { }
     ~ROMThing() override {
@@ -699,6 +700,10 @@ public:
     }
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
+        if constexpr (displayMemoryReadsAndWrites)  {
+            Serial.print(F("\tAccessing address: 0x"));
+            Serial.println(offset, HEX);
+        }
         uint16_t result = 0;
         // okay cool beans, we can load from the boot rom
         theBootROM_.seek(offset);
@@ -715,8 +720,7 @@ public:
     }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
-        // in this case, we want relative offsets
-        return input & ROMEnd;
+        return input & ROMMask;
     }
     [[nodiscard]] bool
     respondsTo(Address address) const noexcept override {
