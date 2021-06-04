@@ -59,7 +59,7 @@ Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      -1);
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
-ProcessorInterface processorInterface;
+ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 template<typename T>
 constexpr Address computeIOAddress(Address base, Address index) noexcept {
     return base + (sizeof(T) * index);

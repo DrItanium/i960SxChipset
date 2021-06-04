@@ -31,6 +31,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class ProcessorInterface {
 public:
+    static ProcessorInterface&
+    getInterface() noexcept {
+        static ProcessorInterface theInterface;
+        return theInterface;
+    }
+    ProcessorInterface(const ProcessorInterface&) = delete;
+    ProcessorInterface(ProcessorInterface&&) = delete;
+    ProcessorInterface& operator=(const ProcessorInterface&) = delete;
+    ProcessorInterface& operator=(ProcessorInterface&&) = delete;
+private:
+    ProcessorInterface() = default;
+public:
     enum class IOExpanderAddress : byte {
         DataLines = 0b000,
         Lower16Lines,
