@@ -59,9 +59,6 @@ Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      -1);
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
-// boot rom and sd card loading stuff
-File theBootROM;
-uint32_t bootRomSize = 0;
 ProcessorInterface processorInterface;
 template<typename T>
 constexpr Address computeIOAddress(Address base, Address index) noexcept {
@@ -531,19 +528,6 @@ public:
         Direction, // one byte wide
         Polarity,
         Pullup,
-        Unused0,
-        Unused1,
-        Unused2,
-        Unused3,
-        Unused4,
-        Unused5,
-        Unused6,
-        Unused7,
-        Unused8,
-        Unused9,
-        Unused10,
-        Unused11,
-        Count,
     };
 public:
     explicit PortZThing(Address base) noexcept : IOSpaceThing(base, base + 16) { }
@@ -692,10 +676,79 @@ private:
     File theRAM_; // use an SDCard as ram for the time being
 };
 
-BuiltinLedThing theLed;
+class ROMThing : public MemoryThing {
+public:
+    static constexpr Address ROMStart = 0;
+    static constexpr Address ROMEnd = 0x8000'0000;
+public:
+    ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd) { }
+    ~ROMThing() override {
+        // while this will never get called, it is still a good idea to be complete
+        theBootROM_.close();
+    }
+
+    [[nodiscard]] uint8_t
+    read8(Address offset) noexcept override {
+        // okay cool beans, we can load from the boot rom
+        theBootROM_.seek(offset);
+        return static_cast<uint8_t>(theBootROM_.read());
+    }
+    void
+    write8(Address offset, uint8_t value) noexcept override {
+        // disable
+    }
+    [[nodiscard]] uint16_t
+    read16(Address offset) noexcept override {
+        uint16_t result = 0;
+        // okay cool beans, we can load from the boot rom
+        theBootROM_.seek(offset);
+        theBootROM_.read(&result, 2);
+        if constexpr (displayMemoryReadsAndWrites) {
+            Serial.print(F("\tGot value: 0x"));
+            Serial.println(result, HEX);
+        }
+        return result;
+    }
+    void
+    write16(Address offset, uint16_t value) noexcept override {
+        // disable
+    }
+    [[nodiscard]] Address
+    makeAddressRelative(Address input) const noexcept override {
+        // in this case, we want relative offsets
+        return input & ROMEnd;
+    }
+    [[nodiscard]] bool
+    respondsTo(Address address) const noexcept override {
+        return address < size_;
+    }
+    void
+    begin() noexcept override {
+        if (!SD.exists("boot.rom")) {
+            signalHaltState(F("NO BOOT.ROM!"));
+        }
+        theBootROM_ = SD.open("boot.rom", FILE_READ);
+        Serial.println(F("BOOT.ROM OPEN SUCCESS!"));
+        size_ = theBootROM_.size();
+        if (size_ == 0) {
+            signalHaltState(F("EMPTY BOOT.ROM"));
+        } else if (size_ > 0x8000'0000) {
+            signalHaltState(F("BOOT.ROM TOO LARGE")) ;
+        }
+    }
+    [[nodiscard]] constexpr auto getROMSize() const noexcept { return size_; }
+
+private:
+// boot rom and sd card loading stuff
+    File theBootROM_;
+    uint32_t size_ = 0;
+
+};
+BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 RAMThing ram;
+ROMThing rom;
 
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
@@ -889,17 +942,6 @@ performRead(Address address, LoadStoreStyle style) noexcept {
     }
     /// @todo implement
     if (address < RamStartingAddress) {
-        if (address < bootRomSize) {
-            uint16_t result = 0;
-            // okay cool beans, we can load from the boot rom
-            theBootROM.seek(address);
-            theBootROM.read(&result, 2);
-            if constexpr (displayMemoryReadsAndWrites) {
-                Serial.print(F("\tGot value: 0x"));
-                Serial.println(result, HEX);
-            }
-            return result;
-        }
         // read from flash
     } else {
         // upper half needs to be walked down further
@@ -1100,19 +1142,7 @@ void setupSDCard() {
     if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
         signalHaltState(F("SD CARD INIT FAILed"));
     }
-    if (!SD.exists("boot.rom")) {
-        signalHaltState(F("NO BOOT.ROM!"));
-    } else {
-        theBootROM = SD.open("boot.rom", FILE_READ);
-        Serial.println(F("BOOT.ROM OPEN SUCCESS!"));
-        bootRomSize = theBootROM.size();
-        if (bootRomSize == 0) {
-            signalHaltState(F("EMPTY BOOT.ROM"));
-        } else if (bootRomSize > 0x8000'0000) {
-            signalHaltState(F("BOOT.ROM TOO LARGE")) ;
-        }
-
-    }
+    rom.begin();
     ram.begin();
 
     // the sd card is on a separate SPI Bus in some cases
