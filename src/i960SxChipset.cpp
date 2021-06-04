@@ -1072,6 +1072,7 @@ void setupPeripherals() {
     } else {
         setupTFTShield();
     }
+    internalMemorySpaceSink.begin();
     setupSDCard();
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
