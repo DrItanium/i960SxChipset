@@ -58,7 +58,7 @@ Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
                      -1);
 constexpr bool displaySDCardStatsDuringInit = false;
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayMemoryReadsAndWrites = true;
 // boot rom and sd card loading stuff
 File theBootROM;
 File theRAM; // use an SDCard as ram for the time being
@@ -456,15 +456,25 @@ bool oledDisplaySetup = false;
 
 void
 writeLed(uint8_t value) noexcept {
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.println(F("LED WRITE!"));
+    }
     digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
 }
 uint8_t
 readLed() noexcept {
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.println(F("LED READ!"));
+    }
     return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
 }
 
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.print(F("ioSpaceWrite8 to Offset: 0x"));
+        Serial.println(offset, HEX);
+    }
     switch (offset) {
         case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
             writeLed(value);
@@ -493,6 +503,10 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
 }
 uint8_t
 ioSpaceRead8(Address offset) noexcept {
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.print(F("ioSpaceRead8 to Offset: 0x"));
+        Serial.println(offset, HEX);
+    }
     switch (offset) {
         case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
             return readLed();
@@ -514,6 +528,10 @@ ioSpaceRead8(Address offset) noexcept {
 }
 void
 ioSpaceWrite16(Address offset, uint16_t value) noexcept {
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.print(F("ioSpaceWrite16 to Offset: 0x"));
+        Serial.println(offset, HEX);
+    }
     // we are writing to two separate addresses
     switch (offset) {
         case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
@@ -542,6 +560,10 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
 }
 uint16_t
 ioSpaceRead16(Address offset) noexcept {
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.print(F("ioSpaceRead16 to Offset: 0x"));
+        Serial.println(offset, HEX);
+    }
     switch (offset) {
         case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
@@ -604,10 +626,6 @@ performWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle
                 Serial.println(F("Request to write into CPU internal space"));
             }
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
-            if constexpr (displayMemoryReadsAndWrites) {
-                // this is the internal IO space
-                Serial.println(F("Request to write into IO space"));
-            }
             ioSpaceWrite(address, value, style);
         } else if (address < RamEndingAddress){
             auto thePtr = reinterpret_cast<uint8_t*>(&value);
@@ -688,9 +706,6 @@ performRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept 
             }
         } else if ((address >= 0xFE00'0000) && (address < 0xFF00'0000)) {
             // this is the internal IO space
-            if constexpr (displayMemoryReadsAndWrites) {
-                Serial.println(F("Request to read from IO space"));
-            }
             return ioSpaceRead(address, style);
         } else if ((address >= MemoryMapBase) && (address < IOSpaceBaseAddress)) {
         } else if (address < RamEndingAddress){
