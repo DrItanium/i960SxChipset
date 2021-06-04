@@ -281,8 +281,8 @@ public:
     DisplayType& getAssociatedDisplay() noexcept { return display_; }
     void flush() { display_.flush(); }
     void print(char c) { display_.print(c); }
-    [[nodiscard]] bool available() noexcept { return display_.available(); }
-    [[nodiscard]] bool availableForWriting() noexcept { return display_.availableForWriting(); }
+    [[nodiscard]] bool available() noexcept { return true; }
+    [[nodiscard]] bool availableForWriting() noexcept { return display_.availableForWrite(); }
 private:
     DisplayType& display_;
     Opcodes command_;
@@ -339,7 +339,6 @@ enum class TFTShieldAddresses : uint32_t {
 constexpr Address tftShieldAddress(TFTShieldAddresses address) noexcept {
     return shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, static_cast<Address>(address));
 }
-
 DisplayCommand<decltype(tft)> displayCommandSet(tft);
 
 // for the feather m0 only
@@ -406,6 +405,10 @@ ioSpaceRead8(Address offset) noexcept {
             return processorInterface.getPortZPullupResistorRegister();
         case static_cast<Address>(PortZAddresses::GPIO):
             return processorInterface.readPortZGPIORegister();
+        case tftShieldAddress(TFTShieldAddresses::Available):
+            return static_cast<uint16_t>(displayCommandSet.available());
+        case tftShieldAddress(TFTShieldAddresses::AvailableForWrite):
+            return static_cast<uint16_t>(displayCommandSet.availableForWriting());
         default:
             return 0;
     }
