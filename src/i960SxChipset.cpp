@@ -393,7 +393,7 @@ constexpr MemoryMapEntry FixedMemoryMap[] {
         0x0000'0000, RamStartingAddress, // Program Space Range [start, end)
         MaxRamSize, RamStartingAddress, RamEndingAddress,  // ram data: size, start, end values
         0x100'0000, IOSpaceBaseAddress, 0xFF00'0000, // IO Space [Start, End)
-        BuiltinLedOffsetBaseAddress + IOSpaceBaseAddress, // address of the builtin-led
+        BuiltinLedOffsetBaseAddress, // address of the builtin-led
         // Console addresses
         computeConsoleAddress(ConsoleAddresses::Flush),
         computeConsoleAddress(ConsoleAddresses::IO),
@@ -693,7 +693,6 @@ performRead(Address address, ProcessorInterface::LoadStoreStyle style) noexcept 
             }
             return ioSpaceRead(address, style);
         } else if ((address >= MemoryMapBase) && (address < IOSpaceBaseAddress)) {
-
         } else if (address < RamEndingAddress){
             uint16_t output = 0;
             // in the ram section
@@ -1048,6 +1047,12 @@ void setup() {
     Serial.begin(115200);
     while (!Serial);
     Serial.println(F("i960Sx chipset bringup"));
+    Serial.println(F("Memory Map Information: "));
+    for (int i = 0; i < (sizeof(FixedMemoryMap) / sizeof(MemoryMapEntry)) ;++i) {
+        Serial.print(i);
+        Serial.print(F(": 0x"));
+        Serial.println(FixedMemoryMap[i].value_, HEX);
+    }
     SPI.begin();
     processorInterface.begin();
     // setup the CPU Interface
