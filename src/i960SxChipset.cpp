@@ -94,24 +94,26 @@ constexpr Address BuiltinPortZBaseAddress = BaseMCUPeripheralsBaseAddress + 0x10
  * @brief Describes the Addresses associated with the port-z mmio registers
  */
 enum class PortZAddresses : uint32_t {
-    GPIO = BuiltinPortZBaseAddress, // one byte wide
+    GPIO, // one byte wide
     Direction, // one byte wide
     Polarity,
     Pullup,
 };
-constexpr Address ConsoleOffsetBaseAddress = BaseMCUPeripheralsBaseAddress + 0x20;
-constexpr Address getConsoleMemoryAddress(Address offset) noexcept {
-    return shortWordMemoryAddress(ConsoleOffsetBaseAddress, offset);
+constexpr Address computePortZAddresses(PortZAddresses offset) noexcept {
+    return BuiltinPortZBaseAddress + static_cast<uint32_t>(offset);
 }
+constexpr Address ConsoleOffsetBaseAddress = BaseMCUPeripheralsBaseAddress + 0x20;
 enum class ConsoleAddresses : uint32_t {
-    Flush = getConsoleMemoryAddress(0),
-    IO = getConsoleMemoryAddress(1),
-    Available = getConsoleMemoryAddress(2),
-    AvailableForWrite = getConsoleMemoryAddress(3),
+    Flush,
+    IO,
+    Available,
+    AvailableForWrite,
 };
+constexpr Address computeConsoleAddress(ConsoleAddresses offset) noexcept {
+    return shortWordMemoryAddress(ConsoleOffsetBaseAddress, static_cast<uint32_t>(offset));
+}
 constexpr Address DisplayBaseOffset = 0x0200;
 constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
-
 
 
 uint16_t backlightFrequency = 0;
@@ -339,6 +341,50 @@ enum class TFTShieldAddresses : uint32_t {
 constexpr Address tftShieldAddress(TFTShieldAddresses address) noexcept {
     return shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, static_cast<Address>(address));
 }
+/// The base address which describes the different memory map aspects, it is accessible from the i960's memory map
+constexpr Address MemoryMapBase = 0xFD00'0000;
+constexpr Address FixedMemoryMap[] {
+        0x0000'0000, RamStartingAddress, // Program Space Range [start, end)
+        MaxRamSize, RamStartingAddress, RamEndingAddress,  // ram data: size, start, end values
+        0x100'0000, IOSpaceBaseAddress, 0xFF00'0000, // IO Space [Start, End)
+        BuiltinLedOffsetBaseAddress, // address of the builtin-led
+        // Console addresses
+        computeConsoleAddress(ConsoleAddresses::Flush),
+        computeConsoleAddress(ConsoleAddresses::IO),
+        computeConsoleAddress(ConsoleAddresses::Available),
+        computeConsoleAddress(ConsoleAddresses::AvailableForWrite),
+        // Port z addresses
+        computePortZAddresses(PortZAddresses::GPIO),
+        computePortZAddresses(PortZAddresses::Direction),
+        computePortZAddresses(PortZAddresses::Polarity),
+        computePortZAddresses(PortZAddresses::Pullup),
+        // display command setup
+        tftShieldAddress(TFTShieldAddresses::Flush),
+        tftShieldAddress(TFTShieldAddresses::IO),
+        tftShieldAddress(TFTShieldAddresses::Available),
+        tftShieldAddress(TFTShieldAddresses::AvailableForWrite),
+        tftShieldAddress(TFTShieldAddresses::Command),
+        tftShieldAddress(TFTShieldAddresses::X),
+        tftShieldAddress(TFTShieldAddresses::Y),
+        tftShieldAddress(TFTShieldAddresses::W),
+        tftShieldAddress(TFTShieldAddresses::H),
+        tftShieldAddress(TFTShieldAddresses::Radius),
+        tftShieldAddress(TFTShieldAddresses::Color),
+        tftShieldAddress(TFTShieldAddresses::X0),
+        tftShieldAddress(TFTShieldAddresses::Y0),
+        tftShieldAddress(TFTShieldAddresses::X1),
+        tftShieldAddress(TFTShieldAddresses::Y1),
+        tftShieldAddress(TFTShieldAddresses::X2),
+        tftShieldAddress(TFTShieldAddresses::Y2),
+        tftShieldAddress(TFTShieldAddresses::R),
+        tftShieldAddress(TFTShieldAddresses::G),
+        tftShieldAddress(TFTShieldAddresses::B),
+        tftShieldAddress(TFTShieldAddresses::Doorbell),
+        tftShieldAddress(TFTShieldAddresses::Backlight),
+        tftShieldAddress(TFTShieldAddresses::BacklightFrequency),
+        tftShieldAddress(TFTShieldAddresses::ButtonsLower),
+        tftShieldAddress(TFTShieldAddresses::ButtonsUpper),
+};
 DisplayCommand<decltype(tft)> displayCommandSet(tft);
 
 // for the feather m0 only
@@ -370,16 +416,16 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
         case BuiltinLedOffsetBaseAddress: // builtin led
             writeLed(value);
             break;
-        case static_cast<Address>(PortZAddresses::Direction):
+        case computePortZAddresses(PortZAddresses::Direction):
             processorInterface.setPortZDirectionRegister(value);
             break;
-        case static_cast<Address>(PortZAddresses::Polarity):
+        case computePortZAddresses(PortZAddresses::Polarity):
             processorInterface.setPortZPolarityRegister(value);
             break;
-        case static_cast<Address>(PortZAddresses::Pullup):
+        case computePortZAddresses(PortZAddresses::Pullup):
             processorInterface.setPortZPullupResistorRegister(value);
             break;
-        case static_cast<Address>(PortZAddresses::GPIO):
+        case computePortZAddresses(PortZAddresses::GPIO):
             processorInterface.writePortZGPIORegister(value);
             break;
         case tftShieldAddress(TFTShieldAddresses::Flush):
@@ -397,13 +443,13 @@ ioSpaceRead8(Address offset) noexcept {
     switch (offset) {
         case BuiltinLedOffsetBaseAddress:
             return readLed();
-        case static_cast<Address>(PortZAddresses::Direction):
+        case computePortZAddresses(PortZAddresses::Direction):
             return processorInterface.getPortZDirectionRegister();
-        case static_cast<Address>(PortZAddresses::Polarity):
+        case computePortZAddresses(PortZAddresses::Polarity):
             return processorInterface.getPortZPolarityRegister();
-        case static_cast<Address>(PortZAddresses::Pullup):
+        case computePortZAddresses(PortZAddresses::Pullup):
             return processorInterface.getPortZPullupResistorRegister();
-        case static_cast<Address>(PortZAddresses::GPIO):
+        case computePortZAddresses(PortZAddresses::GPIO):
             return processorInterface.readPortZGPIORegister();
         case tftShieldAddress(TFTShieldAddresses::Available):
             return static_cast<uint16_t>(displayCommandSet.available());
@@ -417,23 +463,23 @@ void
 ioSpaceWrite16(Address offset, uint16_t value) noexcept {
     // we are writing to two separate addresses
     switch (offset) {
-        case 0: // and 1
+        case BuiltinLedOffsetBaseAddress: // and 1
             writeLed(value & 0xFF);
             /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
-        case static_cast<Address>(ConsoleAddresses::Flush):
+        case computeConsoleAddress(ConsoleAddresses::Flush):
             Serial.flush();
             break;
-        case static_cast<Address>(ConsoleAddresses::IO):
+        case computeConsoleAddress(ConsoleAddresses::IO):
             Serial.write(static_cast<uint8_t>(value));
             Serial.flush();
             break;
-        case static_cast<Address>(TFTShieldAddresses::Backlight):
+        case tftShieldAddress(TFTShieldAddresses::Backlight):
             backlightStatus = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
             ss.setBacklight(backlightStatus);
             break;
-        case static_cast<Address>(TFTShieldAddresses::BacklightFrequency):
+        case tftShieldAddress(TFTShieldAddresses::BacklightFrequency):
             backlightFrequency = value;
             ss.setBacklightFreq(backlightFrequency);
             break;
@@ -444,24 +490,24 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
 uint16_t
 ioSpaceRead16(Address offset) noexcept {
     switch (offset) {
-        case 0:
+        case BuiltinLedOffsetBaseAddress:
             /// @todo this would be an amalgamation of the contents addresses zero and one
             /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
-        case static_cast<Address>(ConsoleAddresses::IO):
+        case computeConsoleAddress(ConsoleAddresses::IO):
             return static_cast<uint16_t>(Serial.read());
-        case static_cast<Address>(ConsoleAddresses::Available):
+        case computeConsoleAddress(ConsoleAddresses::Available):
             return static_cast<uint16_t>(Serial.available());
-        case static_cast<Address>(ConsoleAddresses::AvailableForWrite):
+        case computeConsoleAddress(ConsoleAddresses::AvailableForWrite):
             return static_cast<uint16_t>(Serial.availableForWrite());
-        case static_cast<Address>(TFTShieldAddresses::Backlight):
+        case tftShieldAddress(TFTShieldAddresses::Backlight):
             return backlightStatus;
-        case static_cast<Address>(TFTShieldAddresses::BacklightFrequency):
+        case tftShieldAddress(TFTShieldAddresses::BacklightFrequency):
             return backlightFrequency;
-        case static_cast<Address>(TFTShieldAddresses::ButtonsLower):
+        case tftShieldAddress(TFTShieldAddresses::ButtonsLower):
             buttonsCache = ss.readButtons();
             return static_cast<uint16_t>(buttonsCache & 0x0000'FFFF);
-        case static_cast<Address>(TFTShieldAddresses::ButtonsUpper):
+        case tftShieldAddress(TFTShieldAddresses::ButtonsUpper):
             return static_cast<uint16_t>((buttonsCache >> 16) & 0x0000'FFFF);
         default:
             return 0;
