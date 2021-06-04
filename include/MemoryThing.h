@@ -31,56 +31,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 class MemoryThing {
 public:
+    MemoryThing(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) { }
+    /**
+     * @brief Construct a memory thing that is only concerned with a single address
+     * @param baseAddress
+     */
+    explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 1) { }
     virtual ~MemoryThing() = default;
     [[nodiscard]] virtual uint8_t read8(Address address) noexcept = 0;
     [[nodiscard]] virtual uint16_t read16(Address address) noexcept = 0;
-    [[nodiscard]] virtual bool respondsTo(Address address) const noexcept = 0;
+    [[nodiscard]] virtual bool respondsTo(Address address) const noexcept { return base_ <= address && address < end_; }
     virtual void write8(Address address, uint8_t value) noexcept = 0;
     virtual void write16(Address address, uint16_t value) noexcept = 0;
-};
-/**
- * @brief Describes a thing connected to the memory bus which responds to a range of addresses
- */
-class MemoryRangeThing : public MemoryThing {
-public:
-    MemoryRangeThing(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress), length_(endAddress - baseAddress) { }
-    ~MemoryRangeThing() override = default;
-    [[nodiscard]] bool respondsTo(Address address) const noexcept override {
-            return base_ <= address && address < end_;
-    }
-    [[nodiscard]] constexpr Address getBase() const noexcept { return base_; }
-    [[nodiscard]] constexpr Address getEnd() const noexcept { return end_; }
-    [[nodiscard]] constexpr Address getLength() const noexcept { return length_; }
+    [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return base_; }
+    [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
 private:
     Address base_;
     Address end_;
-    Address length_;
 };
 
-/**
- * @brief Describes a thing which responds to a single address
- */
-class MemoryRegisterThing : public MemoryThing {
-public:
-    explicit MemoryRegisterThing(Address address) noexcept : theAddress_(address) { }
-    ~MemoryRegisterThing() override = default;
-    [[nodiscard]] bool respondsTo(Address value) const noexcept override { return value == theAddress_; }
-    [[nodiscard]] constexpr auto getAddress() const noexcept { return theAddress_; }
-private:
-    Address theAddress_;
-};
-
-class LambdaMemoryRegisterThing : public MemoryRegisterThing {
+class LambdaMemoryThing : public MemoryThing {
 public:
     using Read8Operation = uint8_t(*)(Address);
     using Read16Operation = uint16_t(*)(Address);
     using Write8Operation = void(*)(Address, uint8_t);
     using Write16Operation = void(*)(Address, uint16_t);
 public:
-    LambdaMemoryRegisterThing(Address base, Read8Operation r8, Write8Operation w8, Read16Operation r16, Write16Operation w16) noexcept : MemoryRegisterThing(base), read8_(r8), read16_(r16), write8_(w8), write16_(w16) { }
-    LambdaMemoryRegisterThing(Address base, Read8Operation r8, Write8Operation w8) noexcept : LambdaMemoryRegisterThing(base, r8, w8, nullptr, nullptr) { }
-    LambdaMemoryRegisterThing(Address base, Read16Operation r16, Write16Operation w16) noexcept : LambdaMemoryRegisterThing(base, nullptr, nullptr, r16, w16) { }
-    ~LambdaMemoryRegisterThing() override = default;
+    LambdaMemoryThing(Address base, Address end, Read8Operation r8, Write8Operation w8, Read16Operation r16, Write16Operation w16) noexcept : MemoryThing(base, end), read8_(r8), read16_(r16), write8_(w8), write16_(w16) { }
+    LambdaMemoryThing(Address base, Address end, Read8Operation r8, Write8Operation w8) noexcept : LambdaMemoryThing(base, end, r8, w8, nullptr, nullptr) { }
+    LambdaMemoryThing(Address base, Address end, Read16Operation r16, Write16Operation w16) noexcept : LambdaMemoryThing(base, end, nullptr, nullptr, r16, w16) { }
+    ~LambdaMemoryThing() override = default;
     uint8_t
     read8(Address address) noexcept override {
             if (read8_) {
@@ -112,6 +92,8 @@ private:
     Read16Operation read16_;
     Write8Operation write8_;
     Write16Operation write16_;
+
 };
+
 
 #endif //I960SXCHIPSET_MEMORYTHING_H
