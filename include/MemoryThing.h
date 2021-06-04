@@ -25,7 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_MEMORYTHING_H
 #define I960SXCHIPSET_MEMORYTHING_H
-
+#include "Pinout.h"
 /**
  * @brief Describes the interface between a component and a memory request, it introduces some latency with the trade off being easier maintenance
  */
@@ -45,6 +45,33 @@ public:
     virtual void write16(Address address, uint16_t value) noexcept = 0;
     [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return base_; }
     [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
+    [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept {
+        switch (style) {
+            case LoadStoreStyle::Full16:
+                return read16(address);
+            case LoadStoreStyle::Lower8:
+                return read8(address);
+            case LoadStoreStyle::Upper8:
+                return read8(address + 1);
+            default:
+                return 0;
+        }
+    }
+    void write(Address address, uint16_t value, LoadStoreStyle style) noexcept {
+        switch (style) {
+            case LoadStoreStyle::Full16:
+                write16(address, value);
+                break;
+            case LoadStoreStyle::Upper8:
+                write8(address+1, (value >> 8) );
+                break;
+            case LoadStoreStyle::Lower8:
+                write8(address, value);
+                break;
+            default:
+                break;
+        }
+    }
 private:
     Address base_;
     Address end_;

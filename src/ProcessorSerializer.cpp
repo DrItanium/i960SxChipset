@@ -119,7 +119,7 @@ ProcessorInterface::begin() noexcept {
         pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extra_);
     }
 }
-ProcessorInterface::LoadStoreStyle
+LoadStoreStyle
 ProcessorInterface::getStyle() noexcept {
     return static_cast<LoadStoreStyle>(getByteEnableBits());
 }

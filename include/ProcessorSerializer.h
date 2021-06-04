@@ -31,16 +31,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class ProcessorInterface {
 public:
-/**
- * @brief Sx Load/Store styles that the processor will request
- */
-    enum class LoadStoreStyle : uint8_t {
-        // based off of BE0,BE1 pins
-        Full16 = 0b00,
-        Upper8 = 0b01,
-        Lower8 = 0b10,
-        None = 0b11,
-    };
     enum class IOExpanderAddress : byte {
         DataLines = 0b000,
         Lower16Lines,

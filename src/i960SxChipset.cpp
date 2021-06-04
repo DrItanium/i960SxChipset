@@ -50,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "ProcessorSerializer.h"
 #include "DependentFalse.h"
+#include "MemoryThing.h"
 
 bool tftSetup = false;
 Adafruit_TFTShield18 ss;
@@ -452,21 +453,41 @@ bool oledDisplaySetup = false;
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
+/**
+ * @brief An intermediate type which automatically adds the IOBaseAddress to the start and end addresses
+ */
+class IOSpaceThing : public MemoryThing {
+public:
+    IOSpaceThing(Address base, Address end) : MemoryThing(base + IOSpaceBaseAddress, end + IOSpaceBaseAddress) { }
+    explicit IOSpaceThing(Address base) : MemoryThing(base + IOSpaceBaseAddress) { }
+    ~IOSpaceThing() override = default;
+};
+class BuiltinLedThing : public IOSpaceThing {
+public:
+    BuiltinLedThing() : IOSpaceThing(memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress)) { }
+    ~BuiltinLedThing() override = default;
+    [[nodiscard]] uint8_t read8(Address address) noexcept override { return readLed(); }
+    [[nodiscard]] uint16_t read16(Address address) noexcept override { return static_cast<uint16_t>(readLed()); }
+    void write8(Address /*address*/, uint8_t value) noexcept override { writeLed(value); }
+    void write16(Address /*address*/, uint16_t value) noexcept override { writeLed(static_cast<uint8_t>(value)); }
+private:
+    static void
+    writeLed(uint8_t value) noexcept {
+        if constexpr (displayMemoryReadsAndWrites) {
+            Serial.println(F("LED WRITE!"));
+        }
+        digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
+    }
+    static uint8_t
+    readLed() noexcept {
+        if constexpr (displayMemoryReadsAndWrites) {
+            Serial.println(F("LED READ!"));
+        }
+        return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
+    }
+};
 
-void
-writeLed(uint8_t value) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.println(F("LED WRITE!"));
-    }
-    digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
-}
-uint8_t
-readLed() noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.println(F("LED READ!"));
-    }
-    return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
-}
+BuiltinLedThing theLed;
 
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
@@ -475,10 +496,11 @@ ioSpaceWrite8(Address offset, uint8_t value) noexcept {
         Serial.println(offset, HEX);
         Serial.println(memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress), HEX);
     }
+    if (theLed.respondsTo(offset)) {
+        theLed.write8(offset, value);
+        return;
+    }
     switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
-            writeLed(value);
-            break;
         case memoryMapAddress(MemoryMapAddresses::PortZDirectionRegister):
             processorInterface.setPortZDirectionRegister(value);
             break;
@@ -507,9 +529,10 @@ ioSpaceRead8(Address offset) noexcept {
         Serial.print(F("ioSpaceRead8 to Offset: 0x"));
         Serial.println(offset, HEX);
     }
+    if (theLed.respondsTo(offset)) {
+        return theLed.read8(offset);
+    }
     switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
-            return readLed();
         case memoryMapAddress(MemoryMapAddresses::PortZDirectionRegister):
             return processorInterface.getPortZDirectionRegister();
         case memoryMapAddress(MemoryMapAddresses::PortZPolarityRegister):
@@ -532,6 +555,7 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
         Serial.print(F("ioSpaceWrite16 to Offset: 0x"));
         Serial.println(offset, HEX);
     }
+
     // we are writing to two separate addresses
     switch (offset) {
         case memoryMapAddress(MemoryMapAddresses::BuiltinLEDAddress):
