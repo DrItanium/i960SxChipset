@@ -64,7 +64,19 @@ File theBootROM;
 File theRAM; // use an SDCard as ram for the time being
 uint32_t bootRomSize = 0;
 ProcessorInterface processorInterface;
-
+template<typename T>
+constexpr Address computeIOAddress(Address base, Address index) noexcept {
+    return base + (sizeof(T) * index);
+}
+constexpr Address shortWordMemoryAddress(Address base, Address index) noexcept {
+    return computeIOAddress<uint16_t>(base, index);
+}
+constexpr Address wordMemoryAddress(Address base, Address index) noexcept {
+    return computeIOAddress<uint32_t>(base, index);
+}
+constexpr Address longWordMemoryAddress(Address base, Address index) noexcept {
+    return computeIOAddress<uint64_t>(base, index);
+}
 constexpr auto FlashStartingAddress = 0x0000'0000;
 constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
 // the upper 2G is for non-program related stuff, according to my memory map information, we support a maximum of 512 Megs of RAM
@@ -74,17 +86,38 @@ constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 M
 constexpr auto RamMask = MaxRamSize - 1;
 constexpr Address RamStartingAddress = 0x8000'0000;
 constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
-
-constexpr Address AbsoluteConsoleBaseAddress = 0xFE00'0100;
-constexpr Address ConsoleOffsetBaseAddress = 0x0100;
-constexpr Address ConsoleReadWriteBaseAddress = ConsoleOffsetBaseAddress + 0x2;
-constexpr Address ConsoleFlushPort = ConsoleOffsetBaseAddress + 0x0;
-constexpr Address ConsoleAvailableForWrite = ConsoleOffsetBaseAddress + 0x4;
+constexpr Address IOSpaceBaseAddress = 0xFE00'0000;
+constexpr Address BaseMCUPeripheralsBaseAddress = 0;
+constexpr Address BuiltinLedOffsetBaseAddress = BaseMCUPeripheralsBaseAddress;
+constexpr Address BuiltinPortZBaseAddress = BaseMCUPeripheralsBaseAddress + 0x10;
+/**
+ * @brief Describes the Addresses associated with the port-z mmio registers
+ */
+enum class PortZAddresses : uint32_t {
+    GPIO = BuiltinPortZBaseAddress, // one byte wide
+    Direction, // one byte wide
+    Polarity,
+    Pullup,
+};
+constexpr Address ConsoleOffsetBaseAddress = BaseMCUPeripheralsBaseAddress + 0x20;
+constexpr Address getConsoleMemoryAddress(Address offset) noexcept {
+    return shortWordMemoryAddress(ConsoleOffsetBaseAddress, offset);
+}
+enum class ConsoleAddresses : uint32_t {
+    Flush = getConsoleMemoryAddress(0),
+    IO = getConsoleMemoryAddress(1),
+    Available = getConsoleMemoryAddress(2),
+    AvailableForWrite = getConsoleMemoryAddress(3),
+};
 constexpr Address DisplayBaseOffset = 0x0200;
 constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
-constexpr Address DisplayBacklightPort = TFTShieldFeaturesBaseOffset + 0x00;
-constexpr Address DisplayBacklightFrequencyPort = TFTShieldFeaturesBaseOffset + 0x02;
-constexpr Address DisplayButtonsPort = TFTShieldFeaturesBaseOffset + 0x04; // 32-bits
+enum class TFTShieldAddresses : uint32_t {
+    Backlight = shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, 0),
+    BacklightFrequency = shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, 1),
+    ButtonsLower = shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, 2),
+    ButtonsUpper = shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, 3),
+};
+
 
 uint16_t backlightFrequency = 0;
 uint16_t backlightStatus = TFTSHIELD_BACKLIGHT_ON;
@@ -206,14 +239,44 @@ uint8_t
 readLed() noexcept {
     return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
 }
+
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
     switch (offset) {
-        case 0: // builtin led
+        case BuiltinLedOffsetBaseAddress: // builtin led
             writeLed(value);
+            break;
+        case static_cast<Address>(PortZAddresses::Direction):
+            processorInterface.setPortZDirectionRegister(value);
+            break;
+        case static_cast<Address>(PortZAddresses::Polarity):
+            processorInterface.setPortZPolarityRegister(value);
+            break;
+        case static_cast<Address>(PortZAddresses::Pullup):
+            processorInterface.setPortZPullupResistorRegister(value);
+            break;
+        case static_cast<Address>(PortZAddresses::GPIO):
+            processorInterface.writePortZGPIORegister(value);
             break;
         default:
             break;
+    }
+}
+uint8_t
+ioSpaceRead8(Address offset) noexcept {
+    switch (offset) {
+        case BuiltinLedOffsetBaseAddress:
+            return readLed();
+        case static_cast<Address>(PortZAddresses::Direction):
+            return processorInterface.getPortZDirectionRegister();
+        case static_cast<Address>(PortZAddresses::Polarity):
+            return processorInterface.getPortZPolarityRegister();
+        case static_cast<Address>(PortZAddresses::Pullup):
+            return processorInterface.getPortZPullupResistorRegister();
+        case static_cast<Address>(PortZAddresses::GPIO):
+            return processorInterface.readPortZGPIORegister();
+        default:
+            return 0;
     }
 }
 void
@@ -225,18 +288,18 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
             /// @todo figure out if writes like this should be ignored?
             /// @todo write to address 1 as well since it would be both, but do not go through the write8 interface
             break;
-        case ConsoleFlushPort:
+        case static_cast<Address>(ConsoleAddresses::Flush):
             Serial.flush();
             break;
-        case ConsoleReadWriteBaseAddress:
+        case static_cast<Address>(ConsoleAddresses::IO):
             Serial.write(static_cast<uint8_t>(value));
             Serial.flush();
             break;
-        case DisplayBacklightPort:
+        case static_cast<Address>(TFTShieldAddresses::Backlight):
             backlightStatus = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
             ss.setBacklight(backlightStatus);
             break;
-        case DisplayBacklightFrequencyPort:
+        case static_cast<Address>(TFTShieldAddresses::BacklightFrequency):
             backlightFrequency = value;
             ss.setBacklightFreq(backlightFrequency);
             break;
@@ -251,18 +314,20 @@ ioSpaceRead16(Address offset) noexcept {
             /// @todo this would be an amalgamation of the contents addresses zero and one
             /// @todo figure out if we should ignore 16-bit writes to 8-bit registers or not... it could be gross
             return static_cast<uint16_t>(digitalRead(i960Pinout::Led));
-        case ConsoleReadWriteBaseAddress:
+        case static_cast<Address>(ConsoleAddresses::IO):
             return static_cast<uint16_t>(Serial.read());
-        case ConsoleAvailableForWrite:
+        case static_cast<Address>(ConsoleAddresses::Available):
+            return static_cast<uint16_t>(Serial.available());
+        case static_cast<Address>(ConsoleAddresses::AvailableForWrite):
             return static_cast<uint16_t>(Serial.availableForWrite());
-        case DisplayBacklightPort:
+        case static_cast<Address>(TFTShieldAddresses::Backlight):
             return backlightStatus;
-        case DisplayBacklightFrequencyPort:
+        case static_cast<Address>(TFTShieldAddresses::BacklightFrequency):
             return backlightFrequency;
-        case DisplayButtonsPort + 0x00: // lower two bytes
+        case static_cast<Address>(TFTShieldAddresses::ButtonsLower):
             buttonsCache = ss.readButtons();
             return static_cast<uint16_t>(buttonsCache & 0x0000'FFFF);
-        case DisplayButtonsPort + 0x02: // upper two bytes
+        case static_cast<Address>(TFTShieldAddresses::ButtonsUpper):
             return static_cast<uint16_t>((buttonsCache >> 16) & 0x0000'FFFF);
         default:
             return 0;
@@ -341,15 +406,6 @@ performWrite(Address address, uint16_t value, ProcessorInterface::LoadStoreStyle
         }
     }
     /// @todo implement
-}
-uint8_t
-ioSpaceRead8(Address offset) noexcept {
-    switch (offset) {
-        case 0:
-            return readLed();
-        default:
-            return 0;
-    }
 }
 
 uint16_t
