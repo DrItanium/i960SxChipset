@@ -500,7 +500,6 @@ private:
     }
 };
 
-BuiltinLedThing theLed;
 
 class PortZThing : public IOSpaceThing {
 public:
@@ -567,7 +566,56 @@ public:
     }
 };
 
+
+class ConsoleThing : public IOSpaceThing {
+public:
+    enum class Registers : uint32_t {
+        Flush = 0x0, // 2 byte
+        Available = 0x2, // 2 byte
+        AvailableForWrite = 0x4, // 2 byte
+        IO = 0x6, // 2 bytes
+        /// @todo add support for DMA style printing via the HOLD/HLDA signals
+    };
+public:
+    // make sure we allocate a ton of space just in case
+    explicit ConsoleThing(Address base) noexcept : IOSpaceThing(base, base + 0x100) { }
+    ~ConsoleThing() override = default;
+
+    [[nodiscard]] uint8_t read8(Address offset) noexcept override { return 0; }
+    [[nodiscard]] uint16_t read16(Address offset) noexcept override {
+        switch (static_cast<Registers>(offset)) {
+            case Registers::Available:
+                return Serial.available();
+            case Registers::AvailableForWrite:
+                return Serial.availableForWrite();
+            case Registers::IO:
+                return Serial.read();
+            default:
+                return 0;
+        }
+    }
+    void write8(Address offset, uint8_t value) noexcept override {
+        // do nothing
+    }
+    void write16(Address offset, uint16_t value) noexcept override {
+        // 16-bit writes are ignored
+        switch (static_cast<Registers>(offset)) {
+            case Registers::IO:
+                Serial.write(static_cast<char>(value));
+                // always flush afterwards
+            case Registers::Flush:
+                Serial.flush();
+                break;
+            default:
+                break;
+        }
+    }
+
+};
+
+BuiltinLedThing theLed;
 PortZThing portZThing(BuiltinPortZBaseAddress);
+ConsoleThing theConsole(0x100);
 
 void
 ioSpaceWrite8(Address offset, uint8_t value) noexcept {
@@ -611,13 +659,6 @@ ioSpaceWrite16(Address offset, uint16_t value) noexcept {
 
     // we are writing to two separate addresses
     switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::ConsoleFlushRegisterAddress):
-            Serial.flush();
-            break;
-        case memoryMapAddress(MemoryMapAddresses::ConsoleIOPort):
-            Serial.write(static_cast<uint8_t>(value));
-            Serial.flush();
-            break;
         case memoryMapAddress(MemoryMapAddresses::DisplayBacklight):
             backlightStatus = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
             ss.setBacklight(backlightStatus);
@@ -637,12 +678,6 @@ ioSpaceRead16(Address offset) noexcept {
         Serial.println(offset, HEX);
     }
     switch (offset) {
-        case memoryMapAddress(MemoryMapAddresses::ConsoleIOPort):
-            return static_cast<uint16_t>(Serial.read());
-        case memoryMapAddress(MemoryMapAddresses::ConsoleAvailablePort):
-            return static_cast<uint16_t>(Serial.available());
-        case memoryMapAddress(MemoryMapAddresses::ConsoleAvailableForWritePort):
-            return static_cast<uint16_t>(Serial.availableForWrite());
         case memoryMapAddress(MemoryMapAddresses::DisplayBacklight):
             return backlightStatus;
         case memoryMapAddress(MemoryMapAddresses::DisplayBacklightFrequency):
@@ -666,6 +701,8 @@ ioSpaceWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
         theLed.write(address, value, style);
     } else if (portZThing.respondsTo(address, style)) {
         portZThing.write(address, value, style);
+    } else if (theConsole.respondsTo(address, style)) {
+        theConsole.write(address, value, style);
     } else {
         auto offset = 0x00FF'FFFF & address;
         switch (style) {
@@ -741,6 +778,10 @@ ioSpaceRead(Address address, LoadStoreStyle style) noexcept {
     }
     if (theLed.respondsTo(address, style)) {
         return theLed.read(address, style);
+    } else if (portZThing.respondsTo(address, style)) {
+        return portZThing.read(address, style);
+    } else if (theConsole.respondsTo(address, style)) {
+        return theConsole.read(address, style);
     } else {
         auto offset = 0x00FF'FFFF & address;
         switch (style) {
