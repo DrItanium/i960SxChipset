@@ -90,6 +90,9 @@ public:
                 break;
         }
     }
+    virtual void begin() noexcept {
+
+    }
 private:
     Address base_;
     Address end_;

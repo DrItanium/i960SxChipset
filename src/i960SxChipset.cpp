@@ -61,7 +61,6 @@ Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
 constexpr bool displayMemoryReadsAndWrites = false;
 // boot rom and sd card loading stuff
 File theBootROM;
-File theRAM; // use an SDCard as ram for the time being
 uint32_t bootRomSize = 0;
 ProcessorInterface processorInterface;
 template<typename T>
@@ -463,6 +462,25 @@ Adafruit_ADXL343 accel1(12345);
 Adafruit_SSD1306 display(128,32,&Wire);
 
 bool oledDisplaySetup = false;
+template<typename T>
+[[noreturn]] void signalHaltState(T haltMsg) {
+    if (tftSetup) {
+        tft.fillScreen(ST77XX_RED);
+        tft.setCursor(0,0);
+        tft.setTextSize(1);
+        tft.println(haltMsg);
+    } else if (oledDisplaySetup) {
+        display.clearDisplay();
+        display.display();
+        display.setCursor(0,0);
+        display.println(haltMsg);
+        display.display();
+    }
+    Serial.println(haltMsg);
+    while(true) {
+        delay(1000);
+    }
+}
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
@@ -610,6 +628,56 @@ public:
                 break;
         }
     }
+
+};
+
+class RAMThing : public MemoryThing {
+public:
+    RAMThing() noexcept : MemoryThing(RamStartingAddress, RamEndingAddress) { }
+    ~RAMThing() override = default;
+    [[nodiscard]] uint8_t
+    read8(Address offset) noexcept override {
+        theRAM_.seek(offset); // jump to that point in memory
+        return theRAM_.read();
+    }
+    void
+    write8(Address offset, uint8_t value) noexcept override {
+        theRAM_.seek(offset);
+        theRAM_.write(static_cast<uint8_t>(value));
+        theRAM_.flush();
+    }
+    [[nodiscard]] uint16_t
+    read16(Address offset) noexcept override {
+        uint16_t storage;
+        theRAM_.seek(offset);
+        theRAM_.read(&storage, 2);
+        return storage;
+    }
+    void
+    write16(Address offset, uint16_t value) noexcept override {
+        auto thePtr = reinterpret_cast<uint8_t*>(&value);
+        theRAM_.seek(offset);
+        theRAM_.write(thePtr, 2);
+        theRAM_.flush();
+    }
+    [[nodiscard]] Address
+    makeAddressRelative(Address input) const noexcept override {
+        // in this case, we want relative offsets
+        return input & RamMask;
+    }
+
+    void
+    begin() noexcept override {
+        if (!SD.exists("ram.bin")) {
+            signalHaltState(F("NO RAM.BIN FOUND!"));
+        } else {
+            theRAM = SD.open("ram.bin", FILE_WRITE);
+            Serial.println(F("RAM.BIN OPEN SUCCESS!"));
+        }
+    }
+private:
+    File theRAM_; // use an SDCard as ram for the time being
+
 
 };
 
@@ -1020,25 +1088,6 @@ constexpr auto computeAddressStart(Address start, Address size, Address count) n
 // we have access to 12 Winbond Flash Modules, which hold onto common program code, This gives us access to 96 megabytes of Flash.
 // At this point it is a massive pain in the ass to program all these devices but who cares
 
-template<typename T>
-[[noreturn]] void signalHaltState(T haltMsg) {
-    if (tftSetup) {
-        tft.fillScreen(ST77XX_RED);
-        tft.setCursor(0,0);
-        tft.setTextSize(1);
-        tft.println(haltMsg);
-    } else if (oledDisplaySetup) {
-        display.clearDisplay();
-        display.display();
-        display.setCursor(0,0);
-        display.println(haltMsg);
-        display.display();
-    }
-    Serial.println(haltMsg);
-    while(true) {
-        delay(1000);
-    }
-}
 
 void setupSDCard() {
     if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
