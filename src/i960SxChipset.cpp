@@ -254,11 +254,6 @@ public:
     [[nodiscard]] uint16_t read16(Address address) noexcept override { return static_cast<uint16_t>(readLed()); }
     void write8(Address /*address*/, uint8_t value) noexcept override { writeLed(value); }
     void write16(Address /*address*/, uint16_t value) noexcept override { writeLed(static_cast<uint8_t>(value)); }
-    void
-    begin() noexcept override {
-        pinMode(i960Pinout::Led, OUTPUT);
-        digitalWrite(i960Pinout::Led, LOW);
-    }
 private:
     static void
     writeLed(uint8_t value) noexcept {
@@ -333,11 +328,10 @@ public:
 class ConsoleThing : public IOSpaceThing {
 public:
     enum class Registers : uint32_t {
-        Flush = 0x0, // 2 byte
-        Available = 0x2, // 2 byte
-        AvailableForWrite = 0x4, // 2 byte
-        IO = 0x6, // 2 bytes
-        /// @todo add support for DMA style printing via the HOLD/HLDA signals
+        Flush,
+        Available, // 2 byte
+        AvailableForWrite, // 2 byte
+        IO, // 2 bytes
     };
 public:
     // make sure we allocate a ton of space just in case
@@ -346,15 +340,11 @@ public:
 
     [[nodiscard]] uint8_t read8(Address offset) noexcept override { return 0; }
     [[nodiscard]] uint16_t read16(Address offset) noexcept override {
-        switch (static_cast<Registers>(offset)) {
-            case Registers::Available:
-                return Serial.available();
-            case Registers::AvailableForWrite:
-                return Serial.availableForWrite();
-            case Registers::IO:
-                return Serial.read();
-            default:
-                return 0;
+        switch (offset) {
+            case static_cast<uint32_t>(Registers::Available) * sizeof(uint16_t): return Serial.available();
+            case static_cast<uint32_t>(Registers::AvailableForWrite) * sizeof(uint16_t): return Serial.availableForWrite();
+            case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t): return Serial.read();
+            default: return 0;
         }
     }
     void write8(Address offset, uint8_t value) noexcept override {
@@ -362,21 +352,16 @@ public:
     }
     void write16(Address offset, uint16_t value) noexcept override {
         // 16-bit writes are ignored
-        switch (static_cast<Registers>(offset)) {
-            case Registers::IO:
+        switch (offset) {
+            case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t):
                 Serial.write(static_cast<char>(value));
                 // always flush afterwards
-            case Registers::Flush:
+            case static_cast<uint32_t>(Registers::Flush) * sizeof(uint16_t):
                 Serial.flush();
                 break;
             default:
                 break;
         }
-    }
-    void
-    begin() noexcept override {
-        Serial.begin(115200);
-        while(!Serial);
     }
 
 };
@@ -1096,6 +1081,7 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
+              i960Pinout::Led,
               i960Pinout::Int0_);
     PinAsserter<i960Pinout::Reset960> holdi960InReset;
     // all of these pins need to be pulled high
@@ -1114,6 +1100,9 @@ void setup() {
               i960Pinout::FAIL);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
+    digitalWrite(i960Pinout::Led, LOW);
+    Serial.begin(115200);
+    while(!Serial);
     theLed.begin();
     theConsole.begin();
     Serial.println(F("i960Sx chipset bringup"));
