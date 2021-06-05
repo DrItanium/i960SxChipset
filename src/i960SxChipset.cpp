@@ -338,20 +338,8 @@ public:
     explicit ConsoleThing(Address base) noexcept : IOSpaceThing(base, base + 0x100) { }
     ~ConsoleThing() override = default;
 
-    [[nodiscard]] uint8_t read8(Address offset) noexcept override {
-        switch (offset) {
-            case static_cast<uint32_t>(Registers::Available) * sizeof(uint16_t): return Serial.available();
-            case static_cast<uint32_t>(Registers::AvailableForWrite) * sizeof(uint16_t): return Serial.availableForWrite();
-            case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t): return Serial.read();
-            default: return 0;
-        }
-        return 0;
-    }
+    [[nodiscard]] uint8_t read8(Address offset) noexcept override { return 0; }
     [[nodiscard]] uint16_t read16(Address offset) noexcept override {
-        if constexpr (displayMemoryReadsAndWrites) {
-            Serial.print(F("read16: 0x"));
-            Serial.println(offset, HEX);
-        }
         switch (offset) {
             case static_cast<uint32_t>(Registers::Available) * sizeof(uint16_t): return Serial.available();
             case static_cast<uint32_t>(Registers::AvailableForWrite) * sizeof(uint16_t): return Serial.availableForWrite();
@@ -360,25 +348,9 @@ public:
         }
     }
     void write8(Address offset, uint8_t value) noexcept override {
-        switch (offset) {
-            case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t):
-                Serial.write(value);
-                Serial.flush();
-                break;
-            case static_cast<uint32_t>(Registers::Flush) * sizeof(uint16_t):
-                Serial.flush();
-                break;
-            default:
-                break;
-        }
+        // do nothing
     }
     void write16(Address offset, uint16_t value) noexcept override {
-        if constexpr (displayMemoryReadsAndWrites) {
-            Serial.print(F("write16: offset 0x"));
-            Serial.print(offset, HEX);
-            Serial.print(F(" value: 0x"));
-            Serial.println(value, HEX);
-        }
         switch (offset) {
             case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t):
                 Serial.write(static_cast<char>(value));
