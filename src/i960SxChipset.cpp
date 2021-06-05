@@ -53,10 +53,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryThing.h"
 
 bool tftSetup = false;
-Adafruit_TFTShield18 ss;
-Adafruit_ST7735 tft(static_cast<int>(i960Pinout::DISPLAY_EN),
-                     static_cast<int>(i960Pinout::DC),
-                     -1);
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
@@ -125,9 +121,6 @@ constexpr Address DisplayBaseOffset = 0x0200;
 constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
 
 
-uint16_t backlightFrequency = 0;
-uint16_t backlightStatus = TFTSHIELD_BACKLIGHT_ON;
-uint32_t buttonsCache = 0;
 
 // with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
 // set a single pixel in the display, storage area
@@ -135,211 +128,9 @@ uint32_t buttonsCache = 0;
 // A four address is used to act as a door bell!
 // storage area for the display + a doorbell address as well
 // the command is setup to send off to the display
-template<typename DisplayType>
-class DisplayCommand {
-public:
-    enum class Opcodes : uint16_t {
-        None = 0,
-        SetRotation,
-        InvertDisplay,
-        FillRect,
-        FillScreen,
-        DrawLine,
-        DrawRect,
-        DrawCircle,
-        FillCircle,
-        DrawTriangle,
-        FillTriangle,
-        SetTextSizeSquare,
-        SetTextSizeRectangle,
-        SetCursor,
-        SetTextColor0,
-        SetTextColor1,
-        SetTextWrap,
-        GetWidth,
-        GetHeight,
-        GetRotation,
-        GetCursorX,
-        GetCursorY,
-        DrawPixel,
-        Color565,
-        DrawRoundRect,
-        FillRoundRect,
-    };
-public:
-    /**
-     * @brief Invoke on doorbell write
-     * @param value the value written to the doorbell
-     * @return the value to return to the i960 if it makes sense (otherwise it will be zero)
-     */
-    uint16_t invoke(uint16_t /* unused */) {
-        // perhaps we'll do nothing with the value but hold onto it for now
-        switch (command_) {
-            case Opcodes::SetRotation:
-                display_.setRotation(x_);
-                break;
-            case Opcodes::InvertDisplay:
-                display_.invertDisplay(x_ != 0);
-                break;
-            case Opcodes::DrawPixel:
-                display_.drawPixel(x_, y_, color_);
-                break;
-            case Opcodes::FillRect:
-                display_.fillRect(x_, y_, w_, h_, color_);
-                break;
-            case Opcodes::FillScreen:
-                display_.fillScreen(color_);
-                break;
-            case Opcodes::Color565:
-                return display_.color565(r_, g_, b_);
-            case Opcodes::DrawLine:
-                display_.drawLine(x0_, y0_, x1_, y1_, color_);
-                break;
-            case Opcodes::DrawRect:
-                display_.drawRect(x_, y_, w_, h_, color_);
-                break;
-            case Opcodes::DrawCircle:
-                display_.drawCircle(x0_, y0_, r_, color_);
-                break;
-            case Opcodes::FillCircle:
-                display_.fillCircle(x0_, y0_, r_, color_);
-                break;
-            case Opcodes::DrawTriangle:
-                display_.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
-                break;
-            case Opcodes::FillTriangle:
-                display_.fillCircle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
-                break;
-            case Opcodes::DrawRoundRect:
-                display_.drawRoundRect(x_, y_, w_, h_, r_, color_);
-                break;
-            case Opcodes::FillRoundRect:
-                display_.fillRoundRect(x_, y_, w_, h_, r_, color_);
-                break;
-            case Opcodes::SetTextSizeSquare:
-                display_.setTextSize(x_);
-                break;
-            case Opcodes::SetTextSizeRectangle:
-                display_.setTextSize(x_, y_);
-                break;
-            case Opcodes::SetCursor:
-                display_.setCursor(x_, y_);
-                break;
-            case Opcodes::SetTextColor0:
-                display_.setTextColor(color_);
-                break;
-            case Opcodes::SetTextColor1:
-                display_.setTextColor(color_, bgcolor_);
-                break;
-            case Opcodes::SetTextWrap:
-                display_.setTextWrap(x_ != 0);
-                break;
-            case Opcodes::GetWidth:
-                return display_.width();
-            case Opcodes::GetHeight:
-                return display_.height();
-            case Opcodes::GetRotation:
-                return display_.getRotation();
-            case Opcodes::GetCursorX:
-                return display_.getCursorX();
-            case Opcodes::GetCursorY:
-                return display_.getCursorY();
-        }
-        return 0;
-    }
-public:
-    /// @todo extend BusDevice and take in a base address
-    explicit DisplayCommand(DisplayType& display) : display_(display) { }
-    [[nodiscard]] constexpr auto getCommand() const noexcept { return command_; }
-    [[nodiscard]] constexpr auto getX() const noexcept { return x_; }
-    [[nodiscard]] constexpr auto getY() const noexcept { return y_; }
-    [[nodiscard]] constexpr auto getW() const noexcept { return w_; }
-    [[nodiscard]] constexpr auto getH() const noexcept { return h_; }
-    [[nodiscard]] constexpr auto getRadius() const noexcept { return radius_; }
-    [[nodiscard]] constexpr uint16_t getColor() const noexcept { return color_; }
-    [[nodiscard]] constexpr uint16_t getBackgroundColor() const noexcept { return bgcolor_; }
-    [[nodiscard]] constexpr auto getX0() const noexcept { return x0_; }
-    [[nodiscard]] constexpr auto getY0() const noexcept { return y0_; }
-    [[nodiscard]] constexpr auto getX1() const noexcept { return x1_; }
-    [[nodiscard]] constexpr auto getY1() const noexcept { return y1_; }
-    [[nodiscard]] constexpr auto getX2() const noexcept { return x2_; }
-    [[nodiscard]] constexpr auto getY2() const noexcept { return y2_; }
-    [[nodiscard]] constexpr auto getRed() const noexcept { return r_; }
-    [[nodiscard]] constexpr auto getGreen() const noexcept { return g_; }
-    [[nodiscard]] constexpr auto getBlue() const noexcept { return b_; }
-    void setCommand(Opcodes command) noexcept { command_ = command; }
-    void setX(int16_t x) noexcept { x_ = x; }
-    void setY(int16_t y) noexcept { y_ = y; }
-    void setW(int16_t w) noexcept { w_ = w; }
-    void setH(int16_t h) noexcept { h_ = h; }
-    void setRadius(int16_t radius) noexcept { radius_ = radius; }
-    void setColor(uint16_t color) noexcept { color_ = color; }
-    void setBackgroundColor(uint16_t color) noexcept { bgcolor_ = color; }
-    void setX0(int16_t value) noexcept { x0_ = value; }
-    void setY0(int16_t value) noexcept { y0_ = value; }
-    void setX1(int16_t value) noexcept { x1_ = value; }
-    void setY1(int16_t value) noexcept { y1_ = value; }
-    void setX2(int16_t value) noexcept { x2_ = value; }
-    void setY2(int16_t value) noexcept { y2_ = value; }
-    void setR(int16_t value) noexcept { r_ = value; }
-    void setG(int16_t value) noexcept { g_ = value; }
-    void setB(int16_t value) noexcept { b_ = value; }
-    const DisplayType& getAssociatedDisplay() const noexcept { return display_; }
-    DisplayType& getAssociatedDisplay() noexcept { return display_; }
-    void flush() { display_.flush(); }
-    void print(char c) { display_.print(c); }
-    [[nodiscard]] bool available() noexcept { return true; }
-    [[nodiscard]] bool availableForWriting() noexcept { return display_.availableForWrite(); }
-private:
-    DisplayType& display_;
-    Opcodes command_;
-    int16_t x_ = 0;
-    int16_t y_ = 0;
-    int16_t w_ = 0;
-    int16_t h_ = 0;
-    int16_t radius_ = 0;
-    uint16_t color_ = 0;
-    uint16_t bgcolor_ = 0;
-    int16_t x0_ = 0;
-    int16_t y0_ = 0;
-    int16_t x1_ = 0;
-    int16_t y1_ = 0;
-    int16_t x2_ = 0;
-    int16_t y2_ = 0;
-    int16_t r_ = 0;
-    int16_t g_ = 0;
-    int16_t b_ = 0;
-    uint16_t resultLower_ = 0;
-    uint16_t resultUpper_ = 0;
-};
 
 enum class TFTShieldAddresses : uint32_t {
     // display tweakables
-    Flush,
-    IO,
-    Available,
-    AvailableForWrite,
-    Command,
-    X,
-    Y,
-    W,
-    H,
-    Radius,
-    Color,
-    X0,
-    Y0,
-    X1,
-    Y1,
-    X2,
-    Y2,
-    R,
-    G,
-    B,
-    Doorbell,
-    Backlight,
-    BacklightFrequency,
-    ButtonsLower,
-    ButtonsUpper,
     /// @todo implement constexpr offset calculation
 };
 
@@ -448,31 +239,10 @@ constexpr Address memoryMapAddress(MemoryMapAddresses address) noexcept {
     return getMemoryMapEntry(address).value_;
 }
 #endif
-DisplayCommand<decltype(tft)> displayCommandSet(tft);
 
 bool oledDisplaySetup = false;
 template<typename T>
-[[noreturn]] void signalHaltState(T haltMsg) {
-    if (tftSetup) {
-        tft.fillScreen(ST77XX_RED);
-        tft.setCursor(0,0);
-        tft.setTextSize(1);
-        tft.println(haltMsg);
-    }
-#if 0
-    else if (oledDisplaySetup) {
-        display.clearDisplay();
-        display.display();
-        display.setCursor(0,0);
-        display.println(haltMsg);
-        display.display();
-    }
-#endif
-    Serial.println(haltMsg);
-    while(true) {
-        delay(1000);
-    }
-}
+[[noreturn]] void signalHaltState(T haltMsg);
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
@@ -749,9 +519,332 @@ public:
     void write8(Address address, uint8_t value) noexcept override { }
     void write16(Address address, uint16_t value) noexcept override { }
 };
+class TFTShieldThing : public IOSpaceThing {
+public:
+    enum class Registers : uint32_t {
+        Flush = 0,
+        IO,
+        Available,
+        AvailableForWrite,
+        Command,
+        X,
+        Y,
+        W,
+        H,
+        Radius,
+        Color,
+        X0,
+        Y0,
+        X1,
+        Y1,
+        X2,
+        Y2,
+        R,
+        G,
+        B,
+        Doorbell,
+        Backlight,
+        BacklightFrequency,
+        ButtonsLower,
+        ButtonsUpper,
+        ButtonsQuery,
+
+    };
+    constexpr Address computeProperOffset(Registers target) noexcept {
+        // all registers are two bytes wide so we just need to expand them out
+        return static_cast<Address>(static_cast<Address>(target) * sizeof(uint16_t));
+    }
+    enum class Opcodes : uint16_t {
+        None = 0,
+        SetRotation,
+        InvertDisplay,
+        FillRect,
+        FillScreen,
+        DrawLine,
+        DrawRect,
+        DrawCircle,
+        FillCircle,
+        DrawTriangle,
+        FillTriangle,
+        SetTextSizeSquare,
+        SetTextSizeRectangle,
+        SetCursor,
+        SetTextColor0,
+        SetTextColor1,
+        SetTextWrap,
+        GetWidth,
+        GetHeight,
+        GetRotation,
+        GetCursorX,
+        GetCursorY,
+        DrawPixel,
+        Color565,
+        DrawRoundRect,
+        FillRoundRect,
+    };
+public:
+    explicit TFTShieldThing(Address base) : IOSpaceThing(base, base + 0x100),
+                                            display_(static_cast<int>(i960Pinout::DISPLAY_EN),
+                                                     static_cast<int>(i960Pinout::DC),
+                                                     -1) { }
+    ~TFTShieldThing() override = default;
+    /**
+     * @brief Invoke on doorbell write
+     * @param value the value written to the doorbell
+     * @return the value to return to the i960 if it makes sense (otherwise it will be zero)
+     */
+    uint16_t invoke(uint16_t /* unused */) {
+        // perhaps we'll do nothing with the value but hold onto it for now
+        switch (command_) {
+            case Opcodes::SetRotation:
+                display_.setRotation(x_);
+                break;
+            case Opcodes::InvertDisplay:
+                display_.invertDisplay(x_ != 0);
+                break;
+            case Opcodes::DrawPixel:
+                display_.drawPixel(x_, y_, color_);
+                break;
+            case Opcodes::FillRect:
+                display_.fillRect(x_, y_, w_, h_, color_);
+                break;
+            case Opcodes::FillScreen:
+                display_.fillScreen(color_);
+                break;
+            case Opcodes::Color565:
+                return display_.color565(r_, g_, b_);
+            case Opcodes::DrawLine:
+                display_.drawLine(x0_, y0_, x1_, y1_, color_);
+                break;
+            case Opcodes::DrawRect:
+                display_.drawRect(x_, y_, w_, h_, color_);
+                break;
+            case Opcodes::DrawCircle:
+                display_.drawCircle(x0_, y0_, r_, color_);
+                break;
+            case Opcodes::FillCircle:
+                display_.fillCircle(x0_, y0_, r_, color_);
+                break;
+            case Opcodes::DrawTriangle:
+                display_.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
+                break;
+            case Opcodes::FillTriangle:
+                display_.fillCircle(x0_, y0_, r_, color_);
+                break;
+            case Opcodes::DrawRoundRect:
+                display_.drawRoundRect(x_, y_, w_, h_, r_, color_);
+                break;
+            case Opcodes::FillRoundRect:
+                display_.fillRoundRect(x_, y_, w_, h_, r_, color_);
+                break;
+            case Opcodes::SetTextSizeSquare:
+                display_.setTextSize(x_);
+                break;
+            case Opcodes::SetTextSizeRectangle:
+                display_.setTextSize(x_, y_);
+                break;
+            case Opcodes::SetCursor:
+                display_.setCursor(x_, y_);
+                break;
+            case Opcodes::SetTextColor0:
+                display_.setTextColor(color_);
+                break;
+            case Opcodes::SetTextColor1:
+                display_.setTextColor(color_, bgcolor_);
+                break;
+            case Opcodes::SetTextWrap:
+                display_.setTextWrap(x_ != 0);
+                break;
+            case Opcodes::GetWidth:
+                return display_.width();
+            case Opcodes::GetHeight:
+                return display_.height();
+            case Opcodes::GetRotation:
+                return display_.getRotation();
+            case Opcodes::GetCursorX:
+                return display_.getCursorX();
+            case Opcodes::GetCursorY:
+                return display_.getCursorY();
+            default:
+                return 0;
+        }
+        return 0;
+    }
+public:
+    [[nodiscard]] constexpr auto getCommand() const noexcept { return command_; }
+    [[nodiscard]] constexpr auto getX() const noexcept { return x_; }
+    [[nodiscard]] constexpr auto getY() const noexcept { return y_; }
+    [[nodiscard]] constexpr auto getW() const noexcept { return w_; }
+    [[nodiscard]] constexpr auto getH() const noexcept { return h_; }
+    [[nodiscard]] constexpr auto getRadius() const noexcept { return radius_; }
+    [[nodiscard]] constexpr uint16_t getColor() const noexcept { return color_; }
+    [[nodiscard]] constexpr uint16_t getBackgroundColor() const noexcept { return bgcolor_; }
+    [[nodiscard]] constexpr auto getX0() const noexcept { return x0_; }
+    [[nodiscard]] constexpr auto getY0() const noexcept { return y0_; }
+    [[nodiscard]] constexpr auto getX1() const noexcept { return x1_; }
+    [[nodiscard]] constexpr auto getY1() const noexcept { return y1_; }
+    [[nodiscard]] constexpr auto getX2() const noexcept { return x2_; }
+    [[nodiscard]] constexpr auto getY2() const noexcept { return y2_; }
+    [[nodiscard]] constexpr auto getRed() const noexcept { return r_; }
+    [[nodiscard]] constexpr auto getGreen() const noexcept { return g_; }
+    [[nodiscard]] constexpr auto getBlue() const noexcept { return b_; }
+    void setCommand(Opcodes command) noexcept { command_ = command; }
+    void setX(int16_t x) noexcept { x_ = x; }
+    void setY(int16_t y) noexcept { y_ = y; }
+    void setW(int16_t w) noexcept { w_ = w; }
+    void setH(int16_t h) noexcept { h_ = h; }
+    void setRadius(int16_t radius) noexcept { radius_ = radius; }
+    void setColor(uint16_t color) noexcept { color_ = color; }
+    void setBackgroundColor(uint16_t color) noexcept { bgcolor_ = color; }
+    void setX0(int16_t value) noexcept { x0_ = value; }
+    void setY0(int16_t value) noexcept { y0_ = value; }
+    void setX1(int16_t value) noexcept { x1_ = value; }
+    void setY1(int16_t value) noexcept { y1_ = value; }
+    void setX2(int16_t value) noexcept { x2_ = value; }
+    void setY2(int16_t value) noexcept { y2_ = value; }
+    void setR(int16_t value) noexcept { r_ = value; }
+    void setG(int16_t value) noexcept { g_ = value; }
+    void setB(int16_t value) noexcept { b_ = value; }
+    void flush() { display_.flush(); }
+    void print(char c) { display_.print(c); }
+    [[nodiscard]] bool available() noexcept { return true; }
+    [[nodiscard]] bool availableForWriting() noexcept { return display_.availableForWrite(); }
+    uint8_t read8(Address address) noexcept override {
+        return 0;
+    }
+    void write8(Address address, uint8_t value) noexcept override { }
+    uint16_t read16(Address address) noexcept override {
+        switch (address) {
+#define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
+                X(Available) : return available();
+                X(AvailableForWrite) : return availableForWriting();
+                X(Command) : return static_cast<uint16_t>(getCommand());
+                X(X) : return getX();
+                X(Y) : return getY();
+                X(W) : return getW();
+                X(H) : return getH();
+                X(Radius) : return getRadius();
+                X(Color) : return getColor();
+                X(X0) : return getX0();
+                X(Y0) : return getY0();
+                X(X1) : return getX1();
+                X(Y1) : return getY1();
+                X(X2) : return getX2();
+                X(Y2) : return getY2();
+                X(R) : return getRed();
+                X(G) : return getGreen();
+                X(B) : return getBlue();
+                X(Doorbell) : return invoke(0);
+                X(Backlight) : return backlightStatus_;
+                X(BacklightFrequency) : return backlightFrequency_;
+                X(ButtonsLower) : return buttonsCache_ & 0xFFFF;
+                X(ButtonsUpper) : return (buttonsCache_ >> 16) & 0xFFFF;
+#undef X
+            default: return 0;
+        }
+    }
+    void write16(Address address, uint16_t value) noexcept override {
+        switch (address) {
+#define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
+            X(Command) :
+                setCommand(static_cast<Opcodes>(value));
+                break;
+            X(X) : setX(static_cast<int16_t>(value)); break;
+            X(Y) : setY(static_cast<int16_t>(value)); break;
+            X(W) : setW(static_cast<int16_t>(value)); break;
+            X(H) : setH(static_cast<int16_t>(value)); break;
+            X(Radius) : setRadius(static_cast<int16_t>(value)); break;
+            X(Color) : setColor(value); break;
+            X(X0) : setX0(static_cast<int16_t>(value)); break;
+            X(Y0) : setY0(static_cast<int16_t>(value)); break;
+            X(X1) : setX1(static_cast<int16_t>(value)); break;
+            X(Y1) : setY1(static_cast<int16_t>(value)); break;
+            X(X2) : setX2(static_cast<int16_t>(value)); break;
+            X(Y2) : setY2(static_cast<int16_t>(value)); break;
+            X(R) : setR(static_cast<int16_t>(value)); break;
+            X(G) : setG(static_cast<int16_t>(value)); break;
+            X(B) : setB(static_cast<int16_t>(value)); break;
+            X(Doorbell) :
+                resultLower_ = invoke(value);
+                break;
+            X(Backlight) :
+                backlightStatus_ = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
+                ss.setBacklight(backlightStatus_);
+                break;
+            X(BacklightFrequency) :
+                backlightFrequency_ = value;
+                ss.setBacklightFreq(backlightFrequency_);
+                break;
+            X(ButtonsQuery):
+                buttonsCache_ = ss.readButtons();
+                break;
+#undef X
+            default: break;
+        }
+    }
+    inline void fillScreen(uint16_t value) noexcept { display_.fillScreen(value); }
+    inline void setCursor(int16_t x, int16_t y) noexcept { display_.setCursor(x, y); }
+    inline void setTextColor(uint16_t value) noexcept { display_.setTextColor(value); }
+    inline void setTextSize(uint16_t size) noexcept { display_.setTextSize(size); }
+    template<typename T, typename ... Args>
+    inline void println(T msg, Args&& ... args) noexcept {
+        display_.println(msg, args...);
+    }
+    void
+    begin() noexcept override {
+        Serial.println(F("Setting up the seesaw"));
+        if (!ss.begin()) {
+            signalHaltState(F("NO SEESAW"));
+        }
+        Serial.println(F("seesaw started"));
+        Serial.print(F("Version: "));
+        Serial.println(ss.getVersion(), HEX);
+        ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
+        ss.tftReset();
+        display_.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
+        ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
+        Serial.println(F("TFT OK!"));
+        display_.fillScreen(ST77XX_CYAN);
+        Serial.println(F("Screen should have cyan in it!"));
+        delay(100);
+        tftSetup = true;
+        display_.fillScreen(ST77XX_BLACK);
+        display_.setCursor(0, 0);
+        display_.setTextColor(ST77XX_WHITE);
+        display_.setTextSize(3);
+        display_.println(F("i960Sx!"));
+    }
+private:
+    Adafruit_ST7735 display_;
+    Opcodes command_;
+    int16_t x_ = 0;
+    int16_t y_ = 0;
+    int16_t w_ = 0;
+    int16_t h_ = 0;
+    int16_t radius_ = 0;
+    uint16_t color_ = 0;
+    uint16_t bgcolor_ = 0;
+    int16_t x0_ = 0;
+    int16_t y0_ = 0;
+    int16_t x1_ = 0;
+    int16_t y1_ = 0;
+    int16_t x2_ = 0;
+    int16_t y2_ = 0;
+    int16_t r_ = 0;
+    int16_t g_ = 0;
+    int16_t b_ = 0;
+    uint16_t resultLower_ = 0;
+    uint16_t resultUpper_ = 0;
+    uint16_t backlightStatus_ = TFTSHIELD_BACKLIGHT_ON;
+    uint16_t backlightFrequency_ = 0;
+    uint32_t buttonsCache_ = 0;
+    Adafruit_TFTShield18 ss;
+
+};
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
+TFTShieldThing displayCommandSet(0x200);
 RAMThing ram;
 ROMThing rom;
 CPUInternalMemorySpace internalMemorySpaceSink;
@@ -762,6 +855,7 @@ MemoryThing* things[] {
         &theLed,
         &portZThing,
         &theConsole,
+        &displayCommandSet,
         &internalMemorySpaceSink,
 };
 
@@ -977,44 +1071,15 @@ constexpr auto computeAddressStart(Address start, Address size, Address count) n
 // we have access to 12 Winbond Flash Modules, which hold onto common program code, This gives us access to 96 megabytes of Flash.
 // At this point it is a massive pain in the ass to program all these devices but who cares
 
-
-void setupSDCard() {
+void setupPeripherals() {
+    Serial.println(F("Setting up peripherals..."));
+    displayCommandSet.begin();
+    internalMemorySpaceSink.begin();
     if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
         signalHaltState(F("SD CARD INIT FAILed"));
     }
     rom.begin();
     ram.begin();
-
-    // the sd card is on a separate SPI Bus in some cases
-}
-void setupTFTShield() {
-    Serial.println(F("Setting up the seesaw"));
-    if (!ss.begin()) {
-        signalHaltState(F("NO SEESAW"));
-    }
-    Serial.println(F("seesaw started"));
-    Serial.print(F("Version: "));
-    Serial.println(ss.getVersion(), HEX);
-    ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
-    ss.tftReset();
-    tft.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
-    ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
-    Serial.println(F("TFT OK!"));
-    tft.fillScreen(ST77XX_CYAN);
-    Serial.println(F("Screen should have cyan in it!"));
-    delay(100);
-    tftSetup = true;
-    tft.fillScreen(ST77XX_BLACK);
-    tft.setCursor(0, 0);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setTextSize(3);
-    tft.println(F("i960Sx!"));
-}
-void setupPeripherals() {
-    Serial.println(F("Setting up peripherals..."));
-    setupTFTShield();
-    internalMemorySpaceSink.begin();
-    setupSDCard();
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
@@ -1068,10 +1133,10 @@ void loop() {
 void enteringChecksumFailure() noexcept {
     auto msg = F("CHECKSUM FAILURE");
     if (tftSetup) {
-        tft.fillScreen(ST77XX_RED);
-        tft.setCursor(0, 0);
-        tft.setTextSize(2);
-        tft.println(msg);
+        displayCommandSet.fillScreen(ST77XX_RED);
+        displayCommandSet.setCursor(0, 0);
+        displayCommandSet.setTextSize(2);
+        displayCommandSet.println(msg);
     }
 #if 0
     else if (oledDisplaySetup) {
@@ -1083,6 +1148,28 @@ void enteringChecksumFailure() noexcept {
     }
 #endif
     Serial.println(msg);
+}
+template<typename T>
+[[noreturn]] void signalHaltState(T haltMsg) {
+    if (tftSetup) {
+        displayCommandSet.fillScreen(ST77XX_RED);
+        displayCommandSet.setCursor(0,0);
+        displayCommandSet.setTextSize(1);
+        displayCommandSet.println(haltMsg);
+    }
+#if 0
+    else if (oledDisplaySetup) {
+        display.clearDisplay();
+        display.display();
+        display.setCursor(0,0);
+        display.println(haltMsg);
+        display.display();
+    }
+#endif
+    Serial.println(haltMsg);
+    while(true) {
+        delay(1000);
+    }
 }
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
