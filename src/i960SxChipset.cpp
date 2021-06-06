@@ -351,11 +351,15 @@ public:
         // do nothing
     }
     void write16(Address offset, uint16_t value) noexcept override {
+        if constexpr (displayMemoryReadsAndWrites) {
+            Serial.print(F("Write 0x"));
+            Serial.print(value, HEX);
+            Serial.print(F(" to IO Offset 0x"));
+            Serial.println(offset, HEX);
+        }
         switch (offset) {
             case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t):
                 Serial.write(static_cast<char>(value));
-                Serial.flush();
-                break;
             case static_cast<uint32_t>(Registers::Flush) * sizeof(uint16_t):
                 Serial.flush();
                 break;
