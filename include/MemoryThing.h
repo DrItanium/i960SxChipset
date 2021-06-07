@@ -38,8 +38,8 @@ public:
      */
     explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 1) { }
     virtual ~MemoryThing() = default;
-    [[nodiscard]] virtual uint8_t read8(Address address) noexcept = 0;
-    [[nodiscard]] virtual uint16_t read16(Address address) noexcept = 0;
+    [[nodiscard]] virtual uint8_t read8(Address address) noexcept { return 0; }
+    [[nodiscard]] virtual uint16_t read16(Address address) noexcept { return 0; }
     [[nodiscard]] virtual bool respondsTo(Address address) const noexcept { return base_ <= address && address < end_; }
     [[nodiscard]] bool respondsTo(Address address, LoadStoreStyle style) const noexcept {
         switch (style) {
@@ -56,8 +56,8 @@ public:
 
         }
     }
-    virtual void write8(Address address, uint8_t value) noexcept = 0;
-    virtual void write16(Address address, uint16_t value) noexcept = 0;
+    virtual void write8(Address address, uint8_t value) noexcept { }
+    virtual void write16(Address address, uint16_t value) noexcept { }
     [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return base_; }
     [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
     [[nodiscard]] virtual Address makeAddressRelative(Address input) const noexcept { return input - base_; }

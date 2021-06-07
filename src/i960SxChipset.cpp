@@ -52,7 +52,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DependentFalse.h"
 #include "MemoryThing.h"
 
-bool tftSetup = false;
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
@@ -84,16 +83,10 @@ public:
 private:
     static void
     writeLed(uint8_t value) noexcept {
-        if constexpr (displayMemoryReadsAndWrites) {
-            Serial.println(F("LED WRITE!"));
-        }
         digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
     }
     static uint8_t
     readLed() noexcept {
-        if constexpr (displayMemoryReadsAndWrites) {
-            Serial.println(F("LED READ!"));
-        }
         return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
     }
 };
@@ -124,10 +117,6 @@ public:
                 return 0;
         }
     }
-    [[nodiscard]] uint16_t read16(Address offset) noexcept override {
-        // do nothing at this point as it doesn't make sense!
-        return 0;
-    }
     void write8(Address offset, uint8_t value) noexcept override {
         switch (static_cast<Registers>(offset)) {
             case Registers::GPIO:
@@ -145,9 +134,6 @@ public:
             default:
                 break;
         }
-    }
-    void write16(Address offset, uint16_t value) noexcept override {
-        // 16-bit writes are ignored
     }
 };
 
@@ -292,10 +278,6 @@ public:
         theBootROM_.seek(offset);
         return static_cast<uint8_t>(theBootROM_.read());
     }
-    void
-    write8(Address offset, uint8_t value) noexcept override {
-        // disable
-    }
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
         if constexpr (displayMemoryReadsAndWrites)  {
@@ -311,10 +293,6 @@ public:
             Serial.println(result, HEX);
         }
         return result;
-    }
-    void
-    write16(Address offset, uint16_t value) noexcept override {
-        // disable
     }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
@@ -356,10 +334,6 @@ public:
     respondsTo(Address address) const noexcept override {
         return address > 0xFF00'0000;
     }
-    uint8_t read8(Address address) noexcept override { return 0; }
-    uint16_t read16(Address address) noexcept override { return 0; }
-    void write8(Address address, uint8_t value) noexcept override { }
-    void write16(Address address, uint16_t value) noexcept override { }
 };
 class TFTShieldThing : public IOSpaceThing {
 public:
@@ -547,10 +521,6 @@ public:
     void print(char c) { display_.print(c); }
     [[nodiscard]] bool available() noexcept { return true; }
     [[nodiscard]] bool availableForWriting() noexcept { return display_.availableForWrite(); }
-    uint8_t read8(Address address) noexcept override {
-        return 0;
-    }
-    void write8(Address address, uint8_t value) noexcept override { }
     uint16_t read16(Address address) noexcept override {
         switch (address) {
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
@@ -645,7 +615,6 @@ public:
         display_.fillScreen(ST77XX_CYAN);
         Serial.println(F("Screen should have cyan in it!"));
         delay(100);
-        tftSetup = true;
         display_.fillScreen(ST77XX_BLACK);
         display_.setCursor(0, 0);
         display_.setTextColor(ST77XX_WHITE);
@@ -699,12 +668,6 @@ MemoryThing* things[] {
 
 void
 performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("Write 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" to 0x"));
-        Serial.println(address, HEX);
-    }
     for (auto* currentThing : things) {
         if (!currentThing) {
             continue;
@@ -718,10 +681,6 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
 
 uint16_t
 performRead(Address address, LoadStoreStyle style) noexcept {
-    if constexpr (displayMemoryReadsAndWrites) {
-        Serial.print(F("Read from 0x"));
-        Serial.println(address, HEX);
-    }
     for (auto* currentThing : things) {
         if (!currentThing) {
             continue;
@@ -887,7 +846,6 @@ void doRecoveryState() noexcept {
 // ----------------------------------------------------------------
 
 void setupBusStateMachine() noexcept {
-    Serial.print(F("Setting up bus state machine..."));
     fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
     fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
@@ -898,16 +856,7 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
     fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
-    Serial.println(F("done"));
 }
-//State tw(nullptr, nullptr, nullptr); // at this point, this will be synthetic
-//as we have no concept of waiting inside of the mcu
-
-constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
-    return start + (size * count);
-}
-// we have access to 12 Winbond Flash Modules, which hold onto common program code, This gives us access to 96 megabytes of Flash.
-// At this point it is a massive pain in the ass to program all these devices but who cares
 
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
@@ -974,22 +923,18 @@ void loop() {
 
 void enteringChecksumFailure() noexcept {
     auto msg = F("CHECKSUM FAILURE");
-    if (tftSetup) {
-        displayCommandSet.fillScreen(ST77XX_RED);
-        displayCommandSet.setCursor(0, 0);
-        displayCommandSet.setTextSize(2);
-        displayCommandSet.println(msg);
-    }
+    displayCommandSet.fillScreen(ST77XX_RED);
+    displayCommandSet.setCursor(0, 0);
+    displayCommandSet.setTextSize(2);
+    displayCommandSet.println(msg);
     Serial.println(msg);
 }
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
-    if (tftSetup) {
-        displayCommandSet.fillScreen(ST77XX_RED);
-        displayCommandSet.setCursor(0,0);
-        displayCommandSet.setTextSize(1);
-        displayCommandSet.println(haltMsg);
-    }
+    displayCommandSet.fillScreen(ST77XX_RED);
+    displayCommandSet.setCursor(0,0);
+    displayCommandSet.setTextSize(1);
+    displayCommandSet.println(haltMsg);
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
