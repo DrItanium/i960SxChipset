@@ -339,6 +339,7 @@ public:
         H,
         Radius,
         Color,
+        BGColor,
         X0,
         Y0,
         X1,
@@ -523,6 +524,7 @@ public:
                 X(H) : return getH();
                 X(Radius) : return getRadius();
                 X(Color) : return getColor();
+                X(BGColor) : return getBackgroundColor();
                 X(X0) : return getX0();
                 X(Y0) : return getY0();
                 X(X1) : return getX1();
@@ -553,6 +555,7 @@ public:
             X(H) : setH(static_cast<int16_t>(value)); break;
             X(Radius) : setRadius(static_cast<int16_t>(value)); break;
             X(Color) : setColor(value); break;
+            X(BGColor) : setBackgroundColor(value); break;
             X(X0) : setX0(static_cast<int16_t>(value)); break;
             X(Y0) : setY0(static_cast<int16_t>(value)); break;
             X(X1) : setX1(static_cast<int16_t>(value)); break;
@@ -921,11 +924,7 @@ void enteringChecksumFailure() noexcept {
 }
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
-    displayCommandSet.fillScreen(ST77XX_RED);
-    displayCommandSet.setCursor(0,0);
-    displayCommandSet.setTextSize(1);
-    displayCommandSet.println(haltMsg);
-    Serial.println(haltMsg);
+    enteringChecksumFailure();
     while(true) {
         delay(1000);
     }
