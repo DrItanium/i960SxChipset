@@ -333,6 +333,7 @@ public:
         AvailableForWrite, // 2 byte
         IO, // 2 bytes
         BufferDoorbell, // 2 bytes
+        BufferSize, // 2 bytes
         BufferLength, // 2 bytes
         BufStart, // 2 byte
     };
@@ -359,6 +360,8 @@ public:
                 return static_cast<uint16_t>(Serial.readBytes(buf_, bufCount_));
             case static_cast<uint32_t>(Registers::BufferLength) * sizeof(uint16_t):
                 return static_cast<uint16_t>(bufCount_);
+            case static_cast<uint32_t>(Registers::BufferSize) * sizeof(uint16_t):
+                return static_cast<uint16_t>(BufferSize);
             default:
                 return 0;
         }
