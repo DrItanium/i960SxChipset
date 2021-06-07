@@ -56,19 +56,6 @@ bool tftSetup = false;
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
-template<typename T>
-constexpr Address computeIOAddress(Address base, Address index) noexcept {
-    return base + (sizeof(T) * index);
-}
-constexpr Address shortWordMemoryAddress(Address base, Address index) noexcept {
-    return computeIOAddress<uint16_t>(base, index);
-}
-constexpr Address wordMemoryAddress(Address base, Address index) noexcept {
-    return computeIOAddress<uint32_t>(base, index);
-}
-constexpr Address longWordMemoryAddress(Address base, Address index) noexcept {
-    return computeIOAddress<uint64_t>(base, index);
-}
 constexpr auto FlashStartingAddress = 0x0000'0000;
 constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
 // the upper 2G is for non-program related stuff, according to my memory map information, we support a maximum of 512 Megs of RAM
@@ -81,166 +68,6 @@ constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
 constexpr Address BaseMCUPeripheralsBaseAddress = 0;
 constexpr Address BuiltinLedOffsetBaseAddress = BaseMCUPeripheralsBaseAddress;
 constexpr Address BuiltinPortZBaseAddress = BaseMCUPeripheralsBaseAddress + 0x10;
-/**
- * @brief Describes the Addresses associated with the port-z mmio registers
- */
-enum class PortZAddresses : uint32_t {
-    GPIO, // one byte wide
-    Direction, // one byte wide
-    Polarity,
-    Pullup,
-    Unused0,
-    Unused1,
-    Unused2,
-    Unused3,
-    Unused4,
-    Unused5,
-    Unused6,
-    Unused7,
-    Unused8,
-    Unused9,
-    Unused10,
-    Unused11,
-    Count,
-};
-static_assert(static_cast<int>(PortZAddresses::Count) == 0x10, "PortZRegister space must be exactly 16 entries wide!");
-constexpr Address computePortZAddresses(PortZAddresses offset) noexcept {
-    return BuiltinPortZBaseAddress + static_cast<uint32_t>(offset);
-}
-constexpr Address ConsoleOffsetBaseAddress = BaseMCUPeripheralsBaseAddress + 0x20;
-enum class ConsoleAddresses : uint32_t {
-    Flush,
-    IO,
-    Available,
-    AvailableForWrite,
-};
-constexpr Address computeConsoleAddress(ConsoleAddresses offset) noexcept {
-    return shortWordMemoryAddress(ConsoleOffsetBaseAddress, static_cast<uint32_t>(offset));
-}
-constexpr Address DisplayBaseOffset = 0x0200;
-constexpr Address TFTShieldFeaturesBaseOffset = 0x0300;
-
-
-
-// with the display I want to expose a 16 color per pixel interface. Each specific function needs to be exposed
-// set a single pixel in the display, storage area
-// we map these pixel values to specific storage cells on the microcontroller
-// A four address is used to act as a door bell!
-// storage area for the display + a doorbell address as well
-// the command is setup to send off to the display
-
-enum class TFTShieldAddresses : uint32_t {
-    // display tweakables
-    /// @todo implement constexpr offset calculation
-};
-
-constexpr Address tftShieldAddress(TFTShieldAddresses address) noexcept {
-    return shortWordMemoryAddress(TFTShieldFeaturesBaseOffset, static_cast<Address>(address));
-}
-/// The base address which describes the different memory map aspects, it is accessible from the i960's memory map
-#if 0
-constexpr Address MemoryMapBase = 0xFD00'0000;
-union MemoryMapEntry {
-    constexpr MemoryMapEntry(Address value) : value_(value) {}
-    Address value_;
-    uint16_t shorts[2];
-};
-enum class MemoryMapAddresses : uint32_t {
-    ProgramSpaceStart,
-    ProgramSpaceEnd,
-    RamSpaceSize,
-    RamSpaceStart,
-    RamSpaceEnd,
-    IOSpaceSize,
-    IOSpaceStart,
-    IOSpaceEnd,
-    BuiltinLEDAddress,
-    ConsoleFlushRegisterAddress,
-    ConsoleIOPort,
-    ConsoleAvailablePort,
-    ConsoleAvailableForWritePort,
-    PortZGPIORegister,
-    PortZDirectionRegister,
-    PortZPolarityRegister,
-    PortZPullupRegister,
-    DisplayFlush,
-    DisplayIO,
-    DisplayAvailable,
-    DisplayAvailableForWrite,
-    DisplayCommand,
-    DisplayX,
-    DisplayY,
-    DisplayW,
-    DisplayH,
-    DisplayRadius,
-    DisplayColor,
-    DisplayX0,
-    DisplayY0,
-    DisplayX1,
-    DisplayY1,
-    DisplayX2,
-    DisplayY2,
-    DisplayR,
-    DisplayG,
-    DisplayB,
-    DisplayDoorbell,
-    DisplayBacklight,
-    DisplayBacklightFrequency,
-    DisplayButtonsLower,
-    DisplayButtonsUpper,
-};
-constexpr MemoryMapEntry FixedMemoryMap[] {
-        0x0000'0000, RamStartingAddress, // Program Space Range [start, end)
-        MaxRamSize, RamStartingAddress, RamEndingAddress,  // ram data: size, start, end values
-        0x100'0000, IOSpaceBaseAddress, 0xFF00'0000, // IO Space [Start, End)
-        BuiltinLedOffsetBaseAddress, // address of the builtin-led
-        // Console addresses
-        computeConsoleAddress(ConsoleAddresses::Flush),
-        computeConsoleAddress(ConsoleAddresses::IO),
-        computeConsoleAddress(ConsoleAddresses::Available),
-        computeConsoleAddress(ConsoleAddresses::AvailableForWrite),
-        // Port z addresses
-        computePortZAddresses(PortZAddresses::GPIO),
-        computePortZAddresses(PortZAddresses::Direction),
-        computePortZAddresses(PortZAddresses::Polarity),
-        computePortZAddresses(PortZAddresses::Pullup),
-        // display command setup
-        tftShieldAddress(TFTShieldAddresses::Flush),
-        tftShieldAddress(TFTShieldAddresses::IO),
-        tftShieldAddress(TFTShieldAddresses::Available),
-        tftShieldAddress(TFTShieldAddresses::AvailableForWrite),
-        tftShieldAddress(TFTShieldAddresses::Command),
-        tftShieldAddress(TFTShieldAddresses::X),
-        tftShieldAddress(TFTShieldAddresses::Y),
-        tftShieldAddress(TFTShieldAddresses::W),
-        tftShieldAddress(TFTShieldAddresses::H),
-        tftShieldAddress(TFTShieldAddresses::Radius),
-        tftShieldAddress(TFTShieldAddresses::Color),
-        tftShieldAddress(TFTShieldAddresses::X0),
-        tftShieldAddress(TFTShieldAddresses::Y0),
-        tftShieldAddress(TFTShieldAddresses::X1),
-        tftShieldAddress(TFTShieldAddresses::Y1),
-        tftShieldAddress(TFTShieldAddresses::X2),
-        tftShieldAddress(TFTShieldAddresses::Y2),
-        tftShieldAddress(TFTShieldAddresses::R),
-        tftShieldAddress(TFTShieldAddresses::G),
-        tftShieldAddress(TFTShieldAddresses::B),
-        tftShieldAddress(TFTShieldAddresses::Doorbell),
-        tftShieldAddress(TFTShieldAddresses::Backlight),
-        tftShieldAddress(TFTShieldAddresses::BacklightFrequency),
-        tftShieldAddress(TFTShieldAddresses::ButtonsLower),
-        tftShieldAddress(TFTShieldAddresses::ButtonsUpper),
-};
-
-constexpr MemoryMapEntry getMemoryMapEntry(MemoryMapAddresses address) noexcept {
-    return FixedMemoryMap[static_cast<uint32_t>(address)];
-}
-constexpr Address memoryMapAddress(MemoryMapAddresses address) noexcept {
-    return getMemoryMapEntry(address).value_;
-}
-#endif
-
-bool oledDisplaySetup = false;
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg);
 // ----------------------------------------------------------------
@@ -565,10 +392,6 @@ public:
         ButtonsQuery,
 
     };
-    constexpr Address computeProperOffset(Registers target) noexcept {
-        // all registers are two bytes wide so we just need to expand them out
-        return static_cast<Address>(static_cast<Address>(target) * sizeof(uint16_t));
-    }
     enum class Opcodes : uint16_t {
         None = 0,
         SetRotation,
@@ -1157,15 +980,6 @@ void enteringChecksumFailure() noexcept {
         displayCommandSet.setTextSize(2);
         displayCommandSet.println(msg);
     }
-#if 0
-    else if (oledDisplaySetup) {
-        display.clearDisplay();
-        display.display();
-        display.setCursor(0, 0);
-        display.println(msg);
-        display.display();
-    }
-#endif
     Serial.println(msg);
 }
 template<typename T>
@@ -1176,15 +990,6 @@ template<typename T>
         displayCommandSet.setTextSize(1);
         displayCommandSet.println(haltMsg);
     }
-#if 0
-    else if (oledDisplaySetup) {
-        display.clearDisplay();
-        display.display();
-        display.setCursor(0,0);
-        display.println(haltMsg);
-        display.display();
-    }
-#endif
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
