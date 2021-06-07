@@ -145,12 +145,12 @@ class MCP23x17 {
         constexpr auto getOLATAAddress()    const noexcept { return chooseAddress<0x14, 0x0A>(); }
         constexpr auto getOLATBAddress()    const noexcept { return chooseAddress<0x15, 0x1A>(); }
     public:
-        constexpr bool registersAreInSeparateBanks() const noexcept { return !_registersAreSequential; }
-        constexpr bool registersAreSequential() const noexcept { return _registersAreSequential; }
-        constexpr bool interruptPinsAreActiveLow() const noexcept { return _polarityIsActiveLow; }
-        constexpr bool interruptPinsAreActiveHigh() const noexcept { return !_polarityIsActiveLow; }
-        constexpr bool hardwareAddressEnabled() const noexcept { return _hardwareAddressPinsEnabled; }
-        constexpr bool hardwareAddressDisabled() const noexcept { return !_hardwareAddressPinsEnabled; }
+        [[nodiscard]] constexpr bool registersAreInSeparateBanks() const noexcept { return !_registersAreSequential; }
+        [[nodiscard]] constexpr bool registersAreSequential() const noexcept { return _registersAreSequential; }
+        [[nodiscard]] constexpr bool interruptPinsAreActiveLow() const noexcept { return _polarityIsActiveLow; }
+        [[nodiscard]] constexpr bool interruptPinsAreActiveHigh() const noexcept { return !_polarityIsActiveLow; }
+        [[nodiscard]] constexpr bool hardwareAddressEnabled() const noexcept { return _hardwareAddressPinsEnabled; }
+        [[nodiscard]] constexpr bool hardwareAddressDisabled() const noexcept { return !_hardwareAddressPinsEnabled; }
         void refreshIOCon() noexcept {
             auto result = getIOCon();
             _registersAreSequential = ((result & 0b1000'0000) == 0);
@@ -343,17 +343,17 @@ class MCP23S17 : public MCP23x17<address, resetPin> {
 } // end namespace bonuspin
 
 template<byte address, int resetPin = -1>
-void digitalWrite(uint8_t pin, uint8_t value, bonuspin::MCP23x17<address, resetPin>& mcp) noexcept {
+inline void digitalWrite(uint8_t pin, uint8_t value, bonuspin::MCP23x17<address, resetPin>& mcp) noexcept {
     mcp.digitalWrite(pin, value);
 }
 
 template<byte address, int resetPin = -1>
-auto digitalRead(uint8_t pin, bonuspin::MCP23x17<address, resetPin>& mcp) noexcept {
+inline auto digitalRead(uint8_t pin, bonuspin::MCP23x17<address, resetPin>& mcp) noexcept {
     return mcp.digitalRead(pin);
 }
 
 template<byte address, int resetPin = -1>
-void pinMode(uint8_t pin, decltype(INPUT) kind, bonuspin::MCP23x17<address, resetPin>& mcp) noexcept {
+inline void pinMode(uint8_t pin, decltype(INPUT) kind, bonuspin::MCP23x17<address, resetPin>& mcp) noexcept {
     mcp.pinMode(pin, kind);
 }
 
