@@ -33,23 +33,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <libbonuspin.h>
 #include <Fsm.h>
 #include <SD.h>
-#include <Wire.h>
 
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
 #include "Pinout.h"
 
-#include <Adafruit_LSM6DSOX.h>
-#include <Adafruit_LIS3MDL.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_ADT7410.h>
-#include <Adafruit_ADXL343.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 
-#include "Pinout.h"
 #include "ProcessorSerializer.h"
-#include "DependentFalse.h"
 #include "MemoryThing.h"
 
 /// Set to false to prevent the console from displaying every single read and write
