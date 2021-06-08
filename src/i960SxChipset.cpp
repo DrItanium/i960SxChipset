@@ -50,13 +50,14 @@ union MemoryElement {
 /**
  * @brief Describes a single cache line which associates an address with 16 bytes of storage
  */
+template<uint32_t size = 16>
 struct CacheLine {
 public:
     [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
         return (address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize));
     }
     [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
-        auto base = targetAddress & 0b1111;
+        auto base = computeCacheByteOffset(targetAddress);
         auto componentId = base >> 1;
         auto offsetId = base & 1;
         return components_[componentId].bytes[offsetId];
@@ -65,22 +66,35 @@ public:
     [[nodiscard]] constexpr auto cacheDirty() const noexcept { return dirty_; }
     void setByte(uint32_t address, uint8_t value) noexcept {
         dirty_ = true;
-        auto base = address & 0b1111;
-        auto componentId = base >> 1;
+        auto base = computeCacheByteOffset(address);
+        auto componentId = computeCacheWordOffset(address);
         auto offsetId = base & 1;
         components_[componentId].bytes[offsetId] = value;
     }
     [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
-        auto base = (targetAddress & 0b1110) >> 1;
-        return components_[base].wordValue;
+        return components_[computeCacheWordOffset(targetAddress)].wordValue;
     }
     void setWord(uint32_t targetAddress, uint16_t value) noexcept {
         dirty_ = true;
-        auto base = (targetAddress & 0b1110) >> 1;
-        components_[base].wordValue = value;
+        components_[computeCacheWordOffset(targetAddress)].wordValue = value;
     }
-    static constexpr auto CacheLineSize = 256;
+    [[nodiscard]] constexpr auto getCacheLineSize() const noexcept { return CacheLineSize; }
+    static constexpr auto CacheLineSize = size;
     static constexpr auto ComponentSize = CacheLineSize / sizeof(MemoryElement);
+    static constexpr auto CacheByteMask = CacheLineSize - 1;
+    static_assert((CacheLineSize == 16 ||
+                   CacheLineSize == 32 ||
+                   CacheLineSize == 64 ||
+                   CacheLineSize == 128 ||
+                   CacheLineSize == 256 ||
+                   CacheLineSize == 512 ||
+                   CacheLineSize == 1024), "CacheLineSize must be 16, 32, 64, 128, 256, 512, or 1024");
+    static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
+        return targetAddress & CacheByteMask;
+    }
+    static constexpr uint32_t computeCacheWordOffset(uint32_t targetAddress) noexcept {
+        return computeCacheByteOffset(targetAddress) >> 1;
+    }
     [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
     void reset(uint32_t address) noexcept {
         dirty_ = false;
@@ -310,6 +324,7 @@ public:
     static constexpr Address ROMStart = 0;
     static constexpr Address ROMEnd = 0x8000'0000;
     static constexpr Address ROMMask = ROMEnd - 1;
+    using ACacheLine = CacheLine<16>;
 public:
     ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd) { }
     ~ROMThing() override {
@@ -369,7 +384,7 @@ public:
         cacheBlock_.reset(address);
         theBootROM_.seek(address);
         uint8_t* buffer = reinterpret_cast<uint8_t*>(cacheBlock_.getMemoryBlock()) ;
-        theBootROM_.read(buffer, CacheLine::CacheLineSize);
+        theBootROM_.read(buffer, cacheBlock_.getCacheLineSize());
     }
     void
     begin() noexcept override {
@@ -393,7 +408,7 @@ private:
 // boot rom and sd card loading stuff
     File theBootROM_;
     uint32_t size_ = 0;
-    CacheLine cacheBlock_;
+    ACacheLine cacheBlock_;
 };
 
 
