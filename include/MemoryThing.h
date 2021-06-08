@@ -100,9 +100,24 @@ public:
                 break;
         }
     }
-    virtual void begin() noexcept {
-
-    }
+    /**
+     * @brief Called during startup to activate any extra functionality
+     */
+    virtual void begin() noexcept { }
+    /**
+     * @brief Write a buffer to the given thing mapped into memory, this is used by the DataCache to perform cache replacement
+     * @param baseAddress the starting address where data will be written to within the memory thing
+     * @param buffer the buffer to write to memory
+     * @param size the number of elements to write
+     */
+    virtual void write(uint32_t baseAddress, byte* buffer, size_t size) { }
+    /**
+     * @brief Read into a provided buffer from the mapped memory thing, this is used by the DataCache to perform cache replacement
+     * @param baseAddress the starting address where data will be read from
+     * @param buffer the buffer to store the read operation into
+     * @param size the number of bytes to read from the memory thing into the buffer
+     */
+    virtual void read(uint32_t baseAddress, byte* buffer, size_t size) { }
 private:
     Address base_;
     Address end_;

@@ -54,7 +54,7 @@ template<uint32_t size = 16>
 struct CacheLine {
 public:
     [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
-        return (address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize));
+        return valid_ && (address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize));
     }
     [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
         auto base = computeCacheByteOffset(targetAddress);
@@ -99,10 +99,19 @@ public:
         return computeCacheByteOffset(targetAddress) >> 1;
     }
     [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
-    void reset(uint32_t address) noexcept {
+    void reset(uint32_t address, MemoryThing* thing) noexcept {
+        auto* buf = reinterpret_cast<byte*>(components_);
+        if (valid_) {
+            if (dirty_) {
+                thing->write(address_, buf, CacheLineSize);
+            }
+        }
         dirty_ = false;
+        valid_ = true;
         address_ = address;
+        thing->read(address_, buf, CacheLineSize);
     }
+    [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
     /**
      * @brief The base address of the cache line
@@ -113,7 +122,96 @@ private:
      */
     MemoryElement components_[ComponentSize];
     bool dirty_ = false;
+    bool valid_ = false;
     static_assert(sizeof(components_) == CacheLineSize );
+};
+template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
+class DataCache {
+public:
+    using ASingleCacheLine = CacheLine<cacheLineSize>;
+    static constexpr auto NumberOfCacheLines = numLines;
+    static constexpr auto NumberOfCacheLinesMask = numLines - 1;
+    static constexpr auto CacheLineSize = cacheLineSize;
+    static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
+    static_assert(DataCacheSize < 4096, "Overall cache size must be less than 4k of sram");
+    static_assert(NumberOfCacheLines == 16 ||
+                  NumberOfCacheLines == 32 ||
+                  NumberOfCacheLines == 64 ||
+                  NumberOfCacheLines == 128 ||
+                  NumberOfCacheLines == 256);
+    explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
+    [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
+        for (const ASingleCacheLine & line : lines_) {
+            if (line.respondsTo(targetAddress)) {
+                // cache hit!
+               return line.getByte(targetAddress);
+            }
+        }
+        // cache miss
+        // need to replace a cache line
+        return cacheMiss(targetAddress).getByte(targetAddress);
+    }
+    [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
+        for (const ASingleCacheLine& line : lines_) {
+            if (line.respondsTo(targetAddress)) {
+                // cache hit!
+                return line.getWord(targetAddress);
+            }
+        }
+        // cache miss
+        // need to replace a cache line
+        return cacheMiss(targetAddress).getWord(targetAddress);
+    }
+    void setByte(uint32_t targetAddress, uint8_t value) noexcept {
+        for (ASingleCacheLine & line : lines_) {
+            if (line.respondsTo(targetAddress)) {
+                // cache hit!
+                line.setByte(targetAddress, value);
+                return;
+            }
+        }
+        // cache miss
+        // need to replace a cache line
+        cacheMiss(targetAddress).setByte(targetAddress, value);
+    }
+    void setWord(uint32_t targetAddress, uint16_t value) noexcept {
+        for (ASingleCacheLine& line : lines_) {
+            if (line.respondsTo(targetAddress)) {
+                // cache hit!
+                line.setWord(targetAddress, value);
+                return;
+            }
+        }
+        // cache miss
+        // need to replace a cache line
+        cacheMiss(targetAddress).setWord(targetAddress, value);
+    }
+private:
+    /**
+     * @brief Looks through the given lines and does a random replacement (like arm cortex R)
+     * @param targetAddress
+     * @return The line that was updated
+     */
+    ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
+        // use random number generation to do this
+        for (ASingleCacheLine& line : lines_) {
+            if (!line.isValid()) {
+                line.reset(targetAddress);
+                thing_->read(targetAddress,
+                             reinterpret_cast<byte*>(line.getMemoryBlock()),
+                             line.getCacheLineSize());
+                return line;
+            }
+        }
+        // we had no free elements so choose one to replace
+        auto targetCacheLine = rand() & NumberOfCacheLinesMask;
+        ASingleCacheLine& replacementLine = lines_[targetCacheLine];
+        replacementLine.reset(targetAddress);
+        return replacementLine;
+    }
+private:
+    MemoryThing* thing_ = nullptr;
+    ASingleCacheLine lines_[NumberOfCacheLines] = { 0 };
 };
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
@@ -743,7 +841,7 @@ PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 TFTShieldThing displayCommandSet(0x200);
 RAMThing ram;
-ROMThing<2048> rom;
+ROMThing<512> rom;
 CPUInternalMemorySpace internalMemorySpaceSink;
 // list of memory devices to walk through
 MemoryThing* things[] {
