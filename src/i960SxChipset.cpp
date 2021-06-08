@@ -133,7 +133,7 @@ public:
     static constexpr auto NumberOfCacheLinesMask = numLines - 1;
     static constexpr auto CacheLineSize = cacheLineSize;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
-    static_assert(DataCacheSize < 4096, "Overall cache size must be less than 4k of sram");
+    static_assert(DataCacheSize <= 4096, "Overall cache size must be less than or equal to 4k of sram");
     static_assert(NumberOfCacheLines == 16 ||
                   NumberOfCacheLines == 32 ||
                   NumberOfCacheLines == 64 ||
@@ -419,13 +419,12 @@ private:
     File theRAM_; // use an SDCard as ram for the time being
 };
 
-template<uint32_t cacheLineSize = 32>
+template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
 class ROMThing : public MemoryThing {
 public:
     static constexpr Address ROMStart = 0;
     static constexpr Address ROMEnd = 0x8000'0000;
     static constexpr Address ROMMask = ROMEnd - 1;
-    using ACacheLine = CacheLine<cacheLineSize>;
 public:
     ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd), theCache_(this) { }
     ~ROMThing() override {
@@ -464,6 +463,12 @@ public:
         return address < size_;
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("Accessing "));
+            Serial.print(size, DEC);
+            Serial.print(F(" bytes starting at 0x"));
+            Serial.println(baseAddress, HEX);
+        }
         theBootROM_.seek(baseAddress);
         theBootROM_.read(buffer, size);
     }
@@ -489,7 +494,7 @@ private:
 // boot rom and sd card loading stuff
     File theBootROM_;
     uint32_t size_ = 0;
-    DataCache<16, 32> theCache_;
+    DataCache<numCacheLines, cacheLineSize> theCache_;
 };
 
 
@@ -823,7 +828,7 @@ PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 TFTShieldThing displayCommandSet(0x200);
 RAMThing ram;
-ROMThing<512> rom;
+ROMThing<64,64> rom;
 CPUInternalMemorySpace internalMemorySpaceSink;
 // list of memory devices to walk through
 MemoryThing* things[] {
