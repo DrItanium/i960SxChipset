@@ -47,6 +47,56 @@ union MemoryElement {
     uint16_t wordValue;
     uint8_t bytes[sizeof(uint16_t)];
 };
+/**
+ * @brief Describes a single cache line which associates an address with 16 bytes of storage
+ */
+struct CacheLine {
+public:
+    [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
+        return (address_ <= targetAddress) && (targetAddress < (address_ + 16));
+    }
+    [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
+        auto base = targetAddress & 0b1111;
+        auto componentId = base >> 1;
+        auto offsetId = base & 1;
+        return components_[componentId].bytes[offsetId];
+    }
+    [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return address_; }
+    [[nodiscard]] constexpr auto cacheDirty() const noexcept { return dirty_; }
+    void setByte(uint32_t address, uint8_t value) noexcept {
+        dirty_ = true;
+        auto base = address & 0b1111;
+        auto componentId = base >> 1;
+        auto offsetId = base & 1;
+        components_[componentId].bytes[offsetId] = value;
+    }
+    [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
+        auto base = (targetAddress & 0b1110) >> 1;
+        return components_[base].wordValue;
+    }
+    void setWord(uint32_t targetAddress, uint16_t value) noexcept {
+        dirty_ = true;
+        auto base = (targetAddress & 0b1110) >> 1;
+        components_[base].wordValue = value;
+    }
+    static constexpr auto CacheLineSize = 16;
+    static constexpr auto ComponentSize = CacheLineSize / sizeof(MemoryElement);
+    [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
+    void reset(uint32_t address) noexcept {
+        dirty_ = false;
+        address_ = address;
+    }
+private:
+    /**
+     * @brief The base address of the cache line
+     */
+    uint32_t address_;
+    /**
+     * @brief The cache line contents itself
+     */
+    MemoryElement components_[ComponentSize];
+    bool dirty_ = false;
+};
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
@@ -269,9 +319,19 @@ public:
 
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
-        // okay cool beans, we can load from the boot rom
-        theBootROM_.seek(offset);
-        return static_cast<uint8_t>(theBootROM_.read());
+        if constexpr (displayMemoryReadsAndWrites)  {
+            Serial.print(F("\tAccessing address: 0x"));
+            Serial.println(offset, HEX);
+        }
+        if (!cacheBlock_.respondsTo(offset)) {
+            auto blockAddress = offset & (~0b1111);
+            if constexpr (displayMemoryReadsAndWrites) {
+                Serial.print(F("\t\tReset Cache Line to 0x"));
+                Serial.println(blockAddress, HEX);
+            }
+            resetCacheLine(blockAddress);
+        }
+        return cacheBlock_.getByte(offset);
     }
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
@@ -279,10 +339,17 @@ public:
             Serial.print(F("\tAccessing address: 0x"));
             Serial.println(offset, HEX);
         }
-        uint16_t result = 0;
+        auto blockAddress = offset & (~0b1111);
+        if (!cacheBlock_.respondsTo(offset)) {
+            if constexpr (displayMemoryReadsAndWrites) {
+                Serial.print(F("\t\tReset Cache Line to 0x"));
+                Serial.println(blockAddress, HEX);
+            }
+            resetCacheLine(blockAddress);
+        }
+        // instead of seeking from the sd card each time, access based off of the 16 byte cache
         // okay cool beans, we can load from the boot rom
-        theBootROM_.seek(offset);
-        theBootROM_.read(&result, 2);
+        auto result = cacheBlock_.getWord(offset);
         if constexpr (displayMemoryReadsAndWrites) {
             Serial.print(F("\tGot value: 0x"));
             Serial.println(result, HEX);
@@ -298,6 +365,13 @@ public:
         return address < size_;
     }
     void
+    resetCacheLine(uint32_t address) {
+        cacheBlock_.reset(address);
+        theBootROM_.seek(address);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(cacheBlock_.getMemoryBlock()) ;
+        theBootROM_.read(buffer, CacheLine::CacheLineSize);
+    }
+    void
     begin() noexcept override {
         if (!SD.exists("boot.rom")) {
             signalHaltState(F("NO BOOT.ROM!"));
@@ -310,6 +384,8 @@ public:
         } else if (size_ > 0x8000'0000) {
             signalHaltState(F("BOOT.ROM TOO LARGE")) ;
         }
+        // okay now setup the initial cache block
+        resetCacheLine(0);
     }
     [[nodiscard]] constexpr auto getROMSize() const noexcept { return size_; }
 
@@ -317,6 +393,7 @@ private:
 // boot rom and sd card loading stuff
     File theBootROM_;
     uint32_t size_ = 0;
+    CacheLine cacheBlock_;
 };
 
 
