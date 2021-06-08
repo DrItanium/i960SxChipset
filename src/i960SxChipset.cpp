@@ -88,7 +88,10 @@ public:
                    CacheLineSize == 128 ||
                    CacheLineSize == 256 ||
                    CacheLineSize == 512 ||
-                   CacheLineSize == 1024), "CacheLineSize must be 16, 32, 64, 128, 256, 512, or 1024");
+                   CacheLineSize == 1024 ||
+                   CacheLineSize == 2048 ||
+                   CacheLineSize == 4096 ||
+                   CacheLineSize == 8192), "CacheLineSize must be 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, or 8192");
     static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
         return targetAddress & CacheByteMask;
     }
@@ -110,9 +113,11 @@ private:
      */
     MemoryElement components_[ComponentSize];
     bool dirty_ = false;
+    static_assert(sizeof(components_) == CacheLineSize );
 };
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = true;
+constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayCacheLineUpdates = true;
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 constexpr auto FlashStartingAddress = 0x0000'0000;
 constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
@@ -319,12 +324,13 @@ private:
     File theRAM_; // use an SDCard as ram for the time being
 };
 
+template<uint32_t cacheLineSize = 32>
 class ROMThing : public MemoryThing {
 public:
     static constexpr Address ROMStart = 0;
     static constexpr Address ROMEnd = 0x8000'0000;
     static constexpr Address ROMMask = ROMEnd - 1;
-    using ACacheLine = CacheLine<16>;
+    using ACacheLine = CacheLine<cacheLineSize>;
 public:
     ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd) { }
     ~ROMThing() override {
@@ -339,12 +345,7 @@ public:
             Serial.println(offset, HEX);
         }
         if (!cacheBlock_.respondsTo(offset)) {
-            auto blockAddress = offset & (~0b1111);
-            if constexpr (displayMemoryReadsAndWrites) {
-                Serial.print(F("\t\tReset Cache Line to 0x"));
-                Serial.println(blockAddress, HEX);
-            }
-            resetCacheLine(blockAddress);
+            resetCacheLine(offset);
         }
         return cacheBlock_.getByte(offset);
     }
@@ -354,13 +355,8 @@ public:
             Serial.print(F("\tAccessing address: 0x"));
             Serial.println(offset, HEX);
         }
-        auto blockAddress = offset & (~0b1111);
         if (!cacheBlock_.respondsTo(offset)) {
-            if constexpr (displayMemoryReadsAndWrites) {
-                Serial.print(F("\t\tReset Cache Line to 0x"));
-                Serial.println(blockAddress, HEX);
-            }
-            resetCacheLine(blockAddress);
+            resetCacheLine(offset);
         }
         // instead of seeking from the sd card each time, access based off of the 16 byte cache
         // okay cool beans, we can load from the boot rom
@@ -380,9 +376,14 @@ public:
         return address < size_;
     }
     void
-    resetCacheLine(uint32_t address) {
-        cacheBlock_.reset(address);
-        theBootROM_.seek(address);
+    resetCacheLine(uint32_t offset) {
+        auto blockAddress = offset & (~ACacheLine::CacheByteMask);
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("\t\tReset Cache Line to 0x"));
+            Serial.println(blockAddress, HEX);
+        }
+        cacheBlock_.reset(blockAddress);
+        theBootROM_.seek(blockAddress);
         uint8_t* buffer = reinterpret_cast<uint8_t*>(cacheBlock_.getMemoryBlock()) ;
         theBootROM_.read(buffer, cacheBlock_.getCacheLineSize());
     }
@@ -742,7 +743,7 @@ PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 TFTShieldThing displayCommandSet(0x200);
 RAMThing ram;
-ROMThing rom;
+ROMThing<2048> rom;
 CPUInternalMemorySpace internalMemorySpaceSink;
 // list of memory devices to walk through
 MemoryThing* things[] {
