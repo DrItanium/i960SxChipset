@@ -106,7 +106,7 @@ public:
     }
     [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
     void reset(uint32_t address, MemoryThing* thing) noexcept {
-        auto* buf = reinterpret_cast<byte*>(components_);
+        byte* buf = reinterpret_cast<byte*>(components_);
         if (valid_) {
             if (dirty_) {
                 thing->write(address_, buf, CacheLineSize);
@@ -115,15 +115,9 @@ public:
         dirty_ = false;
         valid_ = true;
         address_ = address;
+        Serial.print(F("Address of buf: 0x"));
+        Serial.println(reinterpret_cast<uint32_t>(buf), HEX);
         thing->read(address_, buf, CacheLineSize);
-        if constexpr (displayCacheLineUpdates) {
-            for (auto i = 0u; i < CacheLineSize; ++i) {
-                Serial.print(F("0x"));
-                Serial.print(i + address_, HEX);
-                Serial.print(F(": 0x"));
-                Serial.println(buf[i], HEX);
-            }
-        }
     }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
