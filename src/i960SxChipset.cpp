@@ -421,9 +421,10 @@ private:
 
 };
 
+template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
 class RAMThing : public MemoryThing {
 public:
-    RAMThing() noexcept : MemoryThing(RamStartingAddress, RamEndingAddress) { }
+    RAMThing() noexcept : MemoryThing(RamStartingAddress, RamEndingAddress), theCache_(this) { }
     ~RAMThing() override {
         // while this will never get called, it is still a good idea to be complete
         theRAM_.close();
@@ -468,8 +469,35 @@ public:
             Serial.println(F("RAM.BIN OPEN SUCCESS!"));
         }
     }
+    void write(uint32_t baseAddress, byte* buffer, size_t size) override {
+        theRAM_.seek(baseAddress);
+        theRAM_.write(buffer, size);
+    }
+    void read(uint32_t baseAddress, byte *buffer, size_t size) override {
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("Accessing "));
+            Serial.print(size, DEC);
+            Serial.print(F(" bytes starting at 0x"));
+            Serial.println(baseAddress, HEX);
+        }
+        theRAM_.seek(baseAddress);
+        theRAM_.read(buffer, size);
+        if constexpr (displayCacheLineUpdates) {
+            Serial.println(F("READ ROMTHING!"));
+            for (size_t i = 0; i < size; ++i) {
+                Serial.print(F("0x"));
+                Serial.print(baseAddress + i, HEX);
+                Serial.print(F(": 0x"));
+                Serial.print(buffer[i], HEX);
+                Serial.print(F(" (0x"));
+                Serial.print(reinterpret_cast<uint32_t>(&buffer[i]), HEX);
+                Serial.println(F(")"));
+            }
+        }
+    }
 private:
     File theRAM_; // use an SDCard as ram for the time being
+    DataCache<numCacheLines, cacheLineSize> theCache_;
 };
 
 template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
@@ -880,7 +908,7 @@ BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 TFTShieldThing displayCommandSet(0x200);
-RAMThing ram;
+RAMThing<128,32> ram;
 ROMThing<128,32> rom; // 4k rom sections
 CPUInternalMemorySpace internalMemorySpaceSink;
 // list of memory devices to walk through
