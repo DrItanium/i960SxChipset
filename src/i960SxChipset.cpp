@@ -59,7 +59,7 @@ public:
     [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
         return valid_ && (address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize));
     }
-    [[nodiscard]] uint8_t getByte(uint32_t targetAddress) const noexcept {
+    [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
         auto base = computeCacheByteOffset(targetAddress);
         auto componentId = base >> 1;
         auto offsetId = base & 1;
@@ -74,11 +74,7 @@ public:
         auto offsetId = base & 1;
         components_[componentId].bytes[offsetId] = value;
     }
-    [[nodiscard]] uint16_t getWord(uint32_t targetAddress) const noexcept {
-        Serial.print(F("\t\tcompute cache word offset: 0x"));
-        Serial.println(computeCacheWordOffset(targetAddress), HEX);
-        Serial.print(F("\t\tTarget Address: 0x"));
-        Serial.println(targetAddress, HEX);
+    [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
         return components_[computeCacheWordOffset(targetAddress)].wordValue;
     }
     void setWord(uint32_t targetAddress, uint16_t value) noexcept {
