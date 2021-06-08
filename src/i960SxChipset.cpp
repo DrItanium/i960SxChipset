@@ -196,22 +196,19 @@ private:
         // use random number generation to do this
         for (ASingleCacheLine& line : lines_) {
             if (!line.isValid()) {
-                line.reset(targetAddress);
-                thing_->read(targetAddress,
-                             reinterpret_cast<byte*>(line.getMemoryBlock()),
-                             line.getCacheLineSize());
+                line.reset(targetAddress, thing_);
                 return line;
             }
         }
         // we had no free elements so choose one to replace
         auto targetCacheLine = rand() & NumberOfCacheLinesMask;
         ASingleCacheLine& replacementLine = lines_[targetCacheLine];
-        replacementLine.reset(targetAddress);
+        replacementLine.reset(targetAddress, thing_);
         return replacementLine;
     }
 private:
     MemoryThing* thing_ = nullptr;
-    ASingleCacheLine lines_[NumberOfCacheLines] = { 0 };
+    ASingleCacheLine lines_[NumberOfCacheLines];
 };
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
@@ -430,7 +427,7 @@ public:
     static constexpr Address ROMMask = ROMEnd - 1;
     using ACacheLine = CacheLine<cacheLineSize>;
 public:
-    ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd) { }
+    ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd), theCache_(this) { }
     ~ROMThing() override {
         // while this will never get called, it is still a good idea to be complete
         theBootROM_.close();
@@ -442,10 +439,7 @@ public:
             Serial.print(F("\tAccessing address: 0x"));
             Serial.println(offset, HEX);
         }
-        if (!cacheBlock_.respondsTo(offset)) {
-            resetCacheLine(offset);
-        }
-        return cacheBlock_.getByte(offset);
+        return theCache_.getByte(offset);
     }
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
@@ -453,12 +447,8 @@ public:
             Serial.print(F("\tAccessing address: 0x"));
             Serial.println(offset, HEX);
         }
-        if (!cacheBlock_.respondsTo(offset)) {
-            resetCacheLine(offset);
-        }
-        // instead of seeking from the sd card each time, access based off of the 16 byte cache
-        // okay cool beans, we can load from the boot rom
-        auto result = cacheBlock_.getWord(offset);
+        // use the onboard cache to get data from
+        auto result = theCache_.getWord(offset);
         if constexpr (displayMemoryReadsAndWrites) {
             Serial.print(F("\tGot value: 0x"));
             Serial.println(result, HEX);
@@ -473,17 +463,9 @@ public:
     respondsTo(Address address) const noexcept override {
         return address < size_;
     }
-    void
-    resetCacheLine(uint32_t offset) {
-        auto blockAddress = offset & (~ACacheLine::CacheByteMask);
-        if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("\t\tReset Cache Line to 0x"));
-            Serial.println(blockAddress, HEX);
-        }
-        cacheBlock_.reset(blockAddress);
-        theBootROM_.seek(blockAddress);
-        uint8_t* buffer = reinterpret_cast<uint8_t*>(cacheBlock_.getMemoryBlock()) ;
-        theBootROM_.read(buffer, cacheBlock_.getCacheLineSize());
+    void read(uint32_t baseAddress, byte *buffer, size_t size) override {
+        theBootROM_.seek(baseAddress);
+        theBootROM_.read(buffer, size);
     }
     void
     begin() noexcept override {
@@ -499,7 +481,7 @@ public:
             signalHaltState(F("BOOT.ROM TOO LARGE")) ;
         }
         // okay now setup the initial cache block
-        resetCacheLine(0);
+        (void)theCache_.getByte(0);
     }
     [[nodiscard]] constexpr auto getROMSize() const noexcept { return size_; }
 
@@ -507,7 +489,7 @@ private:
 // boot rom and sd card loading stuff
     File theBootROM_;
     uint32_t size_ = 0;
-    ACacheLine cacheBlock_;
+    DataCache<16, 32> theCache_;
 };
 
 
