@@ -62,6 +62,10 @@ public:
     [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
     [[nodiscard]] virtual Address makeAddressRelative(Address input) const noexcept { return input - base_; }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept {
+#if 0
+        Serial.print(F("READ from 0x"));
+        Serial.println(address, HEX);
+#endif
         auto offset = makeAddressRelative(address);
         switch (style) {
             case LoadStoreStyle::Full16:
@@ -75,6 +79,12 @@ public:
         }
     }
     void write(Address address, uint16_t value, LoadStoreStyle style) noexcept {
+#if 0
+        Serial.print(F("WRITE 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F("to 0x"));
+        Serial.println(address, HEX);
+#endif
         auto offset = makeAddressRelative(address);
         switch (style) {
             case LoadStoreStyle::Full16:
