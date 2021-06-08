@@ -53,7 +53,7 @@ union MemoryElement {
 struct CacheLine {
 public:
     [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
-        return (address_ <= targetAddress) && (targetAddress < (address_ + 16));
+        return (address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize));
     }
     [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
         auto base = targetAddress & 0b1111;
@@ -79,7 +79,7 @@ public:
         auto base = (targetAddress & 0b1110) >> 1;
         components_[base].wordValue = value;
     }
-    static constexpr auto CacheLineSize = 16;
+    static constexpr auto CacheLineSize = 256;
     static constexpr auto ComponentSize = CacheLineSize / sizeof(MemoryElement);
     [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
     void reset(uint32_t address) noexcept {
@@ -98,7 +98,7 @@ private:
     bool dirty_ = false;
 };
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayMemoryReadsAndWrites = true;
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 constexpr auto FlashStartingAddress = 0x0000'0000;
 constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
