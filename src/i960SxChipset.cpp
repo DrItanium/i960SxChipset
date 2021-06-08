@@ -42,8 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
-constexpr bool displayCacheLineUpdates = true;
+constexpr bool displayMemoryReadsAndWrites = true;
+constexpr bool displayCacheLineUpdates = false;
 
 union MemoryElement {
     explicit MemoryElement(uint16_t value = 0) noexcept : wordValue(value) { }
@@ -107,16 +107,12 @@ public:
     [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
     void reset(uint32_t address, MemoryThing* thing) noexcept {
         byte* buf = reinterpret_cast<byte*>(components_);
-        if (valid_) {
-            if (dirty_) {
-                thing->write(address_, buf, CacheLineSize);
-            }
+        if (valid_ && dirty_) {
+            thing->write(address_, buf, CacheLineSize);
         }
         dirty_ = false;
         valid_ = true;
         address_ = address;
-        Serial.print(F("Address of buf: 0x"));
-        Serial.println(reinterpret_cast<uint32_t>(buf), HEX);
         thing->read(address_, buf, CacheLineSize);
     }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
@@ -487,24 +483,12 @@ public:
 
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
-        if constexpr (displayMemoryReadsAndWrites)  {
-            Serial.print(F("\tRead8: Accessing address: 0x"));
-            Serial.println(offset, HEX);
-        }
         return theCache_.getByte(offset);
     }
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
-        if constexpr (displayMemoryReadsAndWrites)  {
-            Serial.print(F("\tRead16: Accessing address: 0x"));
-            Serial.println(offset, HEX);
-        }
         // use the onboard cache to get data from
         auto result = theCache_.getWord(offset);
-        if constexpr (displayMemoryReadsAndWrites) {
-            Serial.print(F("\tGot value: 0x"));
-            Serial.println(result, HEX);
-        }
         return result;
     }
     [[nodiscard]] Address
@@ -909,13 +893,27 @@ performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
 
 uint16_t
 performRead(Address address, LoadStoreStyle style) noexcept {
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.print(F("performRead: 0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(" -> 0x"));
+    }
     for (auto* currentThing : things) {
         if (!currentThing) {
             continue;
         }
         if (currentThing->respondsTo(address, style)) {
-            return currentThing->read(address, style);
+           auto result = currentThing->read(address, style);
+           if constexpr (displayMemoryReadsAndWrites) {
+               Serial.println(result, HEX);
+               delay(100);
+           }
+           return result;
         }
+    }
+    if constexpr (displayMemoryReadsAndWrites) {
+        Serial.println(0, HEX);
+        delay(100);
     }
     return 0;
 }
