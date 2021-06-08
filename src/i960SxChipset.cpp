@@ -59,7 +59,7 @@ public:
     [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
         return valid_ && (address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize));
     }
-    [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
+    [[nodiscard]] uint8_t getByte(uint32_t targetAddress) const noexcept {
         auto base = computeCacheByteOffset(targetAddress);
         auto componentId = base >> 1;
         auto offsetId = base & 1;
@@ -74,7 +74,11 @@ public:
         auto offsetId = base & 1;
         components_[componentId].bytes[offsetId] = value;
     }
-    [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
+    [[nodiscard]] uint16_t getWord(uint32_t targetAddress) const noexcept {
+        Serial.print(F("\t\tcompute cache word offset: 0x"));
+        Serial.println(computeCacheWordOffset(targetAddress), HEX);
+        Serial.print(F("\t\tTarget Address: 0x"));
+        Serial.println(targetAddress, HEX);
         return components_[computeCacheWordOffset(targetAddress)].wordValue;
     }
     void setWord(uint32_t targetAddress, uint16_t value) noexcept {
@@ -113,7 +117,39 @@ public:
         dirty_ = false;
         valid_ = true;
         address_ = address;
+        Serial.println(F("BUF BEFORE: "));
+        for (size_t i = 0; i < size; ++i) {
+            Serial.print(F("0x"));
+            Serial.print(address_ + i, HEX);
+            Serial.print(F(": 0x"));
+            Serial.print(buf[i], HEX);
+            Serial.print(F(" (0x"));
+            Serial.print(reinterpret_cast<uint32_t>(&buf[i]), HEX);
+            Serial.println(F(")"));
+        }
         thing->read(address_, buf, CacheLineSize);
+        Serial.println(F("BUF AFTER: "));
+        for (size_t i = 0; i < CacheLineSize; ++i) {
+            Serial.print(F("0x"));
+            Serial.print(address_ + i, HEX);
+            Serial.print(F(": 0x"));
+            Serial.print(buf[i], HEX);
+            Serial.print(F(" (0x"));
+            Serial.print(reinterpret_cast<uint32_t>(&buf[i]), HEX);
+            Serial.println(F(")"));
+        }
+        Serial.println(F("components after: "));
+        size_t i = 0;
+        for (auto& line : components_) {
+            Serial.print(F("0x"));
+            Serial.print(i, HEX);
+            Serial.print(F(": 0x"));
+            Serial.print(line.wordValue, HEX);
+            Serial.print(F(" (0x"));
+            Serial.print(reinterpret_cast<uint32_t>(&line), HEX);
+            Serial.println(F(")"));
+            ++i;
+        }
     }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
@@ -508,6 +544,16 @@ public:
         }
         theBootROM_.seek(baseAddress);
         theBootROM_.read(buffer, size);
+        Serial.println(F("READ ROMTHING!"));
+        for (size_t i = 0; i < size; ++i) {
+            Serial.print(F("0x"));
+            Serial.print(baseAddress + i, HEX);
+            Serial.print(F(": 0x"));
+            Serial.print(buffer[i], HEX);
+            Serial.print(F(" (0x"));
+            Serial.print(reinterpret_cast<uint32_t>(&buffer[i]), HEX);
+            Serial.println(F(")"));
+        }
     }
     void
     begin() noexcept override {
