@@ -41,6 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
+/// Set to false to prevent the console from displaying every single read and write
+constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayCacheLineUpdates = true;
 
 union MemoryElement {
     explicit MemoryElement(uint16_t value = 0) noexcept : wordValue(value) { }
@@ -193,6 +196,9 @@ private:
      * @return The line that was updated
      */
     ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
+        if constexpr (displayCacheLineUpdates) {
+            Serial.println(F("Cache Miss: handling cache miss"));
+        }
         // use random number generation to do this
         for (ASingleCacheLine& line : lines_) {
             if (!line.isValid()) {
@@ -202,6 +208,14 @@ private:
         }
         // we had no free elements so choose one to replace
         auto targetCacheLine = rand() & NumberOfCacheLinesMask;
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("Number of cache lines: 0x"));
+            Serial.println(NumberOfCacheLines, HEX);
+            Serial.print(F("Cache lines mask: 0b"));
+            Serial.println(targetCacheLine, BIN);
+            Serial.print(F("Cache Miss: target cache line: "));
+            Serial.println(targetAddress, DEC);
+        }
         ASingleCacheLine& replacementLine = lines_[targetCacheLine];
         replacementLine.reset(targetAddress, thing_);
         return replacementLine;
@@ -210,9 +224,6 @@ private:
     MemoryThing* thing_ = nullptr;
     ASingleCacheLine lines_[NumberOfCacheLines];
 };
-/// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
-constexpr bool displayCacheLineUpdates = true;
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 constexpr auto FlashStartingAddress = 0x0000'0000;
 constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
@@ -828,7 +839,7 @@ PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 TFTShieldThing displayCommandSet(0x200);
 RAMThing ram;
-ROMThing<64,64> rom;
+ROMThing<16,16> rom;
 CPUInternalMemorySpace internalMemorySpaceSink;
 // list of memory devices to walk through
 MemoryThing* things[] {
