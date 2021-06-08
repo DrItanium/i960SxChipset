@@ -101,6 +101,9 @@ public:
     static constexpr uint32_t computeCacheWordOffset(uint32_t targetAddress) noexcept {
         return computeCacheByteOffset(targetAddress) >> 1;
     }
+    static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
+        return targetAddress & ~CacheByteMask;
+    }
     [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
     void reset(uint32_t address, MemoryThing* thing) noexcept {
         auto* buf = reinterpret_cast<byte*>(components_);
@@ -128,6 +131,7 @@ private:
     bool valid_ = false;
     static_assert(sizeof(components_) == CacheLineSize );
 };
+static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
 class DataCache {
 public:
@@ -208,6 +212,8 @@ private:
         }
         // we had no free elements so choose one to replace
         auto targetCacheLine = rand() & NumberOfCacheLinesMask;
+        ASingleCacheLine& replacementLine = lines_[targetCacheLine];
+        auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
         if constexpr (displayCacheLineUpdates) {
             Serial.print(F("Number of cache lines: 0x"));
             Serial.println(NumberOfCacheLines, HEX);
@@ -215,11 +221,13 @@ private:
             Serial.println(NumberOfCacheLinesMask, BIN);
             Serial.print(F("Cache Miss: target cache line: "));
             Serial.println(targetCacheLine, DEC);
-            Serial.print(F("Cache Miss: target address: "));
-            Serial.println(targetAddress, DEC);
+            Serial.print(F("Cache Miss: raw address: 0x"));
+            Serial.println(targetAddress, HEX);
+            Serial.print(F("Cache Miss: aligned address: 0x"));
+            Serial.println(alignedAddress, HEX);
         }
-        ASingleCacheLine& replacementLine = lines_[targetCacheLine];
-        replacementLine.reset(targetAddress, thing_);
+        // generate an aligned address
+        replacementLine.reset(alignedAddress, thing_);
         return replacementLine;
     }
 private:
