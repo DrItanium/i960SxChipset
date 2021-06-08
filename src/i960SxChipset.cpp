@@ -116,6 +116,14 @@ public:
         valid_ = true;
         address_ = address;
         thing->read(address_, buf, CacheLineSize);
+        if constexpr (displayCacheLineUpdates) {
+            for (auto i = 0u; i < CacheLineSize; ++i) {
+                Serial.print(F("0x"));
+                Serial.print(i + address_, HEX);
+                Serial.print(F(": 0x"));
+                Serial.println(buf[i], HEX);
+            }
+        }
     }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
@@ -148,26 +156,56 @@ public:
                   NumberOfCacheLines == 256);
     explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("GetByte: 0x"));
+            Serial.println(targetAddress, HEX);
+        }
         for (const ASingleCacheLine & line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
-               return line.getByte(targetAddress);
+                auto result = line.getByte(targetAddress);
+                if constexpr (displayCacheLineUpdates) {
+                    Serial.print(F("\tResult: 0x"));
+                    Serial.println(result, HEX);
+                }
+                return result;
+
             }
         }
         // cache miss
         // need to replace a cache line
-        return cacheMiss(targetAddress).getByte(targetAddress);
+        auto hit = cacheMiss(targetAddress).getByte(targetAddress);
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("\tHIT: 0x"));
+            Serial.println(hit, HEX);
+        }
+        return hit;
+
     }
     [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("GetWord: 0x"));
+            Serial.print(targetAddress, HEX);
+        }
         for (const ASingleCacheLine& line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
-                return line.getWord(targetAddress);
+                auto result = line.getWord(targetAddress);
+                if constexpr (displayCacheLineUpdates) {
+                    Serial.print(F("  Result: 0x"));
+                    Serial.println(result, HEX);
+                }
+                return result;
             }
         }
         // cache miss
         // need to replace a cache line
-        return cacheMiss(targetAddress).getWord(targetAddress);
+        auto hit = cacheMiss(targetAddress).getWord(targetAddress);
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("  HIT: 0x"));
+            Serial.println(hit, HEX);
+        }
+        return hit;
     }
     void setByte(uint32_t targetAddress, uint8_t value) noexcept {
         for (ASingleCacheLine & line : lines_) {
@@ -456,7 +494,7 @@ public:
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
         if constexpr (displayMemoryReadsAndWrites)  {
-            Serial.print(F("\tAccessing address: 0x"));
+            Serial.print(F("\tRead8: Accessing address: 0x"));
             Serial.println(offset, HEX);
         }
         return theCache_.getByte(offset);
@@ -464,7 +502,7 @@ public:
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
         if constexpr (displayMemoryReadsAndWrites)  {
-            Serial.print(F("\tAccessing address: 0x"));
+            Serial.print(F("\tRead16: Accessing address: 0x"));
             Serial.println(offset, HEX);
         }
         // use the onboard cache to get data from
