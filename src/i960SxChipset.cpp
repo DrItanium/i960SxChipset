@@ -42,6 +42,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 
+union MemoryElement {
+    explicit MemoryElement(uint16_t value = 0) noexcept : wordValue(value) { }
+    uint16_t wordValue;
+    uint8_t bytes[sizeof(uint16_t)];
+};
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
@@ -312,7 +317,6 @@ private:
 // boot rom and sd card loading stuff
     File theBootROM_;
     uint32_t size_ = 0;
-
 };
 
 
