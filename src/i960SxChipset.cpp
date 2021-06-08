@@ -881,7 +881,7 @@ PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 TFTShieldThing displayCommandSet(0x200);
 RAMThing ram;
-ROMThing<16,16> rom;
+ROMThing<128,32> rom; // 4k rom sections
 CPUInternalMemorySpace internalMemorySpaceSink;
 // list of memory devices to walk through
 MemoryThing* things[] {
