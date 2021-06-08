@@ -212,8 +212,10 @@ private:
             Serial.print(F("Number of cache lines: 0x"));
             Serial.println(NumberOfCacheLines, HEX);
             Serial.print(F("Cache lines mask: 0b"));
-            Serial.println(targetCacheLine, BIN);
+            Serial.println(NumberOfCacheLinesMask, BIN);
             Serial.print(F("Cache Miss: target cache line: "));
+            Serial.println(targetCacheLine, DEC);
+            Serial.print(F("Cache Miss: target address: "));
             Serial.println(targetAddress, DEC);
         }
         ASingleCacheLine& replacementLine = lines_[targetCacheLine];
