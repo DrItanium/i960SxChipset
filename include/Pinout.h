@@ -109,18 +109,16 @@ enum class i960Pinout : decltype(A0) {
         SD2_MISO = MISO,
         SD2_SCK = SCK,
 #elif defined(ADAFRUIT_FEATHER_M0)
-    Reset960 = ::A1,          // output
-    SPI_BUS_EN = ::A2, // output
-    Int0_ = ::A3,          // output
-    DEN_ = ::A4,
-    W_R_ = ::A5,          // input
     SD_EN = 4,      // output
-    GPIOSelect = 5,        // output
-    Ready = 6,      // output
-    CD = 7,
-    FAIL = 11,         // input
-    AS_ = 12,
-    BLAST_ = 13,     // input
+    FAIL = 5,         // input
+    AS_ = 6,
+    BLAST_ = 11,     // input
+    DEN_ = 12,
+    W_R_ = 13,          // input
+    Ready = ::A2,      // output
+    Int0_ = ::A3,          // output
+    Reset960 = ::A4,          // output
+    GPIOSelect = ::A5,        // output
     DISPLAY_EN = SDA, // done over i2c
     DC = SDA, // done over i2c
 #elif defined(ARDUINO_METRO_M4)
