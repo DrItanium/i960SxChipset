@@ -109,9 +109,9 @@ enum class i960Pinout : decltype(A0) {
         SD2_MISO = MISO,
         SD2_SCK = SCK,
 #elif defined(ADAFRUIT_FEATHER_M0)
+    SD_EN = 4,      // output
     FAIL = 5,         // input
     AS_ = 6,
-    SD_EN = 10,      // output
     BLAST_ = 11,     // input
     DEN_ = 12,
     W_R_ = 13,          // input

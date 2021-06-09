@@ -32,7 +32,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <libbonuspin.h>
 #include <Fsm.h>
+#ifdef ARDUINO_NRF52_ADAFRUIT
+#include <SdFat.h>
+SdFat SD;
+#else
 #include <SD.h>
+#endif
 
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
@@ -1247,7 +1252,7 @@ void enteringChecksumFailure() noexcept {
     signalHaltState(F("CHECKSUM FAILURE!"));
 }
 /// @todo Eliminate after MightyCore update
-#if __cplusplus >= 201402L
+#if __cplusplus >= 201402L && !defined(ARDUINO_NRF52_ADAFRUIT)
 
 void operator delete(void * ptr, size_t)
 {
