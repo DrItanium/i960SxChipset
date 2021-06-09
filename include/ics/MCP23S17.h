@@ -26,13 +26,15 @@
 #include "Arduino.h"
 #include "../core/concepts.h"
 #include <SPI.h>
+#include "MCUPlatform.h"
 namespace bonuspin 
 {
 template<byte address, int resetPin = -1>
 class MCP23x17 {
     public:
         static SPISettings& getSPISettings() noexcept {
-            static SPISettings theSettings(10'000'000, MSBFIRST, SPI_MODE0);
+            static SPISettings theSettings(
+                    TargetBoard::onFeatherM0() ? 8'000'000 : 10'000'000, MSBFIRST, SPI_MODE0);
             return theSettings;
         }
         static_assert((address & 0b111) == address, "Provided address is too large!");
