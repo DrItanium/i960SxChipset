@@ -1178,6 +1178,7 @@ void setup() {
     digitalWrite(i960Pinout::Led, LOW);
     Serial.begin(115200);
     while(!Serial);
+    fallback.begin();
     theLed.begin();
     theConsole.begin();
     Serial.println(F("i960Sx chipset bringup"));
