@@ -962,7 +962,7 @@ MemoryThing* things[] {
         &portZThing,
         &theConsole,
         &displayCommandSet,
-#ifdef ADAFRUIT_FEATHER_M0
+#ifdef ADAFRUIT_FEATHER
         &lsi3mdl,
         &lsm6dsox,
         &adt7410,
@@ -1175,7 +1175,7 @@ void setupPeripherals() {
     displayReady = true;
     rom.begin();
     ram.begin();
-#ifdef ADAFRUIT_FEATHER_M0
+#ifdef ADAFRUIT_FEATHER
     lsi3mdl.begin();
     lsm6dsox.begin();
     adt7410.begin();

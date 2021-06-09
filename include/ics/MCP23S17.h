@@ -32,28 +32,30 @@ namespace bonuspin
 template<byte address, int resetPin = -1>
 class MCP23x17 {
     public:
-        static SPISettings& getSPISettings() noexcept {
+    static constexpr uint16_t BitMasks[] = {
+            1,
+            1 << 1,
+            1 << 2,
+            1 << 3,
+            1 << 4,
+            1 << 5,
+            1 << 6,
+            1 << 7,
+            1 << 8,
+            1 << 9,
+            1 << 10,
+            1 << 11,
+            1 << 12,
+            1 << 13,
+            1 << 14,
+            1 << 15,
+    };
+    static SPISettings& getSPISettings() noexcept {
             static SPISettings theSettings(
                     TargetBoard::onFeatherBoard() ? 8'000'000 : 10'000'000, MSBFIRST, SPI_MODE0);
             return theSettings;
         }
         static_assert((address & 0b111) == address, "Provided address is too large!");
-    private:
-        static constexpr auto generateByte(bool a, bool b, bool c, bool d, bool e, bool f, bool g, bool h) noexcept {
-            byte output = 0;
-            output |= (b ? 0b0000'0001 : 0);
-            output |= (b ? 0b0000'0010 : 0);
-            output |= (c ? 0b0000'0100 : 0);
-            output |= (d ? 0b0000'1000 : 0);
-            output |= (e ? 0b0001'0000 : 0);
-            output |= (f ? 0b0010'0000 : 0);
-            output |= (g ? 0b0100'0000 : 0);
-            output |= (h ? 0b1000'0000 : 0);
-            return output;
-        }
-        static constexpr auto generateIOConByte(bool intPolarity, bool odr, bool haen, bool disslw, bool seqop, bool mirror, bool bank) noexcept {
-            return generateByte(false, intPolarity, odr, haen, disslw, seqop, mirror, bank);
-        }
     public:
         using Self = MCP23x17<address, resetPin>;
         static constexpr auto BusAddress = address;
@@ -231,24 +233,6 @@ class MCP23x17 {
         void interruptPinsAreIndependent() noexcept {
             setIOCon(getIOCon() & 0b1011'1110);
         }
-        static constexpr uint16_t BitMasks[] = {
-            1,
-            1 << 1,
-            1 << 2,
-            1 << 3,
-            1 << 4,
-            1 << 5,
-            1 << 6,
-            1 << 7,
-            1 << 8,
-            1 << 9,
-            1 << 10,
-            1 << 11,
-            1 << 12,
-            1 << 13,
-            1 << 14,
-            1 << 15,
-        };
         void digitalWrite(uint8_t pin, uint8_t value) noexcept {
             if (pin > 15) {
                 return;
