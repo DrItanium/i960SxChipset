@@ -44,6 +44,10 @@ static_assert(20_MHz == 20'000'000);
 #endif
 #endif
 
+#if defined(ARDUINO_NRF52_ADAFRUIT) || defined(ARDUINO_SAMD_FEATHER_M0)
+#define ADAFRUIT_FEATHER
+#endif
+
 #ifndef NUM_ANALOG_OUTPUTS
 #define NUM_ANALOG_OUTPUTS 0
 #endif
@@ -52,6 +56,7 @@ enum class TargetMCU {
     GrandCentralM4,
     FeatherM0Basic,
     FeatherM0Adalogger,
+    Feather_nRF52832,
     MetroM4,
     Unknown,
 };
@@ -94,6 +99,8 @@ public:
     return TargetMCU::FeatherM0Basic;
 #elif defined(ADAFRUIT_METRO_M4_EXPRESS)
     return TargetMCU::MetroM4;
+#elif defined(ARDUINO_NRF52_ADAFRUIT)
+        return TargetMCU::Feather_nRF52832;
 #else
     return TargetMCU::Unknown;
 #endif
@@ -104,8 +111,15 @@ public:
     [[nodiscard]] static constexpr auto onFeatherM0Basic() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Basic; }
     [[nodiscard]] static constexpr auto onFeatherM0Adalogger() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Adalogger; }
     [[nodiscard]] static constexpr auto onMetroM4() noexcept { return getMCUTarget() == TargetMCU::MetroM4; }
+    [[nodiscard]] static constexpr auto onNRF52832() noexcept { return getMCUTarget() == TargetMCU::Feather_nRF52832; }
     [[nodiscard]] static constexpr auto onFeatherM0() noexcept { return onFeatherM0Basic() || onFeatherM0Adalogger(); }
-    [[nodiscard]] static constexpr auto onFeatherBoard() noexcept { return onFeatherM0(); }
+    [[nodiscard]] static constexpr auto onFeatherBoard() noexcept {
+#ifdef ADAFRUIT_FEATHER
+        return true;
+#else
+        return false;
+#endif
+    }
 /**
  * @brief Is there an onboard sdcard slot?
  * @return True if defined via the command line

@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
-#ifdef ADAFRUIT_FEATHER_M0
+#ifdef ADAFRUIT_FEATHER
 #include "FeatherWingPeripherals.h"
 #endif
 /// Set to false to prevent the console from displaying every single read and write
@@ -749,7 +749,11 @@ public:
     void setR(int16_t value) noexcept { r_ = value; }
     void setG(int16_t value) noexcept { g_ = value; }
     void setB(int16_t value) noexcept { b_ = value; }
-    void flush() { display_.flush(); }
+    void flush() {
+#ifndef ARDUINO_NRF52_ADAFRUIT
+        display_.flush();
+#endif
+    }
     void print(char c) { display_.print(c); }
     [[nodiscard]] bool available() noexcept { return true; }
     [[nodiscard]] bool availableForWriting() noexcept { return display_.availableForWrite(); }
@@ -927,7 +931,7 @@ public:
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
-#ifndef ADAFRUIT_FEATHER_M0
+#ifndef ADAFRUIT_FEATHER
 using DisplayThing = TFTShieldThing;
 #else
 using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
@@ -936,7 +940,7 @@ DisplayThing displayCommandSet(0x200);
 RAMThing<16,256> ram; // we want 4k but laid out more for locality than narrow strips
 ROMThing<128,32> rom; // 4k rom sections
 CPUInternalMemorySpace internalMemorySpaceSink;
-#ifdef ADAFRUIT_FEATHER_M0
+#ifdef ADAFRUIT_FEATHER
 AdafruitLIS3MDLThing lsi3mdl(0x1000);
 AdafruitLSM6DSOXThing lsm6dsox(0x1100);
 AdafruitADT7410Thing adt7410(0x1200);
