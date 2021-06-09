@@ -935,7 +935,14 @@ DisplayThing displayCommandSet(0x200);
 RAMThing<16,256> ram; // we want 4k but laid out more for locality than narrow strips
 ROMThing<128,32> rom; // 4k rom sections
 CPUInternalMemorySpace internalMemorySpaceSink;
+#ifdef ADAFRUIT_FEATHER_M0
+AdafruitLIS3MDLThing lsi3mdl(0x1000);
+AdafruitLSM6DSOXThing lsm6dsox(0x1100);
+AdafruitADT7410Thing adt7410(0x1200);
+AdafruitADXL343Thing adxl343(0x1300);
+#endif
 FallbackMemorySpace fallback;
+
 // list of memory devices to walk through
 MemoryThing* things[] {
         &rom,
@@ -944,8 +951,13 @@ MemoryThing* things[] {
         &portZThing,
         &theConsole,
         &displayCommandSet,
+#ifdef ADAFRUIT_FEATHER_M0
+        &lsi3mdl,
+        &lsm6dsox,
+        &adt7410,
+        &adxl343,
+#endif
         &internalMemorySpaceSink,
-
         &fallback, // must be last!!!!!
 };
 
@@ -1151,6 +1163,12 @@ void setupPeripherals() {
     }
     rom.begin();
     ram.begin();
+#ifdef ADAFRUIT_FEATHER_M0
+    lsi3mdl.begin();
+    lsm6dsox.begin();
+    adt7410.begin();
+    adxl343.begin();
+#endif
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
