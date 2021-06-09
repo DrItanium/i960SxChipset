@@ -46,6 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 constexpr bool displayCacheLineUpdates = false;
+bool displayReady = false;
 
 union MemoryElement {
     explicit MemoryElement(uint16_t value = 0) noexcept : wordValue(value) { }
@@ -1156,11 +1157,12 @@ void setupBusStateMachine() noexcept {
 
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-    displayCommandSet.begin();
     internalMemorySpaceSink.begin();
     if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-        signalHaltState(F("SD CARD INIT FAILed"));
+        signalHaltState(F("SD CARD INIT FAILED"));
     }
+    displayCommandSet.begin();
+    displayReady = true;
     rom.begin();
     ram.begin();
 #ifdef ADAFRUIT_FEATHER_M0
@@ -1226,10 +1228,12 @@ void loop() {
 
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
-    displayCommandSet.clearScreen();
-    displayCommandSet.setCursor(0, 0);
-    displayCommandSet.setTextSize(2);
-    displayCommandSet.println(haltMsg);
+    if (displayReady) {
+        displayCommandSet.clearScreen();
+        displayCommandSet.setCursor(0, 0);
+        displayCommandSet.setTextSize(2);
+        displayCommandSet.println(haltMsg);
+    }
     Serial.println(haltMsg);
     while(true) {
         delay(1000);

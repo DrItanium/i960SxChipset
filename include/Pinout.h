@@ -117,6 +117,7 @@ enum class i960Pinout : decltype(A0) {
     SD_EN = 4,      // output
     GPIOSelect = 5,        // output
     Ready = 6,      // output
+    CD = 7,
     FAIL = 11,         // input
     AS_ = 12,
     BLAST_ = 13,     // input
