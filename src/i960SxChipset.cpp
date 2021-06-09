@@ -879,6 +879,44 @@ private:
     Adafruit_TFTShield18 ss;
 
 };
+/**
+ * @brief We need to know when the cpu is requested to write to any unmapped memory block. This memory space handles that
+ */
+class FallbackMemorySpace : public MemoryThing {
+public:
+    FallbackMemorySpace() noexcept : MemoryThing(0, 0xFFFF'FFFF) { }
+    ~FallbackMemorySpace() override  = default;
+    uint8_t read8(Address address) noexcept override {
+        Serial.print(F("UNMAPPED READ8 OF 0x"));
+        Serial.println(address, HEX);
+        return MemoryThing::read8(address);
+    }
+    uint16_t read16(Address address) noexcept override {
+        Serial.print(F("UNMAPPED READ16 OF 0x"));
+        Serial.println(address, HEX);
+        return MemoryThing::read16(address);
+    }
+    void write8(Address address, uint8_t value) noexcept override {
+        Serial.print(F("UNMAPPED WRITE8 OF 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" TO 0x"));
+        Serial.println(address, HEX);
+        MemoryThing::write8(address, value);
+    }
+    void write16(Address address, uint16_t value) noexcept override {
+        Serial.print(F("UNMAPPED WRITE16 OF 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" TO 0x"));
+        Serial.println(address, HEX);
+        MemoryThing::write16(address, value);
+    }
+    [[nodiscard]] Address makeAddressRelative(Address input) const noexcept override { return input; }
+    [[nodiscard]] bool
+    respondsTo(Address) const noexcept override {
+        // regardless of address, return true since we should only ever hit this if all other things fail to match!
+        return true;
+    }
+};
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
@@ -886,6 +924,7 @@ TFTShieldThing displayCommandSet(0x200);
 RAMThing<16,256> ram; // we want 4k but laid out more for locality than narrow strips
 ROMThing<128,32> rom; // 4k rom sections
 CPUInternalMemorySpace internalMemorySpaceSink;
+FallbackMemorySpace fallback;
 // list of memory devices to walk through
 MemoryThing* things[] {
         &rom,
@@ -895,6 +934,8 @@ MemoryThing* things[] {
         &theConsole,
         &displayCommandSet,
         &internalMemorySpaceSink,
+
+        &fallback, // must be last!!!!!
 };
 
 void
