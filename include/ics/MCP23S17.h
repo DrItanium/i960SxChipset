@@ -34,7 +34,7 @@ class MCP23x17 {
     public:
         static SPISettings& getSPISettings() noexcept {
             static SPISettings theSettings(
-                    TargetBoard::onFeatherM0() ? 8'000'000 : 10'000'000, MSBFIRST, SPI_MODE0);
+                    TargetBoard::onFeatherBoard() ? 8'000'000 : 10'000'000, MSBFIRST, SPI_MODE0);
             return theSettings;
         }
         static_assert((address & 0b111) == address, "Provided address is too large!");
