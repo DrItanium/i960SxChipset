@@ -38,9 +38,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_ST7735.h>
 #include "Pinout.h"
 
-
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
+#ifdef ADAFRUIT_FEATHER_M0
+#include "FeatherWingPeripherals.h"
+#endif
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = false;
 constexpr bool displayCacheLineUpdates = false;
@@ -852,6 +854,10 @@ public:
         display_.setTextSize(3);
         display_.println(F("i960Sx!"));
     }
+    void
+    clearScreen() {
+        display_.fillScreen(ST7735_BLACK);
+    }
 private:
     Adafruit_ST7735 display_;
     Opcodes command_;
@@ -920,7 +926,12 @@ public:
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
-TFTShieldThing displayCommandSet(0x200);
+#ifndef ADAFRUIT_FEATHER_M0
+using DisplayThing = TFTShieldThing;
+#else
+using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
+#endif
+DisplayThing displayCommandSet(0x200);
 RAMThing<16,256> ram; // we want 4k but laid out more for locality than narrow strips
 ROMThing<128,32> rom; // 4k rom sections
 CPUInternalMemorySpace internalMemorySpaceSink;
@@ -1195,20 +1206,19 @@ void loop() {
     fsm.run_machine();
 }
 
-void enteringChecksumFailure() noexcept {
-    auto msg = F("CHECKSUM FAILURE");
-    displayCommandSet.fillScreen(ST77XX_RED);
-    displayCommandSet.setCursor(0, 0);
-    displayCommandSet.setTextSize(2);
-    displayCommandSet.println(msg);
-    Serial.println(msg);
-}
 template<typename T>
 [[noreturn]] void signalHaltState(T haltMsg) {
-    enteringChecksumFailure();
+    displayCommandSet.clearScreen();
+    displayCommandSet.setCursor(0, 0);
+    displayCommandSet.setTextSize(2);
+    displayCommandSet.println(haltMsg);
+    Serial.println(haltMsg);
     while(true) {
         delay(1000);
     }
+}
+void enteringChecksumFailure() noexcept {
+    signalHaltState(F("CHECKSUM FAILURE!"));
 }
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L

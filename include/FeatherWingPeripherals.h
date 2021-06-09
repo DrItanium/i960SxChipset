@@ -5,6 +5,7 @@
 #ifndef I960SXCHIPSET_FEATHERWINGPERIPHERALS_H
 #define I960SXCHIPSET_FEATHERWINGPERIPHERALS_H
 #include "MemoryThing.h"
+#include <Arduino.h>
 #include <Adafruit_LSM6DSOX.h>
 #include <Adafruit_LIS3MDL.h>
 #include <Adafruit_Sensor.h>
@@ -22,7 +23,9 @@ public:
     void
     begin() noexcept override {
             if (!lsm6ds_.begin_I2C()) {
-                signalHaltState(F("FAILED TO BRING UP LSM6DS"));
+                Serial.println(F("FAILED TO BRING UP LSM6DS"));
+                // hang the startup
+                while (true) { }
             }
     }
 private:
@@ -38,7 +41,8 @@ public:
     void
     begin() noexcept override {
             if (!lis3mdl_.begin_I2C()) {
-                signalHaltState(F("FAILED TO BRING UP LIS3MDL"));
+                Serial.println(F("FAILED TO BRING UP LIS3MDL"));
+                while(true) { }
             }
     }
 private:
@@ -54,7 +58,8 @@ public:
     void
     begin() noexcept override {
             if (!tempSensor_.begin()) {
-                signalHaltState(F("ADT7410 Bringup Failure"));
+                Serial.println(F("ADT7410 Bringup Failure"));
+                while (true) { }
             }
             // sensor takes 250 ms to get readings
             delay(250);
@@ -70,7 +75,8 @@ public:
     void
     begin() noexcept override {
             if (!accel1_.begin()) {
-                signalHaltState(F("ADXL343 Bringup Failure"));
+                Serial.println(F("ADXL343 Bringup Failure"));
+                while (true) { }
             }
             // configure for your project
             accel1_.setRange(ADXL343_RANGE_16_G);
@@ -101,7 +107,26 @@ public:
             display_.println(F("i960Sx!"));
             display_.display();
             Serial.println(F("Done setting up OLED Featherwing"));
-            oledDisplaySetup = true;
+    }
+    void
+    clearScreen() {
+        display_.clearDisplay();
+    }
+    void
+    setCursor(int16_t x, int16_t y) {
+        display_.setCursor(x, y);
+    }
+    template<typename T, typename ... Args>
+    void println(T thing, Args&&... args) {
+        display_.println(thing, args...);
+    }
+    template<typename T, typename ... Args>
+    void print(T thing, Args&& ... args) {
+        display_.print(thing, args...);
+    }
+    void
+    setTextSize(uint8_t size) {
+        display_.setTextSize(size);
     }
 private:
     Adafruit_SSD1306 display_;
