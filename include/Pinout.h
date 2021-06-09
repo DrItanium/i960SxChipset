@@ -115,6 +115,7 @@ enum class i960Pinout : decltype(A0) {
     BLAST_ = 11,     // input
     DEN_ = 12,
     W_R_ = 13,          // input
+    SPI_BUS_EN = ::A0,
     Ready = ::A2,      // output
     Int0_ = ::A3,          // output
     Reset960 = ::A4,          // output
