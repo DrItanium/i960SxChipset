@@ -571,7 +571,7 @@ public:
         return address > 0xFF00'0000;
     }
 };
-class TFTShieldThing : public IOSpaceThing {
+class DisplayThing : public IOSpaceThing {
 public:
     enum class Registers : uint32_t {
         Flush = 0,
@@ -632,11 +632,11 @@ public:
         FillRoundRect,
     };
 public:
-    explicit TFTShieldThing(Address base) : IOSpaceThing(base, base + 0x100),
-                                            display_(static_cast<int>(i960Pinout::DISPLAY_EN),
+    explicit DisplayThing(Address base) : IOSpaceThing(base, base + 0x100),
+                                          display_(static_cast<int>(i960Pinout::DISPLAY_EN),
                                                      static_cast<int>(i960Pinout::DC),
                                                      -1) { }
-    ~TFTShieldThing() override = default;
+    ~DisplayThing() override = default;
     /**
      * @brief Invoke on doorbell write
      * @param value the value written to the doorbell
@@ -937,7 +937,7 @@ BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 #ifndef ADAFRUIT_FEATHER
-using DisplayThing = TFTShieldThing;
+using DisplayThing = DisplayThing;
 #else
 using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
 #endif
