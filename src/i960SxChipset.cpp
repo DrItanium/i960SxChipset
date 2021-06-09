@@ -431,28 +431,19 @@ public:
     }
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
-        theRAM_.seek(offset); // jump to that point in memory
-        return theRAM_.read();
+        return theCache_.getByte(offset);
     }
     void
     write8(Address offset, uint8_t value) noexcept override {
-        theRAM_.seek(offset);
-        theRAM_.write(static_cast<uint8_t>(value));
-        theRAM_.flush();
+        theCache_.setByte(offset, value);
     }
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
-        uint16_t storage;
-        theRAM_.seek(offset);
-        theRAM_.read(&storage, 2);
-        return storage;
+        return theCache_.getWord(offset);
     }
     void
     write16(Address offset, uint16_t value) noexcept override {
-        auto thePtr = reinterpret_cast<uint8_t*>(&value);
-        theRAM_.seek(offset);
-        theRAM_.write(thePtr, 2);
-        theRAM_.flush();
+        theCache_.setWord(offset, value);
     }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
@@ -468,32 +459,17 @@ public:
             theRAM_ = SD.open("ram.bin", FILE_WRITE);
             Serial.println(F("RAM.BIN OPEN SUCCESS!"));
         }
+        (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
     void write(uint32_t baseAddress, byte* buffer, size_t size) override {
         theRAM_.seek(baseAddress);
         theRAM_.write(buffer, size);
+        // make sure...
+        theRAM_.flush();
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("Accessing "));
-            Serial.print(size, DEC);
-            Serial.print(F(" bytes starting at 0x"));
-            Serial.println(baseAddress, HEX);
-        }
         theRAM_.seek(baseAddress);
         theRAM_.read(buffer, size);
-        if constexpr (displayCacheLineUpdates) {
-            Serial.println(F("READ ROMTHING!"));
-            for (size_t i = 0; i < size; ++i) {
-                Serial.print(F("0x"));
-                Serial.print(baseAddress + i, HEX);
-                Serial.print(F(": 0x"));
-                Serial.print(buffer[i], HEX);
-                Serial.print(F(" (0x"));
-                Serial.print(reinterpret_cast<uint32_t>(&buffer[i]), HEX);
-                Serial.println(F(")"));
-            }
-        }
     }
 private:
     File theRAM_; // use an SDCard as ram for the time being
@@ -520,8 +496,7 @@ public:
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
         // use the onboard cache to get data from
-        auto result = theCache_.getWord(offset);
-        return result;
+        return theCache_.getWord(offset);
     }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
@@ -908,7 +883,7 @@ BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
 TFTShieldThing displayCommandSet(0x200);
-RAMThing<128,32> ram;
+RAMThing<16,256> ram; // we want 4k but laid out more for locality than narrow strips
 ROMThing<128,32> rom; // 4k rom sections
 CPUInternalMemorySpace internalMemorySpaceSink;
 // list of memory devices to walk through
