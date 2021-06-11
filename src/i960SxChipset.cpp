@@ -49,7 +49,7 @@ SdFat SD;
 #include "FeatherWingPeripherals.h"
 #endif
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayMemoryReadsAndWrites = true;
 constexpr bool displayCacheLineUpdates = false;
 bool displayReady = false;
 
@@ -496,7 +496,13 @@ public:
         // while this will never get called, it is still a good idea to be complete
         theBootROM_.close();
     }
-
+    [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
+        if constexpr (displayMemoryReadsAndWrites) {
+            Serial.print(F("ROM: READING FROM ADDRESS 0x"));
+            Serial.println(address, HEX);
+        }
+        return MemoryThing::read(address, style);
+    }
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
         return theCache_.getByte(offset);

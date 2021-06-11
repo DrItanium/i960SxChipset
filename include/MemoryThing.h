@@ -61,7 +61,7 @@ public:
     [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return base_; }
     [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
     [[nodiscard]] virtual Address makeAddressRelative(Address input) const noexcept { return input - base_; }
-    [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept {
+    [[nodiscard]] virtual uint16_t read(Address address, LoadStoreStyle style) noexcept {
 #if 0
         Serial.print(F("READ from 0x"));
         Serial.println(address, HEX);
@@ -78,7 +78,7 @@ public:
                 return 0;
         }
     }
-    void write(Address address, uint16_t value, LoadStoreStyle style) noexcept {
+    virtual void write(Address address, uint16_t value, LoadStoreStyle style) noexcept {
 #if 0
         Serial.print(F("WRITE 0x"));
         Serial.print(value, HEX);
