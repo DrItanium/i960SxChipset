@@ -49,7 +49,7 @@ SdFat SD;
 #include "FeatherWingPeripherals.h"
 #endif
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = true;
+constexpr bool displayMemoryReadsAndWrites = false;
 constexpr bool displayCacheLineUpdates = false;
 bool displayReady = false;
 
@@ -279,11 +279,6 @@ constexpr auto FlashStartingAddress = 0x0000'0000;
 constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
 // the upper 2G is for non-program related stuff, according to my memory map information, we support a maximum of 512 Megs of RAM
 // so the "ram" file is 512 megs in size. If the range is between 0x8000'0000 and
-constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
-constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
-constexpr auto RamMask = MaxRamSize - 1;
-constexpr Address RamStartingAddress = 0x8000'0000;
-constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
 constexpr Address BaseMCUPeripheralsBaseAddress = 0;
 constexpr Address BuiltinLedOffsetBaseAddress = BaseMCUPeripheralsBaseAddress;
 constexpr Address BuiltinPortZBaseAddress = BaseMCUPeripheralsBaseAddress + 0x10;
@@ -432,6 +427,11 @@ private:
 template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
 class RAMThing : public MemoryThing {
 public:
+    static constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
+    static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
+    static constexpr auto RamMask = MaxRamSize - 1;
+    static constexpr Address RamStartingAddress = 0x2000'0000; // start this at 512 megabytes
+    static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
     RAMThing() noexcept : MemoryThing(RamStartingAddress, RamEndingAddress), theCache_(this) { }
     ~RAMThing() override {
         // while this will never get called, it is still a good idea to be complete
@@ -575,7 +575,7 @@ public:
         size_ = theBootROM_.size();
         if (size_ == 0) {
             signalHaltState(F("EMPTY BOOT.ROM"));
-        } else if (size_ > 0x8000'0000) {
+        } else if (size_ > ROMEnd) {
             signalHaltState(F("BOOT.ROM TOO LARGE")) ;
         }
         // okay now setup the initial cache block
