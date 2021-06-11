@@ -625,7 +625,7 @@ public:
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
         if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("\tAccessing "));
+            Serial.print(F("DATA.ROM:\tAccessing "));
             Serial.print(size, DEC);
             Serial.print(F(" bytes starting at 0x"));
             Serial.println(baseAddress, HEX);
