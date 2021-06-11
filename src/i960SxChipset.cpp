@@ -1054,6 +1054,7 @@ using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
 DisplayThing displayCommandSet(0x200);
 RAMThing<16,256> ram; // we want 4k but laid out more for locality than narrow strips
 ROMThing<128,32> rom; // 4k rom sections
+DataROMThing dataRom;
 CPUInternalMemorySpace internalMemorySpaceSink;
 #ifdef ADAFRUIT_FEATHER
 AdafruitLIS3MDLThing lsi3mdl(0x1000);
@@ -1078,6 +1079,7 @@ MemoryThing* things[] {
         &adxl343,
 #endif
         &internalMemorySpaceSink,
+        &dataRom, // last target because we are only going to run into this thing during startup
         &fallback, // must be last!!!!!
 };
 
@@ -1283,6 +1285,7 @@ void setupPeripherals() {
     displayCommandSet.begin();
     displayReady = true;
     rom.begin();
+    dataRom.begin();
     ram.begin();
 #ifdef ADAFRUIT_FEATHER
     lsi3mdl.begin();
