@@ -430,7 +430,7 @@ public:
     static constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
     static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
     static constexpr auto RamMask = MaxRamSize - 1;
-    static constexpr Address RamStartingAddress = 0x2000'0000; // start this at 512 megabytes
+    static constexpr Address RamStartingAddress = 0x8000'0000; // start this at 512 megabytes
     static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
     RAMThing() noexcept : MemoryThing(RamStartingAddress, RamEndingAddress), theCache_(this) { }
     ~RAMThing() override {
