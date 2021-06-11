@@ -50,7 +50,7 @@ SdFat SD;
 #endif
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = true;
-constexpr bool displayCacheLineUpdates = false;
+constexpr bool displayCacheLineUpdates = true;
 bool displayReady = false;
 
 union MemoryElement {
@@ -155,7 +155,7 @@ public:
     explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
         if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("GetByte: 0x"));
+            Serial.print(F("\tGetByte: 0x"));
             Serial.println(targetAddress, HEX);
         }
         for (const ASingleCacheLine & line : lines_) {
@@ -163,7 +163,7 @@ public:
                 // cache hit!
                 auto result = line.getByte(targetAddress);
                 if constexpr (displayCacheLineUpdates) {
-                    Serial.print(F("\tResult: 0x"));
+                    Serial.print(F("\t\tResult: 0x"));
                     Serial.println(result, HEX);
                 }
                 return result;
@@ -174,7 +174,7 @@ public:
         // need to replace a cache line
         auto hit = cacheMiss(targetAddress).getByte(targetAddress);
         if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("\tHIT: 0x"));
+            Serial.print(F("\t\tHIT: 0x"));
             Serial.println(hit, HEX);
         }
         return hit;
@@ -182,7 +182,7 @@ public:
     }
     [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
         if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("GetWord: 0x"));
+            Serial.print(F("\tGetWord: 0x"));
             Serial.print(targetAddress, HEX);
         }
         for (const ASingleCacheLine& line : lines_) {
@@ -190,7 +190,7 @@ public:
                 // cache hit!
                 auto result = line.getWord(targetAddress);
                 if constexpr (displayCacheLineUpdates) {
-                    Serial.print(F("  Result: 0x"));
+                    Serial.print(F("\t\tResult: 0x"));
                     Serial.println(result, HEX);
                 }
                 return result;
@@ -200,7 +200,7 @@ public:
         // need to replace a cache line
         auto hit = cacheMiss(targetAddress).getWord(targetAddress);
         if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("  HIT: 0x"));
+            Serial.print(F("\t\tHIT: 0x"));
             Serial.println(hit, HEX);
         }
         return hit;
@@ -239,9 +239,9 @@ private:
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
         if constexpr (displayCacheLineUpdates) {
             Serial.println(F("Cache Miss: handling cache miss"));
-            Serial.print(F("Target Address: 0x"));
+            Serial.print(F("\tTarget Address: 0x"));
             Serial.println(targetAddress, HEX);
-            Serial.print(F("Aligned Address: 0x"));
+            Serial.print(F("\tAligned Address: 0x"));
             Serial.println(alignedAddress, HEX);
         }
         // use random number generation to do this
@@ -255,15 +255,15 @@ private:
         auto targetCacheLine = rand() & NumberOfCacheLinesMask;
         ASingleCacheLine& replacementLine = lines_[targetCacheLine];
         if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("Number of cache lines: 0x"));
+            Serial.print(F("\tNumber of cache lines: 0x"));
             Serial.println(NumberOfCacheLines, HEX);
-            Serial.print(F("Cache lines mask: 0b"));
+            Serial.print(F("\tCache lines mask: 0b"));
             Serial.println(NumberOfCacheLinesMask, BIN);
-            Serial.print(F("Cache Miss: target cache line: "));
+            Serial.print(F("\tCache Miss: target cache line: "));
             Serial.println(targetCacheLine, DEC);
-            Serial.print(F("Cache Miss: raw address: 0x"));
+            Serial.print(F("\tCache Miss: raw address: 0x"));
             Serial.println(targetAddress, HEX);
-            Serial.print(F("Cache Miss: aligned address: 0x"));
+            Serial.print(F("\tCache Miss: aligned address: 0x"));
             Serial.println(alignedAddress, HEX);
         }
         // generate an aligned address
@@ -437,6 +437,22 @@ public:
         // while this will never get called, it is still a good idea to be complete
         theRAM_.close();
     }
+    [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
+        if constexpr (displayMemoryReadsAndWrites) {
+            Serial.print(F("RAM: READING FROM ADDRESS 0x"));
+            Serial.println(address, HEX);
+        }
+        return MemoryThing::read(address, style);
+    }
+    void write(Address address, uint16_t value, LoadStoreStyle style) noexcept override {
+        if constexpr (displayMemoryReadsAndWrites) {
+            Serial.print(F("RAM: WRITING 0x"));
+            Serial.print(value, HEX);
+            Serial.print(F(" to ADDRESS 0x"));
+            Serial.println(address, HEX);
+        }
+        MemoryThing::write(address, value, style);
+    }
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
         return theCache_.getByte(offset);
@@ -522,7 +538,7 @@ public:
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
         if constexpr (displayCacheLineUpdates) {
-            Serial.print(F("Accessing "));
+            Serial.print(F("\tAccessing "));
             Serial.print(size, DEC);
             Serial.print(F(" bytes starting at 0x"));
             Serial.println(baseAddress, HEX);
@@ -530,9 +546,10 @@ public:
         theBootROM_.seek(baseAddress);
         theBootROM_.read(buffer, size);
         if constexpr (displayCacheLineUpdates) {
+            Serial.println();
             Serial.println(F("READ ROMTHING!"));
             for (size_t i = 0; i < size; ++i) {
-                Serial.print(F("0x"));
+                Serial.print(F("\t0x"));
                 Serial.print(baseAddress + i, HEX);
                 Serial.print(F(": 0x"));
                 Serial.print(buffer[i], HEX);
