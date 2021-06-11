@@ -507,7 +507,7 @@ template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
 class ROMThing : public MemoryThing {
 public:
     static constexpr Address ROMStart = 0;
-    static constexpr Address ROMEnd = 0x8000'0000;
+    static constexpr Address ROMEnd = 0x2000'0000;
     static constexpr Address ROMMask = ROMEnd - 1;
 public:
     ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd), theCache_(this) { }
@@ -586,6 +586,86 @@ public:
 private:
 // boot rom and sd card loading stuff
     File theBootROM_;
+    uint32_t size_ = 0;
+    DataCache<numCacheLines, cacheLineSize> theCache_;
+};
+
+/// @todo add support for the boot data section that needs to be copied into ram by the i960 on bootup
+class DataROMThing : public MemoryThing {
+public:
+    static constexpr uint32_t numCacheLines = 16;
+    static constexpr uint32_t cacheLineSize = 128;
+    static constexpr Address ROMStart = 0x2000'0000;
+    static constexpr Address ROMEnd = 0x8000'0000;
+    static constexpr Address DataSizeMax = ROMEnd - ROMStart;
+public:
+    DataROMThing() noexcept : MemoryThing(ROMStart, ROMEnd), theCache_(this) { }
+    ~DataROMThing() override {
+        // while this will never get called, it is still a good idea to be complete
+        theDataROM_.close();
+    }
+    [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
+        auto result = MemoryThing::read(address, style);
+        if constexpr (displayMemoryReadsAndWrites) {
+            Serial.print(F("DATA.ROM: READING FROM ADDRESS 0x"));
+            Serial.print(address, HEX);
+            Serial.print(F(" yielded value 0x"));
+            Serial.println(result, HEX);
+        }
+        return result;
+    }
+    [[nodiscard]] uint8_t
+    read8(Address offset) noexcept override {
+        return theCache_.getByte(offset);
+    }
+    [[nodiscard]] uint16_t
+    read16(Address offset) noexcept override {
+        // use the onboard cache to get data from
+        return theCache_.getWord(offset);
+    }
+    void read(uint32_t baseAddress, byte *buffer, size_t size) override {
+        if constexpr (displayCacheLineUpdates) {
+            Serial.print(F("\tAccessing "));
+            Serial.print(size, DEC);
+            Serial.print(F(" bytes starting at 0x"));
+            Serial.println(baseAddress, HEX);
+        }
+        theDataROM_.seek(baseAddress);
+        theDataROM_.read(buffer, size);
+        if constexpr (displayCacheLineUpdates) {
+            Serial.println();
+            Serial.println(F("READ ROMTHING!"));
+            for (size_t i = 0; i < size; ++i) {
+                Serial.print(F("\t0x"));
+                Serial.print(baseAddress + i, HEX);
+                Serial.print(F(": 0x"));
+                Serial.print(buffer[i], HEX);
+                Serial.print(F(" (0x"));
+                Serial.print(reinterpret_cast<uint32_t>(&buffer[i]), HEX);
+                Serial.println(F(")"));
+            }
+        }
+    }
+    void
+    begin() noexcept override {
+        if (!SD.exists("boot.dat")) {
+            signalHaltState(F("NO BOOT.DAT!"));
+        }
+        theDataROM_ = SD.open("boot.dat", FILE_READ);
+        Serial.println(F("BOOT.DAT OPEN SUCCESS!"));
+        size_ = theDataROM_.size();
+        if (size_ == 0) {
+            signalHaltState(F("EMPTY BOOT.DAT"));
+        } else if ((size_ + ROMStart) > ROMEnd) {
+            signalHaltState(F("BOOT.ROM TOO LARGE")) ;
+        }
+        // okay now setup the initial cache block
+        (void)theCache_.getByte(0);
+    }
+
+private:
+// boot rom and sd card loading stuff
+    File theDataROM_;
     uint32_t size_ = 0;
     DataCache<numCacheLines, cacheLineSize> theCache_;
 };
