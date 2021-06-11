@@ -50,7 +50,7 @@ SdFat SD;
 #endif
 /// Set to false to prevent the console from displaying every single read and write
 constexpr bool displayMemoryReadsAndWrites = true;
-constexpr bool displayCacheLineUpdates = true;
+constexpr bool displayCacheLineUpdates = false;
 bool displayReady = false;
 
 union MemoryElement {
@@ -438,11 +438,14 @@ public:
         theRAM_.close();
     }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
+        auto result = MemoryThing::read(address, style);
         if constexpr (displayMemoryReadsAndWrites) {
             Serial.print(F("RAM: READING FROM ADDRESS 0x"));
-            Serial.println(address, HEX);
+            Serial.print(address, HEX);
+            Serial.print(F(" yielded value 0x"));
+            Serial.println(result, HEX);
         }
-        return MemoryThing::read(address, style);
+        return result;
     }
     void write(Address address, uint16_t value, LoadStoreStyle style) noexcept override {
         if constexpr (displayMemoryReadsAndWrites) {
@@ -513,11 +516,14 @@ public:
         theBootROM_.close();
     }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
+        auto result = MemoryThing::read(address, style);
         if constexpr (displayMemoryReadsAndWrites) {
             Serial.print(F("ROM: READING FROM ADDRESS 0x"));
-            Serial.println(address, HEX);
+            Serial.print(address, HEX);
+            Serial.print(F(" yielded value 0x"));
+            Serial.println(result, HEX);
         }
-        return MemoryThing::read(address, style);
+        return result;
     }
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
