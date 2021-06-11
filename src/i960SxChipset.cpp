@@ -49,7 +49,7 @@ SdFat SD;
 #include "FeatherWingPeripherals.h"
 #endif
 /// Set to false to prevent the console from displaying every single read and write
-bool displayMemoryReadsAndWrites = true;
+bool displayMemoryReadsAndWrites = false;
 bool displayCacheLineUpdates = false;
 bool displayReady = false;
 
