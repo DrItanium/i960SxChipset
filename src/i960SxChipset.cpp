@@ -49,7 +49,7 @@ SdFat SD;
 #include "FeatherWingPeripherals.h"
 #endif
 /// Set to false to prevent the console from displaying every single read and write
-constexpr bool displayMemoryReadsAndWrites = false;
+constexpr bool displayMemoryReadsAndWrites = true;
 constexpr bool displayCacheLineUpdates = false;
 bool displayReady = false;
 
@@ -1015,11 +1015,13 @@ public:
     uint8_t read8(Address address) noexcept override {
         Serial.print(F("UNMAPPED READ8 OF 0x"));
         Serial.println(address, HEX);
+        delay(10);
         return MemoryThing::read8(address);
     }
     uint16_t read16(Address address) noexcept override {
         Serial.print(F("UNMAPPED READ16 OF 0x"));
         Serial.println(address, HEX);
+        delay(10);
         return MemoryThing::read16(address);
     }
     void write8(Address address, uint8_t value) noexcept override {
@@ -1027,6 +1029,7 @@ public:
         Serial.print(value, HEX);
         Serial.print(F(" TO 0x"));
         Serial.println(address, HEX);
+        delay(10);
         MemoryThing::write8(address, value);
     }
     void write16(Address address, uint16_t value) noexcept override {
@@ -1034,6 +1037,7 @@ public:
         Serial.print(value, HEX);
         Serial.print(F(" TO 0x"));
         Serial.println(address, HEX);
+        delay(10);
         MemoryThing::write16(address, value);
     }
     [[nodiscard]] Address makeAddressRelative(Address input) const noexcept override { return input; }
