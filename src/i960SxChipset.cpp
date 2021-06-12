@@ -56,8 +56,16 @@ public:
     static constexpr auto AllowDebuggingStatements = allow;
     [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
     [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
-    void setDisplayMemoryReadsAndWrites(bool value) noexcept { displayMemoryReadsAndWrites_ = value; }
-    void setDisplayCacheLineUpdates(bool value) noexcept { displayCacheLineUpdates_ = value; }
+    void setDisplayMemoryReadsAndWrites(bool value) noexcept {
+        if constexpr (AllowDebuggingStatements) {
+            displayMemoryReadsAndWrites_ = value;
+        }
+    }
+    void setDisplayCacheLineUpdates(bool value) noexcept {
+        if constexpr (AllowDebuggingStatements) {
+            displayCacheLineUpdates_ = value;
+        }
+    }
     [[nodiscard]] constexpr bool active() const noexcept { return allow; }
 private:
     bool displayMemoryReadsAndWrites_ = false;
@@ -108,16 +116,25 @@ public:
     static constexpr auto CacheLineSize = size;
     static constexpr auto ComponentSize = CacheLineSize / sizeof(MemoryElement);
     static constexpr auto CacheByteMask = CacheLineSize - 1;
-    static_assert((CacheLineSize == 16 ||
-                   CacheLineSize == 32 ||
-                   CacheLineSize == 64 ||
-                   CacheLineSize == 128 ||
-                   CacheLineSize == 256 ||
-                   CacheLineSize == 512 ||
-                   CacheLineSize == 1024 ||
-                   CacheLineSize == 2048 ||
-                   CacheLineSize == 4096 ||
-                   CacheLineSize == 8192), "CacheLineSize must be 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, or 8192");
+    static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
+        switch (lineSize) {
+            case 16:
+            case 32:
+            case 64:
+            case 128:
+            case 256:
+            case 512:
+            case 1024:
+            case 2048:
+            case 4096:
+            case 8192:
+                return true;
+            default:
+                return false;
+        }
+    }
+    static_assert(isLegalCacheLineSize(CacheLineSize),
+                  "CacheLineSize must be 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, or 8192");
     static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
         return targetAddress & CacheByteMask;
     }
@@ -148,9 +165,10 @@ private:
      * @brief The cache line contents itself
      */
     MemoryElement components_[ComponentSize];
+    static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!"
+                                                        "");
     bool dirty_ = false;
     bool valid_ = false;
-    static_assert(sizeof(components_) == CacheLineSize );
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
@@ -161,12 +179,25 @@ public:
     static constexpr auto NumberOfCacheLinesMask = numLines - 1;
     static constexpr auto CacheLineSize = cacheLineSize;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
+    static constexpr auto isLegalNumberOfCacheLines(uint32_t num) noexcept {
+        switch (num) {
+            case 1:
+            case 2:
+            case 4:
+            case 8:
+            case 16:
+            case 32:
+            case 64:
+            case 128:
+            case 256:
+                return true;
+            default:
+                return false;
+        }
+
+    }
     static_assert(DataCacheSize <= 4096, "Overall cache size must be less than or equal to 4k of sram");
-    static_assert(NumberOfCacheLines == 16 ||
-                  NumberOfCacheLines == 32 ||
-                  NumberOfCacheLines == 64 ||
-                  NumberOfCacheLines == 128 ||
-                  NumberOfCacheLines == 256);
+    static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
     explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
         if (rawDebug.displayCacheLineUpdates()) {
