@@ -313,12 +313,10 @@ public:
 private:
     static void
     writeLed(uint8_t value) noexcept {
-        Serial.println(F("WRITE LED!"));
         digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
     }
     static uint8_t
     readLed() noexcept {
-        Serial.println(F("READ LED!"));
         return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
     }
 };
