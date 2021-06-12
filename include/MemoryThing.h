@@ -73,7 +73,7 @@ public:
             case LoadStoreStyle::Lower8:
                 return read8(offset);
             case LoadStoreStyle::Upper8:
-                return read8(offset + 1);
+                return static_cast<uint16_t>(read8(offset + 1)) << 8;
             default:
                 return 0;
         }
