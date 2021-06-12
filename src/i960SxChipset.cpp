@@ -54,10 +54,11 @@ struct RawDebugRegisters {
 public:
     // if this is false, then this entire class disables
     static constexpr auto AllowDebuggingStatements = allow;
-    constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
-    constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
+    [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
+    [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
     void setDisplayMemoryReadsAndWrites(bool value) noexcept { displayMemoryReadsAndWrites_ = value; }
     void setDisplayCacheLineUpdates(bool value) noexcept { displayCacheLineUpdates_ = value; }
+    [[nodiscard]] constexpr bool active() const noexcept { return allow; }
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
