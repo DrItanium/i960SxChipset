@@ -49,8 +49,26 @@ SdFat SD;
 #include "FeatherWingPeripherals.h"
 #endif
 /// Set to false to prevent the console from displaying every single read and write
-bool displayMemoryReadsAndWrites = false;
-bool displayCacheLineUpdates = false;
+constexpr bool allowDebuggingStatements = true;
+bool displayMemoryReadsAndWrites_ = false;
+bool displayCacheLineUpdates_ = false;
+inline bool
+displayMemoryReadsAndWrites() noexcept {
+    if constexpr (allowDebuggingStatements) {
+        return displayMemoryReadsAndWrites_;
+    } else {
+        return false;
+    }
+}
+
+inline bool
+displayCacheLineUpdates() noexcept {
+    if constexpr (allowDebuggingStatements) {
+        return displayCacheLineUpdates_;
+    } else {
+        return false;
+    }
+}
 bool displayReady = false;
 
 union MemoryElement {
@@ -154,7 +172,7 @@ public:
                   NumberOfCacheLines == 256);
     explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.print(F("\tGetByte: 0x"));
             Serial.println(targetAddress, HEX);
         }
@@ -162,7 +180,7 @@ public:
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
                 auto result = line.getByte(targetAddress);
-                if (displayCacheLineUpdates) {
+                if (displayCacheLineUpdates()) {
                     Serial.print(F("\t\tResult: 0x"));
                     Serial.println(result, HEX);
                 }
@@ -173,7 +191,7 @@ public:
         // cache miss
         // need to replace a cache line
         auto hit = cacheMiss(targetAddress).getByte(targetAddress);
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.print(F("\t\tHIT: 0x"));
             Serial.println(hit, HEX);
         }
@@ -181,7 +199,7 @@ public:
 
     }
     [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.print(F("\tGetWord: 0x"));
             Serial.print(targetAddress, HEX);
         }
@@ -189,7 +207,7 @@ public:
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
                 auto result = line.getWord(targetAddress);
-                if (displayCacheLineUpdates) {
+                if (displayCacheLineUpdates()) {
                     Serial.print(F("\t\tResult: 0x"));
                     Serial.println(result, HEX);
                 }
@@ -199,7 +217,7 @@ public:
         // cache miss
         // need to replace a cache line
         auto hit = cacheMiss(targetAddress).getWord(targetAddress);
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.print(F("\t\tHIT: 0x"));
             Serial.println(hit, HEX);
         }
@@ -237,7 +255,7 @@ private:
      */
     ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.println(F("Cache Miss: handling cache miss"));
             Serial.print(F("\tTarget Address: 0x"));
             Serial.println(targetAddress, HEX);
@@ -254,7 +272,7 @@ private:
         // we had no free elements so choose one to replace
         auto targetCacheLine = rand() & NumberOfCacheLinesMask;
         ASingleCacheLine& replacementLine = lines_[targetCacheLine];
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.print(F("\tNumber of cache lines: 0x"));
             Serial.println(NumberOfCacheLines, HEX);
             Serial.print(F("\tCache lines mask: 0b"));
@@ -439,7 +457,7 @@ public:
     }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
-        if (displayMemoryReadsAndWrites) {
+        if (displayMemoryReadsAndWrites()) {
             Serial.print(F("RAM: READING FROM ADDRESS 0x"));
             Serial.print(address, HEX);
             Serial.print(F(" yielded value 0x"));
@@ -448,7 +466,7 @@ public:
         return result;
     }
     void write(Address address, uint16_t value, LoadStoreStyle style) noexcept override {
-        if (displayMemoryReadsAndWrites) {
+        if (displayMemoryReadsAndWrites()) {
             Serial.print(F("RAM: WRITING 0x"));
             Serial.print(value, HEX);
             Serial.print(F(" to ADDRESS 0x"));
@@ -517,7 +535,7 @@ public:
     }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
-        if (displayMemoryReadsAndWrites) {
+        if (displayMemoryReadsAndWrites()) {
             Serial.print(F("ROM: READING FROM ADDRESS 0x"));
             Serial.print(address, HEX);
             Serial.print(F(" yielded value 0x"));
@@ -543,7 +561,7 @@ public:
         return address < size_;
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.print(F("\tAccessing "));
             Serial.print(size, DEC);
             Serial.print(F(" bytes starting at 0x"));
@@ -551,7 +569,7 @@ public:
         }
         theBootROM_.seek(baseAddress);
         theBootROM_.read(buffer, size);
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.println();
             Serial.println(F("READ ROMTHING!"));
             for (size_t i = 0; i < size; ++i) {
@@ -606,7 +624,7 @@ public:
     }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
-        if (displayMemoryReadsAndWrites) {
+        if (displayMemoryReadsAndWrites()) {
             Serial.print(F("DATA.ROM: READING FROM ADDRESS 0x"));
             Serial.print(address, HEX);
             Serial.print(F(" yielded value 0x"));
@@ -624,7 +642,7 @@ public:
         return theCache_.getWord(offset);
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.print(F("DATA.ROM:\tAccessing "));
             Serial.print(size, DEC);
             Serial.print(F(" bytes starting at 0x"));
@@ -632,7 +650,7 @@ public:
         }
         theDataROM_.seek(baseAddress);
         theDataROM_.read(buffer, size);
-        if (displayCacheLineUpdates) {
+        if (displayCacheLineUpdates()) {
             Serial.println();
             Serial.println(F("READ ROMTHING!"));
             for (size_t i = 0; i < size; ++i) {
@@ -1055,9 +1073,9 @@ public:
     uint8_t read8(Address address) noexcept override {
         switch (address) {
             case 0:
-                return displayMemoryReadsAndWrites;
+                return displayMemoryReadsAndWrites_;
             case 1:
-                return displayCacheLineUpdates;
+                return displayCacheLineUpdates_;
             default:
                 return 0;
         }
@@ -1065,10 +1083,10 @@ public:
     void write8(Address address, uint8_t value) noexcept override {
         switch (address) {
             case 0:
-                displayMemoryReadsAndWrites = value != 0;
+                displayMemoryReadsAndWrites_ = value != 0;
                 break;
             case 1:
-                displayCacheLineUpdates = value != 0;
+                displayCacheLineUpdates_ = value != 0;
                 break;
             default:
                 break;
