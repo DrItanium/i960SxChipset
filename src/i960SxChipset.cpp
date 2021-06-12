@@ -413,6 +413,12 @@ public:
         }
     }
     void write8(Address offset, uint8_t value) noexcept override {
+        if (displayMemoryReadsAndWrites()) {
+            Serial.print(F("CONSOLE.WRITE8 0x"));
+            Serial.print(value, HEX);
+            Serial.print(F(" to 0x"));
+            Serial.println(offset, HEX);
+        }
         constexpr auto baseAddress = static_cast<uint32_t>(Registers::BufStart) * sizeof(uint16_t);
         constexpr auto endAddress = baseAddress + BufferSize;
         if (offset >= baseAddress && endAddress > offset) {
@@ -420,6 +426,12 @@ public:
         }
     }
     void write16(Address offset, uint16_t value) noexcept override {
+        if (displayMemoryReadsAndWrites()) {
+            Serial.print(F("CONSOLE.WRITE16 0x"));
+            Serial.print(value, HEX);
+            Serial.print(F(" to 0x"));
+            Serial.println(offset, HEX);
+        }
         switch (offset) {
             case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t):
                 Serial.write(static_cast<char>(value));
