@@ -1224,6 +1224,7 @@ public:
          * @brief Attempts to open ram.bin, boot.rom, or boot.data will trigger this fault
          */
         CriticalFileSideChannelAttempt,
+        UnimplementedCommand,
     };
 public:
     uint16_t invoke(uint16_t doorbellValue) noexcept {
@@ -1251,6 +1252,18 @@ public:
             case SDCardOperations::GetFileSize: return getFileSize();
             case SDCardOperations::GetFileCoordinates: return getFileCoordinates();
             case SDCardOperations::FileIsOpen: return fileIsOpen();
+            case SDCardOperations::OpenFile:
+            case SDCardOperations::CloseFile:
+            case SDCardOperations::MakeDirectory:
+            case SDCardOperations::RemoveDirectory:
+            case SDCardOperations::FileRead:
+            case SDCardOperations::FileWrite:
+            case SDCardOperations::FileFlush:
+            case SDCardOperations::FileSeek:
+                errorCode_ = ErrorCodes::UnimplementedCommand;
+                result_.quads[0] = -1;
+                result_.quads[1] = -1;
+                return -1;
             default:
                 errorCode_ = ErrorCodes::UndefinedCommandProvided;
                 result_.quads[0] = -1;
