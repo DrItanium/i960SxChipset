@@ -1240,12 +1240,19 @@ public:
             case SDCardOperations::FileExists:
                 // oh man this is freaking dangerous but I have put in a zero padding buffer following the byte addresses
                 // so that should prevent a host of problems
-                return SD.exists(path_);
-            case SDCardOperations::GetNumberOfOpenFiles: return openedFileCount_;
-            case SDCardOperations::GetMaximumNumberOfOpenFiles: return MaxFileCount;
+                result_.bytes[0] = SD.exists(path_);
+                return 0;
+            case SDCardOperations::GetNumberOfOpenFiles:
+                result_.words[0] = openedFileCount_;
+                return 0;
+            case SDCardOperations::GetMaximumNumberOfOpenFiles:
+                result_.words[0] = MaxFileCount;
+                return 0;
             case SDCardOperations::GetFileName: return getFileName();
             case SDCardOperations::IsValidFileId: return isValidFileId();
-            case SDCardOperations::GetFixedPathMaximum: return FixedPathSize;
+            case SDCardOperations::GetFixedPathMaximum:
+                result_.bytes[0] = FixedPathSize;
+                return 0;
             case SDCardOperations::GetFileBytesAvailable: return getFileBytesAvailable();
             case SDCardOperations::GetFilePosition: return getFilePosition();
             case SDCardOperations::GetFilePermissions: return getFilePermissions();
@@ -1316,7 +1323,7 @@ public:
         } else {
             switch (address) {
                 case static_cast<Address>(Registers::Doorbell) * 2:
-                    (void)invoke(0);
+                    (void)invoke(value);
                     break;
                 case static_cast<Address>(Registers::Command) * 2:
                     command_ = static_cast<SDCardOperations>(value);
@@ -1382,7 +1389,8 @@ private:
             result_.quads[1] = -1;
             return -1;
         } else {
-            return static_cast<uint16_t>(files_[fileId_].available());
+            result_.shorts[0] = static_cast<uint16_t>(files_[fileId_].available());
+            return 0;
         }
     }
     uint16_t getFilePermissions() noexcept {
@@ -1398,7 +1406,8 @@ private:
             result_.quads[1] = -1;
             return -1;
         } else {
-            return permissions_[fileId_];
+            result_.shorts[0] = permissions_[fileId_];
+            return 0;
         }
     }
     uint16_t getFilePosition() noexcept {
@@ -1461,14 +1470,16 @@ private:
             result_.quads[1] = -1;
             return -1;
         } else {
-            return files_[fileId_] ? 0 : -1;
+            result_.bytes[0] = files_[fileId_] ? -1 : 0;
+            return 0;
         }
     }
     uint16_t isValidFileId() noexcept {
         if (fileId_ >= MaxFileCount) {
             return -1;
         } else {
-            return files_[fileId_] ? 0 : -1;
+            result_.bytes[0] = files_[fileId_] ? -1 : 0;
+            return 0;
         }
     }
     // these are the actual addresses
