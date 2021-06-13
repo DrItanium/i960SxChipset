@@ -549,25 +549,19 @@ public:
         constexpr auto BufferSize = 512;
         uint8_t buffer[BufferSize]  = { 0 };
         theRAM_.seek(0);
+        constexpr auto IterationIncrement = 64;
         auto count = MaxRamSize / BufferSize;
-        Serial.print(F("Must clear out "));
-        Serial.print(count);
-        Serial.println(F(" clusters!"));
-        constexpr auto IterationIncrement = 16;
-        for (uint32_t i = 0; i < count; i+=IterationIncrement) {
-            Serial.print(F("Clearing out clusters: ["));
-            Serial.print(i);
-            Serial.print(F(", "));
-            Serial.print(i + IterationIncrement);
-            Serial.print(F(") / "));
-            Serial.print(count);
-            Serial.print(F(" .... "));
-            // emit eight buffer writes to speed up operations
-            for (int j = 0; j < IterationIncrement; ++j) {
-                theRAM_.write(buffer, BufferSize);
-            }
-            Serial.println(F("DONE"));
+        Serial.print(F("Generating clusters: ["));
+        Serial.print(0);
+        Serial.print(F(", "));
+        Serial.print(IterationIncrement);
+        Serial.print(F(") "));
+        Serial.print(F(" .... "));
+        // emit eight buffer writes to speed up operations
+        for (int j = 0; j < IterationIncrement; ++j) {
+            theRAM_.write(buffer, BufferSize);
         }
+        Serial.println(F("DONE"));
         Serial.println(F("Halting at this point for testing purposes!"));
         while(true) {
 
