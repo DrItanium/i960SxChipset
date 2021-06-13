@@ -1187,7 +1187,7 @@ public:
 
     enum class SDCardOperations : uint16_t {
         None = 0,
-        // General operations
+        // General SD Operations
         OpenFile,
         CloseFile,
         FileExists,
@@ -1195,9 +1195,9 @@ public:
         RemoveDirectory,
         GetNumberOfOpenFiles,
         GetMaximumNumberOfOpenFiles,
-        IsValidFileId,
         GetFixedPathMaximum,
-        // individual file operations
+        // File specific operations
+        IsValidFileId = 0x8000,
         FileRead,
         FileWrite,
         FileFlush,
@@ -1213,38 +1213,14 @@ public:
     enum class ErrorCodes : uint16_t {
         None = 0,
         NoCommandProvided,
+        UndefinedCommandProvided,
         BadFileId,
         FileIsNotValid,
-        FileIsNotOpen,
         /**
          * @brief Attempts to open ram.bin, boot.rom, or boot.data will trigger this fault
          */
         CriticalFileSideChannelAttempt,
     };
-private:
-    uint16_t getFileName() noexcept {
-        if (fileId_ >= MaxFileCount) {
-            // bad file id!
-            errorCode_ = ErrorCodes::BadFileId;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
-            return 0;
-        } else if (!files_[fileId_]){
-            errorCode_ = ErrorCodes::FileIsNotValid;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
-            return 0;
-        } else {
-            auto& file = files_[fileId_];
-            const char* name = file.name();
-            // 8.3 file names assumption!!!
-            for (int i = 0; i < 13; ++i) {
-                result_.bytes[i] = name[i];
-            }
-            result_.bytes[13] = 0;
-            return 0;
-        }
-    }
 public:
     uint16_t invoke(uint16_t doorbellValue) noexcept {
 
@@ -1263,10 +1239,17 @@ public:
             case SDCardOperations::GetNumberOfOpenFiles: return openedFileCount_;
             case SDCardOperations::GetMaximumNumberOfOpenFiles: return MaxFileCount;
             case SDCardOperations::GetFileName: return getFileName();
+            case SDCardOperations::IsValidFileId: return isValidFileId();
+            case SDCardOperations::GetFixedPathMaximum: return FixedPathSize;
+            case SDCardOperations::GetFileBytesAvailable: return getFileBytesAvailable();
+            case SDCardOperations::GetFilePosition: return getFilePosition();
+            case SDCardOperations::GetFilePermissions: return getFilePermissions();
             default:
-                return 0;
+                errorCode_ = ErrorCodes::UndefinedCommandProvided;
+                result_.quads[0] = -1;
+                result_.quads[1] = -1;
+                return -1;
         }
-        return 0;
     }
     enum class Registers : uint16_t {
         Doorbell, // two bytes
@@ -1342,10 +1325,91 @@ public:
         }
     }
 
+private:
+    uint16_t getFileName() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else if (!files_[fileId_]){
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else {
+            auto& file = files_[fileId_];
+            const char* name = file.name();
+            // 8.3 file names assumption!!!
+            for (int i = 0; i < 13; ++i) {
+                result_.bytes[i] = name[i];
+            }
+            result_.bytes[13] = 0;
+            return 0;
+        }
+    }
+    uint16_t getFileBytesAvailable() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else if (!files_[fileId_]){
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else {
+            return static_cast<uint16_t>(files_[fileId_].available());
+        }
+    }
+    uint16_t getFilePermissions() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else if (!files_[fileId_]){
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else {
+            return permissions_[fileId_];
+        }
+    }
+    uint16_t getFilePosition() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else if (!files_[fileId_]){
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else {
+            result_.words[0] = files_[fileId_].position();
+            return 0;
+        }
+    }
+    uint16_t isValidFileId() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            return -1;
+        } else {
+            return files_[fileId_] ? 0 : -1;
+        }
+    }
     // these are the actual addresses
 private:
     uint16_t openedFileCount_ = 0;
     File files_[MaxFileCount];
+    uint16_t permissions_[MaxFileCount] = { 0 };
     SDCardOperations command_ = SDCardOperations::None;
     uint16_t fileId_ = 0;
     uint16_t modeBits_ = 0;
