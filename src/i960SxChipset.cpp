@@ -1155,8 +1155,7 @@ public:
             if (auto offset = address - PathStart; offset < FixedPathSize) {
                 return static_cast<uint8_t>(path_[offset]);
             } else {
-                // should not get here! so fail out hardcore!
-                signalHaltState(F("LARGER THAN FIXED PATH SIZE!!!"));
+                // make sure we can't do an overrun!
                 return 0;
             }
         }
@@ -1214,9 +1213,41 @@ public:
     enum class ErrorCodes : uint16_t {
         None = 0,
         NoCommandProvided,
+        BadFileId,
+        FileIsNotValid,
+        FileIsNotOpen,
+        /**
+         * @brief Attempts to open ram.bin, boot.rom, or boot.data will trigger this fault
+         */
+        CriticalFileSideChannelAttempt,
     };
-
+private:
+    uint16_t getFileName() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return 0;
+        } else if (!files_[fileId_]){
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return 0;
+        } else {
+            auto& file = files_[fileId_];
+            const char* name = file.name();
+            // 8.3 file names assumption!!!
+            for (int i = 0; i < 13; ++i) {
+                result_.bytes[i] = name[i];
+            }
+            result_.bytes[13] = 0;
+            return 0;
+        }
+    }
+public:
     uint16_t invoke(uint16_t doorbellValue) noexcept {
+
         // clear the error code on startup
         errorCode_ = ErrorCodes::None;
 
@@ -1226,12 +1257,16 @@ public:
                 result_.words[0] = -1;
                 return -1;
             case SDCardOperations::FileExists:
-                // oh man this is freaking dangerous
-                // if we are not careful, we could run into a buffer overrun....
-                result_.bytes[0] = SD.exists(path_);
+                // oh man this is freaking dangerous but I have put in a zero padding buffer following the byte addresses
+                // so that should prevent a host of problems
+                return SD.exists(path_);
+            case SDCardOperations::GetNumberOfOpenFiles: return openedFileCount_;
+            case SDCardOperations::GetMaximumNumberOfOpenFiles: return MaxFileCount;
+            case SDCardOperations::GetFileName: return getFileName();
             default:
                 return 0;
         }
+        return 0;
     }
     enum class Registers : uint16_t {
         Doorbell, // two bytes
@@ -1309,7 +1344,7 @@ public:
 
     // these are the actual addresses
 private:
-    uint16_t openedFileCount = 0;
+    uint16_t openedFileCount_ = 0;
     File files_[MaxFileCount];
     SDCardOperations command_ = SDCardOperations::None;
     uint16_t fileId_ = 0;
@@ -1327,7 +1362,7 @@ private:
     } result_;
     ErrorCodes errorCode_ = ErrorCodes::None;
     char path_[FixedPathSize] = { 0 };
-    volatile uint32_t fixedPadding = 0; // always should be here to make sure
+    volatile uint32_t fixedPadding = 0; // always should be here to make sure an overrun doesn't cause problems
 };
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
