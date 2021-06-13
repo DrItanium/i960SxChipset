@@ -1231,7 +1231,8 @@ public:
 
         // clear the error code on startup
         errorCode_ = ErrorCodes::None;
-
+        result_.quads[0] = -1;
+        result_.quads[1] = -1;
         switch (command_) {
             case SDCardOperations::None:
                 errorCode_ = ErrorCodes::NoCommandProvided;
@@ -1268,13 +1269,9 @@ public:
             case SDCardOperations::FileFlush:
             case SDCardOperations::FileSeek:
                 errorCode_ = ErrorCodes::UnimplementedCommand;
-                result_.quads[0] = -1;
-                result_.quads[1] = -1;
                 return -1;
             default:
                 errorCode_ = ErrorCodes::UndefinedCommandProvided;
-                result_.quads[0] = -1;
-                result_.quads[1] = -1;
                 return -1;
         }
     }
@@ -1357,13 +1354,9 @@ private:
         if (fileId_ >= MaxFileCount) {
             // bad file id!
             errorCode_ = ErrorCodes::BadFileId;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else if (!files_[fileId_]){
             errorCode_ = ErrorCodes::FileIsNotValid;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else {
             auto& file = files_[fileId_];
@@ -1380,13 +1373,9 @@ private:
         if (fileId_ >= MaxFileCount) {
             // bad file id!
             errorCode_ = ErrorCodes::BadFileId;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else if (!files_[fileId_]){
             errorCode_ = ErrorCodes::FileIsNotValid;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else {
             result_.shorts[0] = static_cast<uint16_t>(files_[fileId_].available());
@@ -1397,13 +1386,9 @@ private:
         if (fileId_ >= MaxFileCount) {
             // bad file id!
             errorCode_ = ErrorCodes::BadFileId;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else if (!files_[fileId_]){
             errorCode_ = ErrorCodes::FileIsNotValid;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else {
             result_.shorts[0] = permissions_[fileId_];
@@ -1414,13 +1399,9 @@ private:
         if (fileId_ >= MaxFileCount) {
             // bad file id!
             errorCode_ = ErrorCodes::BadFileId;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else if (!files_[fileId_]){
             errorCode_ = ErrorCodes::FileIsNotValid;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else {
             result_.words[0] = files_[fileId_].position();
@@ -1431,13 +1412,9 @@ private:
         if (fileId_ >= MaxFileCount) {
             // bad file id!
             errorCode_ = ErrorCodes::BadFileId;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else if (!files_[fileId_]){
             errorCode_ = ErrorCodes::FileIsNotValid;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else {
             result_.words[0] = files_[fileId_].size();
@@ -1448,13 +1425,9 @@ private:
         if (fileId_ >= MaxFileCount) {
             // bad file id!
             errorCode_ = ErrorCodes::BadFileId;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else if (!files_[fileId_]){
             errorCode_ = ErrorCodes::FileIsNotValid;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else {
             result_.words[0] = files_[fileId_].position();
@@ -1466,8 +1439,6 @@ private:
         if (fileId_ >= MaxFileCount) {
             // bad file id!
             errorCode_ = ErrorCodes::BadFileId;
-            result_.quads[0] = -1;
-            result_.quads[1] = -1;
             return -1;
         } else {
             result_.bytes[0] = files_[fileId_] ? -1 : 0;
@@ -1475,12 +1446,8 @@ private:
         }
     }
     uint16_t isValidFileId() noexcept {
-        if (fileId_ >= MaxFileCount) {
-            return -1;
-        } else {
-            result_.bytes[0] = files_[fileId_] ? -1 : 0;
-            return 0;
-        }
+        result_.bytes[0] = (fileId_ < MaxFileCount && files_[fileId_]);
+        return 0;
     }
     // these are the actual addresses
 private:
