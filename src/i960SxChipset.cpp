@@ -68,7 +68,7 @@ public:
     }
     [[nodiscard]] constexpr bool active() const noexcept { return allow; }
 private:
-    bool displayMemoryReadsAndWrites_ = true;
+    bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
 };
 
@@ -543,6 +543,19 @@ public:
         } else {
             theRAM_ = SD.open("ram.bin", FILE_WRITE);
             Serial.println(F("RAM.BIN OPEN SUCCESS!"));
+        }
+        // we now need to zero out the file
+        constexpr auto BufferSize = 512;
+        uint8_t buffer[BufferSize]  = { 0 };
+        auto size = theRAM_.size();
+        theRAM_.seek(0);
+        auto count = size / BufferSize;
+        for (uint32_t i = 0; i < count; ++i) {
+            theRAM_.write(buffer, BufferSize);
+        }
+        Serial.println(F("Halting at this point for testing purposes!"));
+        while(true) {
+
         }
         (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
