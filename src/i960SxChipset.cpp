@@ -68,7 +68,7 @@ public:
     }
     [[nodiscard]] constexpr bool active() const noexcept { return allow; }
 private:
-    bool displayMemoryReadsAndWrites_ = false;
+    bool displayMemoryReadsAndWrites_ = true;
     bool displayCacheLineUpdates_ = false;
 };
 
