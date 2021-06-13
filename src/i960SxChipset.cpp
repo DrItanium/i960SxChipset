@@ -75,17 +75,17 @@ private:
 RawDebugRegisters<true> rawDebug;
 
 bool displayReady = false;
-
-union MemoryElement {
-    explicit MemoryElement(uint16_t value = 0) noexcept : wordValue(value) { }
-    uint16_t wordValue;
-    uint8_t bytes[sizeof(uint16_t)];
-};
 /**
  * @brief Describes a single cache line which associates an address with 16 bytes of storage
  */
 template<uint32_t size = 16>
 struct CacheLine {
+public:
+    union MemoryElement {
+        explicit MemoryElement(uint16_t value = 0) noexcept : wordValue(value) { }
+        uint16_t wordValue;
+        uint8_t bytes[sizeof(uint16_t)];
+    };
 public:
     [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
         return valid_ && (address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize));
@@ -1134,6 +1134,171 @@ public:
         }
     }
 };
+template<uint16_t fileCount>
+class SDCardFilesystemInterface : public IOSpaceThing {
+public:
+    static constexpr uint8_t FixedPathSize = 80;
+    static constexpr auto MaxFileCount = fileCount;
+#ifdef ARDUINO_AVR_ATmega1284
+    static_assert(MaxFileCount <= 64, "Too many file handles defined, not enough ram on the 1284p to handle this!");
+#endif
+public:
+    explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
+    void begin() noexcept override {
+        if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+            signalHaltState(F("SD CARD INIT FAILED"));
+        }
+    }
+
+    uint8_t read8(Address address) noexcept override {
+        if (address >= ResultStart) {
+            if (auto offset = address - ResultStart; offset < 16) {
+                return result_.bytes[offset];
+            } else {
+                return 0;
+            }
+        }
+        if (address >= PathStart) {
+            if (auto offset = address - PathStart; offset < FixedPathSize) {
+                return static_cast<uint8_t>(path_[offset]);
+            } else {
+                // should not get here! so fail out hardcore!
+                signalHaltState(F("LARGER THAN FIXED PATH SIZE!!!"));
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    void write8(Address address, uint8_t value) noexcept override {
+        if (address >= ResultStart) {
+            if (auto offset = address - ResultStart; offset < 16) {
+                result_.bytes[offset] = value;
+            }
+        }
+        if (address >= PathStart) {
+            if (auto offset = address - PathStart; offset < FixedPathSize) {
+                path_[offset] = static_cast<char>(value);
+            } else {
+                // should not get here! so fail out hardcore!
+                signalHaltState(F("LARGER THAN FIXED PATH SIZE!!!"));
+            }
+        }
+    }
+
+    enum class SDCardOperations : uint16_t {
+        None = 0,
+        // General operations
+        OpenFile,
+        CloseFile,
+        FileExists,
+        MakeDirectory,
+        RemoveDirectory,
+        GetNumberOfOpenFiles,
+        GetMaximumNumberOfOpenFiles,
+        IsValidFileId,
+        GetFixedPathMaximum,
+        // individual file operations
+        FileRead,
+        FileWrite,
+        FileFlush,
+        FileSeek,
+        FileIsOpen,
+        GetFileName,
+        GetFileBytesAvailable,
+        GetFilePosition,
+        GetFilePermissions,
+        GetFileSize,
+    };
+
+    enum class Registers : uint16_t {
+        Doorbell, // two bytes
+        Command,
+        FileId,
+        ModeBits,
+        SeekPositionLower,
+        SeekPositionUpper,
+        Whence,
+        // Path and result are handled differently but we can at least compute base offsets
+        Path, // FixedPathSize bytes
+        Result, // 16 bytes in size
+    };
+    uint16_t invoke(uint16_t doorbellValue) noexcept {
+        return 0;
+    }
+    uint16_t read16(Address address) noexcept override {
+        if (address >= ResultStart) {
+            if (auto offset = (address - ResultStart) / 2; offset < 8) {
+                return result_.shorts[offset];
+            } else {
+                return 0;
+            }
+        }
+        switch (address) {
+            case static_cast<Address>(Registers::Doorbell) * 2: return invoke(0);
+            case static_cast<Address>(Registers::Command) * 2: return static_cast<uint16_t>(command_);
+            case static_cast<Address>(Registers::FileId) * 2: return fileId_;
+            case static_cast<Address>(Registers::ModeBits) * 2: return modeBits_;
+            case static_cast<Address>(Registers::SeekPositionLower) * 2: return seekPositionInfo_.halves[0];
+            case static_cast<Address>(Registers::SeekPositionUpper) * 2: return seekPositionInfo_.halves[1];
+            case static_cast<Address>(Registers::Whence) * 2: return whence_;
+            default: return 0;
+        }
+    }
+    void write16(Address address, uint16_t value) noexcept override {
+        if (address >= ResultStart) {
+            if (auto offset = (address - ResultStart) / 2; offset < 8) {
+               result_.shorts[offset] = value;
+            }
+        } else {
+            switch (address) {
+                case static_cast<Address>(Registers::Doorbell) * 2:
+                    (void)invoke(0);
+                    break;
+                case static_cast<Address>(Registers::Command) * 2:
+                    command_ = static_cast<SDCardOperations>(value);
+                    break;
+                case static_cast<Address>(Registers::FileId) * 2:
+                    fileId_ = value;
+                    break;
+                case static_cast<Address>(Registers::ModeBits) * 2:
+                    modeBits_ = value;
+                    break;
+                case static_cast<Address>(Registers::SeekPositionLower) * 2:
+                    seekPositionInfo_.halves[0] = value;
+                    break;
+                case static_cast<Address>(Registers::SeekPositionUpper) * 2:
+                    seekPositionInfo_.halves[1] = value;
+                    break;
+                case static_cast<Address>(Registers::Whence) * 2:
+                    whence_ = value;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    // these are the actual addresses
+    static constexpr auto PathStart = static_cast<int>(Registers::Path) * 2;
+    static constexpr auto ResultStart = PathStart + 80;
+private:
+    uint16_t openedFileCount = 0;
+    File files_[MaxFileCount];
+    SDCardOperations command_ = SDCardOperations::None;
+    uint16_t fileId_ = 0;
+    uint16_t modeBits_ = 0;
+    union {
+        uint32_t wholeValue_ = 0;
+        uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+    } seekPositionInfo_;
+    uint16_t whence_ = 0;
+    char path_[FixedPathSize] = { 0 };
+    union {
+        uint8_t bytes[16];
+        uint16_t shorts[16/sizeof(uint16_t)];
+    } result_;
+};
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
 ConsoleThing theConsole(0x100);
@@ -1146,6 +1311,8 @@ DisplayThing displayCommandSet(0x200);
 RAMThing<16,256> ram; // we want 4k but laid out more for locality than narrow strips
 ROMThing<128,32> rom; // 4k rom sections
 DataROMThing dataRom;
+
+SDCardFilesystemInterface<32> fs(0x300);
 DebuggingThing debugFlags(0xFF'FF00);
 CPUInternalMemorySpace internalMemorySpaceSink;
 #ifdef ADAFRUIT_FEATHER
@@ -1170,6 +1337,7 @@ MemoryThing* things[] {
         &adt7410,
         &adxl343,
 #endif
+        &fs,
         &debugFlags,
         &internalMemorySpaceSink,
         &dataRom, // last target because we are only going to run into this thing during startup
@@ -1372,9 +1540,6 @@ void setupBusStateMachine() noexcept {
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     internalMemorySpaceSink.begin();
-    if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-        signalHaltState(F("SD CARD INIT FAILED"));
-    }
     displayCommandSet.begin();
     displayReady = true;
     rom.begin();
@@ -1425,6 +1590,7 @@ void setup() {
     Serial.begin(115200);
     while(!Serial);
     fallback.begin();
+    fs.begin();
     theLed.begin();
     theConsole.begin();
     Serial.println(F("i960Sx chipset bringup"));
