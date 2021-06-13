@@ -1211,6 +1211,23 @@ public:
         GetFileSize,
     };
 
+    enum class ErrorCodes : uint16_t {
+        None = 0,
+        NoCommandProvided,
+    };
+
+    uint16_t invoke(uint16_t doorbellValue) noexcept {
+        // clear the error code on startup
+        errorCode_ = ErrorCodes::None;
+        switch (command_) {
+            case SDCardOperations::None:
+                errorCode_ = ErrorCodes::NoCommandProvided;
+                result_.words[0] = -1;
+                return -1;
+            default:
+                return 0;
+        }
+    }
     enum class Registers : uint16_t {
         Doorbell, // two bytes
         Command,
@@ -1219,13 +1236,13 @@ public:
         SeekPositionLower,
         SeekPositionUpper,
         Whence,
+        ErrorCode,
         // Path and result are handled differently but we can at least compute base offsets
         Path, // FixedPathSize bytes
         Result, // 16 bytes in size
+        // always last
+        BuffersStartAt = ErrorCode,
     };
-    uint16_t invoke(uint16_t doorbellValue) noexcept {
-        return 0;
-    }
     uint16_t read16(Address address) noexcept override {
         if (address >= ResultStart) {
             if (auto offset = (address - ResultStart) / 2; offset < 8) {
@@ -1242,6 +1259,7 @@ public:
             case static_cast<Address>(Registers::SeekPositionLower) * 2: return seekPositionInfo_.halves[0];
             case static_cast<Address>(Registers::SeekPositionUpper) * 2: return seekPositionInfo_.halves[1];
             case static_cast<Address>(Registers::Whence) * 2: return whence_;
+            case static_cast<Address>(Registers::ErrorCode) * 2: return static_cast<uint16_t>(errorCode_);
             default: return 0;
         }
     }
@@ -1273,6 +1291,9 @@ public:
                 case static_cast<Address>(Registers::Whence) * 2:
                     whence_ = value;
                     break;
+                case static_cast<Address>(Registers::ErrorCode) * 2:
+                    errorCode_ = static_cast<ErrorCodes>(value);
+                    break;
                 default:
                     break;
             }
@@ -1280,7 +1301,7 @@ public:
     }
 
     // these are the actual addresses
-    static constexpr auto PathStart = static_cast<int>(Registers::Path) * 2;
+    static constexpr auto PathStart = static_cast<int>(Registers::BuffersStartAt) * 2;
     static constexpr auto ResultStart = PathStart + 80;
 private:
     uint16_t openedFileCount = 0;
@@ -1297,7 +1318,10 @@ private:
     union {
         uint8_t bytes[16];
         uint16_t shorts[16/sizeof(uint16_t)];
+        uint32_t words[16/sizeof(uint32_t)];
+        uint64_t quads[16/sizeof(uint64_t)];
     } result_;
+    ErrorCodes errorCode_ = ErrorCodes::None;
 };
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
