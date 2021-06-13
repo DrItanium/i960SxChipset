@@ -539,7 +539,7 @@ private:
     static constexpr auto BufferSize = 512;
     static_assert(BufferSize <= 512, "BUFFER SIZE MUST BE LESS THAN OR EQUAL TO 512");
     void
-    allocateRAMBlock(uint8_t numIterations) {
+    allocateRAMBlock(uint8_t numIterations = 128) {
         static uint8_t staticStorageBuffer_[BufferSize] = { 0 };
         theRAM_.seek(theRAM_.size());
         if (rawDebug.displayMemoryReadsAndWrites()) {
@@ -570,21 +570,36 @@ public:
         Serial.println(F("RAM.BIN OPEN SUCCESS!"));
         // we now need to zero out the file
         Serial.println(F("Clearing out ram.bin!"));
-        allocateRAMBlock(64);
+        allocateRAMBlock();
         Serial.println(F("Halting at this point for testing purposes!"));
         while(true) {
 
         }
         (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
+private:
+    void
+    trySeekMemory(uint32_t address) {
+        bool hadToAllocate = false;
+        while (!theRAM_.seek(address)) {
+            // keep allocating memory until we are able to seek to the target position
+            allocateRAMBlock();
+            hadToAllocate = true;
+        }
+        if (hadToAllocate) {
+            // make sure that we flush the data to disk
+            theRAM_.flush();
+        }
+    }
+public:
     void write(uint32_t baseAddress, byte* buffer, size_t size) override {
-        theRAM_.seek(baseAddress);
+        trySeekMemory(baseAddress);
         theRAM_.write(buffer, size);
         // make sure...
         theRAM_.flush();
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        theRAM_.seek(baseAddress);
+        trySeekMemory(baseAddress);
         theRAM_.read(buffer, size);
     }
 private:
