@@ -1151,13 +1151,6 @@ public:
     }
 
     uint8_t read8(Address address) noexcept override {
-        if (address >= ResultStart) {
-            if (auto offset = address - ResultStart; offset < 16) {
-                return result_.bytes[offset];
-            } else {
-                return 0;
-            }
-        }
         if (address >= PathStart) {
             if (auto offset = address - PathStart; offset < FixedPathSize) {
                 return static_cast<uint8_t>(path_[offset]);
@@ -1167,21 +1160,28 @@ public:
                 return 0;
             }
         }
+        if (address >= ResultStart) {
+            if (auto offset = address - ResultStart; offset < 16) {
+                return result_.bytes[offset];
+            } else {
+                return 0;
+            }
+        }
         return 0;
     }
 
     void write8(Address address, uint8_t value) noexcept override {
-        if (address >= ResultStart) {
-            if (auto offset = address - ResultStart; offset < 16) {
-                result_.bytes[offset] = value;
-            }
-        }
         if (address >= PathStart) {
             if (auto offset = address - PathStart; offset < FixedPathSize) {
                 path_[offset] = static_cast<char>(value);
             } else {
                 // should not get here! so fail out hardcore!
                 signalHaltState(F("LARGER THAN FIXED PATH SIZE!!!"));
+            }
+        }
+        if (address >= ResultStart) {
+            if (auto offset = address - ResultStart; offset < 16) {
+                result_.bytes[offset] = value;
             }
         }
     }
@@ -1219,11 +1219,16 @@ public:
     uint16_t invoke(uint16_t doorbellValue) noexcept {
         // clear the error code on startup
         errorCode_ = ErrorCodes::None;
+
         switch (command_) {
             case SDCardOperations::None:
                 errorCode_ = ErrorCodes::NoCommandProvided;
                 result_.words[0] = -1;
                 return -1;
+            case SDCardOperations::FileExists:
+                // oh man this is freaking dangerous
+                // if we are not careful, we could run into a buffer overrun....
+                result_.bytes[0] = SD.exists(path_);
             default:
                 return 0;
         }
@@ -1238,13 +1243,13 @@ public:
         Whence,
         ErrorCode,
         // Path and result are handled differently but we can at least compute base offsets
-        Path, // FixedPathSize bytes
         Result, // 16 bytes in size
+        Path, // FixedPathSize bytes
         // always last
         BuffersStartAt = ErrorCode,
     };
     uint16_t read16(Address address) noexcept override {
-        if (address >= ResultStart) {
+        if (address >= ResultStart && address < PathStart) {
             if (auto offset = (address - ResultStart) / 2; offset < 8) {
                 return result_.shorts[offset];
             } else {
@@ -1263,8 +1268,10 @@ public:
             default: return 0;
         }
     }
+    static constexpr auto ResultStart = static_cast<int>(Registers::BuffersStartAt) * 2;
+    static constexpr auto PathStart = ResultStart + 16;
     void write16(Address address, uint16_t value) noexcept override {
-        if (address >= ResultStart) {
+        if (address >= ResultStart && address < PathStart) {
             if (auto offset = (address - ResultStart) / 2; offset < 8) {
                result_.shorts[offset] = value;
             }
@@ -1301,8 +1308,6 @@ public:
     }
 
     // these are the actual addresses
-    static constexpr auto PathStart = static_cast<int>(Registers::BuffersStartAt) * 2;
-    static constexpr auto ResultStart = PathStart + 80;
 private:
     uint16_t openedFileCount = 0;
     File files_[MaxFileCount];
@@ -1314,7 +1319,6 @@ private:
         uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     } seekPositionInfo_;
     uint16_t whence_ = 0;
-    char path_[FixedPathSize] = { 0 };
     union {
         uint8_t bytes[16];
         uint16_t shorts[16/sizeof(uint16_t)];
@@ -1322,6 +1326,8 @@ private:
         uint64_t quads[16/sizeof(uint64_t)];
     } result_;
     ErrorCodes errorCode_ = ErrorCodes::None;
+    char path_[FixedPathSize] = { 0 };
+    volatile uint32_t fixedPadding = 0; // always should be here to make sure
 };
 BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
 PortZThing portZThing(BuiltinPortZBaseAddress);
