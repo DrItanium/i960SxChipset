@@ -539,16 +539,38 @@ public:
     void
     begin() noexcept override {
         if (SD.exists("ram.bin")) {
-            // delete the file
+            // delete the file and start a new
             SD.remove("ram.bin");
         }
         theRAM_ = SD.open("ram.bin", FILE_WRITE);
-        theRAM_.seek(0x100'0000);
-        theRAM_.write(static_cast<byte>(0));
-        theRAM_.flush();
-        Serial.println(F("RAM.BIN CONSTRUCTION SUCCESS!"));
+        Serial.println(F("RAM.BIN OPEN SUCCESS!"));
+        // we now need to zero out the file
+        Serial.println(F("Clearing out ram.bin!"));
+        constexpr auto BufferSize = 512;
+        uint8_t buffer[BufferSize]  = { 0 };
+        theRAM_.seek(0);
+        auto count = MaxRamSize / BufferSize;
+        Serial.print(F("Must clear out "));
+        Serial.print(count);
+        Serial.println(F(" clusters!"));
+        constexpr auto IterationIncrement = 16;
+        for (uint32_t i = 0; i < count; i+=IterationIncrement) {
+            Serial.print(F("Clearing out clusters: ["));
+            Serial.print(i);
+            Serial.print(F(", "));
+            Serial.print(i + IterationIncrement);
+            Serial.print(F(") / "));
+            Serial.print(count);
+            Serial.print(F(" .... "));
+            // emit eight buffer writes to speed up operations
+            for (int j = 0; j < IterationIncrement; ++j) {
+                theRAM_.write(buffer, BufferSize);
+            }
+            Serial.println(F("DONE"));
+        }
+        Serial.println(F("Halting at this point for testing purposes!"));
         while(true) {
-            // halt here
+
         }
         (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
