@@ -535,7 +535,31 @@ public:
         // in this case, we want relative offsets
         return input & RamMask;
     }
-
+private:
+    static constexpr auto BufferSize = 512;
+    static_assert(BufferSize <= 512, "BUFFER SIZE MUST BE LESS THAN OR EQUAL TO 512");
+    void
+    allocateRAMBlock(uint8_t numIterations) {
+        static uint8_t staticStorageBuffer_[BufferSize] = { 0 };
+        theRAM_.seek(theRAM_.size());
+        if (rawDebug.displayMemoryReadsAndWrites()) {
+            Serial.print(F("Generating clusters: ["));
+            Serial.print(0);
+            Serial.print(F(", "));
+            Serial.print(numIterations);
+            Serial.print(F(") "));
+            Serial.print(F(" .... "));
+        }
+        // emit eight buffer writes to speed up operations
+        for (int j = 0; j < numIterations; ++j) {
+            theRAM_.write(staticStorageBuffer_, BufferSize);
+        }
+        theRAM_.flush();
+        if (rawDebug.displayMemoryReadsAndWrites()) {
+            Serial.println(F("DONE"));
+        }
+    }
+public:
     void
     begin() noexcept override {
         if (SD.exists("ram.bin")) {
@@ -546,22 +570,7 @@ public:
         Serial.println(F("RAM.BIN OPEN SUCCESS!"));
         // we now need to zero out the file
         Serial.println(F("Clearing out ram.bin!"));
-        constexpr auto BufferSize = 512;
-        uint8_t buffer[BufferSize]  = { 0 };
-        theRAM_.seek(0);
-        constexpr auto IterationIncrement = 64;
-        auto count = MaxRamSize / BufferSize;
-        Serial.print(F("Generating clusters: ["));
-        Serial.print(0);
-        Serial.print(F(", "));
-        Serial.print(IterationIncrement);
-        Serial.print(F(") "));
-        Serial.print(F(" .... "));
-        // emit eight buffer writes to speed up operations
-        for (int j = 0; j < IterationIncrement; ++j) {
-            theRAM_.write(buffer, BufferSize);
-        }
-        Serial.println(F("DONE"));
+        allocateRAMBlock(64);
         Serial.println(F("Halting at this point for testing purposes!"));
         while(true) {
 
