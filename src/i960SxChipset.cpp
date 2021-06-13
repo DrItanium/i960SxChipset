@@ -56,6 +56,7 @@ public:
     static constexpr auto AllowDebuggingStatements = allow;
     [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
     [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
+    [[nodiscard]] constexpr bool displaySDCardActivity() const noexcept { return AllowDebuggingStatements && displaySDCardActivity_; }
     void setDisplayMemoryReadsAndWrites(bool value) noexcept {
         if constexpr (AllowDebuggingStatements) {
             displayMemoryReadsAndWrites_ = value;
@@ -66,10 +67,17 @@ public:
             displayCacheLineUpdates_ = value;
         }
     }
+    void setDisplaySDCardActivity(bool value) noexcept {
+        if constexpr (AllowDebuggingStatements) {
+            displaySDCardActivity_ = value;
+        }
+    }
     [[nodiscard]] constexpr bool active() const noexcept { return allow; }
+
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
+    bool displaySDCardActivity_ = false;
 };
 
 RawDebugRegisters<true> rawDebug;
@@ -542,7 +550,7 @@ private:
     allocateRAMBlock(uint8_t numIterations = 128) {
         static uint8_t staticStorageBuffer_[BufferSize] = { 0 };
         theRAM_.seek(theRAM_.size());
-        if (rawDebug.displayMemoryReadsAndWrites()) {
+        if (rawDebug.displaySDCardActivity()) {
             Serial.print(F("Generating clusters: ["));
             Serial.print(0);
             Serial.print(F(", "));
@@ -555,7 +563,7 @@ private:
             theRAM_.write(staticStorageBuffer_, BufferSize);
         }
         theRAM_.flush();
-        if (rawDebug.displayMemoryReadsAndWrites()) {
+        if (rawDebug.displaySDCardActivity()) {
             Serial.println(F("DONE"));
         }
     }
@@ -571,24 +579,14 @@ public:
         // we now need to zero out the file
         Serial.println(F("Clearing out ram.bin!"));
         allocateRAMBlock();
-        Serial.println(F("Halting at this point for testing purposes!"));
-        while(true) {
-
-        }
         (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
 private:
     void
     trySeekMemory(uint32_t address) {
-        bool hadToAllocate = false;
         while (!theRAM_.seek(address)) {
             // keep allocating memory until we are able to seek to the target position
             allocateRAMBlock();
-            hadToAllocate = true;
-        }
-        if (hadToAllocate) {
-            // make sure that we flush the data to disk
-            theRAM_.flush();
         }
     }
 public:
@@ -1162,6 +1160,8 @@ public:
                 return rawDebug.displayMemoryReadsAndWrites();
             case 1:
                 return rawDebug.displayCacheLineUpdates();
+            case 2:
+                return rawDebug.displaySDCardActivity();
             default:
                 return 0;
         }
@@ -1174,6 +1174,9 @@ public:
                 break;
             case 1:
                 rawDebug.setDisplayCacheLineUpdates(outcome);
+                break;
+            case 2:
+                rawDebug.setDisplaySDCardActivity(outcome);
                 break;
             default:
                 break;
