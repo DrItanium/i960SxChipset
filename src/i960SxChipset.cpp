@@ -80,7 +80,7 @@ private:
     bool displaySDCardActivity_ = false;
 };
 
-RawDebugRegisters<false> rawDebug;
+RawDebugRegisters<true> rawDebug;
 
 bool displayReady = false;
 /**
