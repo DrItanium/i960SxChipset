@@ -538,24 +538,17 @@ public:
 
     void
     begin() noexcept override {
-        if (!SD.exists("ram.bin")) {
-            signalHaltState(F("NO RAM.BIN FOUND!"));
-        } else {
-            theRAM_ = SD.open("ram.bin", FILE_WRITE);
-            Serial.println(F("RAM.BIN OPEN SUCCESS!"));
+        if (SD.exists("ram.bin")) {
+            // delete the file
+            SD.remove("ram.bin");
         }
-        // we now need to zero out the file
-        constexpr auto BufferSize = 512;
-        uint8_t buffer[BufferSize]  = { 0 };
-        auto size = theRAM_.size();
-        theRAM_.seek(0);
-        auto count = size / BufferSize;
-        for (uint32_t i = 0; i < count; ++i) {
-            theRAM_.write(buffer, BufferSize);
-        }
-        Serial.println(F("Halting at this point for testing purposes!"));
+        theRAM_ = SD.open("ram.bin", FILE_WRITE);
+        theRAM_.seek(0x100'0000);
+        theRAM_.write(static_cast<byte>(0));
+        theRAM_.flush();
+        Serial.println(F("RAM.BIN CONSTRUCTION SUCCESS!"));
         while(true) {
-
+            // halt here
         }
         (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
