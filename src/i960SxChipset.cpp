@@ -1208,6 +1208,10 @@ public:
         GetFilePosition,
         GetFilePermissions,
         GetFileSize,
+        /**
+         * @brief Return the position and size of the given file in a single call
+         */
+        GetFileCoordinates,
     };
 
     enum class ErrorCodes : uint16_t {
@@ -1244,6 +1248,9 @@ public:
             case SDCardOperations::GetFileBytesAvailable: return getFileBytesAvailable();
             case SDCardOperations::GetFilePosition: return getFilePosition();
             case SDCardOperations::GetFilePermissions: return getFilePermissions();
+            case SDCardOperations::GetFileSize: return getFileSize();
+            case SDCardOperations::GetFileCoordinates: return getFileCoordinates();
+            case SDCardOperations::FileIsOpen: return fileIsOpen();
             default:
                 errorCode_ = ErrorCodes::UndefinedCommandProvided;
                 result_.quads[0] = -1;
@@ -1396,6 +1403,52 @@ private:
         } else {
             result_.words[0] = files_[fileId_].position();
             return 0;
+        }
+    }
+    uint16_t getFileSize() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else if (!files_[fileId_]){
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else {
+            result_.words[0] = files_[fileId_].size();
+            return 0;
+        }
+    }
+    uint16_t getFileCoordinates() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else if (!files_[fileId_]){
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else {
+            result_.words[0] = files_[fileId_].position();
+            result_.words[1] = files_[fileId_].size();
+            return 0;
+        }
+    }
+    uint16_t fileIsOpen() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            result_.quads[0] = -1;
+            result_.quads[1] = -1;
+            return -1;
+        } else {
+            return files_[fileId_] ? 0 : -1;
         }
     }
     uint16_t isValidFileId() noexcept {
