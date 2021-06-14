@@ -1518,8 +1518,7 @@ performRead(Address address, LoadStoreStyle style) noexcept {
             continue;
         }
         if (currentThing->respondsTo(address, style)) {
-           auto result = currentThing->read(address, style);
-           return result;
+           return currentThing->read(address, style);
         }
     }
     return 0;
