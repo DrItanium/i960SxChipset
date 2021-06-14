@@ -50,7 +50,7 @@ SdFat SD;
 #endif
 /// Set to false to prevent the console from displaying every single read and write
 template<bool allow>
-struct RawDebugRegisters {
+struct ChipsetOperationRegisters {
 public:
     // if this is false, then this entire class disables
     static constexpr auto AllowDebuggingStatements = allow;
@@ -78,9 +78,10 @@ private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
     bool displaySDCardActivity_ = false;
+    /// @todo add support for having the dma engine within the microcontroller to perform block transfers to the RAM
 };
 
-RawDebugRegisters<true> rawDebug;
+ChipsetOperationRegisters<true> chipsetFunctions;
 
 bool displayReady = false;
 /**
@@ -208,7 +209,7 @@ public:
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
     explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.print(F("\tGetByte: 0x"));
             Serial.println(targetAddress, HEX);
         }
@@ -216,7 +217,7 @@ public:
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
                 auto result = line.getByte(targetAddress);
-                if (rawDebug.displayCacheLineUpdates()) {
+                if (chipsetFunctions.displayCacheLineUpdates()) {
                     Serial.print(F("\t\tResult: 0x"));
                     Serial.println(result, HEX);
                 }
@@ -227,7 +228,7 @@ public:
         // cache miss
         // need to replace a cache line
         auto hit = cacheMiss(targetAddress).getByte(targetAddress);
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.print(F("\t\tHIT: 0x"));
             Serial.println(hit, HEX);
         }
@@ -235,7 +236,7 @@ public:
 
     }
     [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.print(F("\tGetWord: 0x"));
             Serial.print(targetAddress, HEX);
         }
@@ -243,7 +244,7 @@ public:
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
                 auto result = line.getWord(targetAddress);
-                if (rawDebug.displayCacheLineUpdates()) {
+                if (chipsetFunctions.displayCacheLineUpdates()) {
                     Serial.print(F("\t\tResult: 0x"));
                     Serial.println(result, HEX);
                 }
@@ -253,7 +254,7 @@ public:
         // cache miss
         // need to replace a cache line
         auto hit = cacheMiss(targetAddress).getWord(targetAddress);
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.print(F("\t\tHIT: 0x"));
             Serial.println(hit, HEX);
         }
@@ -291,7 +292,7 @@ private:
      */
     ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.println(F("Cache Miss: handling cache miss"));
             Serial.print(F("\tTarget Address: 0x"));
             Serial.println(targetAddress, HEX);
@@ -308,7 +309,7 @@ private:
         // we had no free elements so choose one to replace
         auto targetCacheLine = rand() & NumberOfCacheLinesMask;
         ASingleCacheLine& replacementLine = lines_[targetCacheLine];
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.print(F("\tNumber of cache lines: 0x"));
             Serial.println(NumberOfCacheLines, HEX);
             Serial.print(F("\tCache lines mask: 0b"));
@@ -449,7 +450,7 @@ public:
         }
     }
     void write8(Address offset, uint8_t value) noexcept override {
-        if (rawDebug.displayMemoryReadsAndWrites()) {
+        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
             Serial.print(F("CONSOLE.WRITE8 0x"));
             Serial.print(value, HEX);
             Serial.print(F(" to 0x"));
@@ -462,7 +463,7 @@ public:
         }
     }
     void write16(Address offset, uint16_t value) noexcept override {
-        if (rawDebug.displayMemoryReadsAndWrites()) {
+        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
             Serial.print(F("CONSOLE.WRITE16 0x"));
             Serial.print(value, HEX);
             Serial.print(F(" to 0x"));
@@ -505,7 +506,7 @@ public:
     }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
-        if (rawDebug.displayMemoryReadsAndWrites()) {
+        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
             Serial.print(F("RAM: READING FROM ADDRESS 0x"));
             Serial.print(address, HEX);
             Serial.print(F(" yielded value 0x"));
@@ -514,7 +515,7 @@ public:
         return result;
     }
     void write(Address address, uint16_t value, LoadStoreStyle style) noexcept override {
-        if (rawDebug.displayMemoryReadsAndWrites()) {
+        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
             Serial.print(F("RAM: WRITING 0x"));
             Serial.print(value, HEX);
             Serial.print(F(" to ADDRESS 0x"));
@@ -601,7 +602,7 @@ public:
     }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
-        if (rawDebug.displayMemoryReadsAndWrites()) {
+        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
             Serial.print(F("ROM: READING FROM ADDRESS 0x"));
             Serial.print(address, HEX);
             Serial.print(F(" yielded value 0x"));
@@ -627,7 +628,7 @@ public:
         return address < size_;
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.print(F("\tAccessing "));
             Serial.print(size, DEC);
             Serial.print(F(" bytes starting at 0x"));
@@ -635,7 +636,7 @@ public:
         }
         theBootROM_.seek(baseAddress);
         theBootROM_.read(buffer, size);
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.println();
             Serial.println(F("READ ROMTHING!"));
             for (size_t i = 0; i < size; ++i) {
@@ -690,7 +691,7 @@ public:
     }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
-        if (rawDebug.displayMemoryReadsAndWrites()) {
+        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
             Serial.print(F("DATA.ROM: READING FROM ADDRESS 0x"));
             Serial.print(address, HEX);
             Serial.print(F(" yielded value 0x"));
@@ -708,7 +709,7 @@ public:
         return theCache_.getWord(offset);
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.print(F("DATA.ROM:\tAccessing "));
             Serial.print(size, DEC);
             Serial.print(F(" bytes starting at 0x"));
@@ -716,7 +717,7 @@ public:
         }
         theDataROM_.seek(baseAddress);
         theDataROM_.read(buffer, size);
-        if (rawDebug.displayCacheLineUpdates()) {
+        if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.println();
             Serial.println(F("READ ROMTHING!"));
             for (size_t i = 0; i < size; ++i) {
@@ -1132,18 +1133,18 @@ public:
     }
 };
 
-class DebuggingThing : public IOSpaceThing {
+class ChipsetFunctionInterface : public IOSpaceThing {
 public:
-    explicit DebuggingThing(Address base) : IOSpaceThing(base, base + 0x100) { }
-    ~DebuggingThing() override  = default;
+    explicit ChipsetFunctionInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
+    ~ChipsetFunctionInterface() override  = default;
     uint8_t read8(Address address) noexcept override {
         switch (address) {
             case 0:
-                return rawDebug.displayMemoryReadsAndWrites();
+                return chipsetFunctions.displayMemoryReadsAndWrites();
             case 1:
-                return rawDebug.displayCacheLineUpdates();
+                return chipsetFunctions.displayCacheLineUpdates();
             case 2:
-                return rawDebug.displaySDCardActivity();
+                return chipsetFunctions.displaySDCardActivity();
             default:
                 return 0;
         }
@@ -1152,13 +1153,13 @@ public:
         bool outcome = value != 0;
         switch (address) {
             case 0:
-                rawDebug.setDisplayMemoryReadsAndWrites(outcome);
+                chipsetFunctions.setDisplayMemoryReadsAndWrites(outcome);
                 break;
             case 1:
-                rawDebug.setDisplayCacheLineUpdates(outcome);
+                chipsetFunctions.setDisplayCacheLineUpdates(outcome);
                 break;
             case 2:
-                rawDebug.setDisplaySDCardActivity(outcome);
+                chipsetFunctions.setDisplaySDCardActivity(outcome);
                 break;
             default:
                 break;
@@ -1517,7 +1518,7 @@ ROMThing<128,32> rom; // 4k rom sections
 DataROMThing dataRom;
 
 SDCardFilesystemInterface<32> fs(0x300);
-DebuggingThing debugFlags(0xFF'FF00);
+ChipsetFunctionInterface debugFlags(0xFF'FF00);
 CPUInternalMemorySpace internalMemorySpaceSink;
 #ifdef ADAFRUIT_FEATHER
 AdafruitLIS3MDLThing lsi3mdl(0x1000);
