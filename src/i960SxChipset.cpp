@@ -1480,6 +1480,7 @@ FallbackMemorySpace fallback;
 // list of memory devices to walk through
 MemoryThing* things[] {
         &rom,
+        &dataRom, // last target because we are only going to run into this thing during startup
         &ram,
         &theLed,
         &portZThing,
@@ -1494,7 +1495,6 @@ MemoryThing* things[] {
         &fs,
         &debugFlags,
         &internalMemorySpaceSink,
-        &dataRom, // last target because we are only going to run into this thing during startup
         &fallback, // must be last!!!!!
 };
 
