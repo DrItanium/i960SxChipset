@@ -547,20 +547,28 @@ private:
     static constexpr auto BufferSize = 512;
     static_assert(BufferSize <= 512, "BUFFER SIZE MUST BE LESS THAN OR EQUAL TO 512");
     void
-    allocateRAMBlock(uint8_t numIterations = 128) {
+    allocateRAMBlock(int count = 128) {
         static uint8_t staticStorageBuffer_[BufferSize] = { 0 };
+        if (rawDebug.displaySDCardActivity()) {
+            Serial.print(F("Current ram size: 0x"));
+            Serial.println(theRAM_.size(), HEX);
+            Serial.print(F("Current position: "));
+            Serial.println(theRAM_.position());
+        }
         theRAM_.seek(theRAM_.size());
         if (rawDebug.displaySDCardActivity()) {
             Serial.print(F("Generating clusters: ["));
             Serial.print(0);
             Serial.print(F(", "));
-            Serial.print(numIterations);
+            Serial.print(count);
             Serial.print(F(") "));
             Serial.print(F(" .... "));
         }
         // emit eight buffer writes to speed up operations
-        for (int j = 0; j < numIterations; ++j) {
-            theRAM_.write(staticStorageBuffer_, BufferSize);
+        for (int j = 0; j < count; ++j) {
+            if (auto result = theRAM_.write(staticStorageBuffer_, BufferSize); result != 0) {
+                signalHaltState(F("Could not write any more bytes to ram.bin! Halting"));
+            }
         }
         theRAM_.flush();
         if (rawDebug.displaySDCardActivity()) {
@@ -570,11 +578,18 @@ private:
 public:
     void
     begin() noexcept override {
-        if (SD.exists("ram.bin")) {
+        static const char* path = "ram.bin";
+        if (SD.exists(const_cast<char*>(path))) {
             // delete the file and start a new
-            SD.remove("ram.bin");
+            Serial.println(F("Deleting old ram.bin"));
+            if (!SD.remove(const_cast<char*>(path))) {
+                signalHaltState(F("Could not delete ram.bin!"));
+            }
         }
         theRAM_ = SD.open("ram.bin", FILE_WRITE);
+        if (!theRAM_) {
+            signalHaltState(F("Could not open ram.bin!")) ;
+        }
         Serial.println(F("RAM.BIN OPEN SUCCESS!"));
         // we now need to zero out the file
         Serial.println(F("Clearing out ram.bin!"));
@@ -586,7 +601,7 @@ private:
     trySeekMemory(uint32_t address) {
         while (!theRAM_.seek(address)) {
             // keep allocating memory until we are able to seek to the target position
-            allocateRAMBlock();
+            allocateRAMBlock(2048);
         }
     }
 public:
@@ -669,7 +684,7 @@ public:
     }
     void
     begin() noexcept override {
-        if (!SD.exists("boot.rom")) {
+        if (!SD.exists(const_cast<char*>("boot.rom"))) {
             signalHaltState(F("NO BOOT.ROM!"));
         }
         theBootROM_ = SD.open("boot.rom", FILE_READ);
@@ -750,7 +765,7 @@ public:
     }
     void
     begin() noexcept override {
-        if (!SD.exists("boot.dat")) {
+        if (!SD.exists(const_cast<char*>("boot.dat"))) {
             signalHaltState(F("NO BOOT.DAT!"));
         }
         theDataROM_ = SD.open("boot.dat", FILE_READ);
