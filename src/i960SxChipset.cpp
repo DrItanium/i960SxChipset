@@ -543,65 +543,29 @@ public:
         // in this case, we want relative offsets
         return input & RamMask;
     }
-private:
-    static constexpr auto BufferSize = 512;
-    static_assert(BufferSize <= 512, "BUFFER SIZE MUST BE LESS THAN OR EQUAL TO 512");
-    void
-    allocateRAMBlock(int count = 128) {
-        static uint8_t staticStorageBuffer_[BufferSize] = { 0 };
-        if (rawDebug.displaySDCardActivity()) {
-            Serial.print(F("Current ram size: 0x"));
-            Serial.println(theRAM_.size(), HEX);
-            Serial.print(F("Current position: "));
-            Serial.println(theRAM_.position());
-        }
-        theRAM_.seek(theRAM_.size());
-        if (rawDebug.displaySDCardActivity()) {
-            Serial.print(F("Generating clusters: ["));
-            Serial.print(0);
-            Serial.print(F(", "));
-            Serial.print(count);
-            Serial.print(F(") "));
-            Serial.print(F(" .... "));
-        }
-        // emit eight buffer writes to speed up operations
-        for (int j = 0; j < count; ++j) {
-            if (auto result = theRAM_.write(staticStorageBuffer_, BufferSize); result != 0) {
-                signalHaltState(F("Could not write any more bytes to ram.bin! Halting"));
-            }
-        }
-        theRAM_.flush();
-        if (rawDebug.displaySDCardActivity()) {
-            Serial.println(F("DONE"));
-        }
-    }
 public:
     void
     begin() noexcept override {
         static const char* path = "ram.bin";
-        if (SD.exists(const_cast<char*>(path))) {
+        if (!SD.exists(const_cast<char*>(path))) {
             // delete the file and start a new
-            Serial.println(F("Deleting old ram.bin"));
-            if (!SD.remove(const_cast<char*>(path))) {
-                signalHaltState(F("Could not delete ram.bin!"));
-            }
+            signalHaltState(F("Could not find ram.bin! Please create one 512 megs in size!"));
         }
         theRAM_ = SD.open("ram.bin", FILE_WRITE);
         if (!theRAM_) {
-            signalHaltState(F("Could not open ram.bin!")) ;
+            signalHaltState(F("Could not open ram.bin! SD CARD may be corrupt")) ;
         }
         Serial.println(F("RAM.BIN OPEN SUCCESS!"));
-        // we now need to zero out the file
-        Serial.println(F("Clearing out ram.bin!"));
-        allocateRAMBlock();
         (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
 private:
     void
     trySeekMemory(uint32_t address) {
-        while (!theRAM_.seek(address)) {
-            // keep allocating memory until we are able to seek to the target position
-            allocateRAMBlock(2048);
+        if (!theRAM_.seek(address)) {
+            Serial.print(F("Seek memory to address: 0x"));
+            Serial.print(address, HEX);
+            Serial.println(F(" failed!"));
+            signalHaltState(F("SEEK ERROR"));
         }
     }
 public:
