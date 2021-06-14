@@ -520,24 +520,17 @@ public:
         (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
 private:
-    void
-    trySeekMemory(uint32_t address) {
-        if (!theRAM_.seek(address)) {
-            Serial.print(F("Seek memory to address: 0x"));
-            Serial.print(address, HEX);
-            Serial.println(F(" failed!"));
-            signalHaltState(F("SEEK ERROR"));
-        }
-    }
 public:
     void write(uint32_t baseAddress, byte* buffer, size_t size) override {
-        trySeekMemory(baseAddress);
+        Serial.print(F("RAM WRITE to 0x"));
+        Serial.println(baseAddress, HEX);
+        theRAM_.seek(baseAddress);
         theRAM_.write(buffer, size);
         // make sure...
         theRAM_.flush();
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        trySeekMemory(baseAddress);
+        theRAM_.seek(baseAddress);
         theRAM_.read(buffer, size);
     }
 private:
@@ -635,8 +628,9 @@ private:
 /// @todo add support for the boot data section that needs to be copied into ram by the i960 on bootup
 class DataROMThing : public MemoryThing {
 public:
-    static constexpr uint32_t numCacheLines = 16;
-    static constexpr uint32_t cacheLineSize = 128;
+    // two clusters are held onto at a time
+    static constexpr uint32_t numCacheLines = 2;
+    static constexpr uint32_t cacheLineSize = 512;
     static constexpr Address ROMStart = 0x2000'0000;
     static constexpr Address ROMEnd = 0x8000'0000;
     static constexpr Address DataSizeMax = ROMEnd - ROMStart;
@@ -1470,7 +1464,7 @@ using DisplayThing = TFTShieldThing;
 using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
 #endif
 DisplayThing displayCommandSet(0x200);
-RAMThing<16,256> ram; // we want 4k but laid out more for locality than narrow strips
+RAMThing<8,512> ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMThing<128,32> rom; // 4k rom sections
 DataROMThing dataRom;
 
