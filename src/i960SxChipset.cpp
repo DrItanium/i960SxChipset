@@ -415,51 +415,18 @@ public:
         Available, // 2 byte
         AvailableForWrite, // 2 byte
         IO, // 2 bytes
-        BufferDoorbell, // 2 bytes
-        BufferSize, // 2 bytes
-        BufferLength, // 2 bytes
-        BufStart, // 2 byte
     };
 public:
     // make sure we allocate a ton of space just in case
     explicit ConsoleThing(Address base) noexcept : IOSpaceThing(base, base + 0x100) { }
     ~ConsoleThing() override = default;
-    static constexpr auto BufferSize = 128;
-    [[nodiscard]] uint8_t read8(Address offset) noexcept override {
-        constexpr auto baseAddress = static_cast<uint32_t>(Registers::BufStart) * sizeof(uint16_t);
-        constexpr auto endAddress = baseAddress + BufferSize;
-        if (offset >= baseAddress && endAddress > offset) {
-            return buf_[offset - baseAddress];
-        } else {
-            return 0;
-        }
-    }
     [[nodiscard]] uint16_t read16(Address offset) noexcept override {
         switch (offset) {
             case static_cast<uint32_t>(Registers::Available) * sizeof(uint16_t): return Serial.available();
             case static_cast<uint32_t>(Registers::AvailableForWrite) * sizeof(uint16_t): return Serial.availableForWrite();
             case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t): return Serial.read();
-            case static_cast<uint32_t>(Registers::BufferDoorbell) * sizeof(uint16_t):
-                return static_cast<uint16_t>(Serial.readBytes(buf_, bufCount_));
-            case static_cast<uint32_t>(Registers::BufferLength) * sizeof(uint16_t):
-                return static_cast<uint16_t>(bufCount_);
-            case static_cast<uint32_t>(Registers::BufferSize) * sizeof(uint16_t):
-                return static_cast<uint16_t>(BufferSize);
             default:
                 return 0;
-        }
-    }
-    void write8(Address offset, uint8_t value) noexcept override {
-        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
-            Serial.print(F("CONSOLE.WRITE8 0x"));
-            Serial.print(value, HEX);
-            Serial.print(F(" to 0x"));
-            Serial.println(offset, HEX);
-        }
-        constexpr auto baseAddress = static_cast<uint32_t>(Registers::BufStart) * sizeof(uint16_t);
-        constexpr auto endAddress = baseAddress + BufferSize;
-        if (offset >= baseAddress && endAddress > offset) {
-            buf_[offset - baseAddress] = value;
         }
     }
     void write16(Address offset, uint16_t value) noexcept override {
@@ -475,20 +442,10 @@ public:
             case static_cast<uint32_t>(Registers::Flush) * sizeof(uint16_t):
                 Serial.flush();
                 break;
-            case static_cast<uint32_t>(Registers::BufferDoorbell) * sizeof(uint16_t):
-                Serial.write(buf_, bufCount_);
-                break;
-            case static_cast<uint32_t>(Registers::BufferLength) * sizeof(uint16_t):
-                bufCount_ = value > BufferSize ? BufferSize : value;
-                break;
             default:
                 break;
         }
     }
-private:
-    char buf_[BufferSize] = { 0 };
-    byte bufCount_ = 0;
-
 };
 
 template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
