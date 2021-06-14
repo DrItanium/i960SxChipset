@@ -555,6 +555,9 @@ public:
         if (!theRAM_) {
             signalHaltState(F("Could not open ram.bin! SD CARD may be corrupt")) ;
         }
+        if (theRAM_.size() != MaxRamSize) {
+            signalHaltState(F("RAM.BIN wrong size!"));
+        }
         Serial.println(F("RAM.BIN OPEN SUCCESS!"));
         (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
