@@ -522,8 +522,6 @@ public:
 private:
 public:
     void write(uint32_t baseAddress, byte* buffer, size_t size) override {
-        Serial.print(F("RAM WRITE to 0x"));
-        Serial.println(baseAddress, HEX);
         theRAM_.seek(baseAddress);
         theRAM_.write(buffer, size);
         // make sure...
