@@ -1444,39 +1444,35 @@ MemoryThing* things[] {
 
 void
 performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-    if (address < 0xFF00'0000) {
-        for (auto *currentThing : things) {
-            if (!currentThing) {
-                continue;
-            }
-            if (currentThing->respondsTo(address, style)) {
-                currentThing->write(address, value, style);
-                return;
-            }
+    for (auto *currentThing : things) {
+        if (!currentThing) {
+            continue;
         }
-        Serial.print(F("UNMAPPED WRITE OF 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" TO 0x"));
-        Serial.println(address, HEX);
-        delay(10);
+        if (currentThing->respondsTo(address, style)) {
+            currentThing->write(address, value, style);
+            return;
+        }
     }
+    Serial.print(F("UNMAPPED WRITE OF 0x"));
+    Serial.print(value, HEX);
+    Serial.print(F(" TO 0x"));
+    Serial.println(address, HEX);
+    delay(10);
 }
 
 uint16_t
 performRead(Address address, LoadStoreStyle style) noexcept {
-    if (address < 0xFF00'0000) {
-        for (auto *currentThing : things) {
-            if (!currentThing) {
-                continue;
-            }
-            if (currentThing->respondsTo(address, style)) {
-                return currentThing->read(address, style);
-            }
+    for (auto *currentThing : things) {
+        if (!currentThing) {
+            continue;
         }
-        Serial.print(F("UNMAPPED READ OF 0x"));
-        Serial.println(address, HEX);
-        delay(10);
+        if (currentThing->respondsTo(address, style)) {
+            return currentThing->read(address, style);
+        }
     }
+    Serial.print(F("UNMAPPED READ OF 0x"));
+    Serial.println(address, HEX);
+    delay(10);
     return 0;
 }
 
@@ -1600,11 +1596,13 @@ enteringDataState() noexcept {
     performingRead = processorInterface.isReadOperation();
 }
 void processDataRequest() noexcept {
-    auto burstAddress = processorInterface.getBurstAddress(baseAddress);
-    if (performingRead) {
-        processorInterface.setDataBits(performRead(burstAddress, processorInterface.getStyle()));
-    } else {
-        performWrite(burstAddress, processorInterface.getDataBits(), processorInterface.getStyle());
+    if (auto burstAddress = processorInterface.getBurstAddress(baseAddress); burstAddress < 0xFF00'0000) {
+        // do not allow writes or reads into processor internal memory
+        if (performingRead) {
+            processorInterface.setDataBits(performRead(burstAddress, processorInterface.getStyle()));
+        } else {
+            performWrite(burstAddress, processorInterface.getDataBits(), processorInterface.getStyle());
+        }
     }
     // setup the proper address and emit this over serial
     auto blastAsserted = processorInterface.blastTriggered();
