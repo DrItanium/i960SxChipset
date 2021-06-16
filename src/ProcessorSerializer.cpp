@@ -45,7 +45,16 @@ ProcessorInterface::getAddress() noexcept {
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
     dataLines_.writeGPIOsDirection(0xFFFF);
-    return static_cast<uint16_t>(dataLines_.readGPIOs());
+    SPI.beginTransaction(theSettings);
+    digitalWrite(i960Pinout::GPIOSelect, LOW);
+    SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines));
+    SPI.transfer(GPIOBaseAddress);
+    auto lower = static_cast<uint16_t>(SPI.transfer(0x00));
+    auto upper = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
+    digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    SPI.endTransaction();
+    return lower | upper;
+    //return static_cast<uint16_t>(dataLines_.readGPIOs());
 }
 
 void
