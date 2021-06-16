@@ -94,8 +94,8 @@ public:
     void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] constexpr auto getStyle() const noexcept { return lss_; }
     //[[nodiscard]] bool isWriteOperation() const noexcept;
-    void setHOLDPin(decltype(LOW) value) noexcept;
-    void setLOCKPin(decltype(LOW) value) noexcept;
+    void setHOLDPin(bool value) noexcept;
+    void setLOCKPin(bool value) noexcept;
     static constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
         return start + (size * count);
     }
@@ -132,7 +132,8 @@ public:
     void updateDataCycle() noexcept;
     [[nodiscard]] constexpr bool isReadOperation() const noexcept { return isReadOperation_; }
 private:
-    IOExpander<IOExpanderAddress::MemoryCommitExtras> extra_;
+    void updateOutputLatch() noexcept;
+private:
     bool initialized_ = false;
     bool asTriggered_ = false;
     bool denTriggered_ = false;
@@ -141,6 +142,8 @@ private:
     Address address_ = 0;
     LoadStoreStyle lss_ = LoadStoreStyle::None;
     bool isReadOperation_ = false;
+    bool lockValue_ = true;
+    bool holdValue_ = false;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

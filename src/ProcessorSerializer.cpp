@@ -27,6 +27,41 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace
 {
+    enum class MCP23x17Registers : byte {
+        IODIRA = 0,
+        IODIRB,
+        IPOLA,
+        IPOLB,
+        GPINTENA,
+        GPINTENB,
+        DEFVALA,
+        DEFVALB,
+        INTCONA,
+        INTCONB,
+        _IOCONA,
+        _IOCONB,
+        GPPUA,
+        GPPUB,
+        INTFA,
+        INTFB,
+        INTCAPA,
+        INTCAPB,
+        GPIOA,
+        GPIOB,
+        OLATA,
+        OLATB,
+        OLAT = OLATA,
+        GPIO = GPIOA,
+        IOCON = _IOCONA,
+        IODIR = IODIRA,
+        INTCAP = INTCAPA,
+        INTF = INTFA,
+        GPPU = GPPUA,
+        INTCON = INTCONA,
+        DEFVAL = DEFVALA,
+        GPINTEN = GPINTENA,
+        IPOL = IPOLA,
+    };
     SPISettings theSettings(TargetBoard::onFeatherBoard() ? 8'000'000 : 10'000'000, MSBFIRST, SPI_MODE0);
     constexpr byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<uint8_t>(address) & 0b111) << 1) | 1;
@@ -37,10 +72,10 @@ namespace
     constexpr byte IODirBaseAddress = 0x00;
     constexpr byte GPIOBaseAddress = 0x12;
     constexpr byte IOConAddress = 0x0A;
-    uint16_t read16(ProcessorInterface::IOExpanderAddress addr, byte opcode) {
+    uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
                 generateReadOpcode(addr),
-                opcode,
+                static_cast<byte>(opcode),
                 0x00,
                 0x00,
         };
@@ -52,10 +87,10 @@ namespace
         auto lowest = static_cast<uint16_t>(buffer[3]) << 8;
         return lower | lowest;
     }
-    uint8_t read8(ProcessorInterface::IOExpanderAddress addr, byte opcode) {
+    uint8_t read8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[3] = {
                 generateReadOpcode(addr),
-                opcode,
+                static_cast<byte>(opcode),
                 0x00,
         };
 
@@ -65,12 +100,12 @@ namespace
         return buffer[2];
     }
     uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
-        return read16(addr, GPIOBaseAddress);
+        return read16(addr, MCP23x17Registers::GPIO);
     }
-    void write16(ProcessorInterface::IOExpanderAddress addr, byte opcode, uint16_t value) {
+    void write16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint16_t value) {
         uint8_t buffer[4] = {
                 generateWriteOpcode(addr),
-                opcode,
+                static_cast<byte>(opcode),
                 static_cast<uint8_t>(value),
                 static_cast<uint8_t>(value >> 8),
         };
@@ -78,10 +113,10 @@ namespace
         SPI.transfer(buffer, 4);
         digitalWrite(i960Pinout::GPIOSelect, HIGH);
     }
-    void write8(ProcessorInterface::IOExpanderAddress addr, byte opcode, uint8_t value) {
+    void write8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint8_t value) {
         uint8_t buffer[3] = {
                 generateWriteOpcode(addr),
-                opcode,
+                static_cast<byte>(opcode),
                 value
         };
         digitalWrite(i960Pinout::GPIOSelect, LOW);
@@ -89,10 +124,10 @@ namespace
         digitalWrite(i960Pinout::GPIOSelect, HIGH);
     }
     void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
-        write16(addr, GPIOBaseAddress, value);
+        write16(addr, MCP23x17Registers::GPIO, value);
     }
     void writeDirection(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
-        write16(addr, IODirBaseAddress, value);
+        write16(addr, MCP23x17Registers::IODIR, value);
     }
 }
 uint16_t
@@ -121,14 +156,32 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
 
 
 
-
 void
-ProcessorInterface::setHOLDPin(decltype(LOW) value) noexcept {
-    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), value, extra_);
+ProcessorInterface::updateOutputLatch() noexcept {
+    // construct the bit pattern as needed
+    byte latchValue = 0;
+    if (holdValue_ && lockValue_) {
+        latchValue = 0b1010'0000;
+    } else if (holdValue_ && !lockValue_) {
+        latchValue = 0b0010'0000;
+    } else if (!holdValue_ && lockValue_) {
+       latchValue = 0b1000'0000;
+    }
+    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, latchValue);
 }
 void
-ProcessorInterface::setLOCKPin(decltype(LOW) value) noexcept {
-    digitalWrite(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), value, extra_);
+ProcessorInterface::setHOLDPin(bool value) noexcept {
+    if (value != holdValue_) {
+        holdValue_ = value;
+        updateOutputLatch();
+    }
+}
+void
+ProcessorInterface::setLOCKPin(bool value) noexcept {
+    if (value != lockValue_) {
+        lockValue_ = value;
+        updateOutputLatch();
+    }
 }
 
 void
@@ -142,46 +195,44 @@ ProcessorInterface::begin() noexcept {
         // should receive it.
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
-        auto iocon = read8(ProcessorInterface::IOExpanderAddress::DataLines, IOConAddress);
-        write8(ProcessorInterface::IOExpanderAddress::DataLines, IOConAddress, iocon & 0b0111'1110);
-        // now we have to refresh our on mcu flags for each io expander
-        extra_.refreshIOCon();
+        auto iocon = read8(ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON);
+        write8(ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, iocon & 0b0111'1110);
         // now all devices tied to this ~CS pin have separate addresses
         // make each of these inputs
         writeDirection(IOExpanderAddress::Lower16Lines, 0xFFFF);
         writeDirection(IOExpanderAddress::Upper16Lines, 0xFFFF);
         writeDirection(IOExpanderAddress::DataLines, dataLinesDirection_);
         writeDirection(IOExpanderAddress::MemoryCommitExtras, 0x005F);
-        setHOLDPin(LOW);
-        setLOCKPin(HIGH);
+        // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
+        write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, 0b1000'0000);
+
     }
 }
 void
 ProcessorInterface::setPortZDirectionRegister(byte value) noexcept {
-    extra_.setPortBDirection(value);
+    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IODIRB, value);
 }
 byte
 ProcessorInterface::getPortZDirectionRegister() noexcept {
-    return extra_.getPortBDirection();
+    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IODIRB);
 }
 void ProcessorInterface::setPortZPolarityRegister(byte value) noexcept {
-    extra_.setPortBPolarity(value);
-
+    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IPOLB, value);
 }
 byte ProcessorInterface::getPortZPolarityRegister() noexcept {
-    return extra_.getPortBPolarity();
+    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IPOLB);
 }
 void ProcessorInterface::setPortZPullupResistorRegister(byte value) noexcept {
-    extra_.setPortBPullupResistorRegister(value);
+    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPPUB, value);
 }
 byte ProcessorInterface::getPortZPullupResistorRegister() noexcept {
-    return extra_.getPortBPullupResistorRegister();
+    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPPUB);
 }
 byte ProcessorInterface::readPortZGPIORegister() noexcept {
-    return extra_.readPortB();
+    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOB);
 }
 void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
-    extra_.writePortB(value);
+    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOB, value);
 }
 
 void ProcessorInterface::newDataCycle() noexcept {
