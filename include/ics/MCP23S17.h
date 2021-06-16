@@ -50,18 +50,12 @@ class MCP23x17 {
             1 << 14,
             1 << 15,
     };
-    static SPISettings& getSPISettings() noexcept {
-            static SPISettings theSettings(
-                    TargetBoard::onFeatherBoard() ? 8'000'000 : 10'000'000, MSBFIRST, SPI_MODE0);
-            return theSettings;
-        }
         static_assert((address & 0b111) == address, "Provided address is too large!");
     public:
         using Self = MCP23x17<address, resetPin>;
         static constexpr auto BusAddress = address;
         static constexpr auto ResetPin = resetPin;
         static constexpr auto HasResetPin = (ResetPin >= 0);
-        constexpr auto getSPIAddress() const noexcept { return _hardwareAddressPinsEnabled ? BusAddress : 0b000; }
         constexpr auto getResetPin() const noexcept { return ResetPin; }
         constexpr auto hasResetPin() const noexcept { return ResetPin >= 0; }
     public:
@@ -75,8 +69,6 @@ class MCP23x17 {
         Self& operator=(Self&&) = delete; 
         MCP23x17(const Self&) = delete;
         MCP23x17(Self&&) = delete;
-        virtual void enableCS() noexcept = 0;
-        virtual void disableCS() noexcept = 0;
         virtual void begin() noexcept {
             if constexpr (HasResetPin) {
                 pinMode(ResetPin, OUTPUT);
@@ -86,43 +78,11 @@ class MCP23x17 {
             // the iocon register. Polarity is also active low for interrupt
             // lines
         }
-    private:
-        class ReadOperation final { };
-        class WriteOperation final { };
-        constexpr byte generateOpcode(ReadOperation) const noexcept {
-            return 0b0100'0000 | (getSPIAddress() << 1) | 1;
-        }
-        constexpr byte generateOpcode(WriteOperation) const noexcept {
-            return 0b0100'0000 | (getSPIAddress() << 1);
-        }
-
-        byte read(byte registerAddress) noexcept {
-            SPI.beginTransaction(getSPISettings());
-            enableCS();
-            SPI.transfer(static_cast<uint8_t>(generateOpcode(ReadOperation{})));
-            SPI.transfer(static_cast<uint8_t>(registerAddress));
-            auto result = SPI.transfer(0x00);
-            disableCS();
-            SPI.endTransaction();
-            return result;
-        }
-        void write(byte registerAddress, byte value) noexcept {
-            SPI.beginTransaction(getSPISettings());
-            enableCS();
-            SPI.transfer(static_cast<uint8_t>(generateOpcode(WriteOperation{})));
-            SPI.transfer(static_cast<uint8_t>(registerAddress));
-            SPI.transfer(static_cast<uint8_t>(value));
-            disableCS();
-            SPI.endTransaction();
-        }
-        void write16(byte registerAddressA, byte registerAddressB, uint16_t value) noexcept {
-            write(registerAddressA, static_cast<byte>(value & 0xFF));
-            write(registerAddressB, static_cast<byte>((value & 0xFF00) >> 8));
-        }
-        uint16_t read16(byte registerAddressA, byte registerAddressB) noexcept {
-            return static_cast<uint16_t>(read(registerAddressA)) |
-                   (static_cast<uint16_t>(read(registerAddressB)) << 8);
-        }
+protected:
+        virtual byte read(byte registerAddress) noexcept = 0;
+        virtual void write(byte registerAddress, byte value) noexcept = 0;
+        virtual void write16(byte registerAddressA, byte registerAddressB, uint16_t value) noexcept = 0;
+        virtual uint16_t read16(byte registerAddressA, byte registerAddressB) noexcept = 0;
         template<byte seq, byte banked>
         constexpr byte chooseAddress() const noexcept {
             return registersAreSequential() ? seq : banked;
@@ -300,6 +260,11 @@ class MCP23x17 {
 template<byte address, int chipEnable, int resetPin = -1>
 class MCP23S17 : public MCP23x17<address, resetPin> {
     public:
+        static SPISettings& getSPISettings() noexcept {
+            static SPISettings theSettings(
+                    TargetBoard::onFeatherBoard() ? 8'000'000 : 10'000'000, MSBFIRST, SPI_MODE0);
+            return theSettings;
+        }
         using Parent = MCP23x17<address, resetPin>;
         using Self = MCP23S17<address, chipEnable, resetPin>;
         Self& operator=(const Self&) = delete; 
@@ -311,17 +276,54 @@ class MCP23S17 : public MCP23x17<address, resetPin> {
         constexpr auto getChipEnablePin() const noexcept { return ChipEnablePin; }
         MCP23S17() = default;
         ~MCP23S17() override = default;
-        void enableCS() noexcept override {
-            digitalWrite(ChipEnablePin, LOW);
-        }
-        void disableCS() noexcept override {
-            digitalWrite(ChipEnablePin, HIGH);
-        }
         void begin() noexcept override {
             Parent::begin();
             pinMode(ChipEnablePin, OUTPUT);
             digitalWrite(ChipEnablePin, HIGH);
         }
+protected:
+    void enableCS() noexcept {
+        digitalWrite(ChipEnablePin, LOW);
+    }
+    void disableCS() noexcept {
+        digitalWrite(ChipEnablePin, HIGH);
+    }
+    constexpr auto getSPIAddress() const noexcept { return Parent::hardwareAddressEnabled() ? Parent::BusAddress : 0b000; }
+    class ReadOperation final { };
+    class WriteOperation final { };
+    constexpr byte generateOpcode(ReadOperation) const noexcept {
+        return 0b0100'0000 | (getSPIAddress() << 1) | 1;
+    }
+    constexpr byte generateOpcode(WriteOperation) const noexcept {
+        return 0b0100'0000 | (getSPIAddress() << 1);
+    }
+    byte read(byte registerAddress) noexcept override {
+        SPI.beginTransaction(getSPISettings());
+        enableCS();
+        SPI.transfer(static_cast<uint8_t>(generateOpcode(ReadOperation{})));
+        SPI.transfer(static_cast<uint8_t>(registerAddress));
+        auto result = SPI.transfer(0x00);
+        disableCS();
+        SPI.endTransaction();
+        return result;
+    }
+    void write(byte registerAddress, byte value) noexcept override {
+        SPI.beginTransaction(getSPISettings());
+        enableCS();
+        SPI.transfer(static_cast<uint8_t>(generateOpcode(WriteOperation{})));
+        SPI.transfer(static_cast<uint8_t>(registerAddress));
+        SPI.transfer(static_cast<uint8_t>(value));
+        disableCS();
+        SPI.endTransaction();
+    }
+    void write16(byte registerAddressA, byte registerAddressB, uint16_t value) noexcept override {
+        write(registerAddressA, static_cast<byte>(value & 0xFF));
+        write(registerAddressB, static_cast<byte>((value & 0xFF00) >> 8));
+    }
+    uint16_t read16(byte registerAddressA, byte registerAddressB) noexcept override {
+        return static_cast<uint16_t>(read(registerAddressA)) |
+               (static_cast<uint16_t>(read(registerAddressB)) << 8);
+    }
 };
 
 
