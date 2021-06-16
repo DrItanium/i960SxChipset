@@ -35,39 +35,31 @@ namespace
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
     constexpr byte GPIOBaseAddress = 0x12;
+    uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
+        digitalWrite(i960Pinout::GPIOSelect, LOW);
+        SPI.transfer(generateReadOpcode(addr));
+        SPI.transfer(GPIOBaseAddress);
+        auto lower = static_cast<uint16_t>(SPI.transfer(0x00));
+        auto lowest = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
+        digitalWrite(i960Pinout::GPIOSelect, HIGH);
+        return lower | lowest;
+    }
 }
 Address
 ProcessorInterface::getAddress() noexcept {
     SPI.beginTransaction(theSettings);
-    digitalWrite(i960Pinout::GPIOSelect, LOW);
-    SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines));
-    SPI.transfer(GPIOBaseAddress);
-    auto lower = static_cast<uint16_t>(SPI.transfer(0x00));
-    auto lowest = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
-    digitalWrite(i960Pinout::GPIOSelect, HIGH);
-    digitalWrite(i960Pinout::GPIOSelect, LOW);
-    SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines));
-    SPI.transfer(GPIOBaseAddress);
-    auto higher = static_cast<uint16_t>(SPI.transfer(0x00));
-    auto highest = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
-    digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
+    auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
     SPI.endTransaction();
-    auto lower16Addr = static_cast<Address>(lower | lowest);
-    auto upper16Addr = static_cast<Address>(higher | highest) << 16;
     return lower16Addr | upper16Addr;
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
     dataLines_.writeGPIOsDirection(0xFFFF);
     SPI.beginTransaction(theSettings);
-    digitalWrite(i960Pinout::GPIOSelect, LOW);
-    SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines));
-    SPI.transfer(GPIOBaseAddress);
-    auto lower = static_cast<uint16_t>(SPI.transfer(0x00));
-    auto upper = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
-    digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    auto result = readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
     SPI.endTransaction();
-    return lower | upper;
+    return result;
     //return static_cast<uint16_t>(dataLines_.readGPIOs());
 }
 
