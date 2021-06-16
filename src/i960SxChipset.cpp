@@ -1585,7 +1585,7 @@ void processDataRequest() noexcept {
         }
         if (!responseFound) {
             if (performingRead) {
-                Serial.print(F("UNMAPPED READ OF 0x"));
+                Serial.print(F("UNMAPPED READ FROM 0x"));
             } else {
                 Serial.print(F("UNMAPPED WRITE OF 0x"));
                 // expensive but something has gone horribly wrong anyway so whatever!
