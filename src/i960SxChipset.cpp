@@ -1583,9 +1583,7 @@ void processDataRequest() noexcept {
             invokeAction(ram, burstAddress, style);
         } else {
             for (auto *currentThing : things) {
-                if (!currentThing) {
-                    continue;
-                }
+                // While having the sanity check here for null entries is smart, it also introduces more latency
                 if (currentThing->respondsTo(burstAddress, style)) {
                     invokeAction(*currentThing, burstAddress, style);
                     break;
