@@ -1442,40 +1442,6 @@ MemoryThing* things[] {
         &debugFlags,
 };
 
-void
-performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-    for (auto *currentThing : things) {
-        if (!currentThing) {
-            continue;
-        }
-        if (currentThing->respondsTo(address, style)) {
-            currentThing->write(address, value, style);
-            return;
-        }
-    }
-    Serial.print(F("UNMAPPED WRITE OF 0x"));
-    Serial.print(value, HEX);
-    Serial.print(F(" TO 0x"));
-    Serial.println(address, HEX);
-    delay(10);
-}
-
-uint16_t
-performRead(Address address, LoadStoreStyle style) noexcept {
-    for (auto *currentThing : things) {
-        if (!currentThing) {
-            continue;
-        }
-        if (currentThing->respondsTo(address, style)) {
-            return currentThing->read(address, style);
-        }
-    }
-    Serial.print(F("UNMAPPED READ OF 0x"));
-    Serial.println(address, HEX);
-    delay(10);
-    return 0;
-}
-
 // ----------------------------------------------------------------
 // state machine
 // ----------------------------------------------------------------
@@ -1598,10 +1564,37 @@ enteringDataState() noexcept {
 void processDataRequest() noexcept {
     if (auto burstAddress = processorInterface.getBurstAddress(baseAddress); burstAddress < 0xFF00'0000) {
         // do not allow writes or reads into processor internal memory
-        if (performingRead) {
-            processorInterface.setDataBits(performRead(burstAddress, processorInterface.getStyle()));
-        } else {
-            performWrite(burstAddress, processorInterface.getDataBits(), processorInterface.getStyle());
+        //processorInterface.setDataBits(performRead(burstAddress, style));
+        auto style = processorInterface.getStyle();
+        bool responseFound = false;
+        for (auto *currentThing : things) {
+            if (!currentThing) {
+                continue;
+            }
+            if (currentThing->respondsTo(burstAddress, style)) {
+                responseFound = true;
+                // delay getting style bits as long as possible
+                if (performingRead) {
+                    processorInterface.setDataBits(currentThing->read(burstAddress, style));
+                } else {
+                    currentThing->write(burstAddress, processorInterface.getDataBits(), style);
+                    // we are performing a write operation
+                }
+                break;
+            }
+        }
+        if (!responseFound) {
+            if (performingRead) {
+                Serial.print(F("UNMAPPED READ OF 0x"));
+            } else {
+                Serial.print(F("UNMAPPED WRITE OF 0x"));
+                // expensive but something has gone horribly wrong anyway so whatever!
+                Serial.print(processorInterface.getDataBits(), HEX);
+                Serial.print(F(" TO 0x"));
+
+            }
+            Serial.println(burstAddress, HEX);
+            delay(10);
         }
     }
     // setup the proper address and emit this over serial
