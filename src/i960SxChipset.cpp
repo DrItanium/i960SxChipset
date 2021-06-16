@@ -705,16 +705,6 @@ private:
 };
 
 
-class CPUInternalMemorySpace : public MemoryThing {
-public:
-    CPUInternalMemorySpace() noexcept : MemoryThing(0xFF00'0000) { }
-    ~CPUInternalMemorySpace() override  = default;
-    [[nodiscard]] bool
-    respondsTo(Address address) const noexcept override {
-        return address > 0xFF00'0000;
-    }
-};
-
 class TFTShieldThing : public IOSpaceThing {
 public:
     enum class Registers : uint32_t {
@@ -1038,48 +1028,6 @@ private:
     uint32_t buttonsCache_ = 0;
     Adafruit_TFTShield18 ss;
 
-};
-/**
- * @brief We need to know when the cpu is requested to write to any unmapped memory block. This memory space handles that
- */
-class FallbackMemorySpace : public MemoryThing {
-public:
-    FallbackMemorySpace() noexcept : MemoryThing(0, 0xFFFF'FFFF) { }
-    ~FallbackMemorySpace() override  = default;
-    uint8_t read8(Address address) noexcept override {
-        Serial.print(F("UNMAPPED READ8 OF 0x"));
-        Serial.println(address, HEX);
-        delay(10);
-        return MemoryThing::read8(address);
-    }
-    uint16_t read16(Address address) noexcept override {
-        Serial.print(F("UNMAPPED READ16 OF 0x"));
-        Serial.println(address, HEX);
-        delay(10);
-        return MemoryThing::read16(address);
-    }
-    void write8(Address address, uint8_t value) noexcept override {
-        Serial.print(F("UNMAPPED WRITE8 OF 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" TO 0x"));
-        Serial.println(address, HEX);
-        delay(10);
-        MemoryThing::write8(address, value);
-    }
-    void write16(Address address, uint16_t value) noexcept override {
-        Serial.print(F("UNMAPPED WRITE16 OF 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" TO 0x"));
-        Serial.println(address, HEX);
-        delay(10);
-        MemoryThing::write16(address, value);
-    }
-    [[nodiscard]] Address makeAddressRelative(Address input) const noexcept override { return input; }
-    [[nodiscard]] bool
-    respondsTo(Address) const noexcept override {
-        // regardless of address, return true since we should only ever hit this if all other things fail to match!
-        return true;
-    }
 };
 
 class ChipsetFunctionInterface : public IOSpaceThing {
@@ -1468,14 +1416,12 @@ DataROMThing dataRom;
 
 SDCardFilesystemInterface<32> fs(0x300);
 ChipsetFunctionInterface debugFlags(0xFF'FF00);
-CPUInternalMemorySpace internalMemorySpaceSink;
 #ifdef ADAFRUIT_FEATHER
 AdafruitLIS3MDLThing lsi3mdl(0x1000);
 AdafruitLSM6DSOXThing lsm6dsox(0x1100);
 AdafruitADT7410Thing adt7410(0x1200);
 AdafruitADXL343Thing adxl343(0x1300);
 #endif
-FallbackMemorySpace fallback;
 
 // list of memory devices to walk through
 MemoryThing* things[] {
@@ -1494,32 +1440,42 @@ MemoryThing* things[] {
 #endif
         &fs,
         &debugFlags,
-        &internalMemorySpaceSink,
-        &fallback, // must be last!!!!!
 };
 
 void
 performWrite(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-    for (auto* currentThing : things) {
-        if (!currentThing) {
-            continue;
+    if (address < 0xFF00'0000) {
+        for (auto *currentThing : things) {
+            if (!currentThing) {
+                continue;
+            }
+            if (currentThing->respondsTo(address, style)) {
+                currentThing->write(address, value, style);
+                return;
+            }
         }
-        if (currentThing->respondsTo(address, style)) {
-            currentThing->write(address, value, style);
-            break;
-        }
+        Serial.print(F("UNMAPPED WRITE OF 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" TO 0x"));
+        Serial.println(address, HEX);
+        delay(10);
     }
 }
 
 uint16_t
 performRead(Address address, LoadStoreStyle style) noexcept {
-    for (auto* currentThing : things) {
-        if (!currentThing) {
-            continue;
+    if (address < 0xFF00'0000) {
+        for (auto *currentThing : things) {
+            if (!currentThing) {
+                continue;
+            }
+            if (currentThing->respondsTo(address, style)) {
+                return currentThing->read(address, style);
+            }
         }
-        if (currentThing->respondsTo(address, style)) {
-           return currentThing->read(address, style);
-        }
+        Serial.print(F("UNMAPPED READ OF 0x"));
+        Serial.println(address, HEX);
+        delay(10);
     }
     return 0;
 }
@@ -1692,7 +1648,6 @@ void setupBusStateMachine() noexcept {
 
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-    internalMemorySpaceSink.begin();
     displayCommandSet.begin();
     displayReady = true;
     rom.begin();
@@ -1742,7 +1697,6 @@ void setup() {
     digitalWrite(i960Pinout::Led, LOW);
     Serial.begin(115200);
     while(!Serial);
-    fallback.begin();
     fs.begin();
     theLed.begin();
     theConsole.begin();
