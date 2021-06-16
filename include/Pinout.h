@@ -26,7 +26,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ARDUINO_PINOUT_H
 #define ARDUINO_PINOUT_H
 #include <Arduino.h>
-#include <libbonuspin.h>
 #include "MCUPlatform.h"
 using Address = uint32_t;
 /**

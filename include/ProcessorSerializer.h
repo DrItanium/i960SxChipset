@@ -26,7 +26,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ARDUINO_IOEXPANDERS_H
 #define ARDUINO_IOEXPANDERS_H
 #include <Arduino.h>
-#include <libbonuspin.h>
 #include "Pinout.h"
 
 class ProcessorInterface {
@@ -85,8 +84,6 @@ public:
         Count,
     };
     static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
-    template<IOExpanderAddress addr, int enablePin = static_cast<int>(i960Pinout::GPIOSelect)>
-    using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr), enablePin>;
 public:
     void begin() noexcept;
     [[nodiscard]] constexpr Address getAddress() const noexcept { return address_; }

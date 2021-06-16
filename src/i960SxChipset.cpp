@@ -30,7 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// - C++17
 /// Board Platform: MightyCore
 #include <SPI.h>
-#include <libbonuspin.h>
 #include <Fsm.h>
 #ifdef ARDUINO_NRF52_ADAFRUIT
 #include <SdFat.h>

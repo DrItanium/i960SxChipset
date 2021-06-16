@@ -24,7 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ProcessorSerializer.h"
-
+#include <SPI.h>
 namespace
 {
     enum class MCP23x17Registers : byte {
