@@ -123,50 +123,6 @@ private:
     Address end_;
 };
 
-class LambdaMemoryThing : public MemoryThing {
-public:
-    using Read8Operation = uint8_t(*)(Address);
-    using Read16Operation = uint16_t(*)(Address);
-    using Write8Operation = void(*)(Address, uint8_t);
-    using Write16Operation = void(*)(Address, uint16_t);
-public:
-    LambdaMemoryThing(Address base, Address end, Read8Operation r8, Write8Operation w8, Read16Operation r16, Write16Operation w16) noexcept : MemoryThing(base, end), read8_(r8), read16_(r16), write8_(w8), write16_(w16) { }
-    LambdaMemoryThing(Address base, Address end, Read8Operation r8, Write8Operation w8) noexcept : LambdaMemoryThing(base, end, r8, w8, nullptr, nullptr) { }
-    LambdaMemoryThing(Address base, Address end, Read16Operation r16, Write16Operation w16) noexcept : LambdaMemoryThing(base, end, nullptr, nullptr, r16, w16) { }
-    ~LambdaMemoryThing() override = default;
-    uint8_t
-    read8(Address address) noexcept override {
-            if (read8_) {
-                return read8_(address);
-            }
-            return 0;
-    }
-    uint16_t
-    read16(Address address) noexcept override {
-            if (read16_) {
-                return read16_(address);
-            }
-            return 0;
-    }
-    void
-    write8(Address address, uint8_t value) noexcept override {
-            if (write8_) {
-                write8_(address, value);
-            }
-    }
-    void
-    write16(Address address, uint16_t value) noexcept override {
-            if (write16_) {
-                write16_(address, value);
-            }
-    }
-private:
-    Read8Operation read8_;
-    Read16Operation read16_;
-    Write8Operation write8_;
-    Write16Operation write16_;
-
-};
 
 /**
  * @brief An intermediate type which automatically adds the IOBaseAddress to the start and end addresses
