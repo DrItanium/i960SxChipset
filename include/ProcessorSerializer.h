@@ -89,23 +89,11 @@ public:
     using IOExpander = bonuspin::MCP23S17<static_cast<int>(addr), enablePin>;
 public:
     void begin() noexcept;
-    [[nodiscard]] Address getAddress() noexcept;
+    [[nodiscard]] constexpr Address getAddress() const noexcept { return address_; }
     [[nodiscard]] uint16_t getDataBits() noexcept;
     void setDataBits(uint16_t value) noexcept;
-    [[nodiscard]] uint8_t getByteEnableBits() noexcept;
-    [[nodiscard]] decltype(LOW) getByteEnable0() noexcept;
-    [[nodiscard]] decltype(HIGH) getByteEnable1() noexcept;
-    [[nodiscard]] LoadStoreStyle getStyle() noexcept;
-    [[nodiscard]] uint8_t getBurstAddressBits() noexcept;
-
-    static constexpr Address getBurstAddress(Address base, Address burstBits) noexcept {
-        return (base & (~0b1110)) | burstBits;
-    }
-    [[nodiscard]] Address getBurstAddress(Address base) noexcept;
-    [[nodiscard]] Address getBurstAddress() noexcept;
-
-    [[nodiscard]] bool isReadOperation() const noexcept;
-    [[nodiscard]] bool isWriteOperation() const noexcept;
+    [[nodiscard]] constexpr auto getStyle() const noexcept { return lss_; }
+    //[[nodiscard]] bool isWriteOperation() const noexcept;
     void setHOLDPin(decltype(LOW) value) noexcept;
     void setLOCKPin(decltype(LOW) value) noexcept;
     static constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
@@ -140,6 +128,9 @@ public:
     byte readPortZGPIORegister() noexcept;
     void writePortZGPIORegister(byte value) noexcept;
 
+    void newDataCycle() noexcept;
+    void updateDataCycle() noexcept;
+    [[nodiscard]] constexpr bool isReadOperation() const noexcept { return isReadOperation_; }
 private:
     IOExpander<IOExpanderAddress::DataLines> dataLines_;
     IOExpander<IOExpanderAddress::Lower16Lines> lower16_;
@@ -149,6 +140,10 @@ private:
     bool asTriggered_ = false;
     bool denTriggered_ = false;
     uint16_t dataLinesDirection_ = 0xFFFF;
+    Address upperMaskedAddress_ = 0;
+    Address address_ = 0;
+    LoadStoreStyle lss_ = LoadStoreStyle::None;
+    bool isReadOperation_ = false;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

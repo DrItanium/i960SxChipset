@@ -36,6 +36,7 @@ namespace
     }
     constexpr byte IODirBaseAddress = 0x00;
     constexpr byte GPIOBaseAddress = 0x12;
+    constexpr byte IOConAddress = 0x0A;
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, byte opcode) {
         uint8_t buffer[4] = {
                 generateReadOpcode(addr),
@@ -51,6 +52,18 @@ namespace
         auto lowest = static_cast<uint16_t>(buffer[3]) << 8;
         return lower | lowest;
     }
+    uint8_t read8(ProcessorInterface::IOExpanderAddress addr, byte opcode) {
+        uint8_t buffer[3] = {
+                generateReadOpcode(addr),
+                opcode,
+                0x00,
+        };
+
+        digitalWrite(i960Pinout::GPIOSelect, LOW);
+        SPI.transfer(buffer, 3);
+        digitalWrite(i960Pinout::GPIOSelect, HIGH);
+        return buffer[2];
+    }
     uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
         return read16(addr, GPIOBaseAddress);
     }
@@ -65,21 +78,22 @@ namespace
         SPI.transfer(buffer, 4);
         digitalWrite(i960Pinout::GPIOSelect, HIGH);
     }
+    void write8(ProcessorInterface::IOExpanderAddress addr, byte opcode, uint8_t value) {
+        uint8_t buffer[3] = {
+                generateWriteOpcode(addr),
+                opcode,
+                value
+        };
+        digitalWrite(i960Pinout::GPIOSelect, LOW);
+        SPI.transfer(buffer, 3);
+        digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    }
     void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
         write16(addr, GPIOBaseAddress, value);
     }
     void writeDirection(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
         write16(addr, IODirBaseAddress, value);
     }
-
-}
-Address
-ProcessorInterface::getAddress() noexcept {
-    SPI.beginTransaction(theSettings);
-    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
-    auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
-    SPI.endTransaction();
-    return lower16Addr | upper16Addr;
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
@@ -91,7 +105,6 @@ ProcessorInterface::getDataBits() noexcept {
     auto result = readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
     SPI.endTransaction();
     return result;
-    //return static_cast<uint16_t>(dataLines_.readGPIOs());
 }
 
 void
@@ -103,48 +116,11 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
     }
     writeGPIO16(ProcessorInterface::IOExpanderAddress::DataLines, value);
     SPI.endTransaction();
-    //dataLines_.writeGPIOs(value);
 }
 
 
 
-uint8_t
-ProcessorInterface::getByteEnableBits() noexcept {
-    return (extra_.readGPIOs() & 0b11000) >> 3;
-}
 
-decltype(LOW)
-ProcessorInterface::getByteEnable0() noexcept {
-    return (getByteEnableBits() & 1) == 0 ? LOW : HIGH;
-}
-decltype(LOW)
-ProcessorInterface::getByteEnable1() noexcept {
-    return (getByteEnableBits() & 0b10) == 0 ? LOW : HIGH;
-}
-
-uint8_t
-ProcessorInterface::getBurstAddressBits() noexcept {
-    auto gpios = extra_.readGPIOs();
-    return (gpios & 0b111) << 1;
-}
-
-Address
-ProcessorInterface::getBurstAddress(Address base) noexcept {
-    return getBurstAddress(base, static_cast<Address>(getBurstAddressBits()));
-}
-Address
-ProcessorInterface::getBurstAddress() noexcept {
-    return getBurstAddress(getAddress());
-}
-
-bool
-ProcessorInterface::isReadOperation() const noexcept {
-    return DigitalPin<i960Pinout::W_R_>::isAsserted();
-}
-bool
-ProcessorInterface::isWriteOperation() const noexcept {
-    return DigitalPin<i960Pinout::W_R_>::isDeasserted();
-}
 
 void
 ProcessorInterface::setHOLDPin(decltype(LOW) value) noexcept {
@@ -159,16 +135,16 @@ void
 ProcessorInterface::begin() noexcept {
     if (!initialized_) {
         initialized_ = true;
+        pinMode(i960Pinout::GPIOSelect, OUTPUT);
+        pinMode(i960Pinout::GPIOSelect, HIGH);
         // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
         // disabled. We can send out a single IOCON.HAEN enable message and all
         // should receive it.
         // so do a begin operation on all chips (0b000)
-        dataLines_.begin();
         // set IOCON.HAEN on all chips
-        dataLines_.enableHardwareAddressPins();
+        auto iocon = read8(ProcessorInterface::IOExpanderAddress::DataLines, IOConAddress);
+        write8(ProcessorInterface::IOExpanderAddress::DataLines, IOConAddress, iocon & 0b0111'1110);
         // now we have to refresh our on mcu flags for each io expander
-        lower16_.refreshIOCon();
-        upper16_.refreshIOCon();
         extra_.refreshIOCon();
         // now all devices tied to this ~CS pin have separate addresses
         // make each of these inputs
@@ -179,10 +155,6 @@ ProcessorInterface::begin() noexcept {
         setHOLDPin(LOW);
         setLOCKPin(HIGH);
     }
-}
-LoadStoreStyle
-ProcessorInterface::getStyle() noexcept {
-    return static_cast<LoadStoreStyle>(getByteEnableBits());
 }
 void
 ProcessorInterface::setPortZDirectionRegister(byte value) noexcept {
@@ -210,4 +182,23 @@ byte ProcessorInterface::readPortZGPIORegister() noexcept {
 }
 void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
     extra_.writePortB(value);
+}
+
+void ProcessorInterface::newDataCycle() noexcept {
+    clearDENTrigger();
+    SPI.beginTransaction(theSettings);
+    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
+    auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
+    SPI.endTransaction();
+    auto currentBaseAddress_ = lower16Addr | upper16Addr;
+    upperMaskedAddress_ = 0xFFFFFFF0 | currentBaseAddress_;
+    address_ = currentBaseAddress_;
+    isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
+}
+void ProcessorInterface::updateDataCycle() noexcept {
+    auto bits = readGPIO16(IOExpanderAddress::MemoryCommitExtras);
+    auto burstAddressBits = static_cast<byte>((bits & 0b111) << 1);
+    auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
+    lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
+    address_ = upperMaskedAddress_ | burstAddressBits;
 }

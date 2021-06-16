@@ -1555,12 +1555,10 @@ void doAddressState() noexcept {
 void
 enteringDataState() noexcept {
     // when we do the transition, record the information we need
-    processorInterface.clearDENTrigger();
-    baseAddress = processorInterface.getAddress();
-    performingRead = processorInterface.isReadOperation();
+    processorInterface.newDataCycle();
 }
 void processDataRequest() noexcept {
-    if (Address burstAddress = processorInterface.getBurstAddress(baseAddress); burstAddress < 0xFF00'0000) {
+    if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
         LoadStoreStyle style = processorInterface.getStyle();
@@ -1568,7 +1566,7 @@ void processDataRequest() noexcept {
         auto invokeAction = [&responseFound](MemoryThing &currentThing, Address address, auto style) {
             responseFound = true;
             // delay getting style bits as long as possible
-            if (performingRead) {
+            if (processorInterface.isReadOperation()) {
                 processorInterface.setDataBits(currentThing.read(address, style));
             } else {
                 currentThing.write(address, processorInterface.getDataBits(), style);
@@ -1591,7 +1589,7 @@ void processDataRequest() noexcept {
             }
         }
         if (!responseFound) {
-            if (performingRead) {
+            if (processorInterface.isReadOperation()) {
                 Serial.print(F("UNMAPPED READ FROM 0x"));
             } else {
                 Serial.print(F("UNMAPPED WRITE OF 0x"));
@@ -1610,6 +1608,9 @@ void processDataRequest() noexcept {
     if (blastAsserted) {
         // we not in burst mode
         fsm.trigger(ReadyAndNoBurst);
+    } else {
+        // do this instead if we are going to keep the burst transactions up
+        processorInterface.updateDataCycle();
     }
 
 }
