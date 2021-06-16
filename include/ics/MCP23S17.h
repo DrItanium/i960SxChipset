@@ -281,6 +281,8 @@ class MCP23S17 : public MCP23x17<address, resetPin> {
             pinMode(ChipEnablePin, OUTPUT);
             digitalWrite(ChipEnablePin, HIGH);
         }
+    class ReadOperation final { };
+    class WriteOperation final { };
 protected:
     void enableCS() noexcept {
         digitalWrite(ChipEnablePin, LOW);
@@ -289,8 +291,6 @@ protected:
         digitalWrite(ChipEnablePin, HIGH);
     }
     constexpr auto getSPIAddress() const noexcept { return Parent::hardwareAddressEnabled() ? Parent::BusAddress : 0b000; }
-    class ReadOperation final { };
-    class WriteOperation final { };
     constexpr byte generateOpcode(ReadOperation) const noexcept {
         return 0b0100'0000 | (getSPIAddress() << 1) | 1;
     }
@@ -315,6 +315,29 @@ protected:
         SPI.transfer(static_cast<uint8_t>(value));
         disableCS();
         SPI.endTransaction();
+    }
+    void write16Sequential(byte registerAddressBase, uint16_t value) noexcept {
+        SPI.beginTransaction(getSPISettings());
+        enableCS();
+        SPI.transfer(static_cast<uint8_t>(generateOpcode(WriteOperation{})));
+        SPI.transfer(static_cast<uint8_t>(registerAddressBase));
+        SPI.transfer16(value);
+        Serial.print(F("WRITE16 SEQ VALUE 0x"));
+        Serial.println(value, HEX);
+        disableCS();
+        SPI.endTransaction();
+    }
+    uint16_t read16Sequential(byte registerAddress) noexcept {
+        SPI.beginTransaction(getSPISettings());
+        enableCS();
+        SPI.transfer(static_cast<uint8_t>(generateOpcode(ReadOperation{})));
+        SPI.transfer(static_cast<uint8_t>(registerAddress));
+        auto result = SPI.transfer16(0x00);
+        Serial.print(F("READ16 SEQ VALUE 0x"));
+        Serial.println(result, HEX);
+        disableCS();
+        SPI.endTransaction();
+        return result;
     }
     void write16(byte registerAddressA, byte registerAddressB, uint16_t value) noexcept override {
         write(registerAddressA, static_cast<byte>(value & 0xFF));

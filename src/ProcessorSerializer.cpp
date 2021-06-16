@@ -25,6 +25,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 
+namespace
+{
+    SPISettings theSettings(TargetBoard::onFeatherBoard() ? 8'000'000 : 10'000'000, MSBFIRST, SPI_MODE0);
+    constexpr byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
+        return 0b0100'0000 | ((static_cast<uint8_t>(address) & 0b111) << 1) | 1;
+    }
+    constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
+        return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
+    }
+    constexpr byte GPIOBaseAddress = 0x12;
+}
 Address
 ProcessorInterface::getAddress() noexcept {
     auto lower16Addr = static_cast<Address>(lower16_.readGPIOs());
@@ -40,7 +51,15 @@ ProcessorInterface::getDataBits() noexcept {
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
     dataLines_.writeGPIOsDirection(0);
-    dataLines_.writeGPIOs(value);
+    SPI.beginTransaction(theSettings);
+    digitalWrite(i960Pinout::GPIOSelect, LOW);
+    SPI.transfer(generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines));
+    SPI.transfer(GPIOBaseAddress);
+    SPI.transfer(static_cast<uint8_t>(value));
+    SPI.transfer(static_cast<uint8_t>(value >> 8));
+    digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    SPI.endTransaction();
+    //dataLines_.writeGPIOs(value);
 }
 
 
