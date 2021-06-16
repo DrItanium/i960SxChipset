@@ -192,8 +192,11 @@ void ProcessorInterface::newDataCycle() noexcept {
     SPI.endTransaction();
     auto currentBaseAddress_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
-    address_ = currentBaseAddress_;
+    address_ = upperMaskedAddress_;
     isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
+    auto bits = readGPIO16(IOExpanderAddress::MemoryCommitExtras);
+    auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
+    lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
 }
 void ProcessorInterface::updateDataCycle() noexcept {
     auto bits = readGPIO16(IOExpanderAddress::MemoryCommitExtras);
