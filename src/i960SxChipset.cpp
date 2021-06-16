@@ -573,16 +573,7 @@ public:
     }
     [[nodiscard]] bool
     respondsTo(Address address) const noexcept override {
-        Serial.print(F("\t\tROM.RESPONDS TO: 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(": "));
-        auto result = address < size_;
-        if (result) {
-            Serial.println("TRUE");
-        } else {
-            Serial.println("FALSE");
-        }
-        return result;
+        return address < size_;
     }
     using MemoryThing::respondsTo;
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
@@ -1569,8 +1560,6 @@ enteringDataState() noexcept {
 void processDataRequest() noexcept {
 
     if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
-        Serial.print(F("BURST ADDRESS RIGHT NOW IS: 0x"));
-        Serial.println(burstAddress, HEX);
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
         LoadStoreStyle style = processorInterface.getStyle();
@@ -1585,7 +1574,6 @@ void processDataRequest() noexcept {
                 // we are performing a write operation
             }
         };
-        Serial.println(F("\t\tAbout to walk through the different things!"));
         if (rom.respondsTo(burstAddress, style)) {
             invokeAction(rom, burstAddress, style);
         } else if (dataRom.respondsTo(burstAddress, style)) {
