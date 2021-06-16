@@ -575,6 +575,7 @@ public:
     respondsTo(Address address) const noexcept override {
         return address < size_;
     }
+    using MemoryThing::respondsTo;
     void read(uint32_t baseAddress, byte *buffer, size_t size) override {
         if (chipsetFunctions.displayCacheLineUpdates()) {
             Serial.print(F("\tAccessing "));
@@ -1423,11 +1424,8 @@ AdafruitADT7410Thing adt7410(0x1200);
 AdafruitADXL343Thing adxl343(0x1300);
 #endif
 
-// list of memory devices to walk through
+// list of io memory devices to walk through
 MemoryThing* things[] {
-        &rom,
-        &dataRom, // last target because we are only going to run into this thing during startup
-        &ram,
         &theLed,
         &portZThing,
         &theConsole,
@@ -1562,25 +1560,36 @@ enteringDataState() noexcept {
     performingRead = processorInterface.isReadOperation();
 }
 void processDataRequest() noexcept {
-    if (auto burstAddress = processorInterface.getBurstAddress(baseAddress); burstAddress < 0xFF00'0000) {
+    if (Address burstAddress = processorInterface.getBurstAddress(baseAddress); burstAddress < 0xFF00'0000) {
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
-        auto style = processorInterface.getStyle();
+        LoadStoreStyle style = processorInterface.getStyle();
         bool responseFound = false;
-        for (auto *currentThing : things) {
-            if (!currentThing) {
-                continue;
+        auto invokeAction = [&responseFound](MemoryThing &currentThing, Address address, auto style) {
+            responseFound = true;
+            // delay getting style bits as long as possible
+            if (performingRead) {
+                processorInterface.setDataBits(currentThing.read(address, style));
+            } else {
+                currentThing.write(address, processorInterface.getDataBits(), style);
+                // we are performing a write operation
             }
-            if (currentThing->respondsTo(burstAddress, style)) {
-                responseFound = true;
-                // delay getting style bits as long as possible
-                if (performingRead) {
-                    processorInterface.setDataBits(currentThing->read(burstAddress, style));
-                } else {
-                    currentThing->write(burstAddress, processorInterface.getDataBits(), style);
-                    // we are performing a write operation
+        };
+        if (rom.respondsTo(burstAddress, style)) {
+            invokeAction(rom, burstAddress, style);
+        } else if (dataRom.respondsTo(burstAddress, style)) {
+            invokeAction(dataRom, burstAddress, style);
+        } else if (ram.respondsTo(burstAddress, style)) {
+            invokeAction(ram, burstAddress, style);
+        } else {
+            for (auto *currentThing : things) {
+                if (!currentThing) {
+                    continue;
                 }
-                break;
+                if (currentThing->respondsTo(burstAddress, style)) {
+                    invokeAction(*currentThing, burstAddress, style);
+                    break;
+                }
             }
         }
         if (!responseFound) {
