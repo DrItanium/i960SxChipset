@@ -191,7 +191,7 @@ void ProcessorInterface::newDataCycle() noexcept {
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
     SPI.endTransaction();
     auto currentBaseAddress_ = lower16Addr | upper16Addr;
-    upperMaskedAddress_ = 0xFFFFFFF0 | currentBaseAddress_;
+    upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
     address_ = currentBaseAddress_;
     isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
 }
