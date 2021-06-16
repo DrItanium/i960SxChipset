@@ -132,9 +132,6 @@ public:
     void updateDataCycle() noexcept;
     [[nodiscard]] constexpr bool isReadOperation() const noexcept { return isReadOperation_; }
 private:
-    IOExpander<IOExpanderAddress::DataLines> dataLines_;
-    IOExpander<IOExpanderAddress::Lower16Lines> lower16_;
-    IOExpander<IOExpanderAddress::Upper16Lines> upper16_;
     IOExpander<IOExpanderAddress::MemoryCommitExtras> extra_;
     bool initialized_ = false;
     bool asTriggered_ = false;

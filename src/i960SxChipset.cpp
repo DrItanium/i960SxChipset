@@ -1558,7 +1558,7 @@ enteringDataState() noexcept {
     processorInterface.newDataCycle();
 }
 void processDataRequest() noexcept {
-
+    processorInterface.updateDataCycle();
     if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
@@ -1609,11 +1609,7 @@ void processDataRequest() noexcept {
     if (blastAsserted) {
         // we not in burst mode
         fsm.trigger(ReadyAndNoBurst);
-    } else {
-        // do this instead if we are going to keep the burst transactions up
-        processorInterface.updateDataCycle();
     }
-
 }
 
 void doRecoveryState() noexcept {
