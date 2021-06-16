@@ -34,16 +34,35 @@ namespace
     constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
+    constexpr byte IODirBaseAddress = 0x00;
     constexpr byte GPIOBaseAddress = 0x12;
-    uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
+    uint16_t read16(ProcessorInterface::IOExpanderAddress addr, byte opcode) {
         digitalWrite(i960Pinout::GPIOSelect, LOW);
         SPI.transfer(generateReadOpcode(addr));
-        SPI.transfer(GPIOBaseAddress);
+        SPI.transfer(opcode);
         auto lower = static_cast<uint16_t>(SPI.transfer(0x00));
         auto lowest = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
         digitalWrite(i960Pinout::GPIOSelect, HIGH);
         return lower | lowest;
     }
+    uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
+        return read16(addr, GPIOBaseAddress);
+    }
+    void write16(ProcessorInterface::IOExpanderAddress addr, byte opcode, uint16_t value) {
+        digitalWrite(i960Pinout::GPIOSelect, LOW);
+        SPI.transfer(generateWriteOpcode(addr));
+        SPI.transfer(opcode);
+        SPI.transfer(static_cast<uint8_t>(value));
+        SPI.transfer(static_cast<uint8_t>(value >> 8));
+        digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    }
+    void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
+        write16(addr, GPIOBaseAddress, value);
+    }
+    void writeDirection(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
+        write16(addr, IODirBaseAddress, value);
+    }
+
 }
 Address
 ProcessorInterface::getAddress() noexcept {
@@ -55,8 +74,11 @@ ProcessorInterface::getAddress() noexcept {
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
-    dataLines_.writeGPIOsDirection(0xFFFF);
     SPI.beginTransaction(theSettings);
+    if (dataLinesDirection_ != 0xFFFF) {
+        dataLinesDirection_ = 0xFFFF;
+        writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
+    }
     auto result = readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
     SPI.endTransaction();
     return result;
@@ -65,14 +87,12 @@ ProcessorInterface::getDataBits() noexcept {
 
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    dataLines_.writeGPIOsDirection(0);
     SPI.beginTransaction(theSettings);
-    digitalWrite(i960Pinout::GPIOSelect, LOW);
-    SPI.transfer(generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines));
-    SPI.transfer(GPIOBaseAddress);
-    SPI.transfer(static_cast<uint8_t>(value));
-    SPI.transfer(static_cast<uint8_t>(value >> 8));
-    digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    if (dataLinesDirection_ != 0) {
+        dataLinesDirection_ = 0;
+        writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
+    }
+    writeGPIO16(ProcessorInterface::IOExpanderAddress::DataLines, value);
     SPI.endTransaction();
     //dataLines_.writeGPIOs(value);
 }
@@ -143,14 +163,10 @@ ProcessorInterface::begin() noexcept {
         extra_.refreshIOCon();
         // now all devices tied to this ~CS pin have separate addresses
         // make each of these inputs
-        lower16_.writeGPIOsDirection(0xFFFF);
-        upper16_.writeGPIOsDirection(0xFFFF);
-        dataLines_.writeGPIOsDirection(0xFFFF);
-        // set lower eight to inputs and upper eight to outputs
-        extra_.writeGPIOsDirection(0x00FF);
-        // then indirectly mark the outputs
-        pinMode(static_cast<int>(ExtraGPIOExpanderPinout::LOCK_), OUTPUT, extra_);
-        pinMode(static_cast<int>(ExtraGPIOExpanderPinout::HOLD), OUTPUT, extra_);
+        writeDirection(IOExpanderAddress::Lower16Lines, 0xFFFF);
+        writeDirection(IOExpanderAddress::Upper16Lines, 0xFFFF);
+        writeDirection(IOExpanderAddress::DataLines, dataLinesDirection_);
+        writeDirection(IOExpanderAddress::MemoryCommitExtras, 0x005F);
         setHOLDPin(LOW);
         setLOCKPin(HIGH);
     }

@@ -148,6 +148,7 @@ private:
     bool initialized_ = false;
     bool asTriggered_ = false;
     bool denTriggered_ = false;
+    uint16_t dataLinesDirection_ = 0xFFFF;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes
