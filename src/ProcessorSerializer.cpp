@@ -38,8 +38,22 @@ namespace
 }
 Address
 ProcessorInterface::getAddress() noexcept {
-    auto lower16Addr = static_cast<Address>(lower16_.readGPIOs());
-    auto upper16Addr = static_cast<Address>(upper16_.readGPIOs()) << 16;
+    SPI.beginTransaction(theSettings);
+    digitalWrite(i960Pinout::GPIOSelect, LOW);
+    SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines));
+    SPI.transfer(GPIOBaseAddress);
+    auto lower = static_cast<uint16_t>(SPI.transfer(0x00));
+    auto lowest = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
+    digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    digitalWrite(i960Pinout::GPIOSelect, LOW);
+    SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines));
+    SPI.transfer(GPIOBaseAddress);
+    auto higher = static_cast<uint16_t>(SPI.transfer(0x00));
+    auto highest = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
+    digitalWrite(i960Pinout::GPIOSelect, HIGH);
+    SPI.endTransaction();
+    auto lower16Addr = static_cast<Address>(lower | lowest);
+    auto upper16Addr = static_cast<Address>(higher | highest) << 16;
     return lower16Addr | upper16Addr;
 }
 uint16_t
