@@ -37,23 +37,32 @@ namespace
     constexpr byte IODirBaseAddress = 0x00;
     constexpr byte GPIOBaseAddress = 0x12;
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, byte opcode) {
+        uint8_t buffer[4] = {
+                generateReadOpcode(addr),
+                opcode,
+                0x00,
+                0x00,
+        };
+
         digitalWrite(i960Pinout::GPIOSelect, LOW);
-        SPI.transfer(generateReadOpcode(addr));
-        SPI.transfer(opcode);
-        auto lower = static_cast<uint16_t>(SPI.transfer(0x00));
-        auto lowest = static_cast<uint16_t>(SPI.transfer(0x00)) << 8;
+        SPI.transfer(buffer, 4);
         digitalWrite(i960Pinout::GPIOSelect, HIGH);
+        auto lower = static_cast<uint16_t>(buffer[2]);
+        auto lowest = static_cast<uint16_t>(buffer[3]) << 8;
         return lower | lowest;
     }
     uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
         return read16(addr, GPIOBaseAddress);
     }
     void write16(ProcessorInterface::IOExpanderAddress addr, byte opcode, uint16_t value) {
+        uint8_t buffer[4] = {
+                generateWriteOpcode(addr),
+                opcode,
+                static_cast<uint8_t>(value),
+                static_cast<uint8_t>(value >> 8),
+        };
         digitalWrite(i960Pinout::GPIOSelect, LOW);
-        SPI.transfer(generateWriteOpcode(addr));
-        SPI.transfer(opcode);
-        SPI.transfer(static_cast<uint8_t>(value));
-        SPI.transfer(static_cast<uint8_t>(value >> 8));
+        SPI.transfer(buffer, 4);
         digitalWrite(i960Pinout::GPIOSelect, HIGH);
     }
     void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
