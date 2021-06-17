@@ -92,18 +92,23 @@ public:
     }
     ~CoreChipsetFeatures() override = default;
 private:
+    uint8_t buffer_[256] = { 0 };
     uint8_t
     readFromStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept {
         uint8_t count = 0;
         if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); thing) {
-            /// @todo code goes here
+            // force the i960sx to wait
+            count = aStream.readBytes(buffer_, length);
+            thing->write(thing->makeAddressRelative(baseAddress), buffer_, length);
         }
         return count;
     }
-    void
+    uint8_t
     writeToStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept {
         uint8_t count = 0;
         if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); thing) {
+            thing->read(thing->makeAddressRelative(baseAddress), buffer_, length);
+            count = aStream.write(buffer_, length);
             /// @todo code goes here
         }
         return count;
@@ -189,7 +194,7 @@ public:
                 consoleBufferLength_ = value;
                 break;
             case Registers::ConsoleBufferDoorbell:
-                writeToStream(Serial, consoleBufferBaseAddress_.full, consoleBufferLength_);
+                (void)writeToStream(Serial, consoleBufferBaseAddress_.full, consoleBufferLength_);
                 break;
             default:
                 break;
@@ -231,39 +236,6 @@ private:
 CoreChipsetFeatures chipsetFunctions(0);
 
 
-class ConsoleThing : public IOSpaceThing {
-public:
-    enum class Registers : uint32_t {
-        Flush,
-        Available, // 2 byte
-        AvailableForWrite, // 2 byte
-        IO, // 2 bytes
-    };
-public:
-    // make sure we allocate a ton of space just in case
-    explicit ConsoleThing(Address base) noexcept : IOSpaceThing(base, base + 0x100) { }
-    ~ConsoleThing() override = default;
-    [[nodiscard]] uint16_t read16(Address offset) noexcept override {
-        switch (offset) {
-            case static_cast<uint32_t>(Registers::Available) * sizeof(uint16_t): return Serial.available();
-            case static_cast<uint32_t>(Registers::AvailableForWrite) * sizeof(uint16_t): return Serial.availableForWrite();
-            case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t): return Serial.read();
-            default:
-                return 0;
-        }
-    }
-    void write16(Address offset, uint16_t value) noexcept override {
-        switch (offset) {
-            case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t):
-                Serial.write(static_cast<char>(value));
-            case static_cast<uint32_t>(Registers::Flush) * sizeof(uint16_t):
-                Serial.flush();
-                break;
-            default:
-                break;
-        }
-    }
-};
 
 class RAMThing : public MemoryMappedFile<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()> {
 public:
@@ -657,7 +629,6 @@ private:
 
 };
 
-ConsoleThing theConsole(0x100);
 #ifndef ADAFRUIT_FEATHER
 using DisplayThing = TFTShieldThing;
 #else
@@ -682,7 +653,6 @@ MemoryThing* things[] {
         &dataRom,
         &ram,
         &chipsetFunctions,
-        &theConsole,
         &displayCommandSet,
 #ifdef ADAFRUIT_FEATHER
         &lsi3mdl,
@@ -935,7 +905,6 @@ void setup() {
     while(!Serial);
     fs.begin();
     chipsetFunctions.begin();
-    theConsole.begin();
     Serial.println(F("i960Sx chipset bringup"));
     SPI.begin();
     processorInterface.begin();
