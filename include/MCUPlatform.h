@@ -92,24 +92,13 @@ private:
 };
 template<TargetMCU mcu>
 constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, };
-template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
-        16_KB,
-        8,
-        512,
-        8,
-        512,
-        32,
-};
-template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = {
-        256_KB,
-        8,
-        512,
-        8,
-        512,
-        32,
-};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 16, 512, 16, 512, 64 };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::MetroM4> = { 192_KB, 16, 512, 16, 512, 64 };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::SparkfunArtemis> = { 384_KB, 32, 512, 32, 512, 128 };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Basic> = { 32_KB, 16, 512, 16, 512, 64 };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalogger> = { 32_KB, 16, 512, 16, 512, 64 };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::Feather_nRF52832> = { 64_KB, 24, 512, 24, 512, 64};
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
     return true;
