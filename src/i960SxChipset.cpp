@@ -67,10 +67,12 @@ public:
         Led, // one byte
         DisplayMemoryReadsAndWrites,
         DisplayCacheLineUpdates,
-        PortZGPIO, // one byte wide
+        PortZGPIO = 0x10, // one byte wide
         PortZGPIODirection, // one byte wide
         PortZGPIOPolarity,
         PortZGPIOPullup,
+        ConsoleFlush = 0x20,
+
     };
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) { }
     ~CoreChipsetFeatures() override = default;
