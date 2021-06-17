@@ -78,6 +78,10 @@ public:
         TwoByteEntry(ConsoleAvailable),
         TwoByteEntry(ConsoleAvailableForWrite),
         TwoByteEntry(ConsoleIO),
+        /// @todo implement console buffer
+        FourByteEntry(ConsoleBufferAddress),
+        ConsoleBufferLength, // up to 256 bytes in length
+        ConsoleBufferDoorbell, // read from this to do a buffered read, write to this to do a write from memory to console
 #undef FourByteEntry
 #undef TwoByteEntry
     };
@@ -657,6 +661,9 @@ AdafruitADXL343Thing adxl343(0x1300);
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
+        &rom,
+        &dataRom,
+        &ram,
         &chipsetFunctions,
         &theConsole,
         &displayCommandSet,
@@ -791,29 +798,16 @@ void processDataRequest() noexcept {
         //processorInterface.setDataBits(performRead(burstAddress, style));
         LoadStoreStyle style = processorInterface.getStyle();
         bool responseFound = false;
-        auto invokeAction = [&responseFound](MemoryThing &currentThing, Address address, auto style) {
-            responseFound = true;
-            // delay getting style bits as long as possible
-            if (processorInterface.isReadOperation()) {
-                processorInterface.setDataBits(currentThing.read(address, style));
-            } else {
-                currentThing.write(address, processorInterface.getDataBits(), style);
-                // we are performing a write operation
-            }
-        };
-        if (rom.respondsTo(burstAddress, style)) {
-            invokeAction(rom, burstAddress, style);
-        } else if (dataRom.respondsTo(burstAddress, style)) {
-            invokeAction(dataRom, burstAddress, style);
-        } else if (ram.respondsTo(burstAddress, style)) {
-            invokeAction(ram, burstAddress, style);
-        } else {
-            for (auto *currentThing : things) {
-                // While having the sanity check here for null entries is smart, it also introduces more latency
-                if (currentThing->respondsTo(burstAddress, style)) {
-                    invokeAction(*currentThing, burstAddress, style);
-                    break;
+        for (auto *currentThing : things) {
+            // While having the sanity check here for null entries is smart, it also introduces more latency
+            if (currentThing->respondsTo(burstAddress, style)) {
+                responseFound = true;
+                if (processorInterface.isReadOperation()) {
+                    processorInterface.setDataBits(currentThing->read(burstAddress, style));
+                } else {
+                    currentThing->write(burstAddress, processorInterface.getDataBits(), style);
                 }
+                break;
             }
         }
         if (!responseFound) {
