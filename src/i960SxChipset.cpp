@@ -1479,8 +1479,6 @@ MemoryThing* things[] {
 // Tr -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
-volatile uint32_t baseAddress = 0;
-volatile bool performingRead = false;
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
