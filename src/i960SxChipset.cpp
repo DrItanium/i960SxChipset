@@ -53,6 +53,7 @@ SdFat SD;
 //OPL2Thing<i960Pinout::SPI_BUS_A0, i960Pinout::SPI_BUS_A1, i960Pinout::SPI_BUS_A2> thingy(0x1000);
 
 bool displayReady = false;
+MemoryThing* getThing(Address address, LoadStoreStyle style) noexcept;
 /**
  * @brief Describes a single cache line which associates an address with 16 bytes of storage
  */
@@ -612,34 +613,6 @@ private:
 
 };
 
-class ChipsetFunctionInterface : public IOSpaceThing {
-public:
-    explicit ChipsetFunctionInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
-    ~ChipsetFunctionInterface() override  = default;
-    uint8_t read8(Address address) noexcept override {
-        switch (address) {
-            case 0:
-                return chipsetFunctions.displayMemoryReadsAndWrites();
-            case 1:
-                return chipsetFunctions.displayCacheLineUpdates();
-            default:
-                return 0;
-        }
-    }
-    void write8(Address address, uint8_t value) noexcept override {
-        bool outcome = value != 0;
-        switch (address) {
-            case 0:
-                chipsetFunctions.setDisplayMemoryReadsAndWrites(outcome);
-                break;
-            case 1:
-                chipsetFunctions.setDisplayCacheLineUpdates(outcome);
-                break;
-            default:
-                break;
-        }
-    }
-};
 ConsoleThing theConsole(0x100);
 #ifndef ADAFRUIT_FEATHER
 using DisplayThing = TFTShieldThing;
@@ -675,6 +648,16 @@ MemoryThing* things[] {
 #endif
         &fs,
 };
+
+MemoryThing*
+getThing(Address address, LoadStoreStyle style) noexcept {
+    for (auto* currentThing : things) {
+        if (currentThing->respondsTo(address, style)) {
+            return currentThing;
+        }
+    }
+    return nullptr;
+}
 
 // ----------------------------------------------------------------
 // state machine
@@ -797,20 +780,13 @@ void processDataRequest() noexcept {
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
         LoadStoreStyle style = processorInterface.getStyle();
-        bool responseFound = false;
-        for (auto *currentThing : things) {
-            // While having the sanity check here for null entries is smart, it also introduces more latency
-            if (currentThing->respondsTo(burstAddress, style)) {
-                responseFound = true;
-                if (processorInterface.isReadOperation()) {
-                    processorInterface.setDataBits(currentThing->read(burstAddress, style));
-                } else {
-                    currentThing->write(burstAddress, processorInterface.getDataBits(), style);
-                }
-                break;
+        if (auto theThing = getThing(burstAddress, style); theThing) {
+            if (processorInterface.isReadOperation()) {
+                processorInterface.setDataBits(theThing->read(burstAddress, style));
+            } else {
+                theThing->write(burstAddress, processorInterface.getDataBits(), style);
             }
-        }
-        if (!responseFound) {
+        } else {
             if (processorInterface.isReadOperation()) {
                 Serial.print(F("UNMAPPED READ FROM 0x"));
             } else {
