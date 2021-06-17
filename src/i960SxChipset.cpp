@@ -83,13 +83,6 @@ bool displayReady = false;
  * @brief Describes a single cache line which associates an address with 16 bytes of storage
  */
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
-constexpr auto FlashStartingAddress = 0x0000'0000;
-constexpr Address OneMemorySpace = 0x0100'0000; // 16 megabytes
-// the upper 2G is for non-program related stuff, according to my memory map information, we support a maximum of 512 Megs of RAM
-// so the "ram" file is 512 megs in size. If the range is between 0x8000'0000 and
-constexpr Address BaseMCUPeripheralsBaseAddress = 0;
-constexpr Address BuiltinLedOffsetBaseAddress = BaseMCUPeripheralsBaseAddress;
-constexpr Address BuiltinPortZBaseAddress = BaseMCUPeripheralsBaseAddress + 0x10;
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
@@ -190,8 +183,7 @@ public:
 
 class RAMThing : public MemoryMappedFile<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()> {
 public:
-    static constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
-    static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
+    static constexpr Address MaxRamSize = 32 * 0x0100'0000; // 32 Memory Spaces or 512 Megabytes
     static constexpr auto RamMask = MaxRamSize - 1;
     static constexpr Address RamStartingAddress = 0x8000'0000; // start this at 512 megabytes
     static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
