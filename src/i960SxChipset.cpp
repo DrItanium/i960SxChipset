@@ -60,9 +60,9 @@ ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
-template<bool allow = true>
 class CoreChipsetFeatures : public IOSpaceThing {
 public:
+    static constexpr auto AllowDebuggingStatements = true;
     enum class Registers : uint32_t {
         Led, // one byte
         DisplayMemoryReadsAndWrites,
@@ -71,8 +71,15 @@ public:
         PortZGPIODirection, // one byte wide
         PortZGPIOPolarity,
         PortZGPIOPullup,
-        ConsoleFlush = 0x20,
-
+        ConsoleFlush = 0x20, // 2 bytes for alignment purposes
+        ConsoleFlushUpper, // 2 bytes for alignment purposes
+#define TwoByteEntry(Prefix) Prefix, Prefix ## Upper
+#define FourByteEntry(Prefix) Prefix ## LowerHalf, Prefix ## UpperLowerHalf, Prefix ## UpperHalf, Prefix ## UpperUpperHalf
+        TwoByteEntry(ConsoleAvailable),
+        TwoByteEntry(ConsoleAvailableForWrite),
+        TwoByteEntry(ConsoleIO),
+#undef FourByteEntry
+#undef TwoByteEntry
     };
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) { }
     ~CoreChipsetFeatures() override = default;
@@ -95,6 +102,27 @@ public:
             default:
                 return 0;
         }
+    }
+    [[nodiscard]] uint16_t read16(Address address) noexcept override {
+        switch (static_cast<Registers>(address)) {
+            case Registers::ConsoleIO: return Serial.read();
+            case Registers::ConsoleAvailable: return Serial.available();
+            case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
+            default: return 0;
+        }
+    }
+    void write16(Address address, uint16_t value) noexcept override {
+        switch (static_cast<Registers>(address)) {
+            case Registers::ConsoleFlush:
+                Serial.flush();
+                break;
+            case Registers::ConsoleIO:
+                Serial.write(static_cast<char>(value));
+                break;
+            default:
+                break;
+        }
+
     }
     void write8(Address address, uint8_t value) noexcept override {
         switch (static_cast<Registers>(address)) {
@@ -123,7 +151,6 @@ public:
                 break;
         }
     }
-    static constexpr auto AllowDebuggingStatements = allow;
     [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
     [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
     void setDisplayMemoryReadsAndWrites(bool value) noexcept {
@@ -137,6 +164,8 @@ public:
         }
     }
     [[nodiscard]] constexpr bool debuggingActive() const noexcept { return AllowDebuggingStatements; }
+    void begin() noexcept override {
+    }
 private:
     static void
     writeLed(uint8_t value) noexcept {
