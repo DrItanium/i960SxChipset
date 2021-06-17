@@ -4,7 +4,9 @@
 
 #ifndef I960SXCHIPSET_CACHE_H
 #define I960SXCHIPSET_CACHE_H
+
 #include <Arduino.h>
+#include "MCUPlatform.h"
 template<uint32_t size = 16>
 struct CacheLine {
 public:
@@ -55,13 +57,15 @@ public:
             case 2048:
             case 4096:
             case 8192:
+            case 16384:
+            case 32768:
                 return true;
             default:
                 return false;
         }
     }
     static_assert(isLegalCacheLineSize(CacheLineSize),
-    "CacheLineSize must be 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, or 8192");
+    "CacheLineSize must be 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768");
     static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
         return targetAddress & CacheByteMask;
     }
@@ -123,7 +127,7 @@ public:
         }
 
     }
-    static_assert(DataCacheSize <= 4096, "Overall cache size must be less than or equal to 4k of sram");
+    static_assert(DataCacheSize <= TargetBoard::oneFourthSRAMAmountInBytes(), "Overall cache size must be less than or equal to one fourth of SRAM");
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
     explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {

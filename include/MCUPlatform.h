@@ -30,6 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "DependentFalse.h"
 
+constexpr unsigned long long int operator "" _KB(unsigned long long int value) noexcept { return value * 1024; }
+constexpr unsigned long long int operator "" _MB(unsigned long long int value) noexcept { return value * 1024 * 1024; }
 constexpr unsigned long long int operator "" _KHz(unsigned long long int value) noexcept { return value * 1000; }
 constexpr unsigned long long int operator "" _MHz(unsigned long long int value) noexcept { return value * 1000 * 1000; }
 static_assert(2_KHz == 2'000);
@@ -143,6 +145,97 @@ public:
     [[nodiscard]] static constexpr auto getSPISCKPin() noexcept { return PIN_SPI_SCK; }
     [[nodiscard]] static constexpr auto getSDAPin() noexcept { return PIN_WIRE_SDA; }
     [[nodiscard]] static constexpr auto getSCLPin() noexcept { return PIN_WIRE_SCL; }
+    [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept {
+        switch (getMCUTarget())  {
+            case TargetMCU::ATmega1284p:
+                return 16_KB;
+            case TargetMCU::FeatherM0Adalogger:
+            case TargetMCU::FeatherM0Basic:
+                return 32_KB;
+            case TargetMCU::Feather_nRF52832:
+                return 64_KB;
+            case TargetMCU::MetroM4:
+                return 192_KB;
+            case TargetMCU::GrandCentralM4:
+                return 256_KB;
+            default:
+                return 0ull;
+        }
+    }
+    [[nodiscard]] static constexpr auto oneFourthSRAMAmountInBytes() noexcept {
+        return getSRAMAmountInBytes() / 4;
+    }
+    [[nodiscard]] static constexpr auto oneEighthSRAMAmountInBytes() noexcept {
+        return getSRAMAmountInBytes() / 8;
+    }
+    [[nodiscard]] static constexpr auto numberOfDataCacheLines() noexcept {
+            switch (getMCUTarget())  {
+                case TargetMCU::ATmega1284p:
+                    return 8;
+                case TargetMCU::FeatherM0Adalogger:
+                case TargetMCU::FeatherM0Basic:
+                    return 8;
+                case TargetMCU::Feather_nRF52832:
+                    return 8;
+                case TargetMCU::MetroM4:
+                    return 8;
+                case TargetMCU::GrandCentralM4:
+                    return 8;
+                default:
+                    return 8;
+            }
+    }
+    [[nodiscard]] static constexpr auto getDataCacheLineSize() noexcept {
+        switch (getMCUTarget())  {
+            case TargetMCU::ATmega1284p:
+                return 512;
+            case TargetMCU::FeatherM0Adalogger:
+            case TargetMCU::FeatherM0Basic:
+                return 512;
+            case TargetMCU::Feather_nRF52832:
+                return 512;
+            case TargetMCU::MetroM4:
+                return 512;
+            case TargetMCU::GrandCentralM4:
+                return 512;
+            default:
+                return 512;
+        }
+    }
+    [[nodiscard]] static constexpr auto numberOfInstructionCacheLines() noexcept {
+        switch (getMCUTarget())  {
+            case TargetMCU::ATmega1284p:
+                return 8;
+            case TargetMCU::FeatherM0Adalogger:
+            case TargetMCU::FeatherM0Basic:
+                return 8;
+            case TargetMCU::Feather_nRF52832:
+                return 8;
+            case TargetMCU::MetroM4:
+                return 8;
+            case TargetMCU::GrandCentralM4:
+                return 8;
+            default:
+                return 8;
+        }
+    }
+    [[nodiscard]] static constexpr auto getInstructionCacheLineSize() noexcept {
+        switch (getMCUTarget())  {
+            case TargetMCU::ATmega1284p:
+                return 512;
+            case TargetMCU::FeatherM0Adalogger:
+            case TargetMCU::FeatherM0Basic:
+                return 512;
+            case TargetMCU::Feather_nRF52832:
+                return 512;
+            case TargetMCU::MetroM4:
+                return 512;
+            case TargetMCU::GrandCentralM4:
+                return 512;
+            default:
+                return 512;
+        }
+    }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;

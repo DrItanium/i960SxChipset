@@ -188,15 +188,14 @@ public:
     }
 };
 
-template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
-class RAMThing : public MemoryMappedFile<numCacheLines, cacheLineSize> {
+class RAMThing : public MemoryMappedFile<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()> {
 public:
     static constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
     static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
     static constexpr auto RamMask = MaxRamSize - 1;
     static constexpr Address RamStartingAddress = 0x8000'0000; // start this at 512 megabytes
     static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
-    using Parent = MemoryMappedFile<numCacheLines, cacheLineSize>;
+    using Parent = MemoryMappedFile<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>;
     RAMThing() noexcept : Parent(RamStartingAddress, RamEndingAddress, MaxRamSize, "ram.bin", FILE_WRITE) { }
     ~RAMThing() override = default;
     [[nodiscard]] Address
@@ -213,13 +212,12 @@ public:
     }
 };
 
-template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
-class ROMThing : public MemoryMappedFile<numCacheLines, cacheLineSize> {
+class ROMThing : public MemoryMappedFile<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()> {
 public:
     static constexpr Address ROMStart = 0;
     static constexpr Address ROMEnd = 0x2000'0000;
     static constexpr Address ROMMask = ROMEnd - 1;
-    using Parent = MemoryMappedFile<numCacheLines, cacheLineSize>;
+    using Parent = MemoryMappedFile<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()>;
 public:
     ROMThing() noexcept : Parent(ROMStart, ROMEnd, ROMEnd - 1, "boot.rom", FILE_READ){ }
     ~ROMThing() override = default;
@@ -619,8 +617,8 @@ using DisplayThing = TFTShieldThing;
 using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
 #endif
 DisplayThing displayCommandSet(0x200);
-RAMThing<8,512> ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
-ROMThing<8,512> rom; // 4k rom sections
+RAMThing ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+ROMThing rom; // 4k rom sections
 DataROMThing dataRom;
 
 SDCardFilesystemInterface<32> fs(0x300);
