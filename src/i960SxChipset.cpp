@@ -341,28 +341,29 @@ template<typename T>
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
-class BuiltinLedThing : public IOSpaceThing {
+class CoreChipsetFeatures : public IOSpaceThing {
 public:
     enum class Registers : uint32_t {
         Led, // one byte
-        GPIO, // one byte wide
-        Direction, // one byte wide
-        Polarity,
-        Pullup,
+
+        PortZGPIO, // one byte wide
+        PortZGPIODirection, // one byte wide
+        PortZGPIOPolarity,
+        PortZGPIOPullup,
     };
-    explicit BuiltinLedThing(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) { }
-    ~BuiltinLedThing() override = default;
+    explicit CoreChipsetFeatures(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) { }
+    ~CoreChipsetFeatures() override = default;
     [[nodiscard]] uint8_t read8(Address address) noexcept override {
         switch (static_cast<Registers>(address)) {
             case Registers::Led:
                 return readLed();
-            case Registers::GPIO:
+            case Registers::PortZGPIO:
                 return processorInterface.readPortZGPIORegister();
-            case Registers::Direction:
+            case Registers::PortZGPIODirection:
                 return processorInterface.getPortZDirectionRegister();
-            case Registers::Polarity:
+            case Registers::PortZGPIOPolarity:
                 return processorInterface.getPortZPolarityRegister();
-            case Registers::Pullup:
+            case Registers::PortZGPIOPullup:
                 return processorInterface.getPortZPullupResistorRegister();
             default:
                 return 0;
@@ -373,16 +374,16 @@ public:
             case Registers::Led:
                 writeLed(value);
                 break;
-            case Registers::GPIO:
+            case Registers::PortZGPIO:
                 processorInterface.writePortZGPIORegister(value);
                 break;
-            case Registers::Pullup:
+            case Registers::PortZGPIOPullup:
                 processorInterface.setPortZPullupResistorRegister(value);
                 break;
-            case Registers::Polarity:
+            case Registers::PortZGPIOPolarity:
                 processorInterface.setPortZPolarityRegister(value);
                 break;
-            case Registers::Direction:
+            case Registers::PortZGPIODirection:
                 processorInterface.setPortZDirectionRegister(value);
                 break;
             default:
@@ -1296,7 +1297,7 @@ private:
     char path_[FixedPathSize] = { 0 };
     volatile uint32_t fixedPadding = 0; // always should be here to make sure an overrun doesn't cause problems
 };
-BuiltinLedThing theLed(0);
+CoreChipsetFeatures theLed(0);
 ConsoleThing theConsole(0x100);
 #ifndef ADAFRUIT_FEATHER
 using DisplayThing = TFTShieldThing;
