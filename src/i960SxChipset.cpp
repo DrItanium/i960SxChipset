@@ -40,7 +40,6 @@ SdFat SD;
 
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
-#include <OPL2.h>
 #include "Pinout.h"
 
 #include "ProcessorSerializer.h"
@@ -75,7 +74,6 @@ private:
     bool displayCacheLineUpdates_ = false;
     /// @todo add support for having the dma engine within the microcontroller to perform block transfers to the RAM
 };
-OPL2 theOPL2;
 ChipsetOperationRegisters<true> chipsetFunctions;
 
 bool displayReady = false;
