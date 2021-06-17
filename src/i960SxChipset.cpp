@@ -109,7 +109,7 @@ private:
         if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); thing) {
             thing->read(thing->makeAddressRelative(baseAddress), buffer_, length);
             count = aStream.write(buffer_, length);
-            /// @todo code goes here
+            aStream.flush();
         }
         return count;
     }
@@ -194,9 +194,7 @@ public:
                 consoleBufferLength_ = value;
                 break;
             case Registers::ConsoleBufferDoorbell:
-                Serial.flush();
                 (void)writeToStream(Serial, consoleBufferBaseAddress_.full, consoleBufferLength_);
-                Serial.flush();
                 break;
             default:
                 break;
