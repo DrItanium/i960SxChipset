@@ -113,7 +113,7 @@ public:
     void triggerAS() noexcept { asTriggered_ = true; }
     void triggerDEN() noexcept { denTriggered_ = true; }
     [[nodiscard]] bool failTriggered() const noexcept { return DigitalPin<i960Pinout::FAIL>::isAsserted(); }
-    [[nodiscard]] bool blastTriggered() const noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
+    [[nodiscard]] bool blastTriggered() const noexcept { return blastTriggered_; }
     void signalReady() noexcept { DigitalPin<i960Pinout::Ready>::pulse(); }
 public:
     void setPortZDirectionRegister(byte value) noexcept;
@@ -131,16 +131,17 @@ public:
 private:
     void updateOutputLatch() noexcept;
 private:
-    bool initialized_ = false;
-    bool asTriggered_ = false;
-    bool denTriggered_ = false;
     uint16_t dataLinesDirection_ = 0xFFFF;
     Address upperMaskedAddress_ = 0;
     Address address_ = 0;
     LoadStoreStyle lss_ = LoadStoreStyle::None;
+    bool initialized_ = false;
+    bool asTriggered_ = false;
+    bool denTriggered_ = false;
     bool isReadOperation_ = false;
     bool lockValue_ = true;
     bool holdValue_ = false;
+    bool blastTriggered_ = false;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

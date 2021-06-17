@@ -447,19 +447,85 @@ public:
     }
 };
 
+template<uint32_t numCacheLines = 8, uint32_t cacheLineSize = 512>
+class MemoryMappedFile : public MemoryThing {
+public:
+    MemoryMappedFile(Address startingAddress, Address endingAddress, Address maximumSize, const char* path, decltype(FILE_WRITE) permissions) noexcept : MemoryThing(startingAddress, endingAddress), maxSize_(maximumSize), theCache_(this), path_(path), permissions_(permissions) { }
+    ~MemoryMappedFile() override {
+        // while this will never get called, it is still a good idea to be complete
+        theFile_.close();
+    }
+    [[nodiscard]] uint8_t
+    read8(Address offset) noexcept override {
+        return theCache_.getByte(offset);
+    }
+    void
+    write8(Address offset, uint8_t value) noexcept override {
+        theCache_.setByte(offset, value);
+    }
+    [[nodiscard]] uint16_t
+    read16(Address offset) noexcept override {
+        return theCache_.getWord(offset);
+    }
+    void
+    write16(Address offset, uint16_t value) noexcept override {
+        theCache_.setWord(offset, value);
+    }
+public:
+    void
+    begin() noexcept override {
+        if (!SD.exists(const_cast<char*>(path_))) {
+            // delete the file and start a new
+            signalHaltState(F("Could not find ram.bin! Please create one 512 megs in size!"));
+        }
+        theFile_ = SD.open(path_, permissions_);
+        if (!theFile_) {
+            Serial.print(F("Couldn't open "));
+            Serial.println(path_);
+            signalHaltState(F("Could not open memory mapped file! SD CARD may be corrupt")) ;
+        }
+        fileSize_ = theFile_.size();
+        if (fileSize_ != maxSize_) {
+            signalHaltState(F("File wrong size!"));
+        }
+        Serial.print(path_);
+        Serial.println(F(" OPEN SUCCESS!"));
+        (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
+    }
+private:
+public:
+    void write(uint32_t baseAddress, byte* buffer, size_t size) override {
+        if (permissions_ != FILE_READ) {
+            theFile_.seek(baseAddress);
+            theFile_.write(buffer, size);
+            // make sure...
+            theFile_.flush();
+        }
+    }
+    void read(uint32_t baseAddress, byte *buffer, size_t size) override {
+        theFile_.seek(baseAddress);
+        theFile_.read(buffer, size);
+    }
+    [[nodiscard]] constexpr auto getFileSize() const noexcept { return fileSize_; }
+private:
+    File theFile_; // use an SDCard as ram for the time being
+    Address maxSize_;
+    DataCache<numCacheLines, cacheLineSize> theCache_;
+    const char* path_;
+    decltype(FILE_WRITE) permissions_;
+    Address fileSize_;
+};
 template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
-class RAMThing : public MemoryThing {
+class RAMThing : public MemoryMappedFile<numCacheLines, cacheLineSize> {
 public:
     static constexpr Address OneMemorySpaceMask = OneMemorySpace - 1;
     static constexpr Address MaxRamSize = 32 * OneMemorySpace; // 32 Memory Spaces or 512 Megabytes
     static constexpr auto RamMask = MaxRamSize - 1;
     static constexpr Address RamStartingAddress = 0x8000'0000; // start this at 512 megabytes
     static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
-    RAMThing() noexcept : MemoryThing(RamStartingAddress, RamEndingAddress), theCache_(this) { }
-    ~RAMThing() override {
-        // while this will never get called, it is still a good idea to be complete
-        theRAM_.close();
-    }
+    using Parent = MemoryMappedFile<numCacheLines, cacheLineSize>;
+    RAMThing() noexcept : Parent(RamStartingAddress, RamEndingAddress, MaxRamSize, "ram.bin", FILE_WRITE) { }
+    ~RAMThing() override = default;
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
         if (chipsetFunctions.displayMemoryReadsAndWrites()) {
@@ -479,74 +545,23 @@ public:
         }
         MemoryThing::write(address, value, style);
     }
-    [[nodiscard]] uint8_t
-    read8(Address offset) noexcept override {
-        return theCache_.getByte(offset);
-    }
-    void
-    write8(Address offset, uint8_t value) noexcept override {
-        theCache_.setByte(offset, value);
-    }
-    [[nodiscard]] uint16_t
-    read16(Address offset) noexcept override {
-        return theCache_.getWord(offset);
-    }
-    void
-    write16(Address offset, uint16_t value) noexcept override {
-        theCache_.setWord(offset, value);
-    }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
         // in this case, we want relative offsets
         return input & RamMask;
     }
-public:
-    void
-    begin() noexcept override {
-        static const char* path = "ram.bin";
-        if (!SD.exists(const_cast<char*>(path))) {
-            // delete the file and start a new
-            signalHaltState(F("Could not find ram.bin! Please create one 512 megs in size!"));
-        }
-        theRAM_ = SD.open("ram.bin", FILE_WRITE);
-        if (!theRAM_) {
-            signalHaltState(F("Could not open ram.bin! SD CARD may be corrupt")) ;
-        }
-        if (theRAM_.size() != MaxRamSize) {
-            signalHaltState(F("RAM.BIN wrong size!"));
-        }
-        Serial.println(F("RAM.BIN OPEN SUCCESS!"));
-        (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
-    }
-private:
-public:
-    void write(uint32_t baseAddress, byte* buffer, size_t size) override {
-        theRAM_.seek(baseAddress);
-        theRAM_.write(buffer, size);
-        // make sure...
-        theRAM_.flush();
-    }
-    void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        theRAM_.seek(baseAddress);
-        theRAM_.read(buffer, size);
-    }
-private:
-    File theRAM_; // use an SDCard as ram for the time being
-    DataCache<numCacheLines, cacheLineSize> theCache_;
 };
 
 template<uint32_t numCacheLines, uint32_t cacheLineSize = 32>
-class ROMThing : public MemoryThing {
+class ROMThing : public MemoryMappedFile<numCacheLines, cacheLineSize> {
 public:
     static constexpr Address ROMStart = 0;
     static constexpr Address ROMEnd = 0x2000'0000;
     static constexpr Address ROMMask = ROMEnd - 1;
+    using Parent = MemoryMappedFile<numCacheLines, cacheLineSize>;
 public:
-    ROMThing() noexcept : MemoryThing(ROMStart, ROMEnd), theCache_(this) { }
-    ~ROMThing() override {
-        // while this will never get called, it is still a good idea to be complete
-        theBootROM_.close();
-    }
+    ROMThing() noexcept : Parent(ROMStart, ROMEnd, ROMEnd - 1, "boot.rom", FILE_READ){ }
+    ~ROMThing() override = default;
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
         if (chipsetFunctions.displayMemoryReadsAndWrites()) {
@@ -557,70 +572,16 @@ public:
         }
         return result;
     }
-    [[nodiscard]] uint8_t
-    read8(Address offset) noexcept override {
-        return theCache_.getByte(offset);
-    }
-    [[nodiscard]] uint16_t
-    read16(Address offset) noexcept override {
-        // use the onboard cache to get data from
-        return theCache_.getWord(offset);
-    }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
         return input & ROMMask;
     }
     [[nodiscard]] bool
     respondsTo(Address address) const noexcept override {
-        return address < size_;
+        return address < Parent::getFileSize();
     }
     using MemoryThing::respondsTo;
-    void read(uint32_t baseAddress, byte *buffer, size_t size) override {
-        if (chipsetFunctions.displayCacheLineUpdates()) {
-            Serial.print(F("\tAccessing "));
-            Serial.print(size, DEC);
-            Serial.print(F(" bytes starting at 0x"));
-            Serial.println(baseAddress, HEX);
-        }
-        theBootROM_.seek(baseAddress);
-        theBootROM_.read(buffer, size);
-        if (chipsetFunctions.displayCacheLineUpdates()) {
-            Serial.println();
-            Serial.println(F("READ ROMTHING!"));
-            for (size_t i = 0; i < size; ++i) {
-                Serial.print(F("\t0x"));
-                Serial.print(baseAddress + i, HEX);
-                Serial.print(F(": 0x"));
-                Serial.print(buffer[i], HEX);
-                Serial.print(F(" (0x"));
-                Serial.print(reinterpret_cast<uint32_t>(&buffer[i]), HEX);
-                Serial.println(F(")"));
-            }
-        }
-    }
-    void
-    begin() noexcept override {
-        if (!SD.exists(const_cast<char*>("boot.rom"))) {
-            signalHaltState(F("NO BOOT.ROM!"));
-        }
-        theBootROM_ = SD.open("boot.rom", FILE_READ);
-        Serial.println(F("BOOT.ROM OPEN SUCCESS!"));
-        size_ = theBootROM_.size();
-        if (size_ == 0) {
-            signalHaltState(F("EMPTY BOOT.ROM"));
-        } else if (size_ > ROMEnd) {
-            signalHaltState(F("BOOT.ROM TOO LARGE")) ;
-        }
-        // okay now setup the initial cache block
-        (void)theCache_.getByte(0);
-    }
-    [[nodiscard]] constexpr auto getROMSize() const noexcept { return size_; }
 
-private:
-// boot rom and sd card loading stuff
-    File theBootROM_;
-    uint32_t size_ = 0;
-    DataCache<numCacheLines, cacheLineSize> theCache_;
 };
 
 /// @todo add support for the boot data section that needs to be copied into ram by the i960 on bootup
@@ -1601,9 +1562,8 @@ void processDataRequest() noexcept {
         }
     }
     // setup the proper address and emit this over serial
-    auto blastAsserted = processorInterface.blastTriggered();
     processorInterface.signalReady();
-    if (blastAsserted) {
+    if (processorInterface.blastTriggered()) {
         // we not in burst mode
         fsm.trigger(ReadyAndNoBurst);
     }

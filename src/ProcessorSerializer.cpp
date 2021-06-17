@@ -245,6 +245,7 @@ void ProcessorInterface::newDataCycle() noexcept {
     upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
     address_ = upperMaskedAddress_;
     isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
+    blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
     auto bits = readGPIO16(IOExpanderAddress::MemoryCommitExtras);
@@ -252,4 +253,5 @@ void ProcessorInterface::updateDataCycle() noexcept {
     auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
     lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
     address_ = upperMaskedAddress_ | burstAddressBits;
+    blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
