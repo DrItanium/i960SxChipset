@@ -343,51 +343,36 @@ template<typename T>
 // ----------------------------------------------------------------
 class BuiltinLedThing : public IOSpaceThing {
 public:
-    explicit BuiltinLedThing(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase) { }
-    ~BuiltinLedThing() override = default;
-    [[nodiscard]] uint8_t read8(Address address) noexcept override { return readLed(); }
-    [[nodiscard]] uint16_t read16(Address address) noexcept override { return static_cast<uint16_t>(readLed()); }
-    void write8(Address /*address*/, uint8_t value) noexcept override { writeLed(value); }
-    void write16(Address /*address*/, uint16_t value) noexcept override { writeLed(static_cast<uint8_t>(value)); }
-private:
-    static void
-    writeLed(uint8_t value) noexcept {
-        digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
-    }
-    static uint8_t
-    readLed() noexcept {
-        return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
-    }
-};
-
-
-class PortZThing : public IOSpaceThing {
-public:
     enum class Registers : uint32_t {
+        Led, // one byte
         GPIO, // one byte wide
         Direction, // one byte wide
         Polarity,
         Pullup,
     };
-public:
-    explicit PortZThing(Address base) noexcept : IOSpaceThing(base, base + 16) { }
-    ~PortZThing() override = default;
-    [[nodiscard]] uint8_t read8(Address offset) noexcept override {
-        switch (static_cast<Registers>(offset)) {
+    explicit BuiltinLedThing(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) { }
+    ~BuiltinLedThing() override = default;
+    [[nodiscard]] uint8_t read8(Address address) noexcept override {
+        switch (static_cast<Registers>(address)) {
+            case Registers::Led:
+                return readLed();
             case Registers::GPIO:
                 return processorInterface.readPortZGPIORegister();
-            case Registers::Pullup:
-                return processorInterface.getPortZPullupResistorRegister();
-            case Registers::Polarity:
-                return processorInterface.getPortZPolarityRegister();
             case Registers::Direction:
                 return processorInterface.getPortZDirectionRegister();
+            case Registers::Polarity:
+                return processorInterface.getPortZPolarityRegister();
+            case Registers::Pullup:
+                return processorInterface.getPortZPullupResistorRegister();
             default:
                 return 0;
         }
     }
-    void write8(Address offset, uint8_t value) noexcept override {
-        switch (static_cast<Registers>(offset)) {
+    void write8(Address address, uint8_t value) noexcept override {
+        switch (static_cast<Registers>(address)) {
+            case Registers::Led:
+                writeLed(value);
+                break;
             case Registers::GPIO:
                 processorInterface.writePortZGPIORegister(value);
                 break;
@@ -403,6 +388,15 @@ public:
             default:
                 break;
         }
+    }
+private:
+    static void
+    writeLed(uint8_t value) noexcept {
+        digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
+    }
+    static uint8_t
+    readLed() noexcept {
+        return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
     }
 };
 
@@ -1302,8 +1296,7 @@ private:
     char path_[FixedPathSize] = { 0 };
     volatile uint32_t fixedPadding = 0; // always should be here to make sure an overrun doesn't cause problems
 };
-BuiltinLedThing theLed(BuiltinLedOffsetBaseAddress);
-PortZThing portZThing(BuiltinPortZBaseAddress);
+BuiltinLedThing theLed(0);
 ConsoleThing theConsole(0x100);
 #ifndef ADAFRUIT_FEATHER
 using DisplayThing = TFTShieldThing;
@@ -1327,7 +1320,6 @@ AdafruitADXL343Thing adxl343(0x1300);
 // list of io memory devices to walk through
 MemoryThing* things[] {
         &theLed,
-        &portZThing,
         &theConsole,
         &displayCommandSet,
 #ifdef ADAFRUIT_FEATHER
