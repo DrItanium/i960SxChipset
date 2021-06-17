@@ -108,9 +108,7 @@ private:
         uint8_t count = 0;
         if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); thing) {
             thing->read(thing->makeAddressRelative(baseAddress), buffer_, length);
-            aStream.flush(); // flush ahead of time to clear out the current buffer
             count = aStream.write(buffer_, length);
-            aStream.flush(); // now that we are done, purge the buffers again
         }
         return count;
     }
