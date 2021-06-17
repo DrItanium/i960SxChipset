@@ -5,14 +5,10 @@
 #ifndef I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
 #define I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
 #include "MemoryThing.h"
-template<uint16_t fileCount>
 class SDCardFilesystemInterface : public IOSpaceThing {
 public:
     static constexpr uint8_t FixedPathSize = 80;
-    static constexpr auto MaxFileCount = fileCount;
-#ifdef ARDUINO_AVR_ATmega1284
-    static_assert(MaxFileCount <= 64, "Too many file handles defined, not enough ram on the 1284p to handle this!");
-#endif
+    static constexpr auto MaxFileCount = TargetBoard::maximumNumberOfOpenFilesFromSDCard();
 public:
     explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
     void begin() noexcept override {

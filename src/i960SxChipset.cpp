@@ -621,7 +621,7 @@ RAMThing ram; // we want 4k but laid out for multiple sd card clusters, we can h
 ROMThing rom; // 4k rom sections
 DataROMThing dataRom;
 
-SDCardFilesystemInterface<32> fs(0x300);
+SDCardFilesystemInterface fs(0x300);
 ChipsetFunctionInterface debugFlags(0xFF'FF00);
 #ifdef ADAFRUIT_FEATHER
 AdafruitLIS3MDLThing lsi3mdl(0x1000);

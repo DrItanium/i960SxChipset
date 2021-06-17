@@ -236,6 +236,23 @@ public:
                 return 512;
         }
     }
+    [[nodiscard]] static constexpr auto maximumNumberOfOpenFilesFromSDCard() noexcept {
+        switch (getMCUTarget())  {
+            case TargetMCU::ATmega1284p:
+                return 32; // we can't go any higher than this due to lack of sram
+            case TargetMCU::FeatherM0Adalogger:
+            case TargetMCU::FeatherM0Basic:
+                return 32;
+            case TargetMCU::Feather_nRF52832:
+                return 32;
+            case TargetMCU::MetroM4:
+                return 32;
+            case TargetMCU::GrandCentralM4:
+                return 32;
+            default:
+                return 32;
+        }
+    }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
