@@ -7,7 +7,6 @@
 #include <Arduino.h>
 #include "MemoryThing.h"
 #include "Cache.h"
-
 template<uint32_t numCacheLines = 8, uint32_t cacheLineSize = 512>
 class MemoryMappedFile : public MemoryThing {
 public:
@@ -35,7 +34,6 @@ public:
             theCache_.setWord(offset, value);
     }
 public:
-    virtual void signalHaltState(const __FlashStringHelper* thing) noexcept = 0;
     void
     begin() noexcept override {
             if (!SD.exists(const_cast<char*>(path_))) {

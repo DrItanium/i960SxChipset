@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef I960SXCHIPSET_MEMORYTHING_H
 #define I960SXCHIPSET_MEMORYTHING_H
 #include "Pinout.h"
+[[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
 /**
  * @brief Describes the interface between a component and a memory request, it introduces some latency with the trade off being easier maintenance
  */
@@ -62,10 +63,6 @@ public:
     [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
     [[nodiscard]] virtual Address makeAddressRelative(Address input) const noexcept { return input - base_; }
     [[nodiscard]] virtual uint16_t read(Address address, LoadStoreStyle style) noexcept {
-#if 0
-        Serial.print(F("READ from 0x"));
-        Serial.println(address, HEX);
-#endif
         auto offset = makeAddressRelative(address);
         switch (style) {
             case LoadStoreStyle::Full16:
@@ -79,12 +76,6 @@ public:
         }
     }
     virtual void write(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-#if 0
-        Serial.print(F("WRITE 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F("to 0x"));
-        Serial.println(address, HEX);
-#endif
         auto offset = makeAddressRelative(address);
         switch (style) {
             case LoadStoreStyle::Full16:
@@ -118,6 +109,8 @@ public:
      * @param size the number of bytes to read from the memory thing into the buffer
      */
     virtual void read(uint32_t baseAddress, byte* buffer, size_t size) { }
+
+    virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
 private:
     Address base_;
     Address end_;
