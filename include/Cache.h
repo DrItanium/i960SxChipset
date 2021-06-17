@@ -127,56 +127,28 @@ public:
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
     explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
-        if (chipsetFunctions.displayCacheLineUpdates()) {
-            Serial.print(F("\tGetByte: 0x"));
-            Serial.println(targetAddress, HEX);
-        }
         for (const ASingleCacheLine & line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
-                auto result = line.getByte(targetAddress);
-                if (chipsetFunctions.displayCacheLineUpdates()) {
-                    Serial.print(F("\t\tResult: 0x"));
-                    Serial.println(result, HEX);
-                }
-                return result;
+                return line.getByte(targetAddress);
 
             }
         }
         // cache miss
         // need to replace a cache line
-        auto hit = cacheMiss(targetAddress).getByte(targetAddress);
-        if (chipsetFunctions.displayCacheLineUpdates()) {
-            Serial.print(F("\t\tHIT: 0x"));
-            Serial.println(hit, HEX);
-        }
-        return hit;
+        return cacheMiss(targetAddress).getByte(targetAddress);
 
     }
     [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
-        if (chipsetFunctions.displayCacheLineUpdates()) {
-            Serial.print(F("\tGetWord: 0x"));
-            Serial.print(targetAddress, HEX);
-        }
         for (const ASingleCacheLine& line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
-                auto result = line.getWord(targetAddress);
-                if (chipsetFunctions.displayCacheLineUpdates()) {
-                    Serial.print(F("\t\tResult: 0x"));
-                    Serial.println(result, HEX);
-                }
-                return result;
+                return line.getWord(targetAddress);
             }
         }
         // cache miss
         // need to replace a cache line
-        auto hit = cacheMiss(targetAddress).getWord(targetAddress);
-        if (chipsetFunctions.displayCacheLineUpdates()) {
-            Serial.print(F("\t\tHIT: 0x"));
-            Serial.println(hit, HEX);
-        }
-        return hit;
+        return cacheMiss(targetAddress).getWord(targetAddress);
     }
     void setByte(uint32_t targetAddress, uint8_t value) noexcept {
         for (ASingleCacheLine & line : lines_) {
@@ -210,13 +182,6 @@ private:
      */
     ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
-        if (chipsetFunctions.displayCacheLineUpdates()) {
-            Serial.println(F("Cache Miss: handling cache miss"));
-            Serial.print(F("\tTarget Address: 0x"));
-            Serial.println(targetAddress, HEX);
-            Serial.print(F("\tAligned Address: 0x"));
-            Serial.println(alignedAddress, HEX);
-        }
         // use random number generation to do this
         for (ASingleCacheLine& line : lines_) {
             if (!line.isValid()) {
@@ -227,18 +192,6 @@ private:
         // we had no free elements so choose one to replace
         auto targetCacheLine = rand() & NumberOfCacheLinesMask;
         ASingleCacheLine& replacementLine = lines_[targetCacheLine];
-        if (chipsetFunctions.displayCacheLineUpdates()) {
-            Serial.print(F("\tNumber of cache lines: 0x"));
-            Serial.println(NumberOfCacheLines, HEX);
-            Serial.print(F("\tCache lines mask: 0b"));
-            Serial.println(NumberOfCacheLinesMask, BIN);
-            Serial.print(F("\tCache Miss: target cache line: "));
-            Serial.println(targetCacheLine, DEC);
-            Serial.print(F("\tCache Miss: raw address: 0x"));
-            Serial.println(targetAddress, HEX);
-            Serial.print(F("\tCache Miss: aligned address: 0x"));
-            Serial.println(alignedAddress, HEX);
-        }
         // generate an aligned address
         replacementLine.reset(alignedAddress, thing_);
         return replacementLine;

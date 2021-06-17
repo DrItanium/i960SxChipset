@@ -213,25 +213,7 @@ public:
     using Parent = MemoryMappedFile<numCacheLines, cacheLineSize>;
     RAMThing() noexcept : Parent(RamStartingAddress, RamEndingAddress, MaxRamSize, "ram.bin", FILE_WRITE) { }
     ~RAMThing() override = default;
-    [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
-        auto result = MemoryThing::read(address, style);
-        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
-            Serial.print(F("RAM: READING FROM ADDRESS 0x"));
-            Serial.print(address, HEX);
-            Serial.print(F(" yielded value 0x"));
-            Serial.println(result, HEX);
-        }
-        return result;
-    }
-    void write(Address address, uint16_t value, LoadStoreStyle style) noexcept override {
-        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
-            Serial.print(F("RAM: WRITING 0x"));
-            Serial.print(value, HEX);
-            Serial.print(F(" to ADDRESS 0x"));
-            Serial.println(address, HEX);
-        }
-        MemoryThing::write(address, value, style);
-    }
+    void signalHaltState(const __FlashStringHelper* thing) noexcept override { ::signalHaltState(thing); }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
         // in this case, we want relative offsets
@@ -256,6 +238,7 @@ public:
 public:
     ROMThing() noexcept : Parent(ROMStart, ROMEnd, ROMEnd - 1, "boot.rom", FILE_READ){ }
     ~ROMThing() override = default;
+    void signalHaltState(const __FlashStringHelper* thing) noexcept override { ::signalHaltState(thing); }
     [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
         auto result = MemoryThing::read(address, style);
         if (chipsetFunctions.displayMemoryReadsAndWrites()) {
@@ -291,6 +274,7 @@ public:
 public:
     DataROMThing() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
     ~DataROMThing() override = default;
+    void signalHaltState(const __FlashStringHelper* thing) noexcept override { ::signalHaltState(thing); }
 };
 
 

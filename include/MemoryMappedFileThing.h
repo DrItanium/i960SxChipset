@@ -35,6 +35,7 @@ public:
             theCache_.setWord(offset, value);
     }
 public:
+    virtual void signalHaltState(const __FlashStringHelper* thing) noexcept = 0;
     void
     begin() noexcept override {
             if (!SD.exists(const_cast<char*>(path_))) {
