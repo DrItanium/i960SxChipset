@@ -67,22 +67,28 @@ enum class TargetMCU {
 class MCUConfiguration final {
 public:
     constexpr MCUConfiguration(uint32_t sramSize,
-                               uint32_t dataCacheLineCount = 8,
-                               uint32_t dataCacheLineSize = 512,
-                               uint32_t instructionCacheLineCount = 8,
-                               uint32_t instructionCacheLineSize = 512,
-                               uint32_t maxOpenFiles = 32) noexcept : sramAmount_(sramSize),
+                               uint32_t dataCacheLineCount,
+                               uint32_t dataCacheLineSize,
+                               uint32_t instructionCacheLineCount,
+                               uint32_t instructionCacheLineSize,
+                               uint32_t maxOpenFiles,
+                               bool hasBuiltinSDCard,
+                               bool usesDisplayShield) noexcept : sramAmount_(sramSize),
                              dataCacheLineCount_(dataCacheLineCount),
                              dataCacheLineSize_(dataCacheLineSize),
                              instructionCacheLineCount_(instructionCacheLineCount),
                              instructionCacheLineSize_(instructionCacheLineSize),
-                             maximumNumberOfOpenFiles_(maxOpenFiles) {}
+                             maximumNumberOfOpenFiles_(maxOpenFiles),
+                             builtinSDCard_(hasBuiltinSDCard),
+                             usesDisplayShield_(usesDisplayShield) { }
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
     [[nodiscard]] constexpr uint32_t getDataCacheLineCount() const noexcept { return dataCacheLineCount_; }
     [[nodiscard]] constexpr uint32_t getDataCacheLineSize() const noexcept { return dataCacheLineSize_; }
     [[nodiscard]] constexpr uint32_t getInstructionCacheLineCount() const noexcept { return instructionCacheLineCount_; }
     [[nodiscard]] constexpr uint32_t getInstructionCacheLineSize() const noexcept { return instructionCacheLineSize_; }
     [[nodiscard]] constexpr uint32_t getMaximumNumberOfOpenFiles() const noexcept { return maximumNumberOfOpenFiles_; }
+    [[nodiscard]] constexpr auto hasBuiltinSDCard() const noexcept { return builtinSDCard_; }
+    [[nodiscard]] constexpr auto usesDisplayShield() const noexcept { return usesDisplayShield_; }
 private:
     uint32_t sramAmount_;
     uint32_t dataCacheLineCount_;
@@ -90,17 +96,20 @@ private:
     uint32_t instructionCacheLineCount_;
     uint32_t instructionCacheLineSize_;
     uint32_t maximumNumberOfOpenFiles_;
+    bool builtinSDCard_;
+    bool usesDisplayShield_;
 };
 template<TargetMCU mcu>
-constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB, 8, 512, 8, 512, 32 };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 16, 512, 16, 512, 64 };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::MetroM4> = { 192_KB, 16, 512, 16, 512, 64 };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::SparkfunArtemis> = { 384_KB, 32, 512, 32, 512, 128 };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Basic> = { 32_KB, 16, 512, 16, 512, 64 };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalogger> = { 32_KB, 16, 512, 16, 512, 64 };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::Feather_nRF52832> = { 64_KB, 24, 512, 24, 512, 64};
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::HUZZAH32> { 520_KB, 128, 512, 128, 512, 192};
+constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, false, false};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB, 8, 512, 8, 512, 32, false, true};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 16, 512, 16, 512, 64, true, true};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::MetroM4> = { 192_KB, 16, 512, 16, 512, 64, false, true};
+// depends on the board used
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::SparkfunArtemis> = { 384_KB, 32, 512, 32, 512, 128, false, false};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Basic> = { 32_KB, 16, 512, 16, 512, 64, false, false};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalogger> = { 32_KB, 16, 512, 16, 512, 64, true, false };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::Feather_nRF52832> = { 64_KB, 24, 512, 24, 512, 64, false, false};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::HUZZAH32> { 520_KB, 128, 512, 128, 512, 192, false, false };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
     return true;
@@ -165,49 +174,21 @@ public:
  * @brief Is there an onboard sdcard slot?
  * @return True if defined via the command line
  */
-    [[nodiscard]] static constexpr auto hasBuiltinSDCard() noexcept {
-#ifdef HAS_BUILTIN_SDCARD
-        return true;
-#else
-        return false;
-#endif
-    }
-    [[nodiscard]] static constexpr auto usesDisplayShield() noexcept {
-#ifdef USES_DISPLAY_SHIELD
-        return true;
-#else
-        return false;
-#endif
-    }
+    [[nodiscard]] static constexpr auto hasBuiltinSDCard() noexcept { return BoardDescription<getMCUTarget()>.hasBuiltinSDCard(); }
+    [[nodiscard]] static constexpr auto usesDisplayShield() noexcept { return BoardDescription<getMCUTarget()>.usesDisplayShield(); }
     [[nodiscard]] static constexpr auto getSPIMOSIPin() noexcept { return PIN_SPI_MOSI; }
     [[nodiscard]] static constexpr auto getSPIMISOPin() noexcept { return PIN_SPI_MISO; }
     [[nodiscard]] static constexpr auto getSPISCKPin() noexcept { return PIN_SPI_SCK; }
     [[nodiscard]] static constexpr auto getSDAPin() noexcept { return PIN_WIRE_SDA; }
     [[nodiscard]] static constexpr auto getSCLPin() noexcept { return PIN_WIRE_SCL; }
-    [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept {
-        return BoardDescription<getMCUTarget()>.getSramAmount();
-    }
-    [[nodiscard]] static constexpr auto oneFourthSRAMAmountInBytes() noexcept {
-        return getSRAMAmountInBytes() / 4;
-    }
-    [[nodiscard]] static constexpr auto oneEighthSRAMAmountInBytes() noexcept {
-        return getSRAMAmountInBytes() / 8;
-    }
-    [[nodiscard]] static constexpr auto numberOfDataCacheLines() noexcept {
-        return BoardDescription<getMCUTarget()>.getDataCacheLineCount();
-    }
-    [[nodiscard]] static constexpr auto getDataCacheLineSize() noexcept {
-        return BoardDescription<getMCUTarget()>.getDataCacheLineSize();
-    }
-    [[nodiscard]] static constexpr auto numberOfInstructionCacheLines() noexcept {
-        return BoardDescription<getMCUTarget()>.getInstructionCacheLineCount();
-    }
-    [[nodiscard]] static constexpr auto getInstructionCacheLineSize() noexcept {
-        return BoardDescription<getMCUTarget()>.getInstructionCacheLineSize();
-    }
-    [[nodiscard]] static constexpr auto maximumNumberOfOpenFilesFromSDCard() noexcept {
-        return BoardDescription<getMCUTarget()>.getMaximumNumberOfOpenFiles();
-    }
+    [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept { return BoardDescription<getMCUTarget()>.getSramAmount(); }
+    [[nodiscard]] static constexpr auto oneFourthSRAMAmountInBytes() noexcept { return getSRAMAmountInBytes() / 4; }
+    [[nodiscard]] static constexpr auto oneEighthSRAMAmountInBytes() noexcept { return getSRAMAmountInBytes() / 8; }
+    [[nodiscard]] static constexpr auto numberOfDataCacheLines() noexcept { return BoardDescription<getMCUTarget()>.getDataCacheLineCount(); }
+    [[nodiscard]] static constexpr auto getDataCacheLineSize() noexcept { return BoardDescription<getMCUTarget()>.getDataCacheLineSize(); }
+    [[nodiscard]] static constexpr auto numberOfInstructionCacheLines() noexcept { return BoardDescription<getMCUTarget()>.getInstructionCacheLineCount(); }
+    [[nodiscard]] static constexpr auto getInstructionCacheLineSize() noexcept { return BoardDescription<getMCUTarget()>.getInstructionCacheLineSize(); }
+    [[nodiscard]] static constexpr auto maximumNumberOfOpenFilesFromSDCard() noexcept { return BoardDescription<getMCUTarget()>.getMaximumNumberOfOpenFiles(); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
