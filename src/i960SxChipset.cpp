@@ -893,9 +893,6 @@ public:
         display_.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
         ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
         Serial.println(F("TFT OK!"));
-        display_.fillScreen(ST77XX_CYAN);
-        Serial.println(F("Screen should have cyan in it!"));
-        delay(100);
         display_.fillScreen(ST77XX_BLACK);
         display_.setCursor(0, 0);
         display_.setTextColor(ST77XX_WHITE);
