@@ -194,7 +194,9 @@ public:
                 consoleBufferLength_ = value;
                 break;
             case Registers::ConsoleBufferDoorbell:
+                Serial.flush();
                 (void)writeToStream(Serial, consoleBufferBaseAddress_.full, consoleBufferLength_);
+                Serial.flush();
                 break;
             default:
                 break;
