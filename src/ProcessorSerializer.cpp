@@ -196,7 +196,7 @@ ProcessorInterface::begin() noexcept {
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
         auto iocon = read8(ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON);
-        write8(ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, iocon & 0b0111'1110);
+        write8(ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, iocon | 0b0000'1000);
         // now all devices tied to this ~CS pin have separate addresses
         // make each of these inputs
         writeDirection(IOExpanderAddress::Lower16Lines, 0xFFFF);
