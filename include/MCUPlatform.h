@@ -60,7 +60,55 @@ enum class TargetMCU {
     FeatherM0Adalogger,
     Feather_nRF52832,
     MetroM4,
+    SparkfunArtemis,
     Unknown,
+};
+class MCUConfiguration final {
+public:
+    constexpr MCUConfiguration(uint32_t sramSize,
+                               uint32_t dataCacheLineCount = 8,
+                               uint32_t dataCacheLineSize = 512,
+                               uint32_t instructionCacheLineCount = 8,
+                               uint32_t instructionCacheLineSize = 512,
+                               uint32_t maxOpenFiles = 32) noexcept : sramAmount_(sramSize),
+                             dataCacheLineCount_(dataCacheLineCount),
+                             dataCacheLineSize_(dataCacheLineSize),
+                             instructionCacheLineCount_(instructionCacheLineCount),
+                             instructionCacheLineSize_(instructionCacheLineSize),
+                             maximumNumberOfOpenFiles_(maxOpenFiles) {}
+    [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
+    [[nodiscard]] constexpr uint32_t getDataCacheLineCount() const noexcept { return dataCacheLineCount_; }
+    [[nodiscard]] constexpr uint32_t getDataCacheLineSize() const noexcept { return dataCacheLineSize_; }
+    [[nodiscard]] constexpr uint32_t getInstructionCacheLineCount() const noexcept { return instructionCacheLineCount_; }
+    [[nodiscard]] constexpr uint32_t getInstructionCacheLineSize() const noexcept { return instructionCacheLineSize_; }
+    [[nodiscard]] constexpr uint32_t getMaximumNumberOfOpenFiles() const noexcept { return maximumNumberOfOpenFiles_; }
+private:
+    uint32_t sramAmount_;
+    uint32_t dataCacheLineCount_;
+    uint32_t dataCacheLineSize_;
+    uint32_t instructionCacheLineCount_;
+    uint32_t instructionCacheLineSize_;
+    uint32_t maximumNumberOfOpenFiles_;
+};
+template<TargetMCU mcu>
+constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, };
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
+        16_KB,
+        8,
+        512,
+        8,
+        512,
+        32,
+};
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = {
+        256_KB,
+        8,
+        512,
+        8,
+        512,
+        32,
 };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
@@ -146,21 +194,7 @@ public:
     [[nodiscard]] static constexpr auto getSDAPin() noexcept { return PIN_WIRE_SDA; }
     [[nodiscard]] static constexpr auto getSCLPin() noexcept { return PIN_WIRE_SCL; }
     [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept {
-        switch (getMCUTarget())  {
-            case TargetMCU::ATmega1284p:
-                return 16_KB;
-            case TargetMCU::FeatherM0Adalogger:
-            case TargetMCU::FeatherM0Basic:
-                return 32_KB;
-            case TargetMCU::Feather_nRF52832:
-                return 64_KB;
-            case TargetMCU::MetroM4:
-                return 192_KB;
-            case TargetMCU::GrandCentralM4:
-                return 256_KB;
-            default:
-                return 0ull;
-        }
+        return BoardDescription<getMCUTarget()>.getSramAmount();
     }
     [[nodiscard]] static constexpr auto oneFourthSRAMAmountInBytes() noexcept {
         return getSRAMAmountInBytes() / 4;
@@ -169,89 +203,19 @@ public:
         return getSRAMAmountInBytes() / 8;
     }
     [[nodiscard]] static constexpr auto numberOfDataCacheLines() noexcept {
-            switch (getMCUTarget())  {
-                case TargetMCU::ATmega1284p:
-                    return 8;
-                case TargetMCU::FeatherM0Adalogger:
-                case TargetMCU::FeatherM0Basic:
-                    return 8;
-                case TargetMCU::Feather_nRF52832:
-                    return 8;
-                case TargetMCU::MetroM4:
-                    return 8;
-                case TargetMCU::GrandCentralM4:
-                    return 8;
-                default:
-                    return 8;
-            }
+        return BoardDescription<getMCUTarget()>.getDataCacheLineCount();
     }
     [[nodiscard]] static constexpr auto getDataCacheLineSize() noexcept {
-        switch (getMCUTarget())  {
-            case TargetMCU::ATmega1284p:
-                return 512;
-            case TargetMCU::FeatherM0Adalogger:
-            case TargetMCU::FeatherM0Basic:
-                return 512;
-            case TargetMCU::Feather_nRF52832:
-                return 512;
-            case TargetMCU::MetroM4:
-                return 512;
-            case TargetMCU::GrandCentralM4:
-                return 512;
-            default:
-                return 512;
-        }
+        return BoardDescription<getMCUTarget()>.getDataCacheLineSize();
     }
     [[nodiscard]] static constexpr auto numberOfInstructionCacheLines() noexcept {
-        switch (getMCUTarget())  {
-            case TargetMCU::ATmega1284p:
-                return 8;
-            case TargetMCU::FeatherM0Adalogger:
-            case TargetMCU::FeatherM0Basic:
-                return 8;
-            case TargetMCU::Feather_nRF52832:
-                return 8;
-            case TargetMCU::MetroM4:
-                return 8;
-            case TargetMCU::GrandCentralM4:
-                return 8;
-            default:
-                return 8;
-        }
+        return BoardDescription<getMCUTarget()>.getInstructionCacheLineCount();
     }
     [[nodiscard]] static constexpr auto getInstructionCacheLineSize() noexcept {
-        switch (getMCUTarget())  {
-            case TargetMCU::ATmega1284p:
-                return 512;
-            case TargetMCU::FeatherM0Adalogger:
-            case TargetMCU::FeatherM0Basic:
-                return 512;
-            case TargetMCU::Feather_nRF52832:
-                return 512;
-            case TargetMCU::MetroM4:
-                return 512;
-            case TargetMCU::GrandCentralM4:
-                return 512;
-            default:
-                return 512;
-        }
+        return BoardDescription<getMCUTarget()>.getInstructionCacheLineSize();
     }
     [[nodiscard]] static constexpr auto maximumNumberOfOpenFilesFromSDCard() noexcept {
-        switch (getMCUTarget())  {
-            case TargetMCU::ATmega1284p:
-                return 32; // we can't go any higher than this due to lack of sram
-            case TargetMCU::FeatherM0Adalogger:
-            case TargetMCU::FeatherM0Basic:
-                return 32;
-            case TargetMCU::Feather_nRF52832:
-                return 32;
-            case TargetMCU::MetroM4:
-                return 32;
-            case TargetMCU::GrandCentralM4:
-                return 32;
-            default:
-                return 32;
-        }
+        return BoardDescription<getMCUTarget()>.getMaximumNumberOfOpenFiles();
     }
 public:
     TargetBoard() = delete;
