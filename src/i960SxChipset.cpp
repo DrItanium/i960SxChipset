@@ -627,7 +627,7 @@ private:
 class DataROMThing : public MemoryThing {
 public:
     // two clusters are held onto at a time
-    static constexpr uint32_t numCacheLines = 2;
+    static constexpr uint32_t numCacheLines = 1;
     static constexpr uint32_t cacheLineSize = 512;
     static constexpr Address ROMStart = 0x2000'0000;
     static constexpr Address ROMEnd = 0x8000'0000;
@@ -1411,7 +1411,7 @@ using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
 #endif
 DisplayThing displayCommandSet(0x200);
 RAMThing<8,512> ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
-ROMThing<128,32> rom; // 4k rom sections
+ROMThing<8,512> rom; // 4k rom sections
 DataROMThing dataRom;
 
 SDCardFilesystemInterface<32> fs(0x300);
