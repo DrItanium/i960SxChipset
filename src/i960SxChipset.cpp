@@ -86,8 +86,29 @@ public:
 #undef FourByteEntry
 #undef TwoByteEntry
     };
-    explicit CoreChipsetFeatures(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) { }
+    explicit CoreChipsetFeatures(Address offsetFromIOBase = 0) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) {
+        consoleBufferBaseAddress_.full = 0;
+
+    }
     ~CoreChipsetFeatures() override = default;
+private:
+    uint8_t
+    readFromStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept {
+        uint8_t count = 0;
+        if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); thing) {
+            /// @todo code goes here
+        }
+        return count;
+    }
+    void
+    writeToStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept {
+        uint8_t count = 0;
+        if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); thing) {
+            /// @todo code goes here
+        }
+        return count;
+    }
+public:
     [[nodiscard]] uint8_t read8(Address address) noexcept override {
         switch (static_cast<Registers>(address)) {
             case Registers::Led:
@@ -104,6 +125,10 @@ public:
                 return processorInterface.getPortZPolarityRegister();
             case Registers::PortZGPIOPullup:
                 return processorInterface.getPortZPullupResistorRegister();
+            case Registers::ConsoleBufferLength:
+                return consoleBufferLength_;
+            case Registers::ConsoleBufferDoorbell:
+                return readFromStream(Serial, consoleBufferBaseAddress_.full, consoleBufferLength_);
             default:
                 return 0;
         }
@@ -113,6 +138,8 @@ public:
             case Registers::ConsoleIO: return Serial.read();
             case Registers::ConsoleAvailable: return Serial.available();
             case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
+            case Registers::ConsoleBufferAddressLowerHalf: return consoleBufferBaseAddress_.halves[0];
+            case Registers::ConsoleBufferAddressUpperHalf: return consoleBufferBaseAddress_.halves[1];
             default: return 0;
         }
     }
@@ -123,6 +150,12 @@ public:
                 break;
             case Registers::ConsoleIO:
                 Serial.write(static_cast<char>(value));
+                break;
+            case Registers::ConsoleBufferAddressLowerHalf:
+                consoleBufferBaseAddress_.halves[0] = value;
+                break;
+            case Registers::ConsoleBufferAddressUpperHalf:
+                consoleBufferBaseAddress_.halves[1] = value;
                 break;
             default:
                 break;
@@ -151,6 +184,12 @@ public:
                 break;
             case Registers::PortZGPIODirection:
                 processorInterface.setPortZDirectionRegister(value);
+                break;
+            case Registers::ConsoleBufferLength:
+                consoleBufferLength_ = value;
+                break;
+            case Registers::ConsoleBufferDoorbell:
+                writeToStream(Serial, consoleBufferBaseAddress_.full, consoleBufferLength_);
                 break;
             default:
                 break;
@@ -182,6 +221,11 @@ private:
     }
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
+    union {
+        uint16_t halves[2];
+        uint32_t full;
+    } consoleBufferBaseAddress_;
+    uint8_t consoleBufferLength_ = 0;
 };
 
 CoreChipsetFeatures chipsetFunctions(0);
