@@ -46,6 +46,7 @@ SdFat SD;
 #include "MemoryThing.h"
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
+#include "OPL2Thing.h"
 #ifdef ADAFRUIT_FEATHER
 #include "FeatherWingPeripherals.h"
 #endif
