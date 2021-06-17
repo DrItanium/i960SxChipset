@@ -93,7 +93,7 @@ private:
 };
 template<TargetMCU mcu>
 constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB, 8, 512, 8, 512, 32 };
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 16, 512, 16, 512, 64 };
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::MetroM4> = { 192_KB, 16, 512, 16, 512, 64 };
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::SparkfunArtemis> = { 384_KB, 32, 512, 32, 512, 128 };
@@ -218,5 +218,6 @@ public:
 };
 
 static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been defined, please define to continue");
+static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16kb of sram is not allowed!");
 
 #endif //I960SXCHIPSET_MCUPLATFORM_H
