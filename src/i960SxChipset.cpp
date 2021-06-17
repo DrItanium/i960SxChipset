@@ -50,32 +50,6 @@ SdFat SD;
 #ifdef ADAFRUIT_FEATHER
 #include "FeatherWingPeripherals.h"
 #endif
-/// Set to false to prevent the console from displaying every single read and write
-template<bool allow>
-struct ChipsetOperationRegisters {
-public:
-    // if this is false, then this entire class disables
-    static constexpr auto AllowDebuggingStatements = allow;
-    [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
-    [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
-    void setDisplayMemoryReadsAndWrites(bool value) noexcept {
-        if constexpr (AllowDebuggingStatements) {
-            displayMemoryReadsAndWrites_ = value;
-        }
-    }
-    void setDisplayCacheLineUpdates(bool value) noexcept {
-        if constexpr (AllowDebuggingStatements) {
-            displayCacheLineUpdates_ = value;
-        }
-    }
-    [[nodiscard]] constexpr bool active() const noexcept { return allow; }
-
-private:
-    bool displayMemoryReadsAndWrites_ = false;
-    bool displayCacheLineUpdates_ = false;
-    /// @todo add support for having the dma engine within the microcontroller to perform block transfers to the RAM
-};
-ChipsetOperationRegisters<true> chipsetFunctions;
 //OPL2Thing<i960Pinout::SPI_BUS_A0, i960Pinout::SPI_BUS_A1, i960Pinout::SPI_BUS_A2> thingy(0x1000);
 
 bool displayReady = false;
@@ -86,11 +60,13 @@ ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 // ----------------------------------------------------------------
 // Load/Store routines
 // ----------------------------------------------------------------
+template<bool allow = true>
 class CoreChipsetFeatures : public IOSpaceThing {
 public:
     enum class Registers : uint32_t {
         Led, // one byte
-
+        DisplayMemoryReadsAndWrites,
+        DisplayCacheLineUpdates,
         PortZGPIO, // one byte wide
         PortZGPIODirection, // one byte wide
         PortZGPIOPolarity,
@@ -102,6 +78,10 @@ public:
         switch (static_cast<Registers>(address)) {
             case Registers::Led:
                 return readLed();
+            case Registers::DisplayMemoryReadsAndWrites:
+                return displayMemoryReadsAndWrites();
+            case Registers::DisplayCacheLineUpdates:
+                return displayCacheLineUpdates();
             case Registers::PortZGPIO:
                 return processorInterface.readPortZGPIORegister();
             case Registers::PortZGPIODirection:
@@ -119,6 +99,12 @@ public:
             case Registers::Led:
                 writeLed(value);
                 break;
+            case Registers::DisplayMemoryReadsAndWrites:
+                setDisplayMemoryReadsAndWrites(value != 0);
+                break;
+            case Registers::DisplayCacheLineUpdates:
+                setDisplayCacheLineUpdates(value != 0);
+                break;
             case Registers::PortZGPIO:
                 processorInterface.writePortZGPIORegister(value);
                 break;
@@ -135,6 +121,20 @@ public:
                 break;
         }
     }
+    static constexpr auto AllowDebuggingStatements = allow;
+    [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
+    [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
+    void setDisplayMemoryReadsAndWrites(bool value) noexcept {
+        if constexpr (AllowDebuggingStatements) {
+            displayMemoryReadsAndWrites_ = value;
+        }
+    }
+    void setDisplayCacheLineUpdates(bool value) noexcept {
+        if constexpr (AllowDebuggingStatements) {
+            displayCacheLineUpdates_ = value;
+        }
+    }
+    [[nodiscard]] constexpr bool debuggingActive() const noexcept { return AllowDebuggingStatements; }
 private:
     static void
     writeLed(uint8_t value) noexcept {
@@ -144,7 +144,11 @@ private:
     readLed() noexcept {
         return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
     }
+    bool displayMemoryReadsAndWrites_ = false;
+    bool displayCacheLineUpdates_ = false;
 };
+
+CoreChipsetFeatures chipsetFunctions(0);
 
 
 class ConsoleThing : public IOSpaceThing {
@@ -601,7 +605,6 @@ public:
         }
     }
 };
-CoreChipsetFeatures theLed(0);
 ConsoleThing theConsole(0x100);
 #ifndef ADAFRUIT_FEATHER
 using DisplayThing = TFTShieldThing;
@@ -614,7 +617,6 @@ ROMThing rom; // 4k rom sections
 DataROMThing dataRom;
 
 SDCardFilesystemInterface fs(0x300);
-ChipsetFunctionInterface debugFlags(0xFF'FF00);
 #ifdef ADAFRUIT_FEATHER
 AdafruitLIS3MDLThing lsi3mdl(0x1000);
 AdafruitLSM6DSOXThing lsm6dsox(0x1100);
@@ -624,7 +626,7 @@ AdafruitADXL343Thing adxl343(0x1300);
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
-        &theLed,
+        &chipsetFunctions,
         &theConsole,
         &displayCommandSet,
 #ifdef ADAFRUIT_FEATHER
@@ -634,7 +636,6 @@ MemoryThing* things[] {
         &adxl343,
 #endif
         &fs,
-        &debugFlags,
 };
 
 // ----------------------------------------------------------------
@@ -888,7 +889,7 @@ void setup() {
     Serial.begin(115200);
     while(!Serial);
     fs.begin();
-    theLed.begin();
+    chipsetFunctions.begin();
     theConsole.begin();
     Serial.println(F("i960Sx chipset bringup"));
     SPI.begin();
