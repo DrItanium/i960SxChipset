@@ -76,6 +76,7 @@ private:
     /// @todo add support for having the dma engine within the microcontroller to perform block transfers to the RAM
 };
 ChipsetOperationRegisters<true> chipsetFunctions;
+OPL2Thing<i960Pinout::SPI_BUS_A0, i960Pinout::SPI_BUS_A1, i960Pinout::SPI_BUS_A2> thingy(0x1000);
 
 bool displayReady = false;
 /**

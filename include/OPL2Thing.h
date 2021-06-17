@@ -36,7 +36,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<i960Pinout resetPin, i960Pinout addressPin, i960Pinout latchPin>
 class OPL2Thing : public IOSpaceThing {
 public:
-    explicit OPL2Thing(Address base) : IOSpaceThing(base, base + 0x100) ,
+    enum class Registers : uint16_t {
+        NumberOfChannels = 0,
+        ResetDevice,
+        // features, perhaps one byte?
+        Percussion,
+        NoteSelect,
+        WaveFormSelect,
+        DeepTremolo,
+        DeepVibrato,
+        Drums,
+        Channel0 = 0x100,
+        ChannelRegister,
+        Attack,
+        Block,
+        Volume,
+        Decay,
+        EnvelopeScaling,
+        FNumber,
+        Channel1 = 0x200,
+        Channel2 = 0x300,
+        Channel3 = 0x400,
+        Channel4 = 0x500,
+        Channel5 = 0x600,
+        Channel6 = 0x700,
+        Channel7 = 0x800,
+        Channel8 = 0x900,
+    };
+public:
+    explicit OPL2Thing(Address base) : IOSpaceThing(base, base + 0x1000) ,
                                        theOPL2_(static_cast<byte>(resetPin),
                                                 static_cast<byte>(addressPin),
                                                 static_cast<byte>(latchPin)) { }
@@ -47,5 +75,6 @@ public:
     }
 private:
     OPL2 theOPL2_;
+    float frequencyCache_[OPL2_NUM_CHANNELS] = { 0 };
 };
 #endif //I960SXCHIPSET_OPL2THING_H
