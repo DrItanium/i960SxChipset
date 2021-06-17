@@ -57,7 +57,6 @@ public:
     static constexpr auto AllowDebuggingStatements = allow;
     [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
     [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
-    [[nodiscard]] constexpr bool displaySDCardActivity() const noexcept { return AllowDebuggingStatements && displaySDCardActivity_; }
     void setDisplayMemoryReadsAndWrites(bool value) noexcept {
         if constexpr (AllowDebuggingStatements) {
             displayMemoryReadsAndWrites_ = value;
@@ -68,17 +67,11 @@ public:
             displayCacheLineUpdates_ = value;
         }
     }
-    void setDisplaySDCardActivity(bool value) noexcept {
-        if constexpr (AllowDebuggingStatements) {
-            displaySDCardActivity_ = value;
-        }
-    }
     [[nodiscard]] constexpr bool active() const noexcept { return allow; }
 
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
-    bool displaySDCardActivity_ = false;
     /// @todo add support for having the dma engine within the microcontroller to perform block transfers to the RAM
 };
 OPL2 theOPL2;
@@ -184,12 +177,6 @@ public:
         }
     }
     void write16(Address offset, uint16_t value) noexcept override {
-        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
-            Serial.print(F("CONSOLE.WRITE16 0x"));
-            Serial.print(value, HEX);
-            Serial.print(F(" to 0x"));
-            Serial.println(offset, HEX);
-        }
         switch (offset) {
             case static_cast<uint32_t>(Registers::IO) * sizeof(uint16_t):
                 Serial.write(static_cast<char>(value));
@@ -610,8 +597,6 @@ public:
                 return chipsetFunctions.displayMemoryReadsAndWrites();
             case 1:
                 return chipsetFunctions.displayCacheLineUpdates();
-            case 2:
-                return chipsetFunctions.displaySDCardActivity();
             default:
                 return 0;
         }
@@ -624,9 +609,6 @@ public:
                 break;
             case 1:
                 chipsetFunctions.setDisplayCacheLineUpdates(outcome);
-                break;
-            case 2:
-                chipsetFunctions.setDisplaySDCardActivity(outcome);
                 break;
             default:
                 break;
