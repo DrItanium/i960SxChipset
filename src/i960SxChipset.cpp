@@ -31,12 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Board Platform: MightyCore
 #include <SPI.h>
 #include <Fsm.h>
-#ifdef ARDUINO_NRF52_ADAFRUIT
-#include <SdFat.h>
-SdFat SD;
-#else
 #include <SD.h>
-#endif
 
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
@@ -490,9 +485,7 @@ public:
     void setG(int16_t value) noexcept { g_ = value; }
     void setB(int16_t value) noexcept { b_ = value; }
     void flush() {
-#ifndef ARDUINO_NRF52_ADAFRUIT
         display_.flush();
-#endif
     }
     void print(char c) { display_.print(c); }
     [[nodiscard]] bool available() noexcept { return true; }
@@ -954,7 +947,7 @@ void enteringChecksumFailure() noexcept {
     signalHaltState(F("CHECKSUM FAILURE!"));
 }
 /// @todo Eliminate after MightyCore update
-#if __cplusplus >= 201402L && !defined(ARDUINO_NRF52_ADAFRUIT)
+#if __cplusplus >= 201402L
 
 void operator delete(void * ptr, size_t)
 {

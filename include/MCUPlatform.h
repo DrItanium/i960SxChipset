@@ -46,7 +46,7 @@ static_assert(20_MHz == 20'000'000);
 #endif
 #endif
 
-#if defined(ARDUINO_NRF52_ADAFRUIT) || defined(ARDUINO_SAMD_FEATHER_M0)
+#if defined(ARDUINO_SAMD_FEATHER_M0)
 #define ADAFRUIT_FEATHER
 #endif
 
@@ -58,10 +58,6 @@ enum class TargetMCU {
     GrandCentralM4,
     FeatherM0Basic,
     FeatherM0Adalogger,
-    Feather_nRF52832,
-    MetroM4,
-    SparkfunArtemis,
-    HUZZAH32,
     Unknown,
 };
 class MCUConfiguration final {
@@ -103,13 +99,9 @@ template<TargetMCU mcu>
 constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, false, false};
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB, 8, 512, 8, 512, 32, false, true};
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 16, 512, 16, 512, 64, true, true};
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::MetroM4> = { 192_KB, 16, 512, 16, 512, 64, false, true};
 // depends on the board used
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::SparkfunArtemis> = { 384_KB, 32, 512, 32, 512, 128, false, false};
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Basic> = { 32_KB, 16, 512, 16, 512, 64, false, false};
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalogger> = { 32_KB, 16, 512, 16, 512, 64, true, false };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::Feather_nRF52832> = { 64_KB, 24, 512, 24, 512, 64, false, false};
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::HUZZAH32> { 520_KB, 128, 512, 128, 512, 192, false, false };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
     return true;
@@ -149,8 +141,6 @@ public:
     return TargetMCU::FeatherM0Basic;
 #elif defined(ADAFRUIT_METRO_M4_EXPRESS)
     return TargetMCU::MetroM4;
-#elif defined(ARDUINO_NRF52_ADAFRUIT)
-        return TargetMCU::Feather_nRF52832;
 #else
     return TargetMCU::Unknown;
 #endif
@@ -160,8 +150,6 @@ public:
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
     [[nodiscard]] static constexpr auto onFeatherM0Basic() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Basic; }
     [[nodiscard]] static constexpr auto onFeatherM0Adalogger() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Adalogger; }
-    [[nodiscard]] static constexpr auto onMetroM4() noexcept { return getMCUTarget() == TargetMCU::MetroM4; }
-    [[nodiscard]] static constexpr auto onNRF52832() noexcept { return getMCUTarget() == TargetMCU::Feather_nRF52832; }
     [[nodiscard]] static constexpr auto onFeatherM0() noexcept { return onFeatherM0Basic() || onFeatherM0Adalogger(); }
     [[nodiscard]] static constexpr auto onFeatherBoard() noexcept {
 #ifdef ADAFRUIT_FEATHER

@@ -50,16 +50,6 @@ namespace {
             ERR_STATE("Expected Grand Central M4 to use the tft shield");
         }
     }
-    else if constexpr (TargetBoard::onMetroM4()) {
-        if constexpr(!TargetBoard::usesDisplayShield())
-        {
-            ERR_STATE("Expected the Metro M4 Express to use the tft shield");
-        }
-        if constexpr(TargetBoard::hasBuiltinSDCard())
-        {
-            ERR_STATE("The Metro M4 Express does not have a builtin SD Card slot");
-        }
-    }
     else if constexpr (TargetBoard::onFeatherM0Adalogger()) {
         if constexpr(!TargetBoard::hasBuiltinSDCard())
         {
