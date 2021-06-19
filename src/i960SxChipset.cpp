@@ -844,9 +844,7 @@ void processDataRequest() noexcept {
         cycleCount = 0;
         // enable the timer and perform a wait based on the action
         burstTransactionTimer.enable(true);
-        auto previousCycleCount = cycleCount;
-        while (previousCycleCount == cycleCount);
-        burstTransactionTimer.enable(false);
+        while (cycleCount != 0);
 #endif
     }
 }
@@ -949,7 +947,11 @@ void setupClockSource() {
     burstTransactionTimer.enable(false);
     burstTransactionTimer.configure(prescaler, TC_COUNTER_SIZE_16BIT, TC_WAVE_GENERATION_MATCH_FREQ);
     burstTransactionTimer.setCompare(0, compare);
-    burstTransactionTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0, []() { ++cycleCount; });
+    burstTransactionTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0,
+                                      []() {
+                                          ++cycleCount;
+                                          burstTransactionTimer.enable(false);
+                                      });
 
 #endif
 }
