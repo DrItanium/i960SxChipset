@@ -716,6 +716,9 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 // Tr -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
+#ifdef ARDUINO_ARCH_SAMD
+Adafruit_ZeroTimer burstTransactionTimer(3);
+#endif
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -790,8 +793,12 @@ volatile uint64_t previousCycleCount = 0;
 void
 enteringDataState() noexcept {
     if constexpr (!TargetBoard::onAtmega1284p()) {
-        // since we are entering at this point, we count this is part of the cycle count so capture it
+#ifdef ARDUINO_ARCH_SAMD
+        cycleCount = 0;
         previousCycleCount = cycleCount;
+        burstTransactionTimer.enable(true);
+#endif
+        // since we are entering at this point, we count this is part of the cycle count so capture it
     }
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
@@ -848,13 +855,13 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
+#ifdef ARDUINO_ARCH_SAMD
+    // turn of the burst transaction timer
+    burstTransactionTimer.enable(false);
+#endif
     if (processorInterface.failTriggered()) {
         fsm.trigger(ChecksumFailure);
     } else {
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            cycleCount = 0;
-            previousCycleCount = 0;
-        }
         if (processorInterface.asTriggered()) {
             fsm.trigger(RequestPending);
         } else {
@@ -896,9 +903,6 @@ void setupPeripherals() {
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
-#ifdef ARDUINO_ARCH_SAMD
-Adafruit_ZeroTimer burstTransactionTimer(3);
-#endif
 void setupClockSource() {
 #ifdef ARDUINO_SAMD_FEATHER_M0
     // setup PORTS PA15 and PA20 as clock sources (D
@@ -952,7 +956,6 @@ void setupClockSource() {
     burstTransactionTimer.configure(prescaler, TC_COUNTER_SIZE_16BIT, TC_WAVE_GENERATION_MATCH_FREQ);
     burstTransactionTimer.setCompare(0, compare);
     burstTransactionTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0, []() { ++cycleCount; });
-    burstTransactionTimer.enable(true);
 
 #endif
 }
