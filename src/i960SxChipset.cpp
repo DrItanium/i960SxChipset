@@ -717,7 +717,7 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 
 // NOTE: Tw may turn out to be synthetic
 #ifdef ARDUINO_ARCH_SAMD
-Adafruit_ZeroTimer burstTransactionTimer(3);
+Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
 #endif
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
@@ -776,12 +776,14 @@ void idleState() noexcept {
         fsm.trigger(ChecksumFailure);
     } else {
         if (processorInterface.asTriggered()) {
+            Serial.println(F("LEAVING IDLE STATE FOR ADDRESS STATE"));
             fsm.trigger(NewRequest);
         }
     }
 }
 void doAddressState() noexcept {
     if (processorInterface.denTriggered()) {
+        Serial.println(F("LEAVING ADDRESS STATE FOR DATA STATE"));
         fsm.trigger(ToDataState);
     }
 }
@@ -792,16 +794,20 @@ volatile uint64_t cycleCount = 0;
 volatile uint64_t previousCycleCount = 0;
 void
 enteringDataState() noexcept {
+    Serial.println(F("ENTERING DATA STATE"));
     if constexpr (!TargetBoard::onAtmega1284p()) {
 #ifdef ARDUINO_ARCH_SAMD
         cycleCount = 0;
         previousCycleCount = cycleCount;
         burstTransactionTimer.enable(true);
 #endif
+        Serial.println(F("ACTIVATED TIMER!"));
         // since we are entering at this point, we count this is part of the cycle count so capture it
     }
+    Serial.println(F("NEW DATA CYCLE FOR PROCESSOR!"));
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
+    Serial.println(F("DONE WITH DATA CYCLE FOR PROCESSOR!"));
 }
 bool
 readyForNextDataRequest() noexcept {
@@ -813,6 +819,7 @@ readyForNextDataRequest() noexcept {
     }
 }
 void processDataRequest() noexcept {
+    Serial.println(F("IN DATA STATE"));
     if (readyForNextDataRequest()) {
         processorInterface.updateDataCycle();
         if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
@@ -844,6 +851,7 @@ void processDataRequest() noexcept {
         // setup the proper address and emit this over serial
         processorInterface.signalReady();
         if (processorInterface.blastTriggered()) {
+            Serial.println(F("LEAVING DATA STATE FOR RECOVERY STATE"));
             // we not in burst mode
             fsm.trigger(ReadyAndNoBurst);
         }
@@ -855,6 +863,7 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
+    Serial.println(F("RECOVERY STATE"));
 #ifdef ARDUINO_ARCH_SAMD
     // turn of the burst transaction timer
     burstTransactionTimer.enable(false);
@@ -926,7 +935,7 @@ void setupClockSource() {
     // 38 - GCLK / IO1
     // 39 - GCLK / IO0
     // let's choose pin 39 for this purpose
-    constexpr float theTimerFrequency = 10_MHz;
+    constexpr auto theTimerFrequency = 10_MHz;
     constexpr auto ClockDivider_10MHZ = 6;
     constexpr auto ClockDivider_12MHZ = 5;
     constexpr auto ClockDivider_15MHZ = 4;
@@ -943,7 +952,7 @@ void setupClockSource() {
     // enable on pin 39 or PB14
     PORT->Group[g_APinDescription[39].ulPort].PMUX[g_APinDescription[39].ulPin >> 1].reg |= PORT_PMUX_PMUXE(MUX_PB14M_GCLK_IO0);
     // now we need to setup a timer which will count 10 MHz cycles and trigger an interrupt each time
-    auto compare = TargetBoard::getCPUFrequency() / theTimerFrequency;
+    uint32_t compare = TargetBoard::getCPUFrequency() / theTimerFrequency;
     auto divider = 1;
     auto prescaler = TC_CLOCK_PRESCALER_DIV1;
     Serial.print(F("Compare: "));
@@ -962,6 +971,10 @@ void setupClockSource() {
 // the setup routine runs once when you press reset:
 void setup() {
 
+    Serial.begin(115200);
+    while(!Serial) {
+        delay(10);
+    }
     setupClockSource();
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
@@ -993,8 +1006,6 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     digitalWrite(i960Pinout::Led, LOW);
-    Serial.begin(115200);
-    while(!Serial);
     fs.begin();
     chipsetFunctions.begin();
     Serial.println(F("i960Sx chipset bringup"));
@@ -1003,8 +1014,8 @@ void setup() {
     // setup the CPU Interface
     setupBusStateMachine();
     setupPeripherals();
-    Serial.println(F("i960Sx chipset brought up fully!"));
     delay(1000);
+    Serial.println(F("i960Sx chipset brought up fully!"));
     // we want to jump into the code as soon as possible after this point
 }
 void loop() {
@@ -1042,3 +1053,11 @@ void operator delete[](void * ptr, size_t)
 }
 
 #endif // end language is C++14 or greater
+
+#ifdef ARDUINO_ARCH_SAMD
+void
+TC3_Handler()
+{
+    Adafruit_ZeroTimer::timerHandler(3);
+}
+#endif
