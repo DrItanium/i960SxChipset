@@ -298,6 +298,13 @@ public:
 public:
     DataROMThing() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
     ~DataROMThing() override = default;
+    uint16_t read(Address address, LoadStoreStyle style) noexcept override {
+        if constexpr (TargetBoard::onGrandCentralM4()) {
+            Serial.print(F("DATA.ROM: READ FROM 0x"));
+            Serial.println(address, HEX);
+        }
+        return MemoryThing::read(address, style);
+    }
 };
 
 
@@ -723,8 +730,8 @@ void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringChecksumFailure() noexcept;
-State tStart(nullptr, startupState, nullptr);
-State tSystemTest(nullptr, systemTestState, nullptr);
+State tStart(nullptr, startupState, [](){Serial.println(F("LEAVING START"));});
+State tSystemTest(nullptr, systemTestState, []() { Serial.println(F("LEAVING SYSTEM TEST"));});
 Fsm fsm(&tStart);
 State tIdle(nullptr,
             idleState,
@@ -757,7 +764,6 @@ void onASAsserted() {
 void onDENAsserted() {
     processorInterface.triggerDEN();
 }
-
 void idleState() noexcept {
     if (processorInterface.failTriggered()) {
         fsm.trigger(ChecksumFailure);
@@ -938,9 +944,9 @@ void setup() {
     // setup the CPU Interface
     setupBusStateMachine();
     setupPeripherals();
+    Serial.println(F("i960Sx chipset brought up fully!"));
     delay(1000);
     // we want to jump into the code as soon as possible after this point
-    Serial.println(F("i960Sx chipset brought up fully!"));
 }
 void loop() {
     fsm.run_machine();
