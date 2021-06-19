@@ -42,6 +42,7 @@ public:
     [[nodiscard]] virtual uint8_t read8(Address address) noexcept { return 0; }
     [[nodiscard]] virtual uint16_t read16(Address address) noexcept { return 0; }
     [[nodiscard]] virtual bool respondsTo(Address address) const noexcept {
+#if 0
         Serial.print(F("RESPONDS TO: [0x"));
         Serial.print(base_, HEX);
         Serial.print(F(", 0x"));
@@ -49,7 +50,7 @@ public:
         Serial.print(F(", 0x"));
         Serial.print(end_, HEX);
         Serial.println(F(")"));
-
+#endif
         return base_ <= address && address < end_;
     }
     [[nodiscard]] bool respondsTo(Address address, LoadStoreStyle style) const noexcept {

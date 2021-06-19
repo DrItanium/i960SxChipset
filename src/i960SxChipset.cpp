@@ -737,8 +737,8 @@ void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringChecksumFailure() noexcept;
-State tStart(nullptr, startupState, [](){Serial.println(F("LEAVING START"));});
-State tSystemTest(nullptr, systemTestState, []() { Serial.println(F("LEAVING SYSTEM TEST"));});
+State tStart(nullptr, startupState, nullptr);
+State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
 State tIdle(nullptr,
             idleState,
@@ -776,14 +776,12 @@ void idleState() noexcept {
         fsm.trigger(ChecksumFailure);
     } else {
         if (processorInterface.asTriggered()) {
-            Serial.println(F("LEAVING IDLE STATE FOR ADDRESS STATE"));
             fsm.trigger(NewRequest);
         }
     }
 }
 void doAddressState() noexcept {
     if (processorInterface.denTriggered()) {
-        Serial.println(F("LEAVING ADDRESS STATE FOR DATA STATE"));
         fsm.trigger(ToDataState);
     }
 }
@@ -793,24 +791,18 @@ void doAddressState() noexcept {
 volatile uint32_t cycleCount = 0;
 void
 enteringDataState() noexcept {
-    Serial.println(F("ENTERING DATA STATE"));
     if constexpr (!TargetBoard::onAtmega1284p()) {
         // since we are entering at this point, we count this is part of the cycle count so capture it
     }
-    Serial.println(F("NEW DATA CYCLE FOR PROCESSOR!"));
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
-    Serial.println(F("DONE WITH DATA CYCLE FOR PROCESSOR!"));
 }
 void processDataRequest() noexcept {
-    Serial.println(F("IN DATA STATE"));
     processorInterface.updateDataCycle();
     if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
         LoadStoreStyle style = processorInterface.getStyle();
-        Serial.print(F("\tBURST ADDRESS: 0x"));
-        Serial.println(burstAddress, HEX);
         if (auto theThing = getThing(burstAddress, style); theThing) {
             if (processorInterface.isReadOperation()) {
                 processorInterface.setDataBits(theThing->read(burstAddress, style));
@@ -834,7 +826,6 @@ void processDataRequest() noexcept {
     // setup the proper address and emit this over serial
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
-        Serial.println(F("LEAVING DATA STATE FOR RECOVERY STATE"));
         // we not in burst mode
         fsm.trigger(ReadyAndNoBurst);
     }
@@ -850,7 +841,6 @@ void processDataRequest() noexcept {
 }
 
 void doRecoveryState() noexcept {
-    Serial.println(F("RECOVERY STATE"));
     if (processorInterface.failTriggered()) {
         fsm.trigger(ChecksumFailure);
     } else {
@@ -936,14 +926,15 @@ void setupClockSource() {
     PORT->Group[g_APinDescription[39].ulPort].PMUX[g_APinDescription[39].ulPin >> 1].reg |= PORT_PMUX_PMUXE(MUX_PB14M_GCLK_IO0);
     // now we need to setup a timer which will count 10 MHz cycles and trigger an interrupt each time
     uint32_t compare = TargetBoard::getCPUFrequency() / theTimerFrequency;
-    auto divider = 1;
     auto prescaler = TC_CLOCK_PRESCALER_DIV1;
+#if 0
     Serial.print(F("Compare: "));
     Serial.println(compare);
     Serial.print(F("Divider: "));
     Serial.println(divider);
     Serial.print(F("Prescaler: "));
     Serial.println(prescaler);
+#endif
     burstTransactionTimer.enable(false);
     burstTransactionTimer.configure(prescaler, TC_COUNTER_SIZE_16BIT, TC_WAVE_GENERATION_MATCH_FREQ);
     burstTransactionTimer.setCompare(0, compare);
