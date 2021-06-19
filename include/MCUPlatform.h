@@ -68,6 +68,7 @@ public:
                                uint32_t instructionCacheLineCount,
                                uint32_t instructionCacheLineSize,
                                uint32_t maxOpenFiles,
+                               uint32_t ioExpanderSpeedCap,
                                bool hasBuiltinSDCard,
                                bool usesDisplayShield) noexcept : sramAmount_(sramSize),
                              dataCacheLineCount_(dataCacheLineCount),
@@ -75,6 +76,7 @@ public:
                              instructionCacheLineCount_(instructionCacheLineCount),
                              instructionCacheLineSize_(instructionCacheLineSize),
                              maximumNumberOfOpenFiles_(maxOpenFiles),
+                             ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
                              builtinSDCard_(hasBuiltinSDCard),
                              usesDisplayShield_(usesDisplayShield) { }
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
@@ -85,6 +87,7 @@ public:
     [[nodiscard]] constexpr uint32_t getMaximumNumberOfOpenFiles() const noexcept { return maximumNumberOfOpenFiles_; }
     [[nodiscard]] constexpr auto hasBuiltinSDCard() const noexcept { return builtinSDCard_; }
     [[nodiscard]] constexpr auto usesDisplayShield() const noexcept { return usesDisplayShield_; }
+    [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
 private:
     uint32_t sramAmount_;
     uint32_t dataCacheLineCount_;
@@ -92,16 +95,17 @@ private:
     uint32_t instructionCacheLineCount_;
     uint32_t instructionCacheLineSize_;
     uint32_t maximumNumberOfOpenFiles_;
+    uint32_t ioExpanderPeripheralSpeed_;
     bool builtinSDCard_;
     bool usesDisplayShield_;
 };
 template<TargetMCU mcu>
-constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, false, false};
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB, 8, 512, 8, 512, 32, false, true};
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 64, 512, 64, 512, 128, true, true};
+constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, 10_MHz, false, false};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB, 8, 512, 8, 512, 32, 10_MHz, false, true};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 64, 512, 64, 512, 128, 8_MHz, true, true};
 // depends on the board used
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Basic> = { 32_KB, 16, 512, 16, 512, 64, false, false};
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalogger> = { 32_KB, 16, 512, 16, 512, 64, true, false };
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Basic> = { 32_KB, 16, 512, 16, 512, 64, 8_MHz, false, false};
+template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalogger> = { 32_KB, 16, 512, 16, 512, 64, 8_MHz, true, false };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
     return true;
@@ -177,6 +181,7 @@ public:
     [[nodiscard]] static constexpr auto numberOfInstructionCacheLines() noexcept { return BoardDescription<getMCUTarget()>.getInstructionCacheLineCount(); }
     [[nodiscard]] static constexpr auto getInstructionCacheLineSize() noexcept { return BoardDescription<getMCUTarget()>.getInstructionCacheLineSize(); }
     [[nodiscard]] static constexpr auto maximumNumberOfOpenFilesFromSDCard() noexcept { return BoardDescription<getMCUTarget()>.getMaximumNumberOfOpenFiles(); }
+    [[nodiscard]] static constexpr auto runIOExpanderSPIInterfaceAt() noexcept { return BoardDescription<getMCUTarget()>.runIOExpanderSPIInterfaceAt(); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
