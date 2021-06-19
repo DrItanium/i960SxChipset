@@ -36,9 +36,18 @@ public:
 public:
     explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
     void begin() noexcept override {
-            if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+#ifdef ADAFRUIT_GRAND_CENTRAL_M4
+        if (!SD.begin(static_cast<int>(i960Pinout::SD_EN),
+                      static_cast<int>(i960Pinout::SD_MOSI),
+                      static_cast<int>(i960Pinout::SD_MISO),
+                      static_cast<int>(i960Pinout::SD_SCK))) {
+            signalHaltState(F("SD CARD INIT FAILED"));
+        }
+#else
+        if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
                 signalHaltState(F("SD CARD INIT FAILED"));
-            }
+        }
+#endif
     }
 
     uint8_t read8(Address address) noexcept override {
