@@ -792,6 +792,8 @@ void processDataRequest() noexcept {
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
         LoadStoreStyle style = processorInterface.getStyle();
+        Serial.print(F("\tBURST ADDRESS: 0x"));
+        Serial.println(burstAddress, HEX);
         if (auto theThing = getThing(burstAddress, style); theThing) {
             if (processorInterface.isReadOperation()) {
                 processorInterface.setDataBits(theThing->read(burstAddress, style));
@@ -889,7 +891,13 @@ void setupClockSource() {
     // 38 - GCLK / IO1
     // 39 - GCLK / IO0
     // let's choose pin 39 for this purpose
-    GCLK->GENCTRL[0].reg = GCLK_GENCTRL_DIV(6) |
+    constexpr auto ClockDivider_10MHZ = 6;
+    constexpr auto ClockDivider_12MHZ = 5;
+    constexpr auto ClockDivider_15MHZ = 4;
+    constexpr auto ClockDivider_20MHZ = 3;
+    constexpr auto ClockDivider_40MHZ = 2; // THIS IS ALSO DAMN DANGEROUS
+    constexpr auto ClockDivider_80MHZ = 1; // DEAR GOD DO NOT USE THIS!!!!
+    GCLK->GENCTRL[0].reg = GCLK_GENCTRL_DIV(ClockDivider_20MHZ) |
                            GCLK_GENCTRL_IDC |
                            GCLK_GENCTRL_GENEN |
                            GCLK_GENCTRL_OE |
