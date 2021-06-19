@@ -301,9 +301,6 @@ public:
 public:
     DataROMThing() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
     ~DataROMThing() override = default;
-    uint16_t read(Address address, LoadStoreStyle style) noexcept override {
-        return MemoryThing::read(address, style);
-    }
 };
 
 
