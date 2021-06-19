@@ -790,18 +790,11 @@ void doAddressState() noexcept {
 
 
 
-volatile uint64_t cycleCount = 0;
-volatile uint64_t previousCycleCount = 0;
+volatile uint32_t cycleCount = 0;
 void
 enteringDataState() noexcept {
     Serial.println(F("ENTERING DATA STATE"));
     if constexpr (!TargetBoard::onAtmega1284p()) {
-#ifdef ARDUINO_ARCH_SAMD
-        cycleCount = 0;
-        previousCycleCount = cycleCount;
-        burstTransactionTimer.enable(true);
-#endif
-        Serial.println(F("ACTIVATED TIMER!"));
         // since we are entering at this point, we count this is part of the cycle count so capture it
     }
     Serial.println(F("NEW DATA CYCLE FOR PROCESSOR!"));
@@ -809,65 +802,57 @@ enteringDataState() noexcept {
     processorInterface.newDataCycle();
     Serial.println(F("DONE WITH DATA CYCLE FOR PROCESSOR!"));
 }
-bool
-readyForNextDataRequest() noexcept {
-    if constexpr (TargetBoard::onAtmega1284p()) {
-        return true;
-    } else {
-        // we are on a much more powerful board so we have to wait around until we've hit the next 960 processor cycle
-        return previousCycleCount < cycleCount;
-    }
-}
 void processDataRequest() noexcept {
     Serial.println(F("IN DATA STATE"));
-    if (readyForNextDataRequest()) {
-        processorInterface.updateDataCycle();
-        if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
-            // do not allow writes or reads into processor internal memory
-            //processorInterface.setDataBits(performRead(burstAddress, style));
-            LoadStoreStyle style = processorInterface.getStyle();
-            Serial.print(F("\tBURST ADDRESS: 0x"));
-            Serial.println(burstAddress, HEX);
-            if (auto theThing = getThing(burstAddress, style); theThing) {
-                if (processorInterface.isReadOperation()) {
-                    processorInterface.setDataBits(theThing->read(burstAddress, style));
-                } else {
-                    theThing->write(burstAddress, processorInterface.getDataBits(), style);
-                }
+    processorInterface.updateDataCycle();
+    if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
+        // do not allow writes or reads into processor internal memory
+        //processorInterface.setDataBits(performRead(burstAddress, style));
+        LoadStoreStyle style = processorInterface.getStyle();
+        Serial.print(F("\tBURST ADDRESS: 0x"));
+        Serial.println(burstAddress, HEX);
+        if (auto theThing = getThing(burstAddress, style); theThing) {
+            if (processorInterface.isReadOperation()) {
+                processorInterface.setDataBits(theThing->read(burstAddress, style));
             } else {
-                if (processorInterface.isReadOperation()) {
-                    Serial.print(F("UNMAPPED READ FROM 0x"));
-                } else {
-                    Serial.print(F("UNMAPPED WRITE OF 0x"));
-                    // expensive but something has gone horribly wrong anyway so whatever!
-                    Serial.print(processorInterface.getDataBits(), HEX);
-                    Serial.print(F(" TO 0x"));
-
-                }
-                Serial.println(burstAddress, HEX);
-                delay(10);
+                theThing->write(burstAddress, processorInterface.getDataBits(), style);
             }
+        } else {
+            if (processorInterface.isReadOperation()) {
+                Serial.print(F("UNMAPPED READ FROM 0x"));
+            } else {
+                Serial.print(F("UNMAPPED WRITE OF 0x"));
+                // expensive but something has gone horribly wrong anyway so whatever!
+                Serial.print(processorInterface.getDataBits(), HEX);
+                Serial.print(F(" TO 0x"));
+
+            }
+            Serial.println(burstAddress, HEX);
+            delay(10);
         }
-        // setup the proper address and emit this over serial
-        processorInterface.signalReady();
-        if (processorInterface.blastTriggered()) {
-            Serial.println(F("LEAVING DATA STATE FOR RECOVERY STATE"));
-            // we not in burst mode
-            fsm.trigger(ReadyAndNoBurst);
-        }
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            // we are now on _much_ faster boards if it isn't the 1284p
-            previousCycleCount = cycleCount;
-        }
+    }
+    // setup the proper address and emit this over serial
+    processorInterface.signalReady();
+    if (processorInterface.blastTriggered()) {
+        Serial.println(F("LEAVING DATA STATE FOR RECOVERY STATE"));
+        // we not in burst mode
+        fsm.trigger(ReadyAndNoBurst);
+    }
+    if constexpr (!TargetBoard::onAtmega1284p()) {
+#ifdef ARDUINO_ARCH_SAMD
+        // we are now on _much_ faster boards if it isn't the 1284p
+        cycleCount = 0;
+        // enable the timer and perform a wait based on the action
+        burstTransactionTimer.enable(true);
+        auto previousCycleCount = cycleCount;
+        while (previousCycleCount == cycleCount);
+        burstTransactionTimer.enable(false);
+#endif
     }
 }
 
 void doRecoveryState() noexcept {
     Serial.println(F("RECOVERY STATE"));
-#ifdef ARDUINO_ARCH_SAMD
-    // turn of the burst transaction timer
-    burstTransactionTimer.enable(false);
-#endif
     if (processorInterface.failTriggered()) {
         fsm.trigger(ChecksumFailure);
     } else {
