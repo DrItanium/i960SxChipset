@@ -729,8 +729,8 @@ void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringChecksumFailure() noexcept;
-State tStart(nullptr, startupState, []() { Serial.println(F("START TO SYSTEM TEST") );});
-State tSystemTest(nullptr, systemTestState, []() { Serial.println(F("SYSTEM TEST TO IDLE"));});
+State tStart(nullptr, startupState, nullptr);
+State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
 State tIdle(nullptr,
             idleState,
