@@ -249,7 +249,6 @@ public:
         // in this case, we want relative offsets
         return input & RamMask;
     }
-
     void begin() noexcept override {
         Parent::begin();
         if (Parent::getFileSize() != MaxRamSize) {
@@ -303,10 +302,6 @@ public:
     DataROMThing() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
     ~DataROMThing() override = default;
     uint16_t read(Address address, LoadStoreStyle style) noexcept override {
-        if constexpr (TargetBoard::onGrandCentralM4()) {
-            Serial.print(F("DATA.ROM: READ FROM 0x"));
-            Serial.println(address, HEX);
-        }
         return MemoryThing::read(address, style);
     }
 };
@@ -737,8 +732,8 @@ void processDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringChecksumFailure() noexcept;
-State tStart(nullptr, startupState, nullptr);
-State tSystemTest(nullptr, systemTestState, nullptr);
+State tStart(nullptr, startupState, []() { Serial.println(F("START TO SYSTEM TEST") );});
+State tSystemTest(nullptr, systemTestState, []() { Serial.println(F("SYSTEM TEST TO IDLE"));});
 Fsm fsm(&tStart);
 State tIdle(nullptr,
             idleState,

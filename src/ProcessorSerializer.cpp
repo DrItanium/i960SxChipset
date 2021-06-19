@@ -62,7 +62,7 @@ namespace
         GPINTEN = GPINTENA,
         IPOL = IPOLA,
     };
-    SPISettings theSettings(TargetBoard::onAtmega1284p() ? 10'000'000 : 8'000'000, MSBFIRST, SPI_MODE0);
+    SPISettings theSettings(10'000'000, MSBFIRST, SPI_MODE0);
     constexpr byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<uint8_t>(address) & 0b111) << 1) | 1;
     }
