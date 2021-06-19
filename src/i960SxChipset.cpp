@@ -45,6 +45,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef ADAFRUIT_FEATHER
 #include "FeatherWingPeripherals.h"
 #endif
+
+#if defined(ARDUINO_GRAND_CENTRAL_M4)
+#include <Adafruit_ZeroTimer.h>
+#endif
 //OPL2Thing<i960Pinout::SPI_BUS_A0, i960Pinout::SPI_BUS_A1, i960Pinout::SPI_BUS_A2> thingy(0x1000);
 
 bool displayReady = false;
@@ -781,44 +785,65 @@ void doAddressState() noexcept {
 
 
 
+volatile uint64_t cycleCount = 0;
+volatile uint64_t previousCycleCount = 0;
 void
 enteringDataState() noexcept {
+    if constexpr (!TargetBoard::onAtmega1284p()) {
+        // since we are entering at this point, we count this is part of the cycle count so capture it
+        previousCycleCount = cycleCount;
+    }
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
 }
-void processDataRequest() noexcept {
-    processorInterface.updateDataCycle();
-    if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
-        // do not allow writes or reads into processor internal memory
-        //processorInterface.setDataBits(performRead(burstAddress, style));
-        LoadStoreStyle style = processorInterface.getStyle();
-        Serial.print(F("\tBURST ADDRESS: 0x"));
-        Serial.println(burstAddress, HEX);
-        if (auto theThing = getThing(burstAddress, style); theThing) {
-            if (processorInterface.isReadOperation()) {
-                processorInterface.setDataBits(theThing->read(burstAddress, style));
-            } else {
-                theThing->write(burstAddress, processorInterface.getDataBits(), style);
-            }
-        } else {
-            if (processorInterface.isReadOperation()) {
-                Serial.print(F("UNMAPPED READ FROM 0x"));
-            } else {
-                Serial.print(F("UNMAPPED WRITE OF 0x"));
-                // expensive but something has gone horribly wrong anyway so whatever!
-                Serial.print(processorInterface.getDataBits(), HEX);
-                Serial.print(F(" TO 0x"));
-
-            }
-            Serial.println(burstAddress, HEX);
-            delay(10);
-        }
+bool
+readyForNextDataRequest() noexcept {
+    if constexpr (TargetBoard::onAtmega1284p()) {
+        return true;
+    } else {
+        // we are on a much more powerful board so we have to wait around until we've hit the next 960 processor cycle
+        return previousCycleCount < cycleCount;
     }
-    // setup the proper address and emit this over serial
-    processorInterface.signalReady();
-    if (processorInterface.blastTriggered()) {
-        // we not in burst mode
-        fsm.trigger(ReadyAndNoBurst);
+}
+void processDataRequest() noexcept {
+    if (readyForNextDataRequest()) {
+        processorInterface.updateDataCycle();
+        if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
+            // do not allow writes or reads into processor internal memory
+            //processorInterface.setDataBits(performRead(burstAddress, style));
+            LoadStoreStyle style = processorInterface.getStyle();
+            Serial.print(F("\tBURST ADDRESS: 0x"));
+            Serial.println(burstAddress, HEX);
+            if (auto theThing = getThing(burstAddress, style); theThing) {
+                if (processorInterface.isReadOperation()) {
+                    processorInterface.setDataBits(theThing->read(burstAddress, style));
+                } else {
+                    theThing->write(burstAddress, processorInterface.getDataBits(), style);
+                }
+            } else {
+                if (processorInterface.isReadOperation()) {
+                    Serial.print(F("UNMAPPED READ FROM 0x"));
+                } else {
+                    Serial.print(F("UNMAPPED WRITE OF 0x"));
+                    // expensive but something has gone horribly wrong anyway so whatever!
+                    Serial.print(processorInterface.getDataBits(), HEX);
+                    Serial.print(F(" TO 0x"));
+
+                }
+                Serial.println(burstAddress, HEX);
+                delay(10);
+            }
+        }
+        // setup the proper address and emit this over serial
+        processorInterface.signalReady();
+        if (processorInterface.blastTriggered()) {
+            // we not in burst mode
+            fsm.trigger(ReadyAndNoBurst);
+        }
+        if constexpr (!TargetBoard::onAtmega1284p()) {
+            // we are now on _much_ faster boards if it isn't the 1284p
+            previousCycleCount = cycleCount;
+        }
     }
 }
 
@@ -826,6 +851,10 @@ void doRecoveryState() noexcept {
     if (processorInterface.failTriggered()) {
         fsm.trigger(ChecksumFailure);
     } else {
+        if constexpr (!TargetBoard::onAtmega1284p()) {
+            cycleCount = 0;
+            previousCycleCount = 0;
+        }
         if (processorInterface.asTriggered()) {
             fsm.trigger(RequestPending);
         } else {
@@ -851,7 +880,6 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
 }
-
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
@@ -868,6 +896,9 @@ void setupPeripherals() {
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
+#ifdef ARDUINO_ARCH_SAMD
+Adafruit_ZeroTimer burstTransactionTimer(3);
+#endif
 void setupClockSource() {
 #ifdef ARDUINO_SAMD_FEATHER_M0
     // setup PORTS PA15 and PA20 as clock sources (D
@@ -891,13 +922,14 @@ void setupClockSource() {
     // 38 - GCLK / IO1
     // 39 - GCLK / IO0
     // let's choose pin 39 for this purpose
+    constexpr float theTimerFrequency = 10_MHz;
     constexpr auto ClockDivider_10MHZ = 6;
     constexpr auto ClockDivider_12MHZ = 5;
     constexpr auto ClockDivider_15MHZ = 4;
     constexpr auto ClockDivider_20MHZ = 3;
     constexpr auto ClockDivider_40MHZ = 2; // THIS IS ALSO DAMN DANGEROUS
     constexpr auto ClockDivider_80MHZ = 1; // DEAR GOD DO NOT USE THIS!!!!
-    GCLK->GENCTRL[0].reg = GCLK_GENCTRL_DIV(ClockDivider_20MHZ) |
+    GCLK->GENCTRL[0].reg = GCLK_GENCTRL_DIV(ClockDivider_10MHZ) |
                            GCLK_GENCTRL_IDC |
                            GCLK_GENCTRL_GENEN |
                            GCLK_GENCTRL_OE |
@@ -906,6 +938,22 @@ void setupClockSource() {
     PORT->Group[g_APinDescription[39].ulPort].PINCFG[g_APinDescription[39].ulPin].bit.PMUXEN = 1;
     // enable on pin 39 or PB14
     PORT->Group[g_APinDescription[39].ulPort].PMUX[g_APinDescription[39].ulPin >> 1].reg |= PORT_PMUX_PMUXE(MUX_PB14M_GCLK_IO0);
+    // now we need to setup a timer which will count 10 MHz cycles and trigger an interrupt each time
+    auto compare = TargetBoard::getCPUFrequency() / theTimerFrequency;
+    auto divider = 1;
+    auto prescaler = TC_CLOCK_PRESCALER_DIV1;
+    Serial.print(F("Compare: "));
+    Serial.println(compare);
+    Serial.print(F("Divider: "));
+    Serial.println(divider);
+    Serial.print(F("Prescaler: "));
+    Serial.println(prescaler);
+    burstTransactionTimer.enable(false);
+    burstTransactionTimer.configure(prescaler, TC_COUNTER_SIZE_16BIT, TC_WAVE_GENERATION_MATCH_FREQ);
+    burstTransactionTimer.setCompare(0, compare);
+    burstTransactionTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0, []() { ++cycleCount; });
+    burstTransactionTimer.enable(true);
+
 #endif
 }
 // the setup routine runs once when you press reset:
