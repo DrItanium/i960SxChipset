@@ -125,6 +125,7 @@ public:
          */
         CriticalFileSideChannelAttempt,
         UnimplementedCommand,
+        AllFileSlotsInUse,
     };
 public:
     uint16_t invoke(uint16_t doorbellValue) noexcept {
@@ -160,9 +161,7 @@ public:
             case SDCardOperations::GetFileSize: return getFileSize();
             case SDCardOperations::GetFileCoordinates: return getFileCoordinates();
             case SDCardOperations::FileIsOpen: return fileIsOpen();
-            case SDCardOperations::OpenFile:
-                signalHaltState(F("UNIMPLEMENTED FUNCTION OPEN FILE"));
-                break;
+            case SDCardOperations::OpenFile: return openFile();
             case SDCardOperations::CloseFile:
                 signalHaltState(F("UNIMPLEMENTED FUNCTION CLOSE FILE"));
                 break;
@@ -197,6 +196,9 @@ public:
         SeekPositionLower,
         SeekPositionUpper,
         Whence,
+        PermissionBitsLower,
+        PermissionBitsUpper,
+        OpenReadWrite,
         ErrorCode,
         // Path and result are handled differently but we can at least compute base offsets
         Result, // 16 bytes in size
@@ -219,8 +221,11 @@ public:
                 case static_cast<Address>(Registers::ModeBits) * 2: return modeBits_;
                 case static_cast<Address>(Registers::SeekPositionLower) * 2: return seekPositionInfo_.halves[0];
                 case static_cast<Address>(Registers::SeekPositionUpper) * 2: return seekPositionInfo_.halves[1];
+                case static_cast<Address>(Registers::PermissionBitsLower) * 2: return flags_.halves[0];
+                case static_cast<Address>(Registers::PermissionBitsUpper) * 2: return flags_.halves[1];
                 case static_cast<Address>(Registers::Whence) * 2: return whence_;
                 case static_cast<Address>(Registers::ErrorCode) * 2: return static_cast<uint16_t>(errorCode_);
+                case static_cast<Address>(Registers::OpenReadWrite) * 2: return static_cast<uint16_t>(openReadWrite_);
                 default: return 0;
             }
     }
@@ -257,6 +262,8 @@ public:
                     case static_cast<Address>(Registers::ErrorCode) * 2:
                         errorCode_ = static_cast<ErrorCodes>(value);
                         break;
+                    case static_cast<Address>(Registers::OpenReadWrite) * 2:
+                        openReadWrite_ = value != 0;
                     default:
                         break;
                 }
@@ -350,9 +357,9 @@ private:
         }
     }
     uint16_t fileIsOpen() noexcept {
-        if (fileId_ >= MaxFileCount) {
+        if (openedFileCount_ == MaxFileCount) {
             // bad file id!
-            errorCode_ = ErrorCodes::BadFileId;
+            errorCode_ = ErrorCodes::FileIsNotValid;
             return -1;
         } else {
             result_.bytes[0] = files_[fileId_] ? -1 : 0;
@@ -363,11 +370,32 @@ private:
         result_.bytes[0] = (fileId_ < MaxFileCount && files_[fileId_]);
         return 0;
     }
+    uint16_t openFile() noexcept {
+        if (openedFileCount_ >= MaxFileCount) {
+            // too many files opened
+            errorCode_ = ErrorCodes::AllFileSlotsInUse;
+            openedFileCount_ =  MaxFileCount;
+            return -1;
+        } else {
+            // okay, so lets do an open from this point
+            // we also need to decode the
+            permissions_[openedFileCount_] = flags_.wholeValue_;
+            files_[openedFileCount_] = SD.open(path_, openReadWrite_ ? FILE_WRITE : FILE_READ);
+            if (!files_[openedFileCount_]) {
+                errorCode_ = ErrorCodes::FileIsNotValid;
+                return -1;
+            }
+            auto handleId = openedFileCount_;
+            ++openedFileCount_;
+            result_.words[0] = handleId;
+            return 0;
+        }
+    }
     // these are the actual addresses
 private:
     uint16_t openedFileCount_ = 0;
     File files_[MaxFileCount];
-    uint16_t permissions_[MaxFileCount] = { 0 };
+    uint32_t permissions_[MaxFileCount] = { 0 };
     SDCardOperations command_ = SDCardOperations::None;
     uint16_t fileId_ = 0;
     uint16_t modeBits_ = 0;
@@ -377,6 +405,11 @@ private:
     } seekPositionInfo_;
     uint16_t whence_ = 0;
     union {
+        uint32_t wholeValue_ = 0;
+        uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+    } flags_;
+    bool openReadWrite_ = false;
+    union {
         uint8_t bytes[16];
         uint16_t shorts[16/sizeof(uint16_t)];
         uint32_t words[16/sizeof(uint32_t)];
@@ -385,5 +418,6 @@ private:
     ErrorCodes errorCode_ = ErrorCodes::None;
     char path_[FixedPathSize] = { 0 };
     volatile uint32_t fixedPadding = 0; // always should be here to make sure an overrun doesn't cause problems
+
 };
 #endif //I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
