@@ -158,10 +158,6 @@ public:
     void write8(Address address, uint8_t value) noexcept override {
         if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
             auto offset = address - static_cast<Address>(Registers::Path);
-            Serial.print(F("WRITING '"));
-            Serial.print(static_cast<char>(value));
-            Serial.print(F("' to path storage at offset 0x"));
-            Serial.println(offset);
             path_[offset] = static_cast<char>(value);
 
         } else if (inResultArea(reg)) {
@@ -225,9 +221,6 @@ public:
                 result_.words[0] = -1;
                 return -1;
             case SDCardOperations::FileExists:
-                Serial.print(F("Does file at \""));
-                Serial.print(path_);
-                Serial.println(F("exist?"));
                 // oh man this is freaking dangerous but I have put in a zero padding buffer following the byte addresses
                 // so that should prevent a host of problems
                 result_.bytes[0] = SD.exists(path_);
