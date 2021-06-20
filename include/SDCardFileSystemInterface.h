@@ -49,43 +49,125 @@ public:
         }
 #endif
     }
+    enum class Registers : uint16_t {
+#define X(name) name, name ## Upper
+#define Y(name) \
+        X(name ## 0), \
+        X(name ## 1), \
+        X(name ## 2), \
+        X(name ## 3)
+
+        X(Doorbell),
+        X(Command),
+        X(FileId),
+        X(ModeBits),
+        X(SeekPositionLower),
+        X(SeekPositionUpper),
+        X(Whence),
+        X(PermissionBitsLower),
+        X(PermissionBitsUpper),
+        X(OpenReadWrite),
+        X(ErrorCode),
+        X(Result0),
+        X(Result1),
+        X(Result2),
+        X(Result3),
+        X(Result4),
+        X(Result5),
+        X(Result6),
+        X(Result7),
+        Y(Path0),
+        Y(Path1),
+        Y(Path2),
+        Y(Path3),
+        Y(Path4),
+        Y(Path5),
+        Y(Path6),
+        Y(Path7),
+        Y(Path8),
+        Y(Path9),
+#undef Y
+#undef X
+        PathEnd,
+        // Path and result are handled differently but we can at least compute base offsets
+        Path = Path00, // FixedPathSize bytes
+        Result = Result0, // 16 bytes in size
+    };
+    static constexpr bool inResultArea(Registers value) noexcept {
+        switch(value) {
+#define X(name) \
+    case Registers:: name : \
+    case Registers:: name ## Upper
+            X(Result0):
+            X(Result1):
+            X(Result2):
+            X(Result3):
+            X(Result4):
+            X(Result5):
+            X(Result6):
+            X(Result7):
+#undef X
+            return true;
+            default:
+                return false;
+        }
+
+    }
+    static constexpr bool inPathArea(Registers value) noexcept {
+        switch (value) {
+
+#define X(name) \
+    case Registers:: name : \
+    case Registers:: name ## Upper
+
+#define Y(name) \
+        X(name ## 0): \
+        X(name ## 1): \
+        X(name ## 2): \
+        X(name ## 3)
+            Y(Path0):
+            Y(Path1):
+            Y(Path2):
+            Y(Path3):
+            Y(Path4):
+            Y(Path5):
+            Y(Path6):
+            Y(Path7):
+            Y(Path8):
+            Y(Path9):
+#undef X
+#undef Y
+            return true;
+            default:
+                return false;
+        }
+    }
+    static_assert((static_cast<int>(Registers::PathEnd) - static_cast<int>(Registers::Path)) == FixedPathSize, "Path is not of the correct size");
 
     uint8_t read8(Address address) noexcept override {
-            if (address >= PathStart) {
-                if (auto offset = address - PathStart; offset < FixedPathSize) {
-                    return static_cast<uint8_t>(path_[offset]);
-                } else {
-                    // make sure we can't do an overrun!
-                    return 0;
-                }
-            }
-            if (address >= ResultStart) {
-                if (auto offset = address - ResultStart; offset < 16) {
-                    return result_.bytes[offset];
-                } else {
-                    return 0;
-                }
-            }
-            return 0;
+        if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
+            auto offset = address - static_cast<Address>(Registers::Path);
+            return static_cast<uint8_t>(path_[offset]);
+        } else if (inResultArea(reg)) {
+            auto offset = address - static_cast<Address>(Registers::Result);
+            return result_.bytes[offset];
+        }
+        return 0;
     }
 
     void write8(Address address, uint8_t value) noexcept override {
-            if (address >= PathStart) {
-                if (auto offset = address - PathStart; offset < FixedPathSize) {
-                    Serial.print(F("WRITING '"));
-                    Serial.print(static_cast<char>(value));
-                    Serial.println(F("' to path storage"));
-                    path_[offset] = static_cast<char>(value);
-                } else {
-                    // should not get here! so fail out hardcore!
-                    signalHaltState(F("LARGER THAN FIXED PATH SIZE!!!"));
-                }
-            }
-            if (address >= ResultStart) {
-                if (auto offset = address - ResultStart; offset < 16) {
-                    result_.bytes[offset] = value;
-                }
-            }
+        if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
+            auto offset = address - static_cast<Address>(Registers::Path);
+            Serial.print(F("WRITING '"));
+            Serial.print(static_cast<char>(value));
+            Serial.print(F("' to path storage at offset 0x"));
+            Serial.println(offset);
+            path_[offset] = static_cast<char>(value);
+
+        } else if (inResultArea(reg)) {
+            auto offset = address - static_cast<Address>(Registers::Result);
+            result_.bytes[offset] = value;
+        }
     }
 
     enum class SDCardOperations : uint16_t {
@@ -143,6 +225,9 @@ public:
                 result_.words[0] = -1;
                 return -1;
             case SDCardOperations::FileExists:
+                Serial.print(F("Does file at \""));
+                Serial.print(path_);
+                Serial.println(F("exist?"));
                 // oh man this is freaking dangerous but I have put in a zero padding buffer following the byte addresses
                 // so that should prevent a host of problems
                 result_.bytes[0] = SD.exists(path_);
@@ -192,86 +277,76 @@ public:
         }
         return -1;
     }
-    enum class Registers : uint16_t {
-        Doorbell, // two bytes
-        Command,
-        FileId,
-        ModeBits,
-        SeekPositionLower,
-        SeekPositionUpper,
-        Whence,
-        PermissionBitsLower,
-        PermissionBitsUpper,
-        OpenReadWrite,
-        ErrorCode,
-        // Path and result are handled differently but we can at least compute base offsets
-        Result, // 16 bytes in size
-        Path, // FixedPathSize bytes
-        // always last
-        BuffersStartAt = ErrorCode,
-    };
     uint16_t read16(Address address) noexcept override {
-            if (address >= ResultStart && address < PathStart) {
-                if (auto offset = (address - ResultStart) / 2; offset < 8) {
-                    return result_.shorts[offset];
-                } else {
+        if (auto theReg = static_cast<Registers>(address); inResultArea(theReg)) {
+                auto offset = address - static_cast<Address>(Registers::Result);
+                return result_.shorts[offset];
+        }  else {
+            switch (theReg) {
+                case Registers::Doorbell:
+                    return invoke(0);
+                case Registers::Command:
+                    return static_cast<uint16_t>(command_);
+                case Registers::FileId:
+                    return fileId_;
+                case Registers::ModeBits:
+                    return modeBits_;
+                case Registers::SeekPositionLower:
+                    return seekPositionInfo_.halves[0];
+                case Registers::SeekPositionUpper:
+                    return seekPositionInfo_.halves[1];
+                case Registers::PermissionBitsLower:
+                    return flags_.halves[0];
+                case Registers::PermissionBitsUpper:
+                    return flags_.halves[1];
+                case Registers::Whence:
+                    return whence_;
+                case Registers::ErrorCode:
+                    return static_cast<uint16_t>(errorCode_);
+                case Registers::OpenReadWrite:
+                    return static_cast<uint16_t>(openReadWrite_);
+                default:
                     return 0;
-                }
             }
-            switch (address) {
-                case static_cast<Address>(Registers::Doorbell) * 2: return invoke(0);
-                case static_cast<Address>(Registers::Command) * 2: return static_cast<uint16_t>(command_);
-                case static_cast<Address>(Registers::FileId) * 2: return fileId_;
-                case static_cast<Address>(Registers::ModeBits) * 2: return modeBits_;
-                case static_cast<Address>(Registers::SeekPositionLower) * 2: return seekPositionInfo_.halves[0];
-                case static_cast<Address>(Registers::SeekPositionUpper) * 2: return seekPositionInfo_.halves[1];
-                case static_cast<Address>(Registers::PermissionBitsLower) * 2: return flags_.halves[0];
-                case static_cast<Address>(Registers::PermissionBitsUpper) * 2: return flags_.halves[1];
-                case static_cast<Address>(Registers::Whence) * 2: return whence_;
-                case static_cast<Address>(Registers::ErrorCode) * 2: return static_cast<uint16_t>(errorCode_);
-                case static_cast<Address>(Registers::OpenReadWrite) * 2: return static_cast<uint16_t>(openReadWrite_);
-                default: return 0;
-            }
+        }
     }
-    static constexpr auto ResultStart = static_cast<int>(Registers::BuffersStartAt) * 2;
-    static constexpr auto PathStart = ResultStart + 16;
-    void write16(Address address, uint16_t value) noexcept override {
-            if (address >= ResultStart && address < PathStart) {
-                if (auto offset = (address - ResultStart) / 2; offset < 8) {
-                    result_.shorts[offset] = value;
-                }
-            } else {
-                switch (address) {
-                    case static_cast<Address>(Registers::Doorbell) * 2:
-                        (void)invoke(value);
-                        break;
-                    case static_cast<Address>(Registers::Command) * 2:
-                        command_ = static_cast<SDCardOperations>(value);
-                        break;
-                    case static_cast<Address>(Registers::FileId) * 2:
-                        fileId_ = value;
-                        break;
-                    case static_cast<Address>(Registers::ModeBits) * 2:
-                        modeBits_ = value;
-                        break;
-                    case static_cast<Address>(Registers::SeekPositionLower) * 2:
-                        seekPositionInfo_.halves[0] = value;
-                        break;
-                    case static_cast<Address>(Registers::SeekPositionUpper) * 2:
-                        seekPositionInfo_.halves[1] = value;
-                        break;
-                    case static_cast<Address>(Registers::Whence) * 2:
-                        whence_ = value;
-                        break;
-                    case static_cast<Address>(Registers::ErrorCode) * 2:
-                        errorCode_ = static_cast<ErrorCodes>(value);
-                        break;
-                    case static_cast<Address>(Registers::OpenReadWrite) * 2:
-                        openReadWrite_ = value != 0;
-                    default:
-                        break;
-                }
+    void
+    write16(Address address, uint16_t value) noexcept override {
+        if (auto theReg = static_cast<Registers>(address); inResultArea(theReg)) {
+            auto offset = address - static_cast<Address>(Registers::Result) ;
+            result_.shorts[offset] = value;
+        } else {
+            switch (theReg) {
+                case Registers::Doorbell:
+                    (void)invoke(value);
+                    break;
+                case Registers::Command:
+                    command_ = static_cast<SDCardOperations>(value);
+                    break;
+                case Registers::FileId:
+                    fileId_ = value;
+                    break;
+                case Registers::ModeBits:
+                    modeBits_ = value;
+                    break;
+                case Registers::SeekPositionLower:
+                    seekPositionInfo_.halves[0] = value;
+                    break;
+                case Registers::SeekPositionUpper:
+                    seekPositionInfo_.halves[1] = value;
+                    break;
+                case Registers::Whence:
+                    whence_ = value;
+                    break;
+                case Registers::ErrorCode:
+                    errorCode_ = static_cast<ErrorCodes>(value);
+                    break;
+                case Registers::OpenReadWrite:
+                    openReadWrite_ = value != 0;
+                default:
+                    break;
             }
+        }
     }
 
 private:
