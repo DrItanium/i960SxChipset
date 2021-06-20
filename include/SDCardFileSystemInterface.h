@@ -390,7 +390,7 @@ private:
             ++openedFileCount_;
             result_.words[0] = handleId;
             Serial.print(F("Opened file on sd card at path \""));
-            Serial.print()
+            Serial.print(path_);
             if (openReadWrite_) {
                 Serial.println(F("\" for Reading and Writing"));
             } else {
