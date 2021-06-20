@@ -161,12 +161,26 @@ public:
             case SDCardOperations::GetFileCoordinates: return getFileCoordinates();
             case SDCardOperations::FileIsOpen: return fileIsOpen();
             case SDCardOperations::OpenFile:
+                signalHaltState(F("UNIMPLEMENTED FUNCTION OPEN FILE"));
+                break;
             case SDCardOperations::CloseFile:
+                signalHaltState(F("UNIMPLEMENTED FUNCTION CLOSE FILE"));
+                break;
             case SDCardOperations::MakeDirectory:
+                signalHaltState(F("UNIMPLEMENTED FUNCTION MAKE DIRECTORY"));
+                break;
             case SDCardOperations::RemoveDirectory:
+                signalHaltState(F("UNIMPLEMENTED FUNCTION REMOVE DIRECTORY"));
+                break;
             case SDCardOperations::FileRead:
+                signalHaltState(F("UNIMPLEMENTED FUNCTION FILE READ"));
+                break;
             case SDCardOperations::FileWrite:
+                signalHaltState(F("UNIMPLEMENTED FUNCTION FILE WRITE"));
+                break;
             case SDCardOperations::FileFlush:
+                signalHaltState(F("UNIMPLEMENTED FUNCTION FILE FLUSH"));
+                break;
             case SDCardOperations::FileSeek:
                 errorCode_ = ErrorCodes::UnimplementedCommand;
                 return -1;
