@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Board Platform: MightyCore
 #include <SPI.h>
 #include <Fsm.h>
-#include <SD.h>
+#include <SdFat.h>
 
 #include <Adafruit_TFTShield18.h>
 #include <Adafruit_ST7735.h>
@@ -1008,6 +1008,7 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
 void enteringChecksumFailure() noexcept {
     signalHaltState(F("CHECKSUM FAILURE!"));
 }
+SdFat SD;
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
 

@@ -29,8 +29,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef I960SXCHIPSET_MEMORYMAPPEDFILETHING_H
 #define I960SXCHIPSET_MEMORYMAPPEDFILETHING_H
 #include <Arduino.h>
+#include "MCUPlatform.h"
 #include "MemoryThing.h"
 #include "Cache.h"
+#include <SdFat.h>
+extern SdFat SD;
 template<uint32_t numCacheLines = 8, uint32_t cacheLineSize = 512>
 class MemoryMappedFile : public MemoryThing {
 public:

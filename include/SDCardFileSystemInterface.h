@@ -29,6 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
 #define I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
 #include "MemoryThing.h"
+#include <SdFat.h>
+extern SdFat SD;
 class SDCardFilesystemInterface : public IOSpaceThing {
 public:
     static constexpr uint8_t FixedPathSize = 80;
@@ -217,6 +219,7 @@ public:
         AllFileSlotsInUse,
         AttemptToReadFromUnmappedMemory,
         AttemptToWriteToUnmappedMemory,
+        UnableToSeekToRequestedDestination,
     };
 public:
     uint16_t invoke(uint16_t doorbellValue) noexcept {
@@ -528,6 +531,37 @@ private:
             }
             result_.words[0] = bytesRead;
             return 0;
+        }
+    }
+    uint16_t seekFile() noexcept {
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            return -1;
+        } else if (auto& theFile = files_[fileId_]; !theFile) {
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            return -1;
+        } else {
+            bool result = false;
+            switch (whence_) {
+                case 1: // seek_cur
+                    result = theFile.seekCur(seekPositionInfo_.wholeValue_);
+                    break;
+                case 2: // seek_end
+                    result = theFile.seekEnd(seekPositionInfo_.wholeValue_);
+                    break;
+                case 0: // seek_set
+                default:
+                    result = theFile.seekSet(seekPositionInfo_.wholeValue_);
+                    break;
+            }
+            if (!result) {
+                errorCode_ = ErrorCodes::UnableToSeekToRequestedDestination;
+                return -1;
+            } else {
+                result_.words[0] = theFile.position();
+                return 0;
+            }
         }
     }
 private:
