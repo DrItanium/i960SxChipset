@@ -389,6 +389,13 @@ private:
             auto handleId = openedFileCount_;
             ++openedFileCount_;
             result_.words[0] = handleId;
+            Serial.print(F("Opened file on sd card at path \""));
+            Serial.print()
+            if (openReadWrite_) {
+                Serial.println(F("\" for Reading and Writing"));
+            } else {
+                Serial.println(F("\" for Reading"));
+            }
             return 0;
         }
     }
