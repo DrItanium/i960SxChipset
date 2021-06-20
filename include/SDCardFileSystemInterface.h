@@ -86,13 +86,21 @@ public:
         Y(Path7),
         Y(Path8),
         Y(Path9),
+        X(PathEnd),
+        X(AddressLower),
+        X(AddressUpper),
+        X(CountLower),
+        X(CountUpper),
 #undef Y
 #undef X
-        PathEnd,
+
         // Path and result are handled differently but we can at least compute base offsets
         Path = Path00, // FixedPathSize bytes
         Result = Result0, // 16 bytes in size
+        Address = AddressLower,
+        Count = CountLower,
     };
+    static_assert(static_cast<int>(Registers::Address) - static_cast<int>(Registers::PathEnd) == 2, "There should be a buffer following the path container");
     static constexpr bool inResultArea(Registers value) noexcept {
         switch(value) {
 #define X(name) \
@@ -298,6 +306,14 @@ public:
                     return static_cast<uint16_t>(errorCode_);
                 case Registers::OpenReadWrite:
                     return static_cast<uint16_t>(openReadWrite_);
+                case Registers::AddressLower:
+                    return address_.halves[0];
+                case Registers::AddressUpper:
+                    return address_.halves[1];
+                case Registers::CountLower:
+                    return count_.halves[0];
+                case Registers::CountUpper:
+                    return count_.halves[1];
                 default:
                     return 0;
             }
@@ -336,6 +352,18 @@ public:
                     break;
                 case Registers::OpenReadWrite:
                     openReadWrite_ = value != 0;
+                case Registers::AddressLower:
+                    address_.halves[0] = value;
+                    break;
+                case Registers::AddressUpper:
+                    address_.halves[1] = value;
+                    break;
+                case Registers::CountLower:
+                    count_.halves[0] = value;
+                    break;
+                case Registers::CountUpper:
+                    count_.halves[1] = value;
+                    break;
                 default:
                     break;
             }
@@ -472,21 +500,19 @@ private:
     }
     // these are the actual addresses
 private:
+    union SplitWord {
+        uint32_t wholeValue_ = 0;
+        uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+    };
     uint16_t openedFileCount_ = 0;
     File files_[MaxFileCount];
     uint32_t permissions_[MaxFileCount] = { 0 };
     SDCardOperations command_ = SDCardOperations::None;
     uint16_t fileId_ = 0;
     uint16_t modeBits_ = 0;
-    union {
-        uint32_t wholeValue_ = 0;
-        uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
-    } seekPositionInfo_;
+    SplitWord seekPositionInfo_;
     uint16_t whence_ = 0;
-    union {
-        uint32_t wholeValue_ = 0;
-        uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
-    } flags_;
+    SplitWord flags_;
     bool openReadWrite_ = false;
     union {
         uint8_t bytes[16];
@@ -497,6 +523,7 @@ private:
     ErrorCodes errorCode_ = ErrorCodes::None;
     char path_[FixedPathSize] = { 0 };
     volatile uint32_t fixedPadding = 0; // always should be here to make sure an overrun doesn't cause problems
-
+    SplitWord address_;
+    SplitWord count_;
 };
 #endif //I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
