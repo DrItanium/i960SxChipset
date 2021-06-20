@@ -52,7 +52,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //OPL2Thing<i960Pinout::SPI_BUS_A0, i960Pinout::SPI_BUS_A1, i960Pinout::SPI_BUS_A2> thingy(0x1000);
 
 bool displayReady = false;
-MemoryThing* getThing(Address address, LoadStoreStyle style) noexcept;
 /**
  * @brief Describes a single cache line which associates an address with 16 bytes of storage
  */

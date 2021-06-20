@@ -215,6 +215,8 @@ public:
         CriticalFileSideChannelAttempt,
         UnimplementedCommand,
         AllFileSlotsInUse,
+        AttemptToReadFromUnmappedMemory,
+        AttemptToWriteToUnmappedMemory,
     };
 public:
     uint16_t invoke(uint16_t doorbellValue) noexcept {
@@ -260,9 +262,7 @@ public:
             case SDCardOperations::RemoveDirectory:
                 signalHaltState(F("UNIMPLEMENTED FUNCTION REMOVE DIRECTORY"));
                 break;
-            case SDCardOperations::FileRead:
-                signalHaltState(F("UNIMPLEMENTED FUNCTION FILE READ"));
-                break;
+            case SDCardOperations::FileRead: return readFile();
             case SDCardOperations::FileWrite:
                 signalHaltState(F("UNIMPLEMENTED FUNCTION FILE WRITE"));
                 break;
@@ -457,7 +457,7 @@ private:
         }
     }
     uint16_t fileIsOpen() noexcept {
-        if (openedFileCount_ == MaxFileCount) {
+        if (fileId_ >= MaxFileCount) {
             // bad file id!
             errorCode_ = ErrorCodes::FileIsNotValid;
             return -1;
@@ -498,7 +498,38 @@ private:
             return 0;
         }
     }
-    // these are the actual addresses
+    uint16_t readFile() noexcept {
+        // we have the fileId, address to read into within memory, and the number of items to write
+        if (fileId_ >= MaxFileCount) {
+            // bad file id!
+            errorCode_ = ErrorCodes::BadFileId;
+            return -1;
+        } else if (auto& theFile = files_[fileId_]; !theFile) {
+            errorCode_ = ErrorCodes::FileIsNotValid;
+            return -1;
+        } else {
+            Address baseAddress = address_.wholeValue_;
+            Address count = count_.wholeValue_;
+            auto thing = getThing(baseAddress, LoadStoreStyle::Lower8);
+            if (!thing) {
+                errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
+                return -1;
+            }
+            uint32_t bytesRead = 0;
+            for (Address i = 0, j = baseAddress; i < count; ++i, ++j) {
+                // slow but the simplest design for now since we are jumping between radically different implementations of things
+                // read byte by byte into the thing
+                if (auto value = theFile.read(); value == -1) {
+                    thing->write(j, 0, LoadStoreStyle::Lower8) ; // we've gone beyond the end of the original file so just write zeros to be safe
+                } else {
+                    thing->write(j, static_cast<uint8_t>(value), LoadStoreStyle::Lower8);
+                    ++bytesRead;
+                }
+            }
+            result_.words[0] = bytesRead;
+            return 0;
+        }
+    }
 private:
     union SplitWord {
         uint32_t wholeValue_ = 0;
