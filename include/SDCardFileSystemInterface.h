@@ -72,6 +72,9 @@ public:
     void write8(Address address, uint8_t value) noexcept override {
             if (address >= PathStart) {
                 if (auto offset = address - PathStart; offset < FixedPathSize) {
+                    Serial.print(F("WRITING '"));
+                    Serial.print(static_cast<char>(value));
+                    Serial.println(F("' to path storage"));
                     path_[offset] = static_cast<char>(value);
                 } else {
                     // should not get here! so fail out hardcore!
