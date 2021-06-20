@@ -187,6 +187,7 @@ public:
                 errorCode_ = ErrorCodes::UndefinedCommandProvided;
                 return -1;
         }
+        return -1;
     }
     enum class Registers : uint16_t {
         Doorbell, // two bytes
