@@ -283,7 +283,12 @@ public:
     uint16_t read16(Address address) noexcept override {
         if (auto theReg = static_cast<Registers>(address); inResultArea(theReg)) {
                 auto offset = address - static_cast<Address>(Registers::Result);
-                return result_.shorts[offset];
+                Serial.print(F("OFFSET: "));
+                Serial.println(offset);
+                auto result = result_.shorts[offset];
+                Serial.print(F("RESULT: 0x"));
+                Serial.println(result, HEX);
+                return result;
         }  else {
             switch (theReg) {
                 case Registers::Doorbell:
@@ -532,7 +537,7 @@ private:
             }
             result_.words[0] = bytesRead;
             Serial.print(F("Bytes Read: 0x"));
-            Serial.println(bytesRead, HEX);
+            Serial.println(result_.words[0], HEX);
             return 0;
         }
     }
