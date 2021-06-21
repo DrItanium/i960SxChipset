@@ -101,7 +101,16 @@ private:
 };
 template<TargetMCU mcu>
 constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, 10_MHz, false, false};
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = { 16_KB, 8, 512, 8, 512, 32, 10_MHz, false, true};
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
+        16_KB,
+        32, 128,
+        128, 32,
+        32,
+        10_MHz,
+        false,
+        true
+};
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 64, 512, 64, 512, 128, 8_MHz, true, true};
 // depends on the board used
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Basic> = { 32_KB, 16, 512, 16, 512, 64, 8_MHz, false, false};
