@@ -510,19 +510,32 @@ private:
                 errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
                 return -1;
             }
+            constexpr auto BufferSize = 32;
+            uint8_t simpleBuffer[BufferSize] = { 0 };
             uint32_t bytesRead = 0;
-            for (Address i = 0, j = baseAddress; i < count; ++i, ++j) {
-                // slow but the simplest design for now since we are jumping between radically different implementations of things
-                // read byte by byte into the thing
-                if (auto value = theFile.read(); value == -1) {
-                    thing->write(j, 0, LoadStoreStyle::Lower8) ; // we've gone beyond the end of the original file so just write zeros to be safe
-                } else {
-                    thing->write(j, static_cast<uint8_t>(value), LoadStoreStyle::Lower8);
-                    ++bytesRead;
+            if (count == 0) {
+                result_.words[0] = 0;
+                return 0;
+            } else if (count > 0 && count <= BufferSize) {
+                bytesRead = theFile.read(simpleBuffer, count);
+                thing->write(baseAddress, simpleBuffer, bytesRead);
+                result_.words[0] = bytesRead;
+                return 0;
+            } else {
+                auto times = count / BufferSize;
+                auto spillOver = count % BufferSize;
+                for (Address a = baseAddress, i = 0;
+                     i < times;
+                     ++i, a += BufferSize) {
+                    uint32_t actualBytesRead = theFile.read(simpleBuffer, BufferSize) ;
+                    thing->write(baseAddress, simpleBuffer, actualBytesRead);
+                    bytesRead += actualBytesRead;
                 }
+                uint32_t leftOverBytesRead = theFile.read(simpleBuffer, spillOver);
+                thing->write(baseAddress, simpleBuffer, leftOverBytesRead);
+                result_.words[0]  = bytesRead + leftOverBytesRead;
+                return 0;
             }
-            result_.words[0] = bytesRead;
-            return 0;
         }
     }
     uint16_t seekFile() noexcept {
@@ -537,10 +550,10 @@ private:
             bool result = false;
             switch (whence_) {
                 case 1: // seek_cur
-                    result = theFile.seekCur(seekPositionInfo_.wholeValue_);
+                    result = theFile.seekCur(seekPositionInfo_.signedWholeValue);
                     break;
                 case 2: // seek_end
-                    result = theFile.seekEnd(seekPositionInfo_.wholeValue_);
+                    result = theFile.seekEnd(seekPositionInfo_.signedWholeValue);
                     break;
                 case 0: // seek_set
                 default:
@@ -559,6 +572,7 @@ private:
 private:
     union SplitWord {
         uint32_t wholeValue_ = 0;
+        int32_t signedWholeValue;
         uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     };
     uint16_t openedFileCount_ = 0;
