@@ -282,13 +282,8 @@ public:
     }
     uint16_t read16(Address address) noexcept override {
         if (auto theReg = static_cast<Registers>(address); inResultArea(theReg)) {
-                auto offset = address - static_cast<Address>(Registers::Result);
-                Serial.print(F("OFFSET: "));
-                Serial.println(offset);
-                auto result = result_.shorts[offset];
-                Serial.print(F("RESULT: 0x"));
-                Serial.println(result, HEX);
-                return result;
+                auto offset = (address - static_cast<Address>(Registers::Result)) / sizeof(uint16_t);
+                return result_.shorts[offset];
         }  else {
             switch (theReg) {
                 case Registers::Doorbell:
@@ -329,7 +324,7 @@ public:
     void
     write16(Address address, uint16_t value) noexcept override {
         if (auto theReg = static_cast<Registers>(address); inResultArea(theReg)) {
-            auto offset = address - static_cast<Address>(Registers::Result) ;
+            auto offset = (address - static_cast<Address>(Registers::Result)) / sizeof(uint16_t) ;
             result_.shorts[offset] = value;
         } else {
             switch (theReg) {
@@ -495,13 +490,6 @@ private:
             auto handleId = openedFileCount_;
             ++openedFileCount_;
             result_.words[0] = handleId;
-            Serial.print(F("Opened file on sd card at path \""));
-            Serial.print(path_);
-            if (openReadWrite_) {
-                Serial.println(F("\" for Reading and Writing"));
-            } else {
-                Serial.println(F("\" for Reading"));
-            }
             return 0;
         }
     }
@@ -517,8 +505,6 @@ private:
         } else {
             Address baseAddress = address_.wholeValue_;
             Address count = count_.wholeValue_;
-            Serial.print(F("Count: 0x"));
-            Serial.println(count, HEX);
             auto thing = getThing(baseAddress, LoadStoreStyle::Lower8);
             if (!thing) {
                 errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
@@ -536,8 +522,6 @@ private:
                 }
             }
             result_.words[0] = bytesRead;
-            Serial.print(F("Bytes Read: 0x"));
-            Serial.println(result_.words[0], HEX);
             return 0;
         }
     }
