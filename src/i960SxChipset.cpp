@@ -265,16 +265,6 @@ public:
 public:
     ROMThing() noexcept : Parent(ROMStart, ROMEnd, ROMEnd - 1, "boot.rom", FILE_READ){ }
     ~ROMThing() override = default;
-    [[nodiscard]] uint16_t read(Address address, LoadStoreStyle style) noexcept override {
-        auto result = MemoryThing::read(address, style);
-        if (chipsetFunctions.displayMemoryReadsAndWrites()) {
-            Serial.print(F("ROM: READING FROM ADDRESS 0x"));
-            Serial.print(address, HEX);
-            Serial.print(F(" yielded value 0x"));
-            Serial.println(result, HEX);
-        }
-        return result;
-    }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
         return input & ROMMask;
