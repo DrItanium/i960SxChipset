@@ -273,8 +273,7 @@ public:
                 signalHaltState(F("UNIMPLEMENTED FUNCTION FILE FLUSH"));
                 break;
             case SDCardOperations::FileSeek:
-                errorCode_ = ErrorCodes::UnimplementedCommand;
-                return -1;
+                return seekFile();
             default:
                 errorCode_ = ErrorCodes::UndefinedCommandProvided;
                 return -1;
@@ -513,6 +512,8 @@ private:
         } else {
             Address baseAddress = address_.wholeValue_;
             Address count = count_.wholeValue_;
+            Serial.print(F("Count: 0x"));
+            Serial.println(count, HEX);
             auto thing = getThing(baseAddress, LoadStoreStyle::Lower8);
             if (!thing) {
                 errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
@@ -530,6 +531,8 @@ private:
                 }
             }
             result_.words[0] = bytesRead;
+            Serial.print(F("Bytes Read: 0x"));
+            Serial.println(bytesRead, HEX);
             return 0;
         }
     }
