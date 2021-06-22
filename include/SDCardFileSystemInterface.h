@@ -218,12 +218,7 @@ private:
     uint16_t whence_ = 0;
     SplitWord32 flags_;
     bool openReadWrite_ = false;
-    union {
-        uint8_t bytes[16] = { 0 };
-        uint16_t shorts[16/sizeof(uint16_t)];
-        uint32_t words[16/sizeof(uint32_t)];
-        uint64_t quads[16/sizeof(uint64_t)];
-    } result_;
+    SplitWord128 result_;
     ErrorCodes errorCode_ = ErrorCodes::None;
     char path_[FixedPathSize] = { 0 };
     volatile uint32_t fixedPadding = 0; // always should be here to make sure an overrun doesn't cause problems

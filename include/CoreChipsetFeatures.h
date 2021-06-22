@@ -111,13 +111,15 @@ public:
 private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;
+    uint16_t invokePatternEngine() noexcept;
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
     SplitWord32 consoleBufferBaseAddress_;
     uint8_t consoleBufferLength_ = 0;
     uint8_t buffer_[256] = { 0 };
-    uint16_t pattern_[16 / sizeof(uint16_t)] = { 0 };
-
+    SplitWord128 pattern_;
+    SplitWord32 patternLength_;
+    SplitWord32 patternAddress_;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

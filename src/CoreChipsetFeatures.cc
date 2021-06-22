@@ -102,6 +102,19 @@ CoreChipsetFeatures::read16(Address address) noexcept {
         case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
         case Registers::ConsoleBufferAddressLower: return consoleBufferBaseAddress_.halves[0];
         case Registers::ConsoleBufferAddressUpper: return consoleBufferBaseAddress_.halves[1];
+        case Registers::PatternEngine_ActualPattern000: return pattern_.shorts[0];
+        case Registers::PatternEngine_ActualPattern001: return pattern_.shorts[1];
+        case Registers::PatternEngine_ActualPattern010: return pattern_.shorts[2];
+        case Registers::PatternEngine_ActualPattern011: return pattern_.shorts[3];
+        case Registers::PatternEngine_ActualPattern100: return pattern_.shorts[4];
+        case Registers::PatternEngine_ActualPattern101: return pattern_.shorts[5];
+        case Registers::PatternEngine_ActualPattern110: return pattern_.shorts[6];
+        case Registers::PatternEngine_ActualPattern111: return pattern_.shorts[7];
+        case Registers::PatternEngine_LengthLower: return patternLength_.halves[0]; break;
+        case Registers::PatternEngine_LengthUpper: return patternLength_.halves[1]; break;
+        case Registers::PatternEngine_StartAddressLower: return patternAddress_.halves[0]; break;
+        case Registers::PatternEngine_StartAddressUpper: return patternAddress_.halves[1]; break;
+        case Registers::PatternEngine_Doorbell: return invokePatternEngine();
         default: return 0;
     }
 }
@@ -120,6 +133,19 @@ CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
         case Registers::ConsoleBufferAddressUpper:
             consoleBufferBaseAddress_.halves[1] = value;
             break;
+        case Registers::PatternEngine_ActualPattern000: pattern_.shorts[0] = value; break;
+        case Registers::PatternEngine_ActualPattern001: pattern_.shorts[1] = value; break;
+        case Registers::PatternEngine_ActualPattern010: pattern_.shorts[2] = value; break;
+        case Registers::PatternEngine_ActualPattern011: pattern_.shorts[3] = value; break;
+        case Registers::PatternEngine_ActualPattern100: pattern_.shorts[4] = value; break;
+        case Registers::PatternEngine_ActualPattern101: pattern_.shorts[5] = value; break;
+        case Registers::PatternEngine_ActualPattern110: pattern_.shorts[6] = value; break;
+        case Registers::PatternEngine_ActualPattern111: pattern_.shorts[7] = value; break;
+        case Registers::PatternEngine_LengthLower: patternLength_.halves[0] = value; break;
+        case Registers::PatternEngine_LengthUpper: patternLength_.halves[1] = value; break;
+        case Registers::PatternEngine_StartAddressLower: patternAddress_.halves[0] = value; break;
+        case Registers::PatternEngine_StartAddressUpper: patternAddress_.halves[1] = value; break;
+        case Registers::PatternEngine_Doorbell: (void)invokePatternEngine(); break;
         default:
             break;
     }
@@ -158,4 +184,10 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
         default:
             break;
     }
+}
+
+uint16_t
+CoreChipsetFeatures::invokePatternEngine() noexcept {
+    /// @todo implement this
+    return 0;
 }
