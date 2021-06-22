@@ -71,6 +71,8 @@ CoreChipsetFeatures::writeToStream(Stream& aStream, Address baseAddress, uint8_t
 }
 uint8_t
 CoreChipsetFeatures::read8(Address address) noexcept {
+    Serial.print(F("READ8 0x"));
+    Serial.println(address, HEX);
     switch (static_cast<Registers>(address)) {
         case Registers::Led:
             return readLed();
@@ -96,6 +98,8 @@ CoreChipsetFeatures::read8(Address address) noexcept {
 }
 uint16_t
 CoreChipsetFeatures::read16(Address address) noexcept {
+    Serial.print(F("READ16 0x"));
+    Serial.println(address, HEX);
     switch (static_cast<Registers>(address)) {
         case Registers::ConsoleIO: return Serial.read();
         case Registers::ConsoleAvailable: return Serial.available();
@@ -120,6 +124,10 @@ CoreChipsetFeatures::read16(Address address) noexcept {
 }
 void
 CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
+    Serial.print(F("WRITE16 0x"));
+    Serial.print(value, HEX);
+    Serial.print(F(" TO 0x"));
+    Serial.println(address, HEX);
     switch (static_cast<Registers>(address)) {
         case Registers::ConsoleFlush:
             Serial.flush();
@@ -153,6 +161,10 @@ CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
 
 void
 CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
+    Serial.print(F("WRITE8 0x"));
+    Serial.print(value, HEX);
+    Serial.print(F(" TO 0x"));
+    Serial.println(address, HEX);
     switch (static_cast<Registers>(address)) {
         case Registers::Led:
             writeLed(value);
@@ -191,9 +203,8 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
         auto fullCopies = patternLength_.wholeValue_ / 16;
         auto slop = patternLength_.wholeValue_ % 16;
-        auto currentAddress = patternAddress_.wholeValue_;
         Address addr = patternAddress_.wholeValue_;
-        for (uint32_t i = 0; i < fullCopies; ++i, currentAddress += 16, addr+=16) {
+        for (uint32_t i = 0; i < fullCopies; ++i, addr+=16) {
             thing->write(addr, pattern_.bytes, 16);
         }
         if (slop > 0) {
@@ -207,6 +218,8 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
 
 void
 CoreChipsetFeatures::begin() noexcept {
+    Serial.print(F("ADDRESS OF LED: 0x"));
+    Serial.println(static_cast<uint32_t>(Registers::Led) + 0xFE00'0000, HEX);
     Serial.print(F("BASE ADDRESS OF PATTERN: 0x"));
     Serial.println(static_cast<uint32_t>(Registers::PatternEngine_ActualPattern000) + 0xFE00'0000, HEX);
     Serial.print(F("BASE ADDRESS OF PATTERN LENGTH: 0x"));
