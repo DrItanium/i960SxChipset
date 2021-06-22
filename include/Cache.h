@@ -285,9 +285,11 @@ private:
      * @brief Commit all entries in the cache back to the underlying memory type
      */
     void invalidateEntireCache() noexcept {
+        Serial.println(F("Invalidating the entire cache..."));
         for (auto& line : lines_) {
             line.invalidate(thing_);
         }
+        Serial.println(F("Entire Cache invalidated..."));
     }
 };
 #endif //I960SXCHIPSET_CACHE_H
