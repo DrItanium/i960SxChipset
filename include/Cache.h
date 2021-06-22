@@ -100,15 +100,30 @@ public:
         return targetAddress & ~CacheByteMask;
     }
     [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
-    void reset(uint32_t address, MemoryThing* thing) noexcept {
+    void reset(uint32_t address, MemoryThing& thing) noexcept {
         byte* buf = reinterpret_cast<byte*>(components_);
         if (valid_ && dirty_) {
-            thing->write(address_, buf, CacheLineSize);
+            thing.write(address_, buf, CacheLineSize);
         }
         dirty_ = false;
         valid_ = true;
         address_ = address;
-        thing->read(address_, buf, CacheLineSize);
+        thing.read(address_, buf, CacheLineSize);
+    }
+    /**
+     * @brief Invalidate the cache line and mark it as invalid
+     * @param thing The memory thing to commit to
+     */
+    void invalidate(MemoryThing& thing) noexcept {
+        if (valid_ && dirty_) {
+            byte *buf = reinterpret_cast<byte *>(components_);
+            thing.write(address_, buf, CacheLineSize);
+            // purge the contents of memory
+            components_ = { 0 };
+        }
+        dirty_ = false;
+        valid_ = false;
+        address_ = 0;
     }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
@@ -249,15 +264,30 @@ public:
 
     void begin() noexcept override {
         thing_.begin();
+        // cache the first entry
+        (void)getByte(0);
     }
     void write(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
-        /// @todo perform cache snooping when this is called
-        MemoryThing::write(baseAddress, buffer, size);
+        /// @todo perform cache snooping when this is called, we want to commit all cache entries we can and then call the underlying thing's write method
+        // for now just invalidate the entire cache each time
+        invalidateEntireCache();
+        thing_.write(makeAddressRelative(baseAddress), buffer, size);
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
-        MemoryThing::read(baseAddress, buffer, size);
+        // we want to directly read from the underlying memory thing using the buffer so we need to do cache coherency checks as well
+        invalidateEntireCache();
+        thing_.read(makeAddressRelative(baseAddress), buffer, size);
     }
     [[nodiscard]] const MemoryThing& getBackingStore() const noexcept { return thing_; }
     [[nodiscard]] MemoryThing& getBackingStore() noexcept { return thing_; }
+private:
+    /**
+     * @brief Commit all entries in the cache back to the underlying memory type
+     */
+    void invalidateEntireCache() noexcept {
+        for (auto& line : lines_) {
+            line.invalidate(thing_);
+        }
+    }
 };
 #endif //I960SXCHIPSET_CACHE_H

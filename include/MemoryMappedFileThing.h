@@ -93,14 +93,16 @@ private:
 public:
     void write(uint32_t baseAddress, byte* buffer, size_t size) noexcept override {
         if (permissions_ != FILE_READ) {
-            theFile_.seek(baseAddress);
+            /// @todo disallow increasing the size of the underlying file
+            theFile_.seek(makeAddressRelative(baseAddress));
             theFile_.write(buffer, size);
             // make sure...
             theFile_.flush();
         }
     }
     void read(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
-        theFile_.seek(baseAddress);
+        /// @todo disallow reading past the end of the underlying file
+        theFile_.seek(makeAddressRelative(baseAddress));
         theFile_.read(buffer, size);
     }
     [[nodiscard]] constexpr auto getFileSize() const noexcept { return fileSize_; }
