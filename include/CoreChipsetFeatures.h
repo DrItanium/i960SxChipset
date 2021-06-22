@@ -34,27 +34,65 @@ class CoreChipsetFeatures : public IOSpaceThing {
 public:
     static constexpr auto AllowDebuggingStatements = true;
     enum class Registers : uint32_t {
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) \
+        FourByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define TwelveByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        EightByteEntry(Prefix ## 1)
         Led, // one byte
         DisplayMemoryReadsAndWrites,
         DisplayCacheLineUpdates,
-        PortZGPIO = 0x10, // one byte wide
+        PortZGPIO, // one byte wide
         PortZGPIODirection, // one byte wide
         PortZGPIOPolarity,
         PortZGPIOPullup,
-        ConsoleFlush = 0x20, // 2 bytes for alignment purposes
-        ConsoleFlushUpper, // 2 bytes for alignment purposes
-#define TwoByteEntry(Prefix) Prefix, Prefix ## Upper
-#define FourByteEntry(Prefix) Prefix ## LowerHalf, Prefix ## UpperLowerHalf, Prefix ## UpperHalf, Prefix ## UpperUpperHalf
+        TwoByteEntry(ConsoleFlush),
         TwoByteEntry(ConsoleAvailable),
         TwoByteEntry(ConsoleAvailableForWrite),
         TwoByteEntry(ConsoleIO),
-        /// @todo implement console buffer
         FourByteEntry(ConsoleBufferAddress),
         ConsoleBufferLength, // up to 256 bytes in length
         ConsoleBufferDoorbell, // read from this to do a buffered read, write to this to do a write from memory to console
+        SixteenByteEntry(PatternEngine_ActualPattern),
+        FourByteEntry(PatternEngine_StartAddress),
+        FourByteEntry(PatternEngine_Length),
+        TwoByteEntry(PatternEngine_Doorbell),
+#undef SixteenByteEntry
+#undef TwelveByteEntry
+#undef EightByteEntry
 #undef FourByteEntry
 #undef TwoByteEntry
+        End,
+        ConsoleFlush = ConsoleFlush0,
+        ConsoleAvailable = ConsoleAvailable0,
+        ConsoleAvailableForWrite = ConsoleAvailableForWrite0,
+        ConsoleIO = ConsoleIO0,
+        ConsoleBufferAddressLower = ConsoleBufferAddress00,
+        ConsoleBufferAddressUpper = ConsoleBufferAddress10,
+        PatternEngine_ActualPattern000 = PatternEngine_ActualPattern0000,
+        PatternEngine_ActualPattern001 = PatternEngine_ActualPattern0010,
+        PatternEngine_ActualPattern010 = PatternEngine_ActualPattern0100,
+        PatternEngine_ActualPattern011 = PatternEngine_ActualPattern0110,
+        PatternEngine_ActualPattern100 = PatternEngine_ActualPattern1000,
+        PatternEngine_ActualPattern101 = PatternEngine_ActualPattern1010,
+        PatternEngine_ActualPattern110 = PatternEngine_ActualPattern1100,
+        PatternEngine_ActualPattern111 = PatternEngine_ActualPattern1110,
+        PatternEngine_ActualPattern = PatternEngine_ActualPattern000,
+        PatternEngine_StartAddressLower = PatternEngine_StartAddress00,
+        PatternEngine_StartAddressUpper = PatternEngine_StartAddress10,
+        PatternEngine_LengthLower = PatternEngine_Length00,
+        PatternEngine_LengthUpper = PatternEngine_Length10,
+        PatternEngine_Doorbell = PatternEngine_Doorbell0,
     };
+    static_assert(static_cast<int>(Registers::End) < 0x100);
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
     ~CoreChipsetFeatures() override = default;
 private:

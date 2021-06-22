@@ -100,8 +100,8 @@ CoreChipsetFeatures::read16(Address address) noexcept {
         case Registers::ConsoleIO: return Serial.read();
         case Registers::ConsoleAvailable: return Serial.available();
         case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
-        case Registers::ConsoleBufferAddressLowerHalf: return consoleBufferBaseAddress_.halves[0];
-        case Registers::ConsoleBufferAddressUpperHalf: return consoleBufferBaseAddress_.halves[1];
+        case Registers::ConsoleBufferAddressLower: return consoleBufferBaseAddress_.halves[0];
+        case Registers::ConsoleBufferAddressUpper: return consoleBufferBaseAddress_.halves[1];
         default: return 0;
     }
 }
@@ -114,10 +114,10 @@ CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
         case Registers::ConsoleIO:
             Serial.write(static_cast<char>(value));
             break;
-        case Registers::ConsoleBufferAddressLowerHalf:
+        case Registers::ConsoleBufferAddressLower:
             consoleBufferBaseAddress_.halves[0] = value;
             break;
-        case Registers::ConsoleBufferAddressUpperHalf:
+        case Registers::ConsoleBufferAddressUpper:
             consoleBufferBaseAddress_.halves[1] = value;
             break;
         default:
