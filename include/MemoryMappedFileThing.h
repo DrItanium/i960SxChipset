@@ -42,6 +42,27 @@ public:
         // while this will never get called, it is still a good idea to be complete
         theFile_.close();
     }
+    void
+    begin() noexcept override {
+        if (!SD.exists(const_cast<char*>(path_))) {
+            // delete the file and start a new
+            signalHaltState(F("Could not find ram.bin! Please create one 512 megs in size!"));
+        }
+        theFile_ = SD.open(path_, permissions_);
+        if (!theFile_) {
+            Serial.print(F("Couldn't open "));
+            Serial.println(path_);
+            signalHaltState(F("Could not open memory mapped file! SD CARD may be corrupt")) ;
+        }
+        fileSize_ = theFile_.size();
+        if (fileSize_ > maxSize_) {
+            signalHaltState(F("File too large!"));
+        }
+        Serial.print(path_);
+        Serial.println(F(" OPEN SUCCESS!"));
+        //(void)theCache_.getByte(0); // cache something into memory on startup to improve performance
+    }
+protected:
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
         theFile_.seekSet(offset);
@@ -68,49 +89,25 @@ public:
             theFile_.write(reinterpret_cast<char *>(&value), sizeof(value));
         }
     }
-public:
-    void
-    begin() noexcept override {
-            if (!SD.exists(const_cast<char*>(path_))) {
-                // delete the file and start a new
-                signalHaltState(F("Could not find ram.bin! Please create one 512 megs in size!"));
-            }
-            theFile_ = SD.open(path_, permissions_);
-            if (!theFile_) {
-                Serial.print(F("Couldn't open "));
-                Serial.println(path_);
-                signalHaltState(F("Could not open memory mapped file! SD CARD may be corrupt")) ;
-            }
-            fileSize_ = theFile_.size();
-            if (fileSize_ > maxSize_) {
-                signalHaltState(F("File too large!"));
-            }
-            Serial.print(path_);
-            Serial.println(F(" OPEN SUCCESS!"));
-            //(void)theCache_.getByte(0); // cache something into memory on startup to improve performance
-    }
-private:
-public:
-    void write(uint32_t baseAddress, byte* buffer, size_t size) noexcept override {
+    size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         if (permissions_ != FILE_READ) {
-            /// @todo disallow increasing the size of the underlying file
-            theFile_.seek(makeAddressRelative(baseAddress));
-            theFile_.write(buffer, size);
+            theFile_.seek(address);
+            auto result = theFile_.write(buf, capacity);
             // make sure...
             theFile_.flush();
+            return result;
         }
     }
-    void read(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
-        /// @todo disallow reading past the end of the underlying file
-        theFile_.seek(makeAddressRelative(baseAddress));
-        theFile_.read(buffer, size);
+    size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
+        // at this point the methods that call this will have fixed up the addresses and sizes to prevent spanning across this file
+        theFile_.seek(address);
+        return theFile_.readBytes(buf, capacity);
     }
     [[nodiscard]] constexpr auto getFileSize() const noexcept { return fileSize_; }
 
 private:
     File theFile_; // use an SDCard as ram for the time being
     Address maxSize_;
-    //DataCache<CacheLineCount, CacheLineSize> theCache_;
     const char* path_;
     decltype(FILE_WRITE) permissions_;
     Address fileSize_;

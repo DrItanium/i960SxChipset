@@ -39,19 +39,26 @@ public:
      */
     explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 1) { }
     virtual ~MemoryThing() = default;
+protected:
+    virtual size_t blockWrite(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
+    virtual size_t blockRead(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
     [[nodiscard]] virtual uint8_t read8(Address address) noexcept { return 0; }
     [[nodiscard]] virtual uint16_t read16(Address address) noexcept { return 0; }
-    [[nodiscard]] virtual bool respondsTo(Address address) const noexcept {
-#if 0
-        Serial.print(F("RESPONDS TO: [0x"));
-        Serial.print(base_, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(end_, HEX);
-        Serial.println(F(")"));
-#endif
-        return base_ <= address && address < end_;
+    virtual void write8(Address address, uint8_t value) noexcept { }
+    virtual void write16(Address address, uint16_t value) noexcept { }
+public:
+    [[nodiscard]] virtual bool respondsTo(Address address) const noexcept { return base_ <= address && address < end_; }
+    /**
+     * @brief Get the number of bytes from the target address to the end of section
+     * @param address the base address to compute the length from
+     * @return End address of memory thing minus address
+     */
+    [[nodiscard]] constexpr Address lengthFollwingTargetAddress(Address address) const noexcept {
+        if (address >= end_) {
+            return 0;
+        } else {
+            return end_ - address;
+        }
     }
     [[nodiscard]] bool respondsTo(Address address, LoadStoreStyle style) const noexcept {
         switch (style) {
@@ -65,11 +72,8 @@ public:
                 return respondsTo(address);
             default:
                 return false;
-
         }
     }
-    virtual void write8(Address address, uint8_t value) noexcept { }
-    virtual void write16(Address address, uint16_t value) noexcept { }
     [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return base_; }
     [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
     [[nodiscard]] virtual Address makeAddressRelative(Address input) const noexcept { return input - base_; }
@@ -107,19 +111,37 @@ public:
      */
     virtual void begin() noexcept { }
     /**
-     * @brief Write a buffer to the given thing mapped into memory, this is used by the DataCache to perform cache replacement
-     * @param baseAddress the starting address where data will be written to within the memory thing
-     * @param buffer the buffer to write to memory
-     * @param size the number of elements to write
+     * @brief Perform a transfer of a block of bytes
+     * @param baseAddress the base address according to the i960
+     * @param buffer the buffer to commit
+     * @param size the number of bytes to transfer out of the buffer
+     * @return The number of bytes written
      */
-    virtual void write(uint32_t baseAddress, byte* buffer, size_t size) noexcept { }
+    virtual size_t write(uint32_t baseAddress, byte* buffer, size_t size) noexcept {
+        auto relativeAddress = makeAddressRelative(baseAddress);
+        // compute how many bytes we can actually write within this memory thing in case the buffer spans multiple devices
+        size_t count = size;
+        if (auto actualLength = lengthFollwingTargetAddress(baseAddress); size > actualLength) {
+            count = actualLength;
+        }
+        return blockWrite(relativeAddress, buffer, count);
+    }
     /**
-     * @brief Read into a provided buffer from the mapped memory thing, this is used by the DataCache to perform cache replacement
-     * @param baseAddress the starting address where data will be read from
-     * @param buffer the buffer to store the read operation into
-     * @param size the number of bytes to read from the memory thing into the buffer
+     * @brief Transfer a block of bytes into a provides buffer from the memory thing
+     * @param baseAddress The address to start at
+     * @param buffer  the buffer to store into
+     * @param size the number of bytes to transfer
+     * @return the number of bytes actually read into the buffer
      */
-    virtual void read(uint32_t baseAddress, byte* buffer, size_t size) noexcept { }
+    virtual size_t read(uint32_t baseAddress, byte* buffer, size_t size) noexcept {
+        auto relativeAddress = makeAddressRelative(baseAddress);
+        // compute how many bytes we can actually write within this memory thing in case the buffer spans multiple devices
+        size_t count = size;
+        if (auto actualLength = lengthFollwingTargetAddress(baseAddress); size > actualLength) {
+            count = actualLength;
+        }
+        return blockRead(relativeAddress, buffer, count);
+    }
 
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
 private:
