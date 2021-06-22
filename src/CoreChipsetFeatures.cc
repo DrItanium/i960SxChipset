@@ -188,24 +188,40 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
 
 uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
+    Serial.println(F("PATTERN ENGINE INVOKED!!!"));
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
+        Serial.println(F("PATTERN ENGINE MATCH MADE"));
         auto fullCopies = patternLength_.wholeValue_ / 16;
         auto slop = patternLength_.wholeValue_ % 16;
         auto currentAddress = patternAddress_.wholeValue_;
-        for (uint32_t i = 0; i < fullCopies; ++i, currentAddress += 16) {
-            thing->write(currentAddress, pattern_.bytes, 16);
+        Address addr = patternAddress_.wholeValue_;
+        for (uint32_t i = 0; i < fullCopies; ++i, currentAddress += 16, addr+=16) {
+            Serial.printf(F("Writing 16 bytes to 0x%x\n"), addr);
+            thing->write(addr, pattern_.bytes, 16);
         }
         if (slop > 0) {
             Serial.print(F("Slop Start Address: 0x"));
-            Serial.println(currentAddress, HEX);
+            Serial.println(addr, HEX);
             Serial.print(F("Remaining slop bytes: 0x"));
             Serial.println((patternAddress_.wholeValue_ + patternLength_.wholeValue_) - currentAddress, HEX);
             Serial.print(F("Computed slop bytes: 0x"));
             Serial.println(slop, HEX);
-            thing->write(currentAddress, pattern_.bytes, slop);
+            thing->write(addr, pattern_.bytes, slop);
         }
         return 0;
     } else {
         return -1;
     }
+}
+
+void
+CoreChipsetFeatures::begin() noexcept {
+    Serial.print(F("BASE ADDRESS OF PATTERN: 0x"));
+    Serial.println(static_cast<uint32_t>(Registers::PatternEngine_ActualPattern000) + 0xFE00'0000, HEX);
+    Serial.print(F("BASE ADDRESS OF PATTERN LENGTH: 0x"));
+    Serial.println(static_cast<uint32_t>(Registers::PatternEngine_LengthLower) + 0xFE00'0000, HEX);
+    Serial.print(F("BASE ADDRESS OF PATTERN ADDRESS: 0x"));
+    Serial.println(static_cast<uint32_t>(Registers::PatternEngine_StartAddressLower) + 0xFE00'0000, HEX);
+    Serial.print(F("BASE ADDRESS OF DOORBELL: 0x"));
+    Serial.println(static_cast<uint32_t>(Registers::PatternEngine_Doorbell) + 0xFE00'0000, HEX);
 }

@@ -372,16 +372,17 @@ SDCardFilesystemInterface::readFile() noexcept {
         } else {
             auto times = count / ReadBufferSize;
             auto spillOver = count % ReadBufferSize;
+            Address a = baseAddress;
             for (Address i = 0;
                  i < times;
-                 ++i) {
+                 ++i, a+= ReadBufferSize) {
                 uint32_t actualBytesRead = theFile.read(readBuffer_, ReadBufferSize) ;
-                thing->write(baseAddress, readBuffer_, actualBytesRead);
+                thing->write(a, readBuffer_, actualBytesRead);
                 bytesRead += actualBytesRead;
             }
             if (spillOver > 0) {
                 uint32_t leftOverBytesRead = theFile.read(readBuffer_, spillOver);
-                thing->write(baseAddress, readBuffer_, leftOverBytesRead);
+                thing->write(a, readBuffer_, leftOverBytesRead);
                 result_.words[0] = bytesRead + leftOverBytesRead;
             } else {
                 result_.words[0] = bytesRead;

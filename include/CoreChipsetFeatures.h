@@ -108,6 +108,7 @@ public:
     void setDisplayMemoryReadsAndWrites(bool value) noexcept;
     void setDisplayCacheLineUpdates(bool value) noexcept;
     [[nodiscard]] constexpr bool debuggingActive() const noexcept { return AllowDebuggingStatements; }
+    void begin() noexcept override;
 private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;
