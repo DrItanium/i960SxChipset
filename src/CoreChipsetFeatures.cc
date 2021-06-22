@@ -196,7 +196,6 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
         auto currentAddress = patternAddress_.wholeValue_;
         Address addr = patternAddress_.wholeValue_;
         for (uint32_t i = 0; i < fullCopies; ++i, currentAddress += 16, addr+=16) {
-            Serial.printf(F("Writing 16 bytes to 0x%x\n"), addr);
             thing->write(addr, pattern_.bytes, 16);
         }
         if (slop > 0) {

@@ -61,6 +61,7 @@ public:
         FourByteEntry(ConsoleBufferAddress),
         ConsoleBufferLength, // up to 256 bytes in length
         ConsoleBufferDoorbell, // read from this to do a buffered read, write to this to do a write from memory to console
+        HalfWay = 0x7F,
         SixteenByteEntry(PatternEngine_ActualPattern),
         FourByteEntry(PatternEngine_StartAddress),
         FourByteEntry(PatternEngine_Length),
