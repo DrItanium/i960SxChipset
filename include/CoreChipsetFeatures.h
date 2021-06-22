@@ -171,8 +171,8 @@ private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
     union {
+        uint32_t full = 0;
         uint16_t halves[2];
-        uint32_t full;
     } consoleBufferBaseAddress_;
     uint8_t consoleBufferLength_ = 0;
 };
