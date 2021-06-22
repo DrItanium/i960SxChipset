@@ -121,13 +121,6 @@ public:
      */
     virtual void read(uint32_t baseAddress, byte* buffer, size_t size) noexcept { }
 
-    virtual uint32_t dmaRead(uint32_t baseAddress, byte* buf, uint32_t count) noexcept {
-        return 0;
-    }
-    virtual uint32_t dmaWrite(uint32_t baseAddress, byte* buf, uint32_t count) noexcept {
-        return 0;
-    }
-
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
 private:
     Address base_;

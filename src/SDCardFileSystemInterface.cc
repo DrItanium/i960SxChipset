@@ -370,7 +370,8 @@ SDCardFilesystemInterface::readFile() noexcept {
                 return 0;
             } else if (count > 0 && count <= ReadBufferSize) {
                 bytesRead = theFile.read(readBuffer_, count);
-                result_.words[0] = thing->dmaWrite(baseAddress, readBuffer_, bytesRead);
+                thing->write(baseAddress, readBuffer_, bytesRead);
+                result_.words[0] = bytesRead;
                 return 0;
             } else {
                 auto times = count / ReadBufferSize;
@@ -383,18 +384,17 @@ SDCardFilesystemInterface::readFile() noexcept {
                 Address a = baseAddress;
                 for (Address i = 0;
                      i < times;
-                     ++i) {
+                     ++i, a += ReadBufferSize) {
                     uint32_t actualBytesRead = theFile.read(readBuffer_, ReadBufferSize);
-                    auto dmaBytesWritten = thing->dmaWrite(a, readBuffer_, actualBytesRead);
-                    bytesRead += dmaBytesWritten;
-                    a += dmaBytesWritten;
+                    thing->write(a, readBuffer_, actualBytesRead);
+                    bytesRead += actualBytesRead;
                 }
                 Serial.print(F("SPILL OVER TO 0x"));
                 Serial.println(a, HEX);
                 if (spillOver > 0) {
                     uint32_t leftOverBytesRead = theFile.read(readBuffer_, spillOver);
-                    auto leftOverBytesWritten = thing->dmaWrite(a, readBuffer_, leftOverBytesRead);
-                    result_.words[0] = bytesRead + leftOverBytesWritten;
+                    thing->write(a, readBuffer_, leftOverBytesRead);
+                    result_.words[0] = bytesRead + leftOverBytesRead;
                 } else {
                     result_.words[0] = bytesRead;
                 }

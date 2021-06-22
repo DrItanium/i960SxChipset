@@ -96,6 +96,7 @@ public:
         theFile_.read(buffer, size);
     }
     [[nodiscard]] constexpr auto getFileSize() const noexcept { return fileSize_; }
+
 private:
     File theFile_; // use an SDCard as ram for the time being
     Address maxSize_;
