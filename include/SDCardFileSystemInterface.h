@@ -39,20 +39,7 @@ public:
     static constexpr auto WriteBufferSize = 64;
 public:
     explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
-    void begin() noexcept override {
-#ifdef ADAFRUIT_GRAND_CENTRAL_M4
-        if (!SD.begin(static_cast<int>(i960Pinout::SD_EN),
-                      static_cast<int>(i960Pinout::SD_MOSI),
-                      static_cast<int>(i960Pinout::SD_MISO),
-                      static_cast<int>(i960Pinout::SD_SCK))) {
-            signalHaltState(F("SD CARD INIT FAILED"));
-        }
-#else
-        if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-                signalHaltState(F("SD CARD INIT FAILED"));
-        }
-#endif
-    }
+    void begin() noexcept override;
     enum class Registers : uint16_t {
 #define X(name) name, name ## Upper
 #define Y(name) \
@@ -155,28 +142,8 @@ public:
         }
     }
     static_assert((static_cast<int>(Registers::PathEnd) - static_cast<int>(Registers::Path)) == FixedPathSize, "Path is not of the correct size");
-
-    uint8_t read8(Address address) noexcept override {
-        if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
-            auto offset = address - static_cast<Address>(Registers::Path);
-            return static_cast<uint8_t>(path_[offset]);
-        } else if (inResultArea(reg)) {
-            auto offset = address - static_cast<Address>(Registers::Result);
-            return result_.bytes[offset];
-        }
-        return 0;
-    }
-
-    void write8(Address address, uint8_t value) noexcept override {
-        if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
-            auto offset = address - static_cast<Address>(Registers::Path);
-            path_[offset] = static_cast<char>(value);
-
-        } else if (inResultArea(reg)) {
-            auto offset = address - static_cast<Address>(Registers::Result);
-            result_.bytes[offset] = value;
-        }
-    }
+    uint8_t read8(Address address) noexcept override;
+    void write8(Address address, uint8_t value) noexcept override;
 
     enum class SDCardOperations : uint16_t {
         None = 0,

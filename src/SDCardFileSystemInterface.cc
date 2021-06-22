@@ -380,3 +380,32 @@ SDCardFilesystemInterface::fileFlush() noexcept {
         return 0;
     }
 }
+void
+SDCardFilesystemInterface::begin() noexcept {
+    if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+        signalHaltState(F("SD CARD INIT FAILED"));
+    }
+}
+uint8_t
+SDCardFilesystemInterface::read8(Address address) noexcept {
+    if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
+        auto offset = address - static_cast<Address>(Registers::Path);
+        return static_cast<uint8_t>(path_[offset]);
+    } else if (inResultArea(reg)) {
+        auto offset = address - static_cast<Address>(Registers::Result);
+        return result_.bytes[offset];
+    }
+    return 0;
+}
+
+void
+SDCardFilesystemInterface::write8(Address address, uint8_t value) noexcept {
+    if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
+        auto offset = address - static_cast<Address>(Registers::Path);
+        path_[offset] = static_cast<char>(value);
+
+    } else if (inResultArea(reg)) {
+        auto offset = address - static_cast<Address>(Registers::Result);
+        result_.bytes[offset] = value;
+    }
+}
