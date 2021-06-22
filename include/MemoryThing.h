@@ -112,14 +112,21 @@ public:
      * @param buffer the buffer to write to memory
      * @param size the number of elements to write
      */
-    virtual void write(uint32_t baseAddress, byte* buffer, size_t size) { }
+    virtual void write(uint32_t baseAddress, byte* buffer, size_t size) noexcept { }
     /**
      * @brief Read into a provided buffer from the mapped memory thing, this is used by the DataCache to perform cache replacement
      * @param baseAddress the starting address where data will be read from
      * @param buffer the buffer to store the read operation into
      * @param size the number of bytes to read from the memory thing into the buffer
      */
-    virtual void read(uint32_t baseAddress, byte* buffer, size_t size) { }
+    virtual void read(uint32_t baseAddress, byte* buffer, size_t size) noexcept { }
+
+    virtual uint32_t dmaRead(uint32_t baseAddress, byte* buf, uint32_t count) noexcept {
+        return 0;
+    }
+    virtual uint32_t dmaWrite(uint32_t baseAddress, byte* buf, uint32_t count) noexcept {
+        return 0;
+    }
 
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
 private:

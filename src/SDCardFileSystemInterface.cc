@@ -355,39 +355,51 @@ SDCardFilesystemInterface::readFile() noexcept {
     } else {
         Address baseAddress = address_.wholeValue_;
         Address count = count_.wholeValue_;
-        auto thing = getThing(baseAddress, LoadStoreStyle::Lower8);
-        if (!thing) {
+        Serial.print(F("readFile: [0x"));
+        Serial.print(baseAddress, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(count, HEX);
+        Serial.println(F("]"));
+        if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); !thing) {
             errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
             return -1;
-        }
-        uint32_t bytesRead = 0;
-        if (count == 0) {
-            result_.words[0] = 0;
-            return 0;
-        } else if (count > 0 && count <= ReadBufferSize) {
-            bytesRead = theFile.read(readBuffer_, count);
-            thing->write(baseAddress, readBuffer_, bytesRead);
-            result_.words[0] = bytesRead;
-            return 0;
         } else {
-            auto times = count / ReadBufferSize;
-            auto spillOver = count % ReadBufferSize;
-            Address a = baseAddress;
-            for (Address i = 0;
-                 i < times;
-                 ++i, a+= ReadBufferSize) {
-                uint32_t actualBytesRead = theFile.read(readBuffer_, ReadBufferSize) ;
-                thing->write(a, readBuffer_, actualBytesRead);
-                bytesRead += actualBytesRead;
-            }
-            if (spillOver > 0) {
-                uint32_t leftOverBytesRead = theFile.read(readBuffer_, spillOver);
-                thing->write(a, readBuffer_, leftOverBytesRead);
-                result_.words[0] = bytesRead + leftOverBytesRead;
+            uint32_t bytesRead = 0;
+            if (count == 0) {
+                result_.words[0] = 0;
+                return 0;
+            } else if (count > 0 && count <= ReadBufferSize) {
+                bytesRead = theFile.read(readBuffer_, count);
+                result_.words[0] = thing->dmaWrite(baseAddress, readBuffer_, bytesRead);
+                return 0;
             } else {
-                result_.words[0] = bytesRead;
+                auto times = count / ReadBufferSize;
+                auto spillOver = count % ReadBufferSize;
+                Serial.print(F("[TIMES, SPILLOVER]: [0x"));
+                Serial.print(times, HEX);
+                Serial.print(F(", 0x"));
+                Serial.print(spillOver, HEX);
+                Serial.println(F("]"));
+                Address a = baseAddress;
+                for (Address i = 0;
+                     i < times;
+                     ++i) {
+                    uint32_t actualBytesRead = theFile.read(readBuffer_, ReadBufferSize);
+                    auto dmaBytesWritten = thing->dmaWrite(a, readBuffer_, actualBytesRead);
+                    bytesRead += dmaBytesWritten;
+                    a += dmaBytesWritten;
+                }
+                Serial.print(F("SPILL OVER TO 0x"));
+                Serial.println(a, HEX);
+                if (spillOver > 0) {
+                    uint32_t leftOverBytesRead = theFile.read(readBuffer_, spillOver);
+                    auto leftOverBytesWritten = thing->dmaWrite(a, readBuffer_, leftOverBytesRead);
+                    result_.words[0] = bytesRead + leftOverBytesWritten;
+                } else {
+                    result_.words[0] = bytesRead;
+                }
+                return 0;
             }
-            return 0;
         }
     }
 }

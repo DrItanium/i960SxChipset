@@ -83,7 +83,7 @@ public:
     }
 private:
 public:
-    void write(uint32_t baseAddress, byte* buffer, size_t size) override {
+    void write(uint32_t baseAddress, byte* buffer, size_t size) noexcept override {
         if (permissions_ != FILE_READ) {
             theFile_.seek(baseAddress);
             theFile_.write(buffer, size);
@@ -91,7 +91,7 @@ public:
             theFile_.flush();
         }
     }
-    void read(uint32_t baseAddress, byte *buffer, size_t size) override {
+    void read(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
         theFile_.seek(baseAddress);
         theFile_.read(buffer, size);
     }
