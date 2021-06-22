@@ -188,9 +188,7 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
 
 uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
-    Serial.println(F("PATTERN ENGINE INVOKED!!!"));
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
-        Serial.println(F("PATTERN ENGINE MATCH MADE"));
         auto fullCopies = patternLength_.wholeValue_ / 16;
         auto slop = patternLength_.wholeValue_ % 16;
         auto currentAddress = patternAddress_.wholeValue_;
