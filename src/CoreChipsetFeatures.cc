@@ -195,13 +195,15 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
         for (uint32_t i = 0; i < fullCopies; ++i, currentAddress += 16) {
             thing->write(currentAddress, pattern_.bytes, 16);
         }
-        Serial.print(F("Slop Start Address: 0x"));
-        Serial.println(currentAddress, HEX);
-        Serial.print(F("Remaining slop bytes: 0x"));
-        Serial.println((patternAddress_.wholeValue_ + patternLength_.wholeValue_) - currentAddress, HEX);
-        Serial.print(F("Computed slop bytes: 0x"));
-        Serial.println(slop, HEX);
-        thing->write(currentAddress, pattern_.bytes, slop);
+        if (slop > 0) {
+            Serial.print(F("Slop Start Address: 0x"));
+            Serial.println(currentAddress, HEX);
+            Serial.print(F("Remaining slop bytes: 0x"));
+            Serial.println((patternAddress_.wholeValue_ + patternLength_.wholeValue_) - currentAddress, HEX);
+            Serial.print(F("Computed slop bytes: 0x"));
+            Serial.println(slop, HEX);
+            thing->write(currentAddress, pattern_.bytes, slop);
+        }
         return 0;
     } else {
         return -1;
