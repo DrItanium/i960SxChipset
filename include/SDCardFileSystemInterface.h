@@ -35,6 +35,7 @@ class SDCardFilesystemInterface : public IOSpaceThing {
 public:
     static constexpr uint8_t FixedPathSize = 80;
     static constexpr auto MaxFileCount = TargetBoard::maximumNumberOfOpenFilesFromSDCard();
+    static constexpr auto ReadBufferSize = 32;
 public:
     explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
     void begin() noexcept override {
@@ -510,30 +511,32 @@ private:
                 errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
                 return -1;
             }
-            constexpr auto BufferSize = 32;
-            uint8_t simpleBuffer[BufferSize] = { 0 };
             uint32_t bytesRead = 0;
             if (count == 0) {
                 result_.words[0] = 0;
                 return 0;
-            } else if (count > 0 && count <= BufferSize) {
-                bytesRead = theFile.read(simpleBuffer, count);
-                thing->write(baseAddress, simpleBuffer, bytesRead);
+            } else if (count > 0 && count <= ReadBufferSize) {
+                bytesRead = theFile.read(readBuffer_, count);
+                thing->write(baseAddress, readBuffer_, bytesRead);
                 result_.words[0] = bytesRead;
                 return 0;
             } else {
-                auto times = count / BufferSize;
-                auto spillOver = count % BufferSize;
-                for (Address a = baseAddress, i = 0;
+                auto times = count / ReadBufferSize;
+                auto spillOver = count % ReadBufferSize;
+                for (Address i = 0;
                      i < times;
-                     ++i, a += BufferSize) {
-                    uint32_t actualBytesRead = theFile.read(simpleBuffer, BufferSize) ;
-                    thing->write(baseAddress, simpleBuffer, actualBytesRead);
+                     ++i) {
+                    uint32_t actualBytesRead = theFile.read(readBuffer_, ReadBufferSize) ;
+                    thing->write(baseAddress, readBuffer_, actualBytesRead);
                     bytesRead += actualBytesRead;
                 }
-                uint32_t leftOverBytesRead = theFile.read(simpleBuffer, spillOver);
-                thing->write(baseAddress, simpleBuffer, leftOverBytesRead);
-                result_.words[0]  = bytesRead + leftOverBytesRead;
+                if (spillOver > 0) {
+                    uint32_t leftOverBytesRead = theFile.read(readBuffer_, spillOver);
+                    thing->write(baseAddress, readBuffer_, leftOverBytesRead);
+                    result_.words[0] = bytesRead + leftOverBytesRead;
+                } else {
+                    result_.words[0] = bytesRead;
+                }
                 return 0;
             }
         }
@@ -596,5 +599,6 @@ private:
     volatile uint32_t fixedPadding = 0; // always should be here to make sure an overrun doesn't cause problems
     SplitWord address_;
     SplitWord count_;
+    uint8_t readBuffer_[ReadBufferSize] = { 0 };
 };
 #endif //I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
