@@ -39,21 +39,19 @@ public:
      */
     explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 1) { }
     virtual ~MemoryThing() = default;
-protected:
     virtual size_t blockWrite(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
     virtual size_t blockRead(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
     [[nodiscard]] virtual uint8_t read8(Address address) noexcept { return 0; }
     [[nodiscard]] virtual uint16_t read16(Address address) noexcept { return 0; }
     virtual void write8(Address address, uint8_t value) noexcept { }
     virtual void write16(Address address, uint16_t value) noexcept { }
-public:
     [[nodiscard]] virtual bool respondsTo(Address address) const noexcept { return base_ <= address && address < end_; }
     /**
      * @brief Get the number of bytes from the target address to the end of section
      * @param address the base address to compute the length from
      * @return End address of memory thing minus address
      */
-    [[nodiscard]] constexpr Address lengthFollwingTargetAddress(Address address) const noexcept {
+    [[nodiscard]] virtual Address lengthFollowingTargetAddress(Address address) const noexcept {
         if (address >= end_) {
             return 0;
         } else {
@@ -121,7 +119,7 @@ public:
         auto relativeAddress = makeAddressRelative(baseAddress);
         // compute how many bytes we can actually write within this memory thing in case the buffer spans multiple devices
         size_t count = size;
-        if (auto actualLength = lengthFollwingTargetAddress(baseAddress); size > actualLength) {
+        if (auto actualLength = lengthFollowingTargetAddress(baseAddress); size > actualLength) {
             count = actualLength;
         }
         return blockWrite(relativeAddress, buffer, count);
@@ -137,7 +135,7 @@ public:
         auto relativeAddress = makeAddressRelative(baseAddress);
         // compute how many bytes we can actually write within this memory thing in case the buffer spans multiple devices
         size_t count = size;
-        if (auto actualLength = lengthFollwingTargetAddress(baseAddress); size > actualLength) {
+        if (auto actualLength = lengthFollowingTargetAddress(baseAddress); size > actualLength) {
             count = actualLength;
         }
         return blockRead(relativeAddress, buffer, count);

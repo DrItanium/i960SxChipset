@@ -43,6 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardFileSystemInterface.h"
 #include "OPL2Thing.h"
 #include "CoreChipsetFeatures.h"
+#include "Cache.h"
 #ifdef ADAFRUIT_FEATHER
 #include "FeatherWingPeripherals.h"
 #endif
@@ -65,15 +66,16 @@ CoreChipsetFeatures chipsetFunctions(0);
 
 
 
-class RAMThing : public MemoryMappedFile<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()> {
+class RAMFile : public MemoryMappedFile {
+        //<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>
 public:
     static constexpr Address MaxRamSize = 32 * 0x0100'0000; // 32 Memory Spaces or 512 Megabytes
     static constexpr auto RamMask = MaxRamSize - 1;
     static constexpr Address RamStartingAddress = 0x8000'0000; // start this at 512 megabytes
     static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
-    using Parent = MemoryMappedFile<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>;
-    RAMThing() noexcept : Parent(RamStartingAddress, RamEndingAddress, MaxRamSize, "ram.bin", FILE_WRITE) { }
-    ~RAMThing() override = default;
+    using Parent = MemoryMappedFile;
+    RAMFile() noexcept : Parent(RamStartingAddress, RamEndingAddress, MaxRamSize, "ram.bin", FILE_WRITE) { }
+    ~RAMFile() override = default;
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
         // in this case, we want relative offsets
@@ -86,16 +88,19 @@ public:
         }
     }
 };
+using RAMThing = DataCache<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>;
+using ROMThing = DataCache<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()>;
+using DataROMThing = DataCache<1, 512>;
 
-class ROMThing : public MemoryMappedFile<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()> {
+class ROMTextSection : public MemoryMappedFile {
 public:
     static constexpr Address ROMStart = 0;
     static constexpr Address ROMEnd = 0x2000'0000;
     static constexpr Address ROMMask = ROMEnd - 1;
-    using Parent = MemoryMappedFile<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()>;
+    using Parent = MemoryMappedFile;
 public:
-    ROMThing() noexcept : Parent(ROMStart, ROMEnd, ROMEnd - 1, "boot.rom", FILE_READ){ }
-    ~ROMThing() override = default;
+    ROMTextSection() noexcept : Parent(ROMStart, ROMEnd, ROMEnd - 1, "boot.rom", FILE_READ){ }
+    ~ROMTextSection() override = default;
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
         return input & ROMMask;
@@ -105,11 +110,10 @@ public:
         return address < Parent::getFileSize();
     }
     using MemoryThing::respondsTo;
-
 };
 
 /// @todo add support for the boot data section that needs to be copied into ram by the i960 on bootup
-class DataROMThing : public MemoryMappedFile<1, 512> {
+class ROMDataSection : public MemoryMappedFile {
 public:
     // two clusters are held onto at a time
     static constexpr uint32_t numCacheLines = 1;
@@ -117,10 +121,10 @@ public:
     static constexpr Address ROMStart = 0x2000'0000;
     static constexpr Address ROMEnd = 0x8000'0000;
     static constexpr Address DataSizeMax = ROMEnd - ROMStart;
-    using Parent = MemoryMappedFile<1, 512>;
+    using Parent = MemoryMappedFile;
 public:
-    DataROMThing() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
-    ~DataROMThing() override = default;
+    ROMDataSection() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
+    ~ROMDataSection() override = default;
 };
 
 
@@ -450,9 +454,12 @@ using DisplayThing = TFTShieldThing;
 using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
 #endif
 DisplayThing displayCommandSet(0x200);
-RAMThing ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
-ROMThing rom; // 4k rom sections
-DataROMThing dataRom;
+RAMFile ramSection; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+ROMTextSection textSection;
+ROMDataSection dataSection;
+ROMThing rom(textSection);
+RAMThing ram(ramSection);
+DataROMThing dataRom(dataSection);
 
 SDCardFilesystemInterface fs(0x300);
 #ifdef ADAFRUIT_FEATHER

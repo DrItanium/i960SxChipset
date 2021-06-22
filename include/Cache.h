@@ -119,7 +119,6 @@ public:
             byte *buf = reinterpret_cast<byte *>(components_);
             thing.write(address_, buf, CacheLineSize);
             // purge the contents of memory
-            components_ = { 0 };
         }
         dirty_ = false;
         valid_ = false;
@@ -267,16 +266,17 @@ public:
         // cache the first entry
         (void)getByte(0);
     }
-    void write(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
+    size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
+        //return MemoryThing::blockWrite(address, buf, capacity);
         /// @todo perform cache snooping when this is called, we want to commit all cache entries we can and then call the underlying thing's write method
         // for now just invalidate the entire cache each time
         invalidateEntireCache();
-        thing_.write(makeAddressRelative(baseAddress), buffer, size);
+        return thing_.blockWrite(address, buf, capacity);
     }
-    void read(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
+    size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // we want to directly read from the underlying memory thing using the buffer so we need to do cache coherency checks as well
         invalidateEntireCache();
-        thing_.read(makeAddressRelative(baseAddress), buffer, size);
+        return thing_.blockRead(address, buf, capacity);
     }
     [[nodiscard]] const MemoryThing& getBackingStore() const noexcept { return thing_; }
     [[nodiscard]] MemoryThing& getBackingStore() noexcept { return thing_; }

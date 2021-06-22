@@ -97,6 +97,7 @@ protected:
             theFile_.flush();
             return result;
         }
+        return 0;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // at this point the methods that call this will have fixed up the addresses and sizes to prevent spanning across this file
@@ -112,4 +113,5 @@ private:
     decltype(FILE_WRITE) permissions_;
     Address fileSize_;
 };
+
 #endif //I960SXCHIPSET_MEMORYMAPPEDFILETHING_H
