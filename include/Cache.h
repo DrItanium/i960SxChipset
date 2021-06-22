@@ -222,24 +222,31 @@ private:
      * @return The line that was updated
      */
     ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
-        auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
-        // use random number generation to do this
-        for (ASingleCacheLine& line : lines_) {
-            if (!line.isValid()) {
-                line.reset(alignedAddress, thing_);
-                return line;
+        if (auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress); cacheEmpty_) {
+            cacheEmpty_ = false;
+            // use random number generation to do this
+            // just use the first entry since the cache is completely empty
+            lines_[0].reset(alignedAddress, thing_);
+            return lines_[0];
+        } else {
+            for (ASingleCacheLine &line : lines_) {
+                if (!line.isValid()) {
+                    line.reset(alignedAddress, thing_);
+                    return line;
+                }
             }
+            // we had no free elements so choose one to replace
+            auto targetCacheLine = rand() & NumberOfCacheLinesMask;
+            ASingleCacheLine &replacementLine = lines_[targetCacheLine];
+            // generate an aligned address
+            replacementLine.reset(alignedAddress, thing_);
+            return replacementLine;
         }
-        // we had no free elements so choose one to replace
-        auto targetCacheLine = rand() & NumberOfCacheLinesMask;
-        ASingleCacheLine& replacementLine = lines_[targetCacheLine];
-        // generate an aligned address
-        replacementLine.reset(alignedAddress, thing_);
-        return replacementLine;
     }
 private:
     MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
+    bool cacheEmpty_ = true;
 public:
     uint8_t read8(Address address) noexcept override {
         return getByte(address);
@@ -270,7 +277,7 @@ public:
         //return MemoryThing::blockWrite(address, buf, capacity);
         /// @todo perform cache snooping when this is called, we want to commit all cache entries we can and then call the underlying thing's write method
         // for now just invalidate the entire cache each time
-        invalidateEntireCache();
+        invalidateEntireCache(); // this is way to slow, we need to find out which
         return thing_.blockWrite(address, buf, capacity);
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
@@ -285,11 +292,12 @@ private:
      * @brief Commit all entries in the cache back to the underlying memory type
      */
     void invalidateEntireCache() noexcept {
-        Serial.println(F("Invalidating the entire cache..."));
-        for (auto& line : lines_) {
-            line.invalidate(thing_);
+        if (!cacheEmpty_) {
+            for (auto &line : lines_) {
+                line.invalidate(thing_);
+            }
+            cacheEmpty_ = true;
         }
-        Serial.println(F("Entire Cache invalidated..."));
     }
 };
 #endif //I960SXCHIPSET_CACHE_H
