@@ -71,8 +71,6 @@ CoreChipsetFeatures::writeToStream(Stream& aStream, Address baseAddress, uint8_t
 }
 uint8_t
 CoreChipsetFeatures::read8(Address address) noexcept {
-    Serial.print(F("READ8 0x"));
-    Serial.println(address, HEX);
     switch (static_cast<Registers>(address)) {
         case Registers::Led:
             return readLed();
@@ -98,8 +96,6 @@ CoreChipsetFeatures::read8(Address address) noexcept {
 }
 uint16_t
 CoreChipsetFeatures::read16(Address address) noexcept {
-    Serial.print(F("READ16 0x"));
-    Serial.println(address, HEX);
     switch (static_cast<Registers>(address)) {
         case Registers::ConsoleIO: return Serial.read();
         case Registers::ConsoleAvailable: return Serial.available();
@@ -124,10 +120,6 @@ CoreChipsetFeatures::read16(Address address) noexcept {
 }
 void
 CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
-    Serial.print(F("WRITE16 0x"));
-    Serial.print(value, HEX);
-    Serial.print(F(" TO 0x"));
-    Serial.println(address, HEX);
     switch (static_cast<Registers>(address)) {
         case Registers::ConsoleFlush:
             Serial.flush();
@@ -161,10 +153,6 @@ CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
 
 void
 CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
-    Serial.print(F("WRITE8 0x"));
-    Serial.print(value, HEX);
-    Serial.print(F(" TO 0x"));
-    Serial.println(address, HEX);
     switch (static_cast<Registers>(address)) {
         case Registers::Led:
             writeLed(value);
@@ -218,14 +206,16 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
 
 void
 CoreChipsetFeatures::begin() noexcept {
-    Serial.print(F("ADDRESS OF LED: 0x"));
-    Serial.println(static_cast<uint32_t>(Registers::Led) + 0xFE00'0000, HEX);
-    Serial.print(F("BASE ADDRESS OF PATTERN: 0x"));
-    Serial.println(static_cast<uint32_t>(Registers::PatternEngine_ActualPattern000) + 0xFE00'0000, HEX);
-    Serial.print(F("BASE ADDRESS OF PATTERN LENGTH: 0x"));
-    Serial.println(static_cast<uint32_t>(Registers::PatternEngine_LengthLower) + 0xFE00'0000, HEX);
-    Serial.print(F("BASE ADDRESS OF PATTERN ADDRESS: 0x"));
-    Serial.println(static_cast<uint32_t>(Registers::PatternEngine_StartAddressLower) + 0xFE00'0000, HEX);
-    Serial.print(F("BASE ADDRESS OF DOORBELL: 0x"));
-    Serial.println(static_cast<uint32_t>(Registers::PatternEngine_Doorbell) + 0xFE00'0000, HEX);
+    if constexpr (false) {
+        Serial.print(F("ADDRESS OF LED: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::Led) + 0xFE00'0000, HEX);
+        Serial.print(F("BASE ADDRESS OF PATTERN: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::PatternEngine_ActualPattern000) + 0xFE00'0000, HEX);
+        Serial.print(F("BASE ADDRESS OF PATTERN LENGTH: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::PatternEngine_LengthLower) + 0xFE00'0000, HEX);
+        Serial.print(F("BASE ADDRESS OF PATTERN ADDRESS: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::PatternEngine_StartAddressLower) + 0xFE00'0000, HEX);
+        Serial.print(F("BASE ADDRESS OF DOORBELL: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::PatternEngine_Doorbell) + 0xFE00'0000, HEX);
+    }
 }
