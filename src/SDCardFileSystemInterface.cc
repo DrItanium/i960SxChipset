@@ -366,3 +366,17 @@ SDCardFilesystemInterface::readFile() noexcept {
         }
     }
 }
+uint16_t
+SDCardFilesystemInterface::fileFlush() noexcept {
+    if (fileId_ >= MaxFileCount) {
+        // bad file id!
+        errorCode_ = ErrorCodes::BadFileId;
+        return -1;
+    } else if (auto& theFile = files_[fileId_]; !theFile) {
+        errorCode_ = ErrorCodes::FileIsNotValid;
+        return -1;
+    } else {
+        theFile.flush();
+        return 0;
+    }
+}
