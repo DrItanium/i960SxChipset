@@ -35,8 +35,8 @@ class SDCardFilesystemInterface : public IOSpaceThing {
 public:
     static constexpr uint8_t FixedPathSize = 80;
     static constexpr auto MaxFileCount = TargetBoard::maximumNumberOfOpenFilesFromSDCard();
-    static constexpr auto ReadBufferSize = 64;
-    static constexpr auto WriteBufferSize = 64;
+    static constexpr auto ReadBufferSize = 128;
+    static constexpr auto WriteBufferSize = 128;
 public:
     explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
     void begin() noexcept override;
@@ -224,7 +224,7 @@ private:
     SplitWord flags_;
     bool openReadWrite_ = false;
     union {
-        uint8_t bytes[16];
+        uint8_t bytes[16] = { 0 };
         uint16_t shorts[16/sizeof(uint16_t)];
         uint32_t words[16/sizeof(uint32_t)];
         uint64_t quads[16/sizeof(uint64_t)];
