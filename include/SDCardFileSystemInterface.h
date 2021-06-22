@@ -35,7 +35,8 @@ class SDCardFilesystemInterface : public IOSpaceThing {
 public:
     static constexpr uint8_t FixedPathSize = 80;
     static constexpr auto MaxFileCount = TargetBoard::maximumNumberOfOpenFilesFromSDCard();
-    static constexpr auto ReadBufferSize = 32;
+    static constexpr auto ReadBufferSize = 64;
+    static constexpr auto WriteBufferSize = 64;
 public:
     explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
     void begin() noexcept override {
@@ -600,5 +601,6 @@ private:
     SplitWord address_;
     SplitWord count_;
     uint8_t readBuffer_[ReadBufferSize] = { 0 };
+    uint8_t writeBuffer_[WriteBufferSize] = { 0 };
 };
 #endif //I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
