@@ -188,6 +188,22 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
 
 uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
-    /// @todo implement this
-    return 0;
+    if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
+        auto fullCopies = patternLength_.wholeValue_ / 16;
+        auto slop = patternLength_.wholeValue_ % 16;
+        auto currentAddress = patternAddress_.wholeValue_;
+        for (uint32_t i = 0; i < fullCopies; ++i, currentAddress += 16) {
+            thing->write(currentAddress, pattern_.bytes, 16);
+        }
+        Serial.print(F("Slop Start Address: 0x"));
+        Serial.println(currentAddress, HEX);
+        Serial.print(F("Remaining slop bytes: 0x"));
+        Serial.println((patternAddress_.wholeValue_ + patternLength_.wholeValue_) - currentAddress, HEX);
+        Serial.print(F("Computed slop bytes: 0x"));
+        Serial.println(slop, HEX);
+        thing->write(currentAddress, pattern_.bytes, slop);
+        return 0;
+    } else {
+        return -1;
+    }
 }

@@ -111,7 +111,7 @@ public:
 private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;
-    uint16_t invokePatternEngine() noexcept;
+    [[nodiscard]] uint16_t invokePatternEngine() noexcept;
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
