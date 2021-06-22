@@ -55,9 +55,6 @@ public:
         TwoByteEntry(ConsoleAvailable),
         TwoByteEntry(ConsoleAvailableForWrite),
         TwoByteEntry(ConsoleIO),
-        FourByteEntry(ConsoleBufferAddress),
-        ConsoleBufferLength, // up to 256 bytes in length
-        ConsoleBufferDoorbell, // read from this to do a buffered read, write to this to do a write from memory to console
         Led, // one byte
         DisplayMemoryReadsAndWrites,
         DisplayCacheLineUpdates,
@@ -75,8 +72,6 @@ public:
         ConsoleAvailable = ConsoleAvailable0,
         ConsoleAvailableForWrite = ConsoleAvailableForWrite0,
         ConsoleIO = ConsoleIO0,
-        ConsoleBufferAddressLower = ConsoleBufferAddress00,
-        ConsoleBufferAddressUpper = ConsoleBufferAddress10,
         PatternEngine_ActualPattern000 = PatternEngine_ActualPattern0000,
         PatternEngine_ActualPattern001 = PatternEngine_ActualPattern0010,
         PatternEngine_ActualPattern010 = PatternEngine_ActualPattern0100,
@@ -95,9 +90,6 @@ public:
     static_assert(static_cast<int>(Registers::End) < 0x100);
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
     ~CoreChipsetFeatures() override = default;
-private:
-    uint8_t readFromStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept;
-    uint8_t writeToStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept;
 public:
     [[nodiscard]] uint8_t read8(Address address) noexcept override;
     [[nodiscard]] uint16_t read16(Address address) noexcept override;
@@ -116,9 +108,6 @@ private:
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
-    SplitWord32 consoleBufferBaseAddress_;
-    uint8_t consoleBufferLength_ = 0;
-    uint8_t buffer_[256] = { 0 };
     SplitWord128 pattern_;
     SplitWord32 patternLength_;
     SplitWord32 patternAddress_;

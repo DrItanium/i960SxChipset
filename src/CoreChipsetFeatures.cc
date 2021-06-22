@@ -48,26 +48,6 @@ CoreChipsetFeatures::setDisplayCacheLineUpdates(bool value) noexcept {
     }
 }
 CoreChipsetFeatures::CoreChipsetFeatures(Address offsetFromIOBase) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) {
-    consoleBufferBaseAddress_.wholeValue_ = 0;
-}
-uint8_t
-CoreChipsetFeatures::readFromStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept {
-    uint8_t count = 0;
-    if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); thing) {
-        // force the i960sx to wait
-        count = aStream.readBytes(buffer_, length);
-        thing->write(thing->makeAddressRelative(baseAddress), buffer_, length);
-    }
-    return count;
-}
-uint8_t
-CoreChipsetFeatures::writeToStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept {
-    uint8_t count = 0;
-    if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); thing) {
-        thing->read(thing->makeAddressRelative(baseAddress), buffer_, length);
-        count = aStream.write(buffer_, length);
-    }
-    return count;
 }
 uint8_t
 CoreChipsetFeatures::read8(Address address) noexcept {
@@ -86,10 +66,6 @@ CoreChipsetFeatures::read8(Address address) noexcept {
             return ProcessorInterface::getInterface().getPortZPolarityRegister();
         case Registers::PortZGPIOPullup:
             return ProcessorInterface::getInterface().getPortZPullupResistorRegister();
-        case Registers::ConsoleBufferLength:
-            return consoleBufferLength_;
-        case Registers::ConsoleBufferDoorbell:
-            return readFromStream(Serial, consoleBufferBaseAddress_.wholeValue_, consoleBufferLength_);
         default:
             return 0;
     }
@@ -100,8 +76,6 @@ CoreChipsetFeatures::read16(Address address) noexcept {
         case Registers::ConsoleIO: return Serial.read();
         case Registers::ConsoleAvailable: return Serial.available();
         case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
-        case Registers::ConsoleBufferAddressLower: return consoleBufferBaseAddress_.halves[0];
-        case Registers::ConsoleBufferAddressUpper: return consoleBufferBaseAddress_.halves[1];
         case Registers::PatternEngine_ActualPattern000: return pattern_.shorts[0];
         case Registers::PatternEngine_ActualPattern001: return pattern_.shorts[1];
         case Registers::PatternEngine_ActualPattern010: return pattern_.shorts[2];
@@ -126,12 +100,6 @@ CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
             break;
         case Registers::ConsoleIO:
             Serial.write(static_cast<char>(value));
-            break;
-        case Registers::ConsoleBufferAddressLower:
-            consoleBufferBaseAddress_.halves[0] = value;
-            break;
-        case Registers::ConsoleBufferAddressUpper:
-            consoleBufferBaseAddress_.halves[1] = value;
             break;
         case Registers::PatternEngine_ActualPattern000: pattern_.shorts[0] = value; break;
         case Registers::PatternEngine_ActualPattern001: pattern_.shorts[1] = value; break;
@@ -174,12 +142,6 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
             break;
         case Registers::PortZGPIODirection:
             ProcessorInterface::getInterface().setPortZDirectionRegister(value);
-            break;
-        case Registers::ConsoleBufferLength:
-            consoleBufferLength_ = value;
-            break;
-        case Registers::ConsoleBufferDoorbell:
-            (void)writeToStream(Serial, consoleBufferBaseAddress_.wholeValue_, consoleBufferLength_);
             break;
         default:
             break;
