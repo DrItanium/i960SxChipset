@@ -247,21 +247,38 @@ private:
     MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
     bool cacheEmpty_ = true;
+    bool enabled_ = true;
 public:
     uint8_t read8(Address address) noexcept override {
-        return getByte(address);
+        if (enabled_) {
+            return getByte(address);
+        } else {
+            return thing_.read8(address);
+        }
     }
     uint16_t read16(Address address) noexcept override {
-        return getWord(address);
+        if (enabled_) {
+            return getWord(address);
+        } else {
+            return thing_.read16(address);
+        }
     }
     [[nodiscard]] bool respondsTo(Address address) const noexcept override {
         return thing_.respondsTo(address);
     }
     void write8(Address address, uint8_t value) noexcept override {
-        setByte(address, value);
+        if (enabled_) {
+            setByte(address, value);
+        } else {
+            thing_.write8(address, value);
+        }
     }
     void write16(Address address, uint16_t value) noexcept override {
-        setWord(address, value);
+        if (enabled_) {
+            setWord(address, value);
+        } else {
+            thing_.write16(address, value);
+        }
     }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
@@ -277,16 +294,31 @@ public:
         //return MemoryThing::blockWrite(address, buf, capacity);
         /// @todo perform cache snooping when this is called, we want to commit all cache entries we can and then call the underlying thing's write method
         // for now just invalidate the entire cache each time
-        invalidateEntireCache(); // this is way to slow, we need to find out which
+        if (enabled_) {
+            invalidateEntireCache(); // this is way to slow, we need to find out which
+        }
         return thing_.blockWrite(address, buf, capacity);
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // we want to directly read from the underlying memory thing using the buffer so we need to do cache coherency checks as well
-        invalidateEntireCache();
+        if (enabled_) {
+            invalidateEntireCache();
+        }
         return thing_.blockRead(address, buf, capacity);
     }
     [[nodiscard]] const MemoryThing& getBackingStore() const noexcept { return thing_; }
     [[nodiscard]] MemoryThing& getBackingStore() noexcept { return thing_; }
+    void disableCache() noexcept override {
+        if (enabled_) {
+            enabled_ = false;
+            invalidateEntireCache();
+        }
+    }
+    void enableCache() noexcept override {
+        if (!enabled_) {
+            enabled_ = true;
+        }
+    }
 private:
     /**
      * @brief Commit all entries in the cache back to the underlying memory type
