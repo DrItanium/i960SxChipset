@@ -197,15 +197,7 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
             thing->write(addr, pattern_.bytes, 16);
         }
         if (slop > 0) {
-            Serial.print(F("Slop Start Address: 0x"));
-            Serial.println(addr, HEX);
-            Serial.print(F("Remaining slop bytes: 0x"));
-            Serial.println((patternAddress_.wholeValue_ + patternLength_.wholeValue_) - currentAddress, HEX);
-            Serial.print(F("Computed slop bytes: 0x"));
-            Serial.println(slop, HEX);
             thing->write(addr, pattern_.bytes, slop);
-        } else {
-            Serial.println(F("NO SLOP!"));
         }
         return 0;
     } else {
