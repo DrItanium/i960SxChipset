@@ -51,13 +51,6 @@ public:
         FourByteEntry(PatternEngine_StartAddress),
         FourByteEntry(PatternEngine_Length),
         TwoByteEntry(PatternEngine_Doorbell),
-        Led, // one byte
-        DisplayMemoryReadsAndWrites,
-        DisplayCacheLineUpdates,
-        PortZGPIO, // one byte wide
-        PortZGPIODirection, // one byte wide
-        PortZGPIOPolarity,
-        PortZGPIOPullup,
         TwoByteEntry(ConsoleFlush),
         TwoByteEntry(ConsoleAvailable),
         TwoByteEntry(ConsoleAvailableForWrite),
@@ -65,6 +58,13 @@ public:
         FourByteEntry(ConsoleBufferAddress),
         ConsoleBufferLength, // up to 256 bytes in length
         ConsoleBufferDoorbell, // read from this to do a buffered read, write to this to do a write from memory to console
+        Led, // one byte
+        DisplayMemoryReadsAndWrites,
+        DisplayCacheLineUpdates,
+        PortZGPIO, // one byte wide
+        PortZGPIODirection, // one byte wide
+        PortZGPIOPolarity,
+        PortZGPIOPullup,
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
