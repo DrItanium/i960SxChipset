@@ -127,7 +127,7 @@ private:
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
-class DataCache {
+class DataCache : public MemoryThing {
 public:
     using ASingleCacheLine = CacheLine<cacheLineSize>;
     static constexpr auto NumberOfCacheLines = numLines;
@@ -153,13 +153,12 @@ public:
     }
     static_assert(DataCacheSize <= TargetBoard::oneFourthSRAMAmountInBytes(), "Overall cache size must be less than or equal to one fourth of SRAM");
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
-    explicit DataCache(MemoryThing* backingStore) : thing_(backingStore) { }
+    explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
         for (const ASingleCacheLine & line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
                 return line.getByte(targetAddress);
-
             }
         }
         // cache miss
@@ -225,7 +224,40 @@ private:
         return replacementLine;
     }
 private:
-    MemoryThing* thing_ = nullptr;
+    MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
+public:
+    uint8_t read8(Address address) noexcept override {
+        return getByte(address);
+    }
+    uint16_t read16(Address address) noexcept override {
+        return getWord(address);
+    }
+    [[nodiscard]] bool respondsTo(Address address) const noexcept override {
+        return thing_.respondsTo(address);
+    }
+    void write8(Address address, uint8_t value) noexcept override {
+        setByte(address, value);
+    }
+    void write16(Address address, uint16_t value) noexcept override {
+        setWord(address, value);
+    }
+    [[nodiscard]] Address
+    makeAddressRelative(Address input) const noexcept override {
+        return thing_.makeAddressRelative(input);
+    }
+
+    void begin() noexcept override {
+        thing_.begin();
+    }
+    void write(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
+        /// @todo perform cache snooping when this is called
+        MemoryThing::write(baseAddress, buffer, size);
+    }
+    void read(uint32_t baseAddress, byte *buffer, size_t size) noexcept override {
+        MemoryThing::read(baseAddress, buffer, size);
+    }
+    [[nodiscard]] const MemoryThing& getBackingStore() const noexcept { return thing_; }
+    [[nodiscard]] MemoryThing& getBackingStore() noexcept { return thing_; }
 };
 #endif //I960SXCHIPSET_CACHE_H

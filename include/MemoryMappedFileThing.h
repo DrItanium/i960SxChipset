@@ -34,31 +34,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Cache.h"
 #include <SdFat.h>
 extern SdFat SD;
-template<uint32_t numCacheLines = 8, uint32_t cacheLineSize = 512>
+
 class MemoryMappedFile : public MemoryThing {
 public:
-    static constexpr auto CacheLineCount = numCacheLines < 1 ? 1 : numCacheLines;
-    static constexpr auto CacheLineSize = cacheLineSize < 16 ? 16 : cacheLineSize;
-    MemoryMappedFile(Address startingAddress, Address endingAddress, Address maximumSize, const char* path, decltype(FILE_WRITE) permissions) noexcept : MemoryThing(startingAddress, endingAddress), maxSize_(maximumSize), theCache_(this), path_(path), permissions_(permissions) { }
+    MemoryMappedFile(Address startingAddress, Address endingAddress, Address maximumSize, const char* path, decltype(FILE_WRITE) permissions) noexcept : MemoryThing(startingAddress, endingAddress), maxSize_(maximumSize), path_(path), permissions_(permissions) { }
     ~MemoryMappedFile() override {
         // while this will never get called, it is still a good idea to be complete
         theFile_.close();
     }
     [[nodiscard]] uint8_t
     read8(Address offset) noexcept override {
-            return theCache_.getByte(offset);
+        theFile_.seekSet(offset);
+        return static_cast<uint8_t>(theFile_.read());
     }
     void
     write8(Address offset, uint8_t value) noexcept override {
-            theCache_.setByte(offset, value);
+        if (permissions_ != FILE_READ) {
+            theFile_.seekSet(offset);
+            theFile_.write(value);
+        }
     }
     [[nodiscard]] uint16_t
     read16(Address offset) noexcept override {
-            return theCache_.getWord(offset);
+        theFile_.seekSet(offset);
+        uint16_t value = 0;
+        theFile_.read(reinterpret_cast<char*>(&value), sizeof(value));
+        return value;
     }
     void
     write16(Address offset, uint16_t value) noexcept override {
-            theCache_.setWord(offset, value);
+        if (permissions_ != FILE_READ) {
+            theFile_.seekSet(offset);
+            theFile_.write(reinterpret_cast<char *>(&value), sizeof(value));
+        }
     }
 public:
     void
@@ -79,7 +87,7 @@ public:
             }
             Serial.print(path_);
             Serial.println(F(" OPEN SUCCESS!"));
-            (void)theCache_.getByte(0); // cache something into memory on startup to improve performance
+            //(void)theCache_.getByte(0); // cache something into memory on startup to improve performance
     }
 private:
 public:
@@ -100,7 +108,7 @@ public:
 private:
     File theFile_; // use an SDCard as ram for the time being
     Address maxSize_;
-    DataCache<CacheLineCount, CacheLineSize> theCache_;
+    //DataCache<CacheLineCount, CacheLineSize> theCache_;
     const char* path_;
     decltype(FILE_WRITE) permissions_;
     Address fileSize_;
