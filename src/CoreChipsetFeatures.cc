@@ -189,6 +189,7 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
 uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
+        TemporarilyDisableThingCache cacheOff(thing);
         auto fullCopies = patternLength_.wholeValue_ / 16;
         auto slop = patternLength_.wholeValue_ % 16;
         Address addr = patternAddress_.wholeValue_;
