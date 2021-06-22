@@ -204,6 +204,8 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
             Serial.print(F("Computed slop bytes: 0x"));
             Serial.println(slop, HEX);
             thing->write(addr, pattern_.bytes, slop);
+        } else {
+            Serial.println(F("NO SLOP!"));
         }
         return 0;
     } else {
