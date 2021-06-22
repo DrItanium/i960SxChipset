@@ -48,7 +48,7 @@ CoreChipsetFeatures::setDisplayCacheLineUpdates(bool value) noexcept {
     }
 }
 CoreChipsetFeatures::CoreChipsetFeatures(Address offsetFromIOBase) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) {
-    consoleBufferBaseAddress_.full = 0;
+    consoleBufferBaseAddress_.wholeValue_ = 0;
 }
 uint8_t
 CoreChipsetFeatures::readFromStream(Stream& aStream, Address baseAddress, uint8_t length) noexcept {
@@ -89,7 +89,7 @@ CoreChipsetFeatures::read8(Address address) noexcept {
         case Registers::ConsoleBufferLength:
             return consoleBufferLength_;
         case Registers::ConsoleBufferDoorbell:
-            return readFromStream(Serial, consoleBufferBaseAddress_.full, consoleBufferLength_);
+            return readFromStream(Serial, consoleBufferBaseAddress_.wholeValue_, consoleBufferLength_);
         default:
             return 0;
     }
@@ -153,7 +153,7 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
             consoleBufferLength_ = value;
             break;
         case Registers::ConsoleBufferDoorbell:
-            (void)writeToStream(Serial, consoleBufferBaseAddress_.full, consoleBufferLength_);
+            (void)writeToStream(Serial, consoleBufferBaseAddress_.wholeValue_, consoleBufferLength_);
             break;
         default:
             break;

@@ -203,4 +203,12 @@ public:
 static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been defined, please define to continue");
 static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16kb of sram is not allowed!");
 
+/**
+ * @brief The backing design of the registers within the chipset that are 32-bits in width
+ */
+union SplitWord32 {
+    uint32_t wholeValue_ = 0;
+    int32_t signedWholeValue;
+    uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+};
 #endif //I960SXCHIPSET_MCUPLATFORM_H

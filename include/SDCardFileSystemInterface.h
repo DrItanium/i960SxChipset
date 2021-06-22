@@ -208,20 +208,15 @@ private:
     uint16_t seekFile() noexcept;
     uint16_t fileFlush() noexcept;
 private:
-    union SplitWord {
-        uint32_t wholeValue_ = 0;
-        int32_t signedWholeValue;
-        uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
-    };
     uint16_t openedFileCount_ = 0;
     File files_[MaxFileCount];
     uint32_t permissions_[MaxFileCount] = { 0 };
     SDCardOperations command_ = SDCardOperations::None;
     uint16_t fileId_ = 0;
     uint16_t modeBits_ = 0;
-    SplitWord seekPositionInfo_;
+    SplitWord32 seekPositionInfo_;
     uint16_t whence_ = 0;
-    SplitWord flags_;
+    SplitWord32 flags_;
     bool openReadWrite_ = false;
     union {
         uint8_t bytes[16] = { 0 };
@@ -232,8 +227,8 @@ private:
     ErrorCodes errorCode_ = ErrorCodes::None;
     char path_[FixedPathSize] = { 0 };
     volatile uint32_t fixedPadding = 0; // always should be here to make sure an overrun doesn't cause problems
-    SplitWord address_;
-    SplitWord count_;
+    SplitWord32 address_;
+    SplitWord32 count_;
     uint8_t readBuffer_[ReadBufferSize] = { 0 };
     uint8_t writeBuffer_[WriteBufferSize] = { 0 };
 };

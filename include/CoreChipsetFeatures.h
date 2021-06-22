@@ -114,11 +114,10 @@ private:
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
-    union {
-        uint32_t full = 0;
-        uint16_t halves[2];
-    } consoleBufferBaseAddress_;
+    SplitWord32 consoleBufferBaseAddress_;
     uint8_t consoleBufferLength_ = 0;
     uint8_t buffer_[256] = { 0 };
+    uint16_t pattern_[16 / sizeof(uint16_t)] = { 0 };
+
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
