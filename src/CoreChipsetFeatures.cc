@@ -165,13 +165,12 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
 uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
-        TemporarilyDisableThingCache cacheOff(thing);
+        /// @todo unsure if disabling the cache on the write engine makes sense or not
+        //TemporarilyDisableThingCache cacheOff(thing);
         auto fullCopies = patternLength_.wholeValue_ / 16;
         auto slop = patternLength_.wholeValue_ % 16;
         Address addr = patternAddress_.wholeValue_;
         for (uint32_t i = 0; i < fullCopies; ++i, addr+=16) {
-            Serial.print(F("PATTERN INSTALL TO 0x"));
-            Serial.println(addr, HEX);
             thing->write(addr, pattern_.bytes, 16);
         }
         if (slop > 0) {
