@@ -51,6 +51,11 @@ public:
         FourByteEntry(PatternEngine_StartAddress),
         FourByteEntry(PatternEngine_Length),
         TwoByteEntry(PatternEngine_Doorbell),
+        // dma transfer engine
+        FourByteEntry(CopyEngine_SourceAddress),
+        FourByteEntry(CopyEngine_DestinationAddress),
+        FourByteEntry(CopyEngine_Length),
+        TwoByteEntry(CopyEngine_Doorbell),
         TwoByteEntry(ConsoleFlush),
         TwoByteEntry(ConsoleAvailable),
         TwoByteEntry(ConsoleAvailableForWrite),
@@ -86,6 +91,13 @@ public:
         PatternEngine_LengthLower = PatternEngine_Length00,
         PatternEngine_LengthUpper = PatternEngine_Length10,
         PatternEngine_Doorbell = PatternEngine_Doorbell0,
+        CopyEngine_SourceAddressLower = CopyEngine_SourceAddress00,
+        CopyEngine_SourceAddressUpper = CopyEngine_SourceAddress10,
+        CopyEngine_LengthLower = CopyEngine_Length00,
+        CopyEngine_LengthUpper = CopyEngine_Length10,
+        CopyEngine_DestinationAddressLower = CopyEngine_DestinationAddress00,
+        CopyEngine_DestinationAddressUpper = CopyEngine_DestinationAddress10,
+        CopyEngine_Doorbell = CopyEngine_Doorbell0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
@@ -105,11 +117,17 @@ private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;
     [[nodiscard]] uint16_t invokePatternEngine() noexcept;
+    [[nodiscard]] uint16_t invokeCopyEngine() noexcept;
+    static constexpr auto CopyEngineCacheSize = 16;
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
     SplitWord128 pattern_;
     SplitWord32 patternLength_;
     SplitWord32 patternAddress_;
+    SplitWord32 copyEngineSourceAddress_;
+    SplitWord32 copyEngineDestinationAddress_;
+    SplitWord32 copyEngineLength_;
+    uint8_t copyEngineBuffer_[CopyEngineCacheSize] = { 0 };
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

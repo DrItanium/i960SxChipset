@@ -89,6 +89,13 @@ CoreChipsetFeatures::read16(Address address) noexcept {
         case Registers::PatternEngine_StartAddressLower: return patternAddress_.halves[0]; break;
         case Registers::PatternEngine_StartAddressUpper: return patternAddress_.halves[1]; break;
         case Registers::PatternEngine_Doorbell: return invokePatternEngine();
+        case Registers::CopyEngine_DestinationAddressLower: return copyEngineDestinationAddress_.halves[0]; break;
+        case Registers::CopyEngine_DestinationAddressUpper: return copyEngineDestinationAddress_.halves[1] ; break;
+        case Registers::CopyEngine_SourceAddressLower: return copyEngineSourceAddress_.halves[0] ; break;
+        case Registers::CopyEngine_SourceAddressUpper: return copyEngineSourceAddress_.halves[1] ; break;
+        case Registers::CopyEngine_LengthLower: return copyEngineLength_.halves[0] ; break;
+        case Registers::CopyEngine_LengthUpper: return copyEngineLength_.halves[1] ; break;
+        case Registers::CopyEngine_Doorbell: return invokeCopyEngine(); break;
         default: return 0;
     }
 }
@@ -114,6 +121,13 @@ CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
         case Registers::PatternEngine_StartAddressLower: patternAddress_.halves[0] = value; break;
         case Registers::PatternEngine_StartAddressUpper: patternAddress_.halves[1] = value; break;
         case Registers::PatternEngine_Doorbell: (void)invokePatternEngine(); break;
+        case Registers::CopyEngine_DestinationAddressLower: copyEngineDestinationAddress_.halves[0] = value; break;
+        case Registers::CopyEngine_DestinationAddressUpper: copyEngineDestinationAddress_.halves[1] = value; break;
+        case Registers::CopyEngine_SourceAddressLower: copyEngineSourceAddress_.halves[0] = value; break;
+        case Registers::CopyEngine_SourceAddressUpper: copyEngineSourceAddress_.halves[1] = value; break;
+        case Registers::CopyEngine_LengthLower: copyEngineLength_.halves[0] = value; break;
+        case Registers::CopyEngine_LengthUpper: copyEngineLength_.halves[1] = value; break;
+        case Registers::CopyEngine_Doorbell: (void)invokeCopyEngine(); break;
         default:
             break;
     }
@@ -167,9 +181,36 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
     }
 }
 
+uint16_t
+CoreChipsetFeatures::invokeCopyEngine() noexcept {
+    auto srcAddress = copyEngineSourceAddress_.wholeValue_;
+    auto destAddress = copyEngineDestinationAddress_.wholeValue_;
+    if (auto src = getThing(srcAddress, LoadStoreStyle::Lower8),
+             dest = getThing(destAddress, LoadStoreStyle::Lower8);
+            src && dest) {
+        TemporarilyDisableThingCache srcCacheOff(src);
+        TemporarilyDisableThingCache destCacheOff(dest);
+        auto fullCopies = copyEngineLength_.wholeValue_ / CopyEngineCacheSize;
+        auto slop = copyEngineLength_.wholeValue_ % CopyEngineCacheSize;
+        Address srcAddrPtr = copyEngineSourceAddress_.wholeValue_;
+        Address destAddrPtr = copyEngineDestinationAddress_.wholeValue_;
+        for (uint32_t i = 0; i < fullCopies; ++i, srcAddrPtr += CopyEngineCacheSize, destAddrPtr += CopyEngineCacheSize) {
+            src->read(srcAddrPtr, copyEngineBuffer_, CopyEngineCacheSize);
+            dest->write(destAddrPtr, copyEngineBuffer_, CopyEngineCacheSize);
+        }
+        if (slop > 0) {
+            src->read(srcAddrPtr, copyEngineBuffer_, slop);
+            dest->write(destAddrPtr, copyEngineBuffer_, slop);
+        }
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
 void
 CoreChipsetFeatures::begin() noexcept {
-    if constexpr (false) {
+    if constexpr (true) {
         Serial.print(F("ADDRESS OF LED: 0x"));
         Serial.println(static_cast<uint32_t>(Registers::Led) + 0xFE00'0000, HEX);
         Serial.print(F("BASE ADDRESS OF PATTERN: 0x"));
@@ -178,7 +219,15 @@ CoreChipsetFeatures::begin() noexcept {
         Serial.println(static_cast<uint32_t>(Registers::PatternEngine_LengthLower) + 0xFE00'0000, HEX);
         Serial.print(F("BASE ADDRESS OF PATTERN ADDRESS: 0x"));
         Serial.println(static_cast<uint32_t>(Registers::PatternEngine_StartAddressLower) + 0xFE00'0000, HEX);
-        Serial.print(F("BASE ADDRESS OF DOORBELL: 0x"));
+        Serial.print(F("BASE ADDRESS OF PATTERN ENGINE DOORBELL: 0x"));
         Serial.println(static_cast<uint32_t>(Registers::PatternEngine_Doorbell) + 0xFE00'0000, HEX);
+        Serial.print(F("BASE ADDRESS OF COPY ENGINE DOORBELL: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::CopyEngine_Doorbell) + 0xFE00'0000, HEX);
+        Serial.print(F("BASE ADDRESS OF COPY ENGINE LENGTH: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::CopyEngine_LengthLower) + 0xFE00'0000, HEX);
+        Serial.print(F("BASE ADDRESS OF COPY ENGINE SOURCE ADDRESS: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::CopyEngine_SourceAddressLower) + 0xFE00'0000, HEX);
+        Serial.print(F("BASE ADDRESS OF COPY ENGINE DESTINATION ADDRESS: 0x"));
+        Serial.println(static_cast<uint32_t>(Registers::CopyEngine_DestinationAddressLower) + 0xFE00'0000, HEX);
     }
 }
