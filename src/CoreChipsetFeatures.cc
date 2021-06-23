@@ -169,26 +169,10 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
         auto fullCopies = patternLength_.wholeValue_ / 16;
         auto slop = patternLength_.wholeValue_ % 16;
         Address addr = patternAddress_.wholeValue_;
-        Serial.print(F("Pattern copy to 0x"));
-        Serial.print(addr, HEX);
-        Serial.print(F(" length: 0x"));
-        Serial.println(patternLength_.wholeValue_, HEX);
-        Serial.print(F("Full Copies, Slop: [0x"));
-        Serial.print(fullCopies, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(slop, HEX);
-        Serial.println(F("]"));
-        Address endAddress = addr + patternLength_.wholeValue_;
         for (uint32_t i = 0; i < fullCopies; ++i, addr+=16) {
-            Serial.print(F("CURRENT ADDRESS: 0x"));
-            Serial.print(addr, HEX);
-            Serial.print(F(" OF 0x"));
-            Serial.println(endAddress, HEX);
             thing->write(addr, pattern_.bytes, 16);
         }
         if (slop > 0) {
-            Serial.print(F("CURRENT ADDRESS: 0x"));
-            Serial.println(addr, HEX);
             thing->write(addr, pattern_.bytes, slop);
         }
         return 0;
