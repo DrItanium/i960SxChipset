@@ -231,7 +231,7 @@ private:
             }
         }
         // we had no free elements so choose one to replace
-        auto targetCacheLine = rand() & NumberOfCacheLinesMask;
+        auto targetCacheLine = random(NumberOfCacheLines);
         ASingleCacheLine &replacementLine = lines_[targetCacheLine];
         // generate an aligned address
         replacementLine.reset(alignedAddress, thing_);
