@@ -287,17 +287,25 @@ public:
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         //return MemoryThing::blockWrite(address, buf, capacity);
         /// @todo see if it makes more sense to require that the user disables the cache if they need to do such a thing
+
         if (enabled_) {
-            invalidateEntireCache(); // this is way to slow, we need to find out which
+            // use the cache where it makes sense
+            size_t numWritten = 0;
+            for (size_t i = 0; i < capacity; ++i, ++address, ++numWritten) {
+                setByte(address, buf[i]);
+            }
+            return numWritten;
+        } else {
+            // directly write to the backing store
+            return thing_.blockWrite(address, buf, capacity);
         }
-        return thing_.blockWrite(address, buf, capacity);
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // we want to directly read from the underlying memory thing using the buffer so we need to do cache coherency checks as well
         /// @todo figure out if we actually need to disable the cache when performing a read from memory. I don't think we need to actually
         if (enabled_) {
             size_t numRead = 0;
-            for (int i = 0; i < capacity; ++i, ++address) {
+            for (size_t i = 0; i < capacity; ++i, ++address, ++numRead) {
                 buf[i] = getByte(address);
             }
             return numRead;

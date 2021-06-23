@@ -170,6 +170,8 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
         auto slop = patternLength_.wholeValue_ % 16;
         Address addr = patternAddress_.wholeValue_;
         for (uint32_t i = 0; i < fullCopies; ++i, addr+=16) {
+            Serial.print(F("PATTERN INSTALL TO 0x"));
+            Serial.println(addr, HEX);
             thing->write(addr, pattern_.bytes, 16);
         }
         if (slop > 0) {
@@ -188,7 +190,6 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
     if (auto src = getThing(srcAddress, LoadStoreStyle::Lower8),
              dest = getThing(destAddress, LoadStoreStyle::Lower8);
             src && dest) {
-        TemporarilyDisableThingCache srcCacheOff(src);
         TemporarilyDisableThingCache destCacheOff(dest);
         auto fullCopies = copyEngineLength_.wholeValue_ / CopyEngineCacheSize;
         auto slop = copyEngineLength_.wholeValue_ % CopyEngineCacheSize;
