@@ -371,18 +371,16 @@ SDCardFilesystemInterface::readFile() noexcept {
                 result_.words[0] = 0;
                 return 0;
             } else {
-                // we want the cache to be active at this point, it means that at least part of the stream
-                // will be resident in the cache if the memory thing has a cache.
-                //TemporarilyDisableThingCache disableCacheForThing(thing);
+                TemporarilyDisableThingCache disableCacheForThing(thing);
                 // we can keep the cache on at this point in time now
-                if (count > 0 && count <= ReadBufferSize) {
-                    bytesRead = theFile.read(readBuffer_, count);
-                    (void) thing->write(baseAddress, readBuffer_, bytesRead);
+                if (count > 0 && count <= TransferBufferSize) {
+                    bytesRead = theFile.read(transferBuffer_, count);
+                    (void) thing->write(baseAddress, transferBuffer_, bytesRead);
                     result_.words[0] = bytesRead;
                     return 0;
                 } else {
-                    auto times = count / ReadBufferSize;
-                    auto spillOver = count % ReadBufferSize;
+                    auto times = count / TransferBufferSize;
+                    auto spillOver = count % TransferBufferSize;
 #if 0
                     Serial.print(F("[TIMES, SPILLOVER]: [0x"));
                     Serial.print(times, HEX);
@@ -393,21 +391,19 @@ SDCardFilesystemInterface::readFile() noexcept {
                     Address a = baseAddress;
                     for (Address i = 0;
                          i < times;
-                         ++i, a += ReadBufferSize) {
-                        uint32_t actualBytesRead = theFile.read(readBuffer_, ReadBufferSize);
-                        (void) thing->write(a, readBuffer_, actualBytesRead);
+                         ++i, a += TransferBufferSize) {
+                        uint32_t actualBytesRead = theFile.read(transferBuffer_, TransferBufferSize);
+                        (void) thing->write(a, transferBuffer_, actualBytesRead);
                         bytesRead += actualBytesRead;
                     }
 #if 0
                     Serial.print(F("SPILL OVER TO 0x"));
                     Serial.println(a, HEX);
 #endif
+                    result_.words[0] = bytesRead;
                     if (spillOver > 0) {
-                        uint32_t leftOverBytesRead = theFile.read(readBuffer_, spillOver);
-                        (void) thing->write(a, readBuffer_, leftOverBytesRead);
-                        result_.words[0] = bytesRead + leftOverBytesRead;
-                    } else {
-                        result_.words[0] = bytesRead;
+                        uint32_t leftOverBytesRead = theFile.read(transferBuffer_, spillOver);
+                        result_.words[0] += thing->write(a, transferBuffer_, leftOverBytesRead);
                     }
                     return 0;
                 }

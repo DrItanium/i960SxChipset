@@ -115,8 +115,6 @@ public:
 class ROMDataSection : public MemoryMappedFile {
 public:
     // two clusters are held onto at a time
-    static constexpr uint32_t numCacheLines = 1;
-    static constexpr uint32_t cacheLineSize = 512;
     static constexpr Address ROMStart = 0x2000'0000;
     static constexpr Address ROMEnd = 0x8000'0000;
     static constexpr Address DataSizeMax = ROMEnd - ROMStart;
@@ -125,7 +123,6 @@ public:
     ROMDataSection() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
     ~ROMDataSection() override = default;
 };
-
 
 class TFTShieldThing : public IOSpaceThing {
 public:
