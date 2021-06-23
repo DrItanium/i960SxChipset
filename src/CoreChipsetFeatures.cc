@@ -174,8 +174,6 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
         auto slop = patternLength_.wholeValue_ % PatternEngineCacheSizeInBytes;
         Address addr = patternAddress_.wholeValue_;
         for (uint32_t i = 0; i < fullCopies; ++i, addr+=PatternEngineCacheSizeInBytes) {
-            Serial.print(F("PATTERN INSTALL TO 0x"));
-            Serial.println(addr, HEX);
             thing->write(addr, reinterpret_cast<byte*>(patternCache_), PatternEngineCacheSizeInBytes);
         }
         if (slop > 0) {
