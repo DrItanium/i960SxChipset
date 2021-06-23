@@ -118,7 +118,8 @@ private:
     static uint8_t readLed() noexcept;
     [[nodiscard]] uint16_t invokePatternEngine() noexcept;
     [[nodiscard]] uint16_t invokeCopyEngine() noexcept;
-    static constexpr auto CopyEngineCacheSize = 16;
+    static constexpr auto CopyEngineCacheSize = 64;
+
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
