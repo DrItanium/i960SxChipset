@@ -90,7 +90,6 @@ public:
 };
 using RAMThing = DataCache<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>;
 using ROMThing = DataCache<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()>;
-using DataROMThing = DataCache<1, 512>;
 
 class ROMTextSection : public MemoryMappedFile {
 public:
@@ -456,10 +455,9 @@ using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
 DisplayThing displayCommandSet(0x200);
 RAMFile ramSection; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection textSection;
-ROMDataSection dataSection;
+ROMDataSection dataRom;
 ROMThing rom(textSection);
 RAMThing ram(ramSection);
-DataROMThing dataRom(dataSection);
 
 SDCardFilesystemInterface fs(0x300);
 #ifdef ADAFRUIT_FEATHER

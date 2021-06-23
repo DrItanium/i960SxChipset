@@ -371,6 +371,8 @@ SDCardFilesystemInterface::readFile() noexcept {
                 result_.words[0] = 0;
                 return 0;
             } else {
+                // we want the cache to be active at this point, it means that at least part of the stream
+                // will be resident in the cache if the memory thing has a cache.
                 //TemporarilyDisableThingCache disableCacheForThing(thing);
                 // we can keep the cache on at this point in time now
                 if (count > 0 && count <= ReadBufferSize) {
