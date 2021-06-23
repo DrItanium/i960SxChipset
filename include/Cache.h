@@ -286,8 +286,7 @@ public:
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         //return MemoryThing::blockWrite(address, buf, capacity);
-        /// @todo perform cache snooping when this is called, we want to commit all cache entries we can and then call the underlying thing's write method
-        // for now just invalidate the entire cache each time
+        /// @todo see if it makes more sense to require that the user disables the cache if they need to do such a thing
         if (enabled_) {
             invalidateEntireCache(); // this is way to slow, we need to find out which
         }
@@ -295,10 +294,17 @@ public:
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // we want to directly read from the underlying memory thing using the buffer so we need to do cache coherency checks as well
+        /// @todo figure out if we actually need to disable the cache when performing a read from memory. I don't think we need to actually
         if (enabled_) {
-            invalidateEntireCache();
+            size_t numRead = 0;
+            for (int i = 0; i < capacity; ++i, ++address) {
+                buf[i] = getByte(address);
+            }
+            return numRead;
+        } else {
+            // when the cache is disabled do the direct reads and writes
+            return thing_.blockRead(address, buf, capacity);
         }
-        return thing_.blockRead(address, buf, capacity);
     }
     [[nodiscard]] const MemoryThing& getBackingStore() const noexcept { return thing_; }
     [[nodiscard]] MemoryThing& getBackingStore() noexcept { return thing_; }
