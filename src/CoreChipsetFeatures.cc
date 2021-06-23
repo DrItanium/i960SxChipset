@@ -178,9 +178,12 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
         Serial.print(F(", 0x"));
         Serial.print(slop, HEX);
         Serial.println(F("]"));
+        Address endAddress = addr + patternLength_.wholeValue_;
         for (uint32_t i = 0; i < fullCopies; ++i, addr+=16) {
             Serial.print(F("CURRENT ADDRESS: 0x"));
-            Serial.println(addr, HEX);
+            Serial.print(addr, HEX);
+            Serial.print(F(" OF 0x"));
+            Serial.println(endAddress, HEX);
             thing->write(addr, pattern_.bytes, 16);
         }
         if (slop > 0) {

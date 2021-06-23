@@ -222,26 +222,20 @@ private:
      * @return The line that was updated
      */
     ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
-        if (auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress); cacheEmpty_) {
-            cacheEmpty_ = false;
-            // use random number generation to do this
-            // just use the first entry since the cache is completely empty
-            lines_[0].reset(alignedAddress, thing_);
-            return lines_[0];
-        } else {
-            for (ASingleCacheLine &line : lines_) {
-                if (!line.isValid()) {
-                    line.reset(alignedAddress, thing_);
-                    return line;
-                }
+        auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
+        cacheEmpty_ = false;
+        for (ASingleCacheLine &line : lines_) {
+            if (!line.isValid()) {
+                line.reset(alignedAddress, thing_);
+                return line;
             }
-            // we had no free elements so choose one to replace
-            auto targetCacheLine = rand() & NumberOfCacheLinesMask;
-            ASingleCacheLine &replacementLine = lines_[targetCacheLine];
-            // generate an aligned address
-            replacementLine.reset(alignedAddress, thing_);
-            return replacementLine;
         }
+        // we had no free elements so choose one to replace
+        auto targetCacheLine = rand() & NumberOfCacheLinesMask;
+        ASingleCacheLine &replacementLine = lines_[targetCacheLine];
+        // generate an aligned address
+        replacementLine.reset(alignedAddress, thing_);
+        return replacementLine;
     }
 private:
     MemoryThing& thing_;
