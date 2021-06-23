@@ -371,7 +371,8 @@ SDCardFilesystemInterface::readFile() noexcept {
                 result_.words[0] = 0;
                 return 0;
             } else {
-                TemporarilyDisableThingCache disableCacheForThing(thing);
+                //TemporarilyDisableThingCache disableCacheForThing(thing);
+                // we can keep the cache on at this point in time now
                 if (count > 0 && count <= ReadBufferSize) {
                     bytesRead = theFile.read(readBuffer_, count);
                     (void) thing->write(baseAddress, readBuffer_, bytesRead);
