@@ -165,16 +165,24 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
 uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
-        /// @todo unsure if disabling the cache on the write engine makes sense or not
-        //TemporarilyDisableThingCache cacheOff(thing);
-        auto fullCopies = patternLength_.wholeValue_ / 16;
-        auto slop = patternLength_.wholeValue_ % 16;
+        // turn off the cache right now since it will just interfere with write speed
+        TemporarilyDisableThingCache cacheOff(thing);
+        static constexpr auto NumCacheEntries = 32;
+        static constexpr auto NumCacheBytes = 16 * NumCacheEntries;
+        SplitWord128 patternCache[NumCacheEntries] = { 0 };
+        for (auto& entry : patternCache) {
+            entry = pattern_;
+        }
+        auto fullCopies = patternLength_.wholeValue_ / NumCacheBytes;
+        auto slop = patternLength_.wholeValue_ % NumCacheBytes;
         Address addr = patternAddress_.wholeValue_;
-        for (uint32_t i = 0; i < fullCopies; ++i, addr+=16) {
-            thing->write(addr, pattern_.bytes, 16);
+        for (uint32_t i = 0; i < fullCopies; ++i, addr+=NumCacheBytes) {
+            Serial.print(F("PATTERN INSTALL TO 0x"));
+            Serial.println(addr, HEX);
+            thing->write(addr, reinterpret_cast<byte*>(patternCache), NumCacheBytes);
         }
         if (slop > 0) {
-            thing->write(addr, pattern_.bytes, slop);
+            thing->write(addr, reinterpret_cast<byte*>(patternCache), slop);
         }
         return 0;
     } else {
