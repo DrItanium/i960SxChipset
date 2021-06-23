@@ -192,8 +192,8 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
     if (auto src = getThing(srcAddress, LoadStoreStyle::Lower8),
              dest = getThing(destAddress, LoadStoreStyle::Lower8);
             src && dest) {
-        //TemporarilyDisableThingCache srcCacheOff(dest);
-        //TemporarilyDisableThingCache destCacheOff(dest);
+        TemporarilyDisableThingCache srcCacheOff(dest);
+        TemporarilyDisableThingCache destCacheOff(dest);
         // we will be triggering a cache flush
         auto fullCopies = copyEngineLength_.wholeValue_ / CopyEngineCacheSize;
         auto slop = copyEngineLength_.wholeValue_ % CopyEngineCacheSize;
@@ -213,7 +213,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
             Serial.println(F("]"));
         }
         for (uint32_t i = 0; i < fullCopies; ++i, srcAddrPtr += CopyEngineCacheSize, destAddrPtr += CopyEngineCacheSize) {
-            if constexpr (false) {
+            if constexpr (true) {
                 Serial.print(F("COPYING FROM 0x"));
                 Serial.print(srcAddrPtr, HEX);
                 Serial.print(F(" TO 0x"));
