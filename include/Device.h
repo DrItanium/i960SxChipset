@@ -42,8 +42,11 @@ public:
         return ((value & 0b1111) == 0);
     }
     Device(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) {
+        if (end_ < base_) {
+            signalHaltState(F("END ADDRESS OF DEVICE IS LESS THAN BASE ADDRESS OF DEVICE"));
+        }
         if ((end_ - base_) < 16) {
-            signalHaltState(F("PROVIDED DEVICE MUST BE AT LEAST 16 BYTES IN SIZE"));
+            signalHaltState(F("PROVIDED DEVICE MUST BE MAPPED TO AT LEAST 16 BYTES"));
         }
         if (!alignedTo16ByteBoundaries(base_)) {
             signalHaltState(F("BASE ADDRESS OF DEVICE IS NOT ALIGNED TO 16-BYTE BOUNDARIES"));
