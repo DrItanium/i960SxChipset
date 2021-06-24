@@ -208,6 +208,8 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 #ifdef ARDUINO_ARCH_SAMD
 Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
 #endif
+volatile Address burstCacheBaseAddress = 0;
+volatile SplitWord16 burstCache[16 / sizeof(SplitWord16)] = { { 0 }  };
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -281,6 +283,7 @@ void doAddressState() noexcept {
 #ifndef ARDUINO_AVR_ATmega1284
 volatile uint32_t cycleCount = 0;
 #endif
+Device* currentThing = nullptr;
 void
 enteringDataState() noexcept {
     // when we do the transition, record the information we need
@@ -289,14 +292,21 @@ enteringDataState() noexcept {
 void processDataRequest() noexcept {
     processorInterface.updateDataCycle();
     if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
+        LoadStoreStyle style = processorInterface.getStyle();
+        if (!currentThing) {
+            currentThing = getThing(burstAddress, style);
+        } else {
+            if (!currentThing->respondsTo(burstAddress, style)) {
+                currentThing = getThing(burstAddress, style);
+            }
+        }
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
-        LoadStoreStyle style = processorInterface.getStyle();
-        if (auto theThing = getThing(burstAddress, style); theThing) {
+        if (currentThing) {
             if (processorInterface.isReadOperation()) {
-                processorInterface.setDataBits(theThing->read(burstAddress, style));
+                processorInterface.setDataBits(currentThing->read(burstAddress, style));
             } else {
-                theThing->write(burstAddress, processorInterface.getDataBits(), style);
+                currentThing->write(burstAddress, processorInterface.getDataBits(), style);
             }
         } else {
             if (processorInterface.isReadOperation()) {
@@ -316,6 +326,7 @@ void processDataRequest() noexcept {
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         // we not in burst mode
+        currentThing = nullptr;
         fsm.trigger(ReadyAndNoBurst);
     }
     if constexpr (!TargetBoard::onAtmega1284p()) {

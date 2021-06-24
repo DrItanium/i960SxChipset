@@ -219,8 +219,8 @@ union SplitWord128 {
     uint64_t quads[16/sizeof(uint64_t)];
 };
 union SplitWord16 {
-    uint16_t wholeValue_;
-    uint8_t bytes[sizeof(uint16_t) / sizeof(uint8_t)] = { 0 };
+    uint16_t wholeValue_ = 0;
+    uint8_t bytes[sizeof(uint16_t) / sizeof(uint8_t)];
 };
 union SplitWord64 {
     uint64_t wholeValue_ = 0;
