@@ -326,7 +326,6 @@ void processDataRequest() noexcept {
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         // we not in burst mode
-        currentThing = nullptr;
         fsm.trigger(ReadyAndNoBurst);
     }
     if constexpr (!TargetBoard::onAtmega1284p()) {
