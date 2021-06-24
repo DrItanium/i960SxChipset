@@ -527,6 +527,8 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 // Ti -> TChecksumFailure if FAIL is asserted
 // Tr -> TChecksumFailure if FAIL is asserted
 
+// We are adding extra states to the design when dealing with burst transactions on burst address aware devices
+//
 // NOTE: Tw may turn out to be synthetic
 #ifdef ARDUINO_ARCH_SAMD
 Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
@@ -541,11 +543,13 @@ constexpr auto ToDataState = 6;
 constexpr auto PerformSelfTest = 7;
 constexpr auto SelfTestComplete = 8;
 constexpr auto ChecksumFailure = 9;
+constexpr auto ToBurstDataState = 10;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
+void processBurstDataRequest() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringChecksumFailure() noexcept;
@@ -599,13 +603,11 @@ void doAddressState() noexcept {
 }
 
 
-
+#ifndef ARDUINO_AVR_ATmega1284
 volatile uint32_t cycleCount = 0;
+#endif
 void
 enteringDataState() noexcept {
-    if constexpr (!TargetBoard::onAtmega1284p()) {
-        // since we are entering at this point, we count this is part of the cycle count so capture it
-    }
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
 }

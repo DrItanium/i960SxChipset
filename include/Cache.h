@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Arduino.h>
 #include "MCUPlatform.h"
-#include "BurstTransactionAwareDevice.h"
+#include "Device.h"
 template<uint32_t size = 16>
 struct CacheLine {
 public:
@@ -142,9 +142,9 @@ private:
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
-class DataCache : public BurstTransactionAwareDevice {
+class DataCache : public Device {
 public:
-    using Parent = BurstTransactionAwareDevice;
+    using Parent = Device;
     using ASingleCacheLine = CacheLine<cacheLineSize>;
     static constexpr auto NumberOfCacheLines = numLines;
     static constexpr auto NumberOfCacheLinesMask = numLines - 1;

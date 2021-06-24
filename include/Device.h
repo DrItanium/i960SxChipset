@@ -149,11 +149,6 @@ public:
      */
     virtual void enableCache() noexcept { }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
-    /**
-     * @brief Return true if the given device is burst transaction aware and thus should be driven using buffers instead of individual reads and writes
-     * @return True if buffers should be used when burst transactions are requested by the i960Sx
-     */
-    virtual bool burstTransactionAware() const noexcept = 0;
 private:
     Address base_;
     Address end_;
@@ -178,6 +173,18 @@ private:
     Device* thing_;
 };
 
+/**
+ * @brief An intermediate type which automatically adds the IOBaseAddress to the start and end addresses
+ */
+class IOSpaceThing : public Device {
+public:
+    static constexpr Address SpaceBaseAddress = 0xFE00'0000;
+public:
+    using Parent = Device;
+    IOSpaceThing(Address base, Address end) : Parent(base + SpaceBaseAddress, end + SpaceBaseAddress) { }
+    explicit IOSpaceThing(Address base) : Parent(base + SpaceBaseAddress) { }
+    ~IOSpaceThing() override = default;
+};
 
 /**
  * @brief Does a lookup in the global thing collection to try and find a thing that will respond to the given address
