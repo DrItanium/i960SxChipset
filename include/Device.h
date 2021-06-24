@@ -28,16 +28,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 [[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
 /**
- * @brief Describes the interface between a component and a memory request, it introduces some latency with the trade off being easier maintenance
+ * @brief Describes the interface between a component and a memory request, it introduces some latency with the trade off being easier maintenance.
+ * Must be aligned to 16-byte boundaries
  */
 class Device {
 public:
-    Device(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) { }
     /**
-     * @brief Construct a memory thing that is only concerned with a single address
-     * @param baseAddress
+     * @brief Check to see if the given address is aligned to 16-byte boundaries
+     * @param value The address to check
+     * @return True if the lowest four bits are set to 0
      */
-    explicit Device(Address baseAddress) : Device(baseAddress, baseAddress + 1) { }
+    static constexpr auto alignedTo16ByteBoundaries(Address value) {
+        return ((value & 0b1111) == 0);
+    }
+    Device(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) {
+        if ((end_ - base_) < 16) {
+            signalHaltState(F("PROVIDED DEVICE MUST BE AT LEAST 16 BYTES IN SIZE"));
+        }
+        if (!alignedTo16ByteBoundaries(base_)) {
+            signalHaltState(F("BASE ADDRESS OF DEVICE IS NOT ALIGNED TO 16-BYTE BOUNDARIES"));
+        }
+        if (!alignedTo16ByteBoundaries(end_)) {
+            signalHaltState(F("END ADDRESS OF DEVICE IS NOT ALIGNED TO 16-BYTE BOUNDARIES"));
+        }
+
+    }
+    /**
+     * @brief Construct a device with a minimum size of 16 bytes
+     * @param baseAddress The base address of the device in memory
+     */
+    explicit Device(Address baseAddress) : Device(baseAddress, baseAddress + 16) { }
     virtual ~Device() = default;
     virtual size_t blockWrite(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
     virtual size_t blockRead(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
