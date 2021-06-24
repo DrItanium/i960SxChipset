@@ -219,20 +219,14 @@ constexpr auto ToDataState = 6;
 constexpr auto PerformSelfTest = 7;
 constexpr auto SelfTestComplete = 8;
 constexpr auto ChecksumFailure = 9;
-constexpr auto ToBurstReadTransaction_OK = 10;
-constexpr auto ToBurstReadTransaction_Unmapped = 11;
-constexpr auto ToBurstReadTransaction_Internal = 12;
-constexpr auto ToBurstWriteTransaction_OK = 13;
-constexpr auto ToBurstWriteTransaction_Unmapped = 14;
-constexpr auto ToBurstWriteTransaction_Internal = 15;
-constexpr auto ToNonBurstReadTransaction_OK = 16;
-constexpr auto ToNonBurstReadTransaction_Unmapped = 17;
-constexpr auto ToNonBurstReadTransaction_Internal = 18;
-constexpr auto ToNonBurstWriteTransaction_OK = 19;
-constexpr auto ToNonBurstWriteTransaction_Unmapped = 20;
-constexpr auto ToNonBurstWriteTransaction_Internal = 21;
-constexpr auto ToBusRecovery = 22;
-constexpr auto ToCommitBurstTransaction = 23;
+constexpr auto ToBurstReadTransaction = 10;
+constexpr auto ToBurstWriteTransaction = 11;
+constexpr auto ToNonBurstReadTransaction = 12;
+constexpr auto ToNonBurstWriteTransaction = 13;
+constexpr auto ToUnmappedReadTransaction = 14;
+constexpr auto ToUnmappedWriteTransaction = 15;
+constexpr auto ToBusRecovery = 16;
+constexpr auto ToCommitBurstTransaction = 17;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
@@ -310,56 +304,19 @@ void commitBurstCache() noexcept {
 void dataCycleStart() noexcept {
     processorInterface.newDataCycle();
     bool isReadOperation = processorInterface.isReadOperation();
-    bool isBurstOperation = !processorInterface.blastTriggered();
-    if (auto align16BaseAddress = processorInterface.get16ByteAlignedBaseAddress(); align16BaseAddress < 0xFF00'0000) {
-        currentThing = getThing(align16BaseAddress, LoadStoreStyle::Full16);
-        if (currentThing) {
-            if (isBurstOperation) {
-                currentThing->read(align16BaseAddress, reinterpret_cast<byte*>(burstCache), 16);
-                // read into the burst cache as part of data cycle startup
-                if (isReadOperation)  {
-                    fsm.trigger(ToBurstReadTransaction_OK);
-                } else {
-                    fsm.trigger(ToBurstWriteTransaction_OK);
-                }
-            } else {
-                if (isReadOperation)  {
-                    fsm.trigger(ToNonBurstReadTransaction_OK);
-                } else {
-                    fsm.trigger(ToNonBurstWriteTransaction_OK);
-                }
-            }
+    auto align16BaseAddress = processorInterface.get16ByteAlignedBaseAddress();
+    currentThing = getThing(align16BaseAddress, LoadStoreStyle::Full16);
+    if (currentThing) {
+        if (!processorInterface.blastTriggered()) {
+            currentThing->read(align16BaseAddress, reinterpret_cast<byte*>(burstCache), 16);
+            // read into the burst cache as part of data cycle startup
+            fsm.trigger(isReadOperation ? ToBurstReadTransaction : ToBurstWriteTransaction);
         } else {
-            // unmapped space
-            if (isBurstOperation) {
-                if (isReadOperation)  {
-                    fsm.trigger(ToBurstReadTransaction_Unmapped);
-                } else {
-                    fsm.trigger(ToBurstWriteTransaction_Unmapped);
-                }
-            } else {
-                if (isReadOperation)  {
-                    fsm.trigger(ToNonBurstReadTransaction_Unmapped);
-                } else {
-                    fsm.trigger(ToNonBurstWriteTransaction_Unmapped);
-                }
-            }
+            fsm.trigger(isReadOperation ? ToNonBurstReadTransaction : ToNonBurstWriteTransaction);
         }
     } else {
-        // processor internal space, should never get here
-        if (isBurstOperation) {
-            if (isReadOperation)  {
-                fsm.trigger(ToBurstReadTransaction_Internal);
-            } else {
-                fsm.trigger(ToBurstWriteTransaction_Internal);
-            }
-        } else {
-            if (isReadOperation)  {
-                fsm.trigger(ToNonBurstReadTransaction_Internal);
-            } else {
-                fsm.trigger(ToNonBurstWriteTransaction_Internal);
-            }
-        }
+        // unmapped space (including cpu internal)
+        fsm.trigger(isReadOperation ? ToUnmappedReadTransaction : ToUnmappedWriteTransaction);
     }
 }
 void performBurstWrite() noexcept {
@@ -386,6 +343,22 @@ void performBurstWrite() noexcept {
         fsm.trigger(ToCommitBurstTransaction);
     }
 }
+void performBurstRead() noexcept {
+    processorInterface.updateDataCycle();
+    // just assign all 16-bits, the processor will choose which bits to care about
+    processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_);
+    processorInterface.signalReady();
+    if (processorInterface.blastTriggered()) {
+        // we do not need to write anything back
+        fsm.trigger(ToBusRecovery);
+    }
+}
+void performNonBurstRead() noexcept {
+    processorInterface.updateDataCycle();
+    processorInterface.setDataBits(currentThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
+    processorInterface.signalReady();
+    fsm.trigger(ToBusRecovery);
+}
 void performNonBurstWrite() noexcept {
     // write the given value right here and now
     processorInterface.updateDataCycle();
@@ -402,6 +375,22 @@ void unmappedWrite() noexcept {
     // expensive but something has gone horribly wrong anyway so whatever!
     Serial.print(processorInterface.getDataBits(), HEX);
     Serial.print(F(" TO 0x"));
+    Serial.println(processorInterface.getAddress(), HEX);
+    processorInterface.signalReady();
+    if (processorInterface.blastTriggered()) {
+        // we not in burst mode
+        fsm.trigger(ToBusRecovery);
+    }
+}
+void onEnteringDisallowedRead() noexcept {
+    processorInterface.setDataBits(0);
+}
+void unmappedRead() noexcept {
+    // this is used regardless of burst or non burst operations
+    processorInterface.updateDataCycle();
+    // we are just going to report the error
+    Serial.print(F("UNMAPPED READ FROM 0x"));
+    // expensive but something has gone horribly wrong anyway so whatever!
     Serial.println(processorInterface.getAddress(), HEX);
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
