@@ -180,17 +180,6 @@ private:
 
 
 /**
- * @brief An intermediate type which automatically adds the IOBaseAddress to the start and end addresses
- */
-class IOSpaceThing : public Device {
-public:
-    static constexpr Address SpaceBaseAddress = 0xFE00'0000;
-public:
-    IOSpaceThing(Address base, Address end) : Device(base + SpaceBaseAddress, end + SpaceBaseAddress) { }
-    explicit IOSpaceThing(Address base) : Device(base + SpaceBaseAddress) { }
-    ~IOSpaceThing() override = default;
-};
-/**
  * @brief Does a lookup in the global thing collection to try and find a thing that will respond to the given address
  * @param address the address to check for a response to
  * @param style the width of the request

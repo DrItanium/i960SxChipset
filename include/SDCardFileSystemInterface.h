@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
 #define I960SXCHIPSET_SDCARDFILESYSTEMINTERFACE_H
-#include "Device.h"
+#include "SequentialDevice.h"
 #include <SdFat.h>
 extern SdFat SD;
 class SDCardFilesystemInterface : public IOSpaceThing {

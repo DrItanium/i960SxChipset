@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Arduino.h>
 #include "MCUPlatform.h"
+#include "BurstTransactionAwareDevice.h"
 template<uint32_t size = 16>
 struct CacheLine {
 public:
@@ -141,8 +142,9 @@ private:
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
-class DataCache : public Device {
+class DataCache : public BurstTransactionAwareDevice {
 public:
+    using Parent = BurstTransactionAwareDevice;
     using ASingleCacheLine = CacheLine<cacheLineSize>;
     static constexpr auto NumberOfCacheLines = numLines;
     static constexpr auto NumberOfCacheLinesMask = numLines - 1;
@@ -167,7 +169,7 @@ public:
     }
     static_assert(DataCacheSize <= TargetBoard::oneFourthSRAMAmountInBytes(), "Overall cache size must be less than or equal to one fourth of SRAM");
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
-    explicit DataCache(Device& backingStore) : Device(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
+    explicit DataCache(Device& backingStore) : Parent(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
         for (const ASingleCacheLine & line : lines_) {
             if (line.respondsTo(targetAddress)) {

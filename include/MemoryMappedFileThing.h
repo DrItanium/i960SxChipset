@@ -30,14 +30,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_MEMORYMAPPEDFILETHING_H
 #include <Arduino.h>
 #include "MCUPlatform.h"
-#include "Device.h"
+#include "BurstTransactionAwareDevice.h"
 #include "Cache.h"
 #include <SdFat.h>
 extern SdFat SD;
 
-class MemoryMappedFile : public Device {
+class MemoryMappedFile : public BurstTransactionAwareDevice {
 public:
-    MemoryMappedFile(Address startingAddress, Address endingAddress, Address maximumSize, const char* path, decltype(FILE_WRITE) permissions) noexcept : Device(startingAddress, endingAddress), maxSize_(maximumSize), path_(path), permissions_(permissions) { }
+    using Parent = BurstTransactionAwareDevice;
+    MemoryMappedFile(Address startingAddress, Address endingAddress, Address maximumSize, const char* path, decltype(FILE_WRITE) permissions) noexcept : Parent(startingAddress, endingAddress), maxSize_(maximumSize), path_(path), permissions_(permissions) { }
     ~MemoryMappedFile() override {
         // while this will never get called, it is still a good idea to be complete
         theFile_.close();
