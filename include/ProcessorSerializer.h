@@ -128,6 +128,11 @@ public:
     void newDataCycle() noexcept;
     void updateDataCycle() noexcept;
     [[nodiscard]] constexpr bool isReadOperation() const noexcept { return isReadOperation_; }
+    /**
+     * @brief Return the address retrieved from the processor interface with the lowest four bits cleared.
+     * @return The 16-byte aligned address closest to the real burst address
+     */
+    [[nodiscard]] constexpr auto get16ByteAlignedBaseAddress() const noexcept { return upperMaskedAddress_; }
 private:
     void updateOutputLatch() noexcept;
 private:
