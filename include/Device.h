@@ -149,6 +149,11 @@ public:
      */
     virtual void enableCache() noexcept { }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
+    /**
+     * @brief Return true if the given device is burst transaction aware and thus should be driven using buffers instead of individual reads and writes
+     * @return True if buffers should be used when burst transactions are requested by the i960Sx
+     */
+    virtual bool burstTransactionAware() const noexcept = 0;
 private:
     Address base_;
     Address end_;
