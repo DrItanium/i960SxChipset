@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 
 #include "ProcessorSerializer.h"
-#include "MemoryThing.h"
+#include "Device.h"
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
 #include "OPL2Thing.h"
@@ -108,7 +108,7 @@ public:
     respondsTo(Address address) const noexcept override {
         return address < Parent::getFileSize();
     }
-    using MemoryThing::respondsTo;
+    using Device::respondsTo;
 };
 
 /// @todo add support for the boot data section that needs to be copied into ram by the i960 on bootup
@@ -465,7 +465,7 @@ AdafruitADXL343Thing adxl343(0x1300);
 #endif
 
 // list of io memory devices to walk through
-MemoryThing* things[] {
+Device* things[] {
         &rom,
         &dataRom,
         &ram,
@@ -480,7 +480,7 @@ MemoryThing* things[] {
         &fs,
 };
 
-MemoryThing*
+Device*
 getThing(Address address, LoadStoreStyle style) noexcept {
     for (auto* currentThing : things) {
         if (currentThing->respondsTo(address, style)) {

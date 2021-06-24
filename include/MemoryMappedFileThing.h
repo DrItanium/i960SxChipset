@@ -30,14 +30,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_MEMORYMAPPEDFILETHING_H
 #include <Arduino.h>
 #include "MCUPlatform.h"
-#include "MemoryThing.h"
+#include "Device.h"
 #include "Cache.h"
 #include <SdFat.h>
 extern SdFat SD;
 
-class MemoryMappedFile : public MemoryThing {
+class MemoryMappedFile : public Device {
 public:
-    MemoryMappedFile(Address startingAddress, Address endingAddress, Address maximumSize, const char* path, decltype(FILE_WRITE) permissions) noexcept : MemoryThing(startingAddress, endingAddress), maxSize_(maximumSize), path_(path), permissions_(permissions) { }
+    MemoryMappedFile(Address startingAddress, Address endingAddress, Address maximumSize, const char* path, decltype(FILE_WRITE) permissions) noexcept : Device(startingAddress, endingAddress), maxSize_(maximumSize), path_(path), permissions_(permissions) { }
     ~MemoryMappedFile() override {
         // while this will never get called, it is still a good idea to be complete
         theFile_.close();

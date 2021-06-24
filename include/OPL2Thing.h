@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef I960SXCHIPSET_OPL2THING_H
 #define I960SXCHIPSET_OPL2THING_H
 #include <Arduino.h>
-#include "MemoryThing.h"
+#include "Device.h"
 #include <OPL2.h>
 #include <Pinout.h>
 

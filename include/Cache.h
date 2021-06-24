@@ -100,7 +100,7 @@ public:
         return targetAddress & ~CacheByteMask;
     }
     [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
-    void reset(uint32_t address, MemoryThing& thing) noexcept {
+    void reset(uint32_t address, Device& thing) noexcept {
         byte* buf = reinterpret_cast<byte*>(components_);
         if (valid_ && dirty_) {
             thing.write(address_, buf, CacheLineSize);
@@ -114,7 +114,7 @@ public:
      * @brief Invalidate the cache line and mark it as invalid
      * @param thing The memory thing to commit to
      */
-    void invalidate(MemoryThing& thing) noexcept {
+    void invalidate(Device& thing) noexcept {
         if (valid_ && dirty_) {
             byte *buf = reinterpret_cast<byte *>(components_);
             thing.write(address_, buf, CacheLineSize);
@@ -141,7 +141,7 @@ private:
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
-class DataCache : public MemoryThing {
+class DataCache : public Device {
 public:
     using ASingleCacheLine = CacheLine<cacheLineSize>;
     static constexpr auto NumberOfCacheLines = numLines;
@@ -167,7 +167,7 @@ public:
     }
     static_assert(DataCacheSize <= TargetBoard::oneFourthSRAMAmountInBytes(), "Overall cache size must be less than or equal to one fourth of SRAM");
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
-    explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
+    explicit DataCache(Device& backingStore) : Device(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
         for (const ASingleCacheLine & line : lines_) {
             if (line.respondsTo(targetAddress)) {
@@ -238,7 +238,7 @@ private:
         return replacementLine;
     }
 private:
-    MemoryThing& thing_;
+    Device& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
     bool cacheEmpty_ = true;
     bool enabled_ = true;
@@ -285,7 +285,7 @@ public:
         (void)getByte(0);
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        //return MemoryThing::blockWrite(address, buf, capacity);
+        //return Device::blockWrite(address, buf, capacity);
         /// @todo see if it makes more sense to require that the user disables the cache if they need to do such a thing
 
         if (enabled_) {
@@ -314,8 +314,8 @@ public:
             return thing_.blockRead(address, buf, capacity);
         }
     }
-    [[nodiscard]] const MemoryThing& getBackingStore() const noexcept { return thing_; }
-    [[nodiscard]] MemoryThing& getBackingStore() noexcept { return thing_; }
+    [[nodiscard]] const Device& getBackingStore() const noexcept { return thing_; }
+    [[nodiscard]] Device& getBackingStore() noexcept { return thing_; }
     void disableCache() noexcept override {
         if (enabled_) {
             enabled_ = false;

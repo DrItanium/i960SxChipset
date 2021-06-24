@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_CORECHIPSETFEATURES_H
 #define I960SXCHIPSET_CORECHIPSETFEATURES_H
-#include "MemoryThing.h"
+#include "Device.h"
 #include "ProcessorSerializer.h"
 class CoreChipsetFeatures : public IOSpaceThing {
 public:

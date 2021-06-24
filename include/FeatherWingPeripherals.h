@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_FEATHERWINGPERIPHERALS_H
 #define I960SXCHIPSET_FEATHERWINGPERIPHERALS_H
-#include "MemoryThing.h"
+#include "Device.h"
 #include <Arduino.h>
 #include <Adafruit_LSM6DSOX.h>
 #include <Adafruit_LIS3MDL.h>

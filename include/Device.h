@@ -23,22 +23,22 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef I960SXCHIPSET_MEMORYTHING_H
-#define I960SXCHIPSET_MEMORYTHING_H
+#ifndef I960SXCHIPSET_DEVICE_H
+#define I960SXCHIPSET_DEVICE_H
 #include "Pinout.h"
 [[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
 /**
  * @brief Describes the interface between a component and a memory request, it introduces some latency with the trade off being easier maintenance
  */
-class MemoryThing {
+class Device {
 public:
-    MemoryThing(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) { }
+    Device(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) { }
     /**
      * @brief Construct a memory thing that is only concerned with a single address
      * @param baseAddress
      */
-    explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 1) { }
-    virtual ~MemoryThing() = default;
+    explicit Device(Address baseAddress) : Device(baseAddress, baseAddress + 1) { }
+    virtual ~Device() = default;
     virtual size_t blockWrite(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
     virtual size_t blockRead(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
     [[nodiscard]] virtual uint8_t read8(Address address) noexcept { return 0; }
@@ -159,7 +159,7 @@ private:
  */
 struct TemporarilyDisableThingCache final {
 public:
-    explicit TemporarilyDisableThingCache(MemoryThing* theThing) : thing_(theThing) {
+    explicit TemporarilyDisableThingCache(Device* theThing) : thing_(theThing) {
         if (thing_) {
             thing_->disableCache();
         }
@@ -170,19 +170,19 @@ public:
         }
     }
 private:
-    MemoryThing* thing_;
+    Device* thing_;
 };
 
 
 /**
  * @brief An intermediate type which automatically adds the IOBaseAddress to the start and end addresses
  */
-class IOSpaceThing : public MemoryThing {
+class IOSpaceThing : public Device {
 public:
     static constexpr Address SpaceBaseAddress = 0xFE00'0000;
 public:
-    IOSpaceThing(Address base, Address end) : MemoryThing(base + SpaceBaseAddress, end + SpaceBaseAddress) { }
-    explicit IOSpaceThing(Address base) : MemoryThing(base + SpaceBaseAddress) { }
+    IOSpaceThing(Address base, Address end) : Device(base + SpaceBaseAddress, end + SpaceBaseAddress) { }
+    explicit IOSpaceThing(Address base) : Device(base + SpaceBaseAddress) { }
     ~IOSpaceThing() override = default;
 };
 /**
@@ -191,6 +191,6 @@ public:
  * @param style the width of the request
  * @return The thing that will respond to the given address
  */
-MemoryThing* getThing(Address address, LoadStoreStyle style) noexcept;
+Device* getThing(Address address, LoadStoreStyle style) noexcept;
 
-#endif //I960SXCHIPSET_MEMORYTHING_H
+#endif //I960SXCHIPSET_DEVICE_H
