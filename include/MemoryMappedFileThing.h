@@ -31,7 +31,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "MCUPlatform.h"
 #include "Device.h"
-#include "Cache.h"
 #include <SdFat.h>
 extern SdFat SD;
 

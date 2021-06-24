@@ -243,7 +243,6 @@ private:
     Device& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
     bool cacheEmpty_ = true;
-    bool enabled_ = true;
 public:
     uint8_t read8(Address address) noexcept override {
         if (enabled_) {
@@ -318,17 +317,6 @@ public:
     }
     [[nodiscard]] const Device& getBackingStore() const noexcept { return thing_; }
     [[nodiscard]] Device& getBackingStore() noexcept { return thing_; }
-    void disableCache() noexcept override {
-        if (enabled_) {
-            enabled_ = false;
-            invalidateEntireCache();
-        }
-    }
-    void enableCache() noexcept override {
-        if (!enabled_) {
-            enabled_ = true;
-        }
-    }
 private:
     /**
      * @brief Commit all entries in the cache back to the underlying memory type

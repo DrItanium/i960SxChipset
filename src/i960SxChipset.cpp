@@ -41,9 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Device.h"
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
-#include "OPL2Thing.h"
 #include "CoreChipsetFeatures.h"
-#include "Cache.h"
 #ifdef ADAFRUIT_FEATHER
 #include "FeatherWingPeripherals.h"
 #endif
@@ -88,8 +86,6 @@ public:
         }
     }
 };
-using RAMThing = DataCache<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>;
-using ROMThing = DataCache<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()>;
 
 class ROMTextSection : public MemoryMappedFile {
 public:
