@@ -208,7 +208,6 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 #ifdef ARDUINO_ARCH_SAMD
 Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
 #endif
-volatile Address burstCacheBaseAddress = 0;
 volatile SplitWord16 burstCache[16 / sizeof(SplitWord16)] = { { 0 }  };
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
@@ -220,7 +219,18 @@ constexpr auto ToDataState = 6;
 constexpr auto PerformSelfTest = 7;
 constexpr auto SelfTestComplete = 8;
 constexpr auto ChecksumFailure = 9;
-constexpr auto ToBurstDataState = 10;
+constexpr auto ToBurstReadTransaction_OK = 10;
+constexpr auto ToBurstReadTransaction_Unmapped = 11;
+constexpr auto ToBurstReadTransaction_Internal = 12;
+constexpr auto ToBurstWriteTransaction_OK = 13;
+constexpr auto ToBurstWriteTransaction_Unmapped = 14;
+constexpr auto ToBurstWriteTransaction_Internal = 15;
+constexpr auto ToNonBurstReadTransaction_OK = 16;
+constexpr auto ToNonBurstReadTransaction_Unmapped = 17;
+constexpr auto ToNonBurstReadTransaction_Internal = 18;
+constexpr auto ToNonBurstWriteTransaction_OK = 19;
+constexpr auto ToNonBurstWriteTransaction_Unmapped = 20;
+constexpr auto ToNonBurstWriteTransaction_Internal = 21;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
@@ -289,6 +299,59 @@ enteringDataState() noexcept {
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
     currentThing = getThing(processorInterface.get16ByteAlignedBaseAddress(), LoadStoreStyle::Full16);
+}
+void dataCycleStart() noexcept {
+    processorInterface.newDataCycle();
+    bool isReadOperation = processorInterface.isReadOperation();
+    bool isBurstOperation = !processorInterface.blastTriggered();
+    if (auto align16BaseAddress = processorInterface.get16ByteAlignedBaseAddress(); align16BaseAddress < 0xFF00'0000) {
+        currentThing = getThing(align16BaseAddress, LoadStoreStyle::Full16);
+        if (currentThing) {
+            if (isBurstOperation) {
+                if (isReadOperation)  {
+                    fsm.trigger(ToBurstReadTransaction_OK);
+                } else {
+                    fsm.trigger(ToBurstWriteTransaction_OK);
+                }
+            } else {
+                if (isReadOperation)  {
+                    fsm.trigger(ToNonBurstReadTransaction_OK);
+                } else {
+                    fsm.trigger(ToNonBurstWriteTransaction_OK);
+                }
+            }
+        } else {
+            // unmapped space
+            if (isBurstOperation) {
+                if (isReadOperation)  {
+                    fsm.trigger(ToBurstReadTransaction_Unmapped);
+                } else {
+                    fsm.trigger(ToBurstWriteTransaction_Unmapped);
+                }
+            } else {
+                if (isReadOperation)  {
+                    fsm.trigger(ToNonBurstReadTransaction_Unmapped);
+                } else {
+                    fsm.trigger(ToNonBurstWriteTransaction_Unmapped);
+                }
+            }
+        }
+    } else {
+        // processor internal space, should never get here
+        if (isBurstOperation) {
+            if (isReadOperation)  {
+                fsm.trigger(ToBurstReadTransaction_Internal);
+            } else {
+                fsm.trigger(ToBurstWriteTransaction_Internal);
+            }
+        } else {
+            if (isReadOperation)  {
+                fsm.trigger(ToNonBurstReadTransaction_Internal);
+            } else {
+                fsm.trigger(ToNonBurstWriteTransaction_Internal);
+            }
+        }
+    }
 }
 void processDataRequest() noexcept {
     processorInterface.updateDataCycle();
