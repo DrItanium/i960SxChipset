@@ -283,10 +283,12 @@ void doAddressState() noexcept {
 #ifndef ARDUINO_AVR_ATmega1284
 volatile uint32_t cycleCount = 0;
 #endif
+Device* currentThing = nullptr;
 void
 enteringDataState() noexcept {
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
+    currentThing = getThing(processorInterface.get16ByteAlignedBaseAddress(), LoadStoreStyle::Full16);
 }
 void processDataRequest() noexcept {
     processorInterface.updateDataCycle();
@@ -294,7 +296,7 @@ void processDataRequest() noexcept {
         LoadStoreStyle style = processorInterface.getStyle();
         // do not allow writes or reads into processor internal memory
         //processorInterface.setDataBits(performRead(burstAddress, style));
-        if (auto currentThing = getThing(burstAddress, style);  currentThing) {
+        if (currentThing) {
             if (processorInterface.isReadOperation()) {
                 processorInterface.setDataBits(currentThing->read(burstAddress, style));
             } else {
