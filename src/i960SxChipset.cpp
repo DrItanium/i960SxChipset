@@ -208,7 +208,7 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 #ifdef ARDUINO_ARCH_SAMD
 Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
 #endif
-volatile SplitWord16 burstCache[16 / sizeof(SplitWord16)] = { { 0 }  };
+SplitWord16 burstCache[16 / sizeof(SplitWord16)] = { { 0 }  };
 constexpr auto NoRequest = 0;
 constexpr auto NewRequest = 1;
 constexpr auto ReadyAndBurst = 2;
@@ -231,12 +231,14 @@ constexpr auto ToNonBurstReadTransaction_Internal = 18;
 constexpr auto ToNonBurstWriteTransaction_OK = 19;
 constexpr auto ToNonBurstWriteTransaction_Unmapped = 20;
 constexpr auto ToNonBurstWriteTransaction_Internal = 21;
+constexpr auto ToBusRecovery = 22;
+constexpr auto ToCommitBurstTransaction = 23;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
-void processBurstDataRequest() noexcept;
+void dataCycleStart() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringChecksumFailure() noexcept;
@@ -300,6 +302,11 @@ enteringDataState() noexcept {
     processorInterface.newDataCycle();
     currentThing = getThing(processorInterface.get16ByteAlignedBaseAddress(), LoadStoreStyle::Full16);
 }
+void commitBurstCache() noexcept {
+    auto baseCacheAddress = processorInterface.get16ByteAlignedBaseAddress();
+    currentThing->blockWrite(baseCacheAddress, reinterpret_cast<byte*>(burstCache), 16);
+    fsm.trigger(ToBusRecovery);
+}
 void dataCycleStart() noexcept {
     processorInterface.newDataCycle();
     bool isReadOperation = processorInterface.isReadOperation();
@@ -308,6 +315,8 @@ void dataCycleStart() noexcept {
         currentThing = getThing(align16BaseAddress, LoadStoreStyle::Full16);
         if (currentThing) {
             if (isBurstOperation) {
+                currentThing->read(align16BaseAddress, reinterpret_cast<byte*>(burstCache), 16);
+                // read into the burst cache as part of data cycle startup
                 if (isReadOperation)  {
                     fsm.trigger(ToBurstReadTransaction_OK);
                 } else {
@@ -351,6 +360,53 @@ void dataCycleStart() noexcept {
                 fsm.trigger(ToNonBurstWriteTransaction_Internal);
             }
         }
+    }
+}
+void performBurstWrite() noexcept {
+    processorInterface.updateDataCycle();
+    auto offset = processorInterface.getBurstAddressIndex();
+    auto& targetCell = burstCache[offset];
+    SplitWord16 dataBits(processorInterface.getDataBits());
+    switch (processorInterface.getStyle()) {
+        case LoadStoreStyle::Full16:
+            targetCell.wholeValue_ = dataBits.wholeValue_;
+            break;
+        case LoadStoreStyle::Lower8:
+            targetCell.bytes[0] = dataBits.bytes[0];
+            break;
+        case LoadStoreStyle::Upper8:
+            targetCell.bytes[1] = dataBits.bytes[1];
+            break;
+        default:
+            break;
+    }
+    processorInterface.signalReady();
+    if (processorInterface.blastTriggered()) {
+        // we not in burst mode
+        fsm.trigger(ToCommitBurstTransaction);
+    }
+}
+void performNonBurstWrite() noexcept {
+    // write the given value right here and now
+    processorInterface.updateDataCycle();
+    currentThing->write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
+    processorInterface.signalReady();
+    // we not in burst mode
+    fsm.trigger(ToBusRecovery);
+}
+void unmappedWrite() noexcept {
+    // this is used regardless of burst or non burst operations
+    processorInterface.updateDataCycle();
+    // we are just going to report the error
+    Serial.print(F("UNMAPPED WRITE OF 0x"));
+    // expensive but something has gone horribly wrong anyway so whatever!
+    Serial.print(processorInterface.getDataBits(), HEX);
+    Serial.print(F(" TO 0x"));
+    Serial.println(processorInterface.getAddress(), HEX);
+    processorInterface.signalReady();
+    if (processorInterface.blastTriggered()) {
+        // we not in burst mode
+        fsm.trigger(ToBusRecovery);
     }
 }
 void processDataRequest() noexcept {

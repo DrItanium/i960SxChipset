@@ -133,6 +133,7 @@ public:
      * @return The 16-byte aligned address closest to the real burst address
      */
     [[nodiscard]] constexpr auto get16ByteAlignedBaseAddress() const noexcept { return upperMaskedAddress_; }
+    [[nodiscard]] constexpr auto getBurstAddressIndex() const noexcept { return burstAddressBits_; }
 private:
     void updateOutputLatch() noexcept;
 private:
@@ -147,6 +148,7 @@ private:
     bool lockValue_ = true;
     bool holdValue_ = false;
     bool blastTriggered_ = false;
+    byte burstAddressBits_ = 0;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

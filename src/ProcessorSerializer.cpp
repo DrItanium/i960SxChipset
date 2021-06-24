@@ -249,9 +249,10 @@ void ProcessorInterface::newDataCycle() noexcept {
 }
 void ProcessorInterface::updateDataCycle() noexcept {
     auto bits = readGPIO16(IOExpanderAddress::MemoryCommitExtras);
-    auto burstAddressBits = static_cast<byte>((bits & 0b111) << 1);
+    burstAddressBits_ = static_cast<byte>(bits & 0b111);
+    auto offsetBurstAddressBits = burstAddressBits_ << 1;
     auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
     lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
-    address_ = upperMaskedAddress_ | burstAddressBits;
+    address_ = upperMaskedAddress_ | offsetBurstAddressBits;
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
