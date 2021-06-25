@@ -548,7 +548,6 @@ void systemTestState() noexcept;
 void idleState() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
-void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringChecksumFailure() noexcept;
 State tStart(nullptr, startupState, nullptr);
@@ -563,9 +562,6 @@ State tAddr([]() { processorInterface.clearASTrigger(); },
 State tData(enteringDataState,
             processDataRequest,
             nullptr);
-State tRecovery(nullptr,
-                doRecoveryState,
-                nullptr);
 State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
 
 
@@ -602,12 +598,9 @@ void doAddressState() noexcept {
 
 
 
-volatile uint32_t cycleCount = 0;
+uint32_t cycleCount = 0;
 void
 enteringDataState() noexcept {
-    if constexpr (!TargetBoard::onAtmega1284p()) {
-        // since we are entering at this point, we count this is part of the cycle count so capture it
-    }
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
 }
@@ -654,18 +647,6 @@ void processDataRequest() noexcept {
     }
 }
 
-void doRecoveryState() noexcept {
-    if (processorInterface.failTriggered()) {
-        fsm.trigger(ChecksumFailure);
-    } else {
-        if (processorInterface.asTriggered()) {
-            fsm.trigger(RequestPending);
-        } else {
-            fsm.trigger(NoRequest);
-        }
-    }
-}
-
 
 // ----------------------------------------------------------------
 // setup routines
@@ -677,10 +658,7 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
     fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
-    fsm.add_transition(&tData, &tRecovery, ReadyAndNoBurst, nullptr);
-    fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
-    fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
-    fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
+    fsm.add_transition(&tData, &tIdle, ReadyAndNoBurst, nullptr);
     fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
 }
 void setupPeripherals() {
