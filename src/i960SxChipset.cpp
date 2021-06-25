@@ -316,10 +316,9 @@ Device* currentThing = nullptr;
 void dataCycleStart() noexcept {
     processorInterface.newDataCycle();
     currentThing = getThing(processorInterface.get16ByteAlignedBaseAddress(), LoadStoreStyle::Full16);
-    //processorInterface.newDataCycle();
     bool isReadOperation = processorInterface.isReadOperation();
     auto align16BaseAddress = processorInterface.get16ByteAlignedBaseAddress();
-    Serial.print(F("Align 16 Base Address: 0x"));
+    Serial.print(F("Base Address: 0x"));
     Serial.println(align16BaseAddress, HEX);
     currentThing = getThing(align16BaseAddress, LoadStoreStyle::Full16);
     if (currentThing) {
@@ -344,10 +343,12 @@ void performBurstWrite() noexcept {
     auto offset = processorInterface.getBurstAddressIndex();
     auto& targetCell = burstCache[offset];
     SplitWord16 dataBits(processorInterface.getDataBits());
+#if 0
     Serial.print(F("Burst Write To Address: 0x"));
     Serial.print(processorInterface.getAddress(), HEX);
     Serial.print(F(", value: 0x"));
     Serial.println(dataBits.wholeValue_, HEX);
+#endif
     switch (processorInterface.getStyle()) {
         case LoadStoreStyle::Full16:
             targetCell.wholeValue_ = dataBits.wholeValue_;
@@ -364,6 +365,7 @@ void performBurstWrite() noexcept {
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         auto baseCacheAddress = processorInterface.get16ByteAlignedBaseAddress();
+        for (int i = 0; i < 16; ++i)
         currentThing->blockWrite(baseCacheAddress, reinterpret_cast<byte*>(burstCache), 16);
         fsm.trigger(ToBusRecovery);
     }
@@ -371,10 +373,12 @@ void performBurstWrite() noexcept {
 void performBurstRead() noexcept {
     processorInterface.updateDataCycle();
     auto result = burstCache[processorInterface.getBurstAddressIndex()].wholeValue_;
+#if 0
     Serial.print(F("Burst Read Address: 0x"));
     Serial.print(processorInterface.getAddress(), HEX);
     Serial.print(F(", value: 0x"));
     Serial.println(result, HEX);
+#endif
     // just assign all 16-bits, the processor will choose which bits to care about
     processorInterface.setDataBits(result);
     processorInterface.signalReady();
@@ -385,8 +389,10 @@ void performBurstRead() noexcept {
 }
 void performNonBurstRead() noexcept {
     processorInterface.updateDataCycle();
+#if 0
     Serial.print(F("Read Address: 0x"));
     Serial.println(processorInterface.getAddress(), HEX);
+#endif
     processorInterface.setDataBits(currentThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
     processorInterface.signalReady();
     fsm.trigger(ToBusRecovery);
@@ -395,10 +401,12 @@ void performNonBurstWrite() noexcept {
     // write the given value right here and now
     processorInterface.updateDataCycle();
     auto result = processorInterface.getDataBits();
+#if 0
     Serial.print(F("Write To Address: 0x"));
     Serial.print(processorInterface.getAddress(), HEX);
     Serial.print(F(", value: 0x"));
     Serial.println(result, HEX);
+#endif
     currentThing->write(processorInterface.getAddress(), result, processorInterface.getStyle());
     processorInterface.signalReady();
     // we not in burst mode
