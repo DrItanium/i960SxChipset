@@ -600,29 +600,27 @@ enteringDataState() noexcept {
 }
 void processDataRequest() noexcept {
     processorInterface.updateDataCycle();
-    if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
-        // do not allow writes or reads into processor internal memory
-        //processorInterface.setDataBits(performRead(burstAddress, style));
-        LoadStoreStyle style = processorInterface.getStyle();
-        if (auto theThing = getThing(burstAddress, style); theThing) {
-            if (processorInterface.isReadOperation()) {
-                processorInterface.setDataBits(theThing->read(burstAddress, style));
-            } else {
-                theThing->write(burstAddress, processorInterface.getDataBits(), style);
-            }
+    // do not allow writes or reads into processor internal memory
+    Address burstAddress = processorInterface.getAddress();
+    LoadStoreStyle style = processorInterface.getStyle();
+    if (auto theThing = getThing(burstAddress, style); theThing) {
+        if (processorInterface.isReadOperation()) {
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
         } else {
-            if (processorInterface.isReadOperation()) {
-                Serial.print(F("UNMAPPED READ FROM 0x"));
-            } else {
-                Serial.print(F("UNMAPPED WRITE OF 0x"));
-                // expensive but something has gone horribly wrong anyway so whatever!
-                Serial.print(processorInterface.getDataBits(), HEX);
-                Serial.print(F(" TO 0x"));
-
-            }
-            Serial.println(burstAddress, HEX);
-            delay(10);
+            theThing->write(burstAddress, processorInterface.getDataBits(), style);
         }
+    } else {
+        if (processorInterface.isReadOperation()) {
+            Serial.print(F("UNMAPPED READ FROM 0x"));
+        } else {
+            Serial.print(F("UNMAPPED WRITE OF 0x"));
+            // expensive but something has gone horribly wrong anyway so whatever!
+            Serial.print(processorInterface.getDataBits(), HEX);
+            Serial.print(F(" TO 0x"));
+
+        }
+        Serial.println(burstAddress, HEX);
+        delay(10);
     }
     // setup the proper address and emit this over serial
     processorInterface.signalReady();
