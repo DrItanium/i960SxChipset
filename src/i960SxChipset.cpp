@@ -241,7 +241,7 @@ constexpr auto ToUnmappedReadTransaction = 14;
 constexpr auto ToUnmappedWriteTransaction = 15;
 constexpr auto ToBusRecovery = 16;
 constexpr auto ToCyclicBurstReadTransaction = 17;
-constexpr auto ToCyclieBurstWriteTransaction= 18;
+constexpr auto ToCyclicBurstWriteTransaction= 18;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
@@ -322,6 +322,9 @@ volatile uint32_t cycleCount = 0;
 #endif
 Device* currentThing = nullptr;
 void dataCycleStart() noexcept {
+    for (auto& a : burstCache) {
+        a.wholeValue_ = 0;
+    }
     processorInterface.newDataCycle();
     currentThing = getThing(processorInterface.get16ByteAlignedBaseAddress(), LoadStoreStyle::Full16);
     bool isReadOperation = processorInterface.isReadOperation();
@@ -329,13 +332,27 @@ void dataCycleStart() noexcept {
     currentThing = getThing(align16BaseAddress, LoadStoreStyle::Full16);
     if (currentThing) {
         if (!processorInterface.blastTriggered()) {
+#if 0
             if (currentThing->supportsBlockTransfers()) {
                 currentThing->read(align16BaseAddress, reinterpret_cast<byte*>(burstCache), 16);
                 // read into the burst cache as part of data cycle startup
                 fsm.trigger(isReadOperation ? ToBurstReadTransaction : ToBurstWriteTransaction);
             } else {
-                fsm.trigger(isReadOperation ? ToCyclicBurstReadTransaction : ToCyclieBurstWriteTransaction);
+                fsm.trigger(isReadOperation ? ToCyclicBurstReadTransaction : ToCyclicBurstWriteTransaction);
             }
+#else
+            if (isReadOperation) {
+                if (currentThing->supportsBlockTransfers()) {
+                    currentThing->read(align16BaseAddress, reinterpret_cast<byte *>(burstCache), 16);
+                    // read into the burst cache as part of data cycle startup
+                    fsm.trigger(ToBurstReadTransaction);
+                } else {
+                    fsm.trigger(ToCyclicBurstReadTransaction);
+                }
+            } else {
+                fsm.trigger(ToCyclicBurstWriteTransaction);
+            }
+#endif
         } else {
             fsm.trigger(isReadOperation ? ToNonBurstReadTransaction : ToNonBurstWriteTransaction);
         }
@@ -377,7 +394,19 @@ void performBurstWrite() noexcept {
 void performBurstRead() noexcept {
     processorInterface.updateDataCycle();
     // just assign all 16-bits, the processor will choose which bits to care about
-    processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_);
+    switch (processorInterface.getStyle()) {
+        case LoadStoreStyle::Full16:
+            processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_);
+            break;
+        case LoadStoreStyle::Upper8:
+            processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_ & 0xFF00);
+            break;
+        case LoadStoreStyle::Lower8:
+            processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_ & 0x00FF);
+            break;
+        default:
+            break;
+    }
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         // we do not need to write anything back
@@ -394,9 +423,6 @@ void performNonBurstRead() noexcept {
 
 void performCyclicBurstRead() noexcept {
     processorInterface.updateDataCycle();
-    auto address = processorInterface.getAddress();
-    Serial.print(F("Perform cyclic burst read from 0x"));
-    Serial.println(address, HEX);
     processorInterface.setDataBits(currentThing->read(processorInterface.getAddress(),
                                                       processorInterface.getStyle()));
     processorInterface.signalReady();
@@ -418,12 +444,6 @@ void performNonBurstWrite() noexcept {
 void performCyclicBurstWrite() noexcept {
     // write the given value right here and now
     processorInterface.updateDataCycle();
-    auto address = processorInterface.getAddress();
-    auto value = processorInterface.getDataBits();
-    Serial.print(F("Perform cyclic burst write to 0x"));
-    Serial.print(address, HEX);
-    Serial.print(F(" of value 0x"));
-    Serial.println(value, HEX);
     currentThing->write(processorInterface.getAddress(),
                         processorInterface.getDataBits(),
                         processorInterface.getStyle());
@@ -545,7 +565,7 @@ void setupBusStateMachine() noexcept {
     connectStateToDataAndRecovery(&tUnmappedRead, ToUnmappedReadTransaction);
     connectStateToDataAndRecovery(&tUnmappedWrite, ToUnmappedWriteTransaction);
     connectStateToDataAndRecovery(&tCyclicBurstRead, ToCyclicBurstReadTransaction);
-    connectStateToDataAndRecovery(&tCyclicBurstWrite, ToCyclieBurstWriteTransaction);
+    connectStateToDataAndRecovery(&tCyclicBurstWrite, ToCyclicBurstWriteTransaction);
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
