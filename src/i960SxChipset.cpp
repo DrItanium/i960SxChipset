@@ -627,15 +627,16 @@ void processDataRequest() noexcept {
     if (processorInterface.blastTriggered()) {
         // we not in burst mode
         fsm.trigger(ReadyAndNoBurst);
-    }
-    if constexpr (!TargetBoard::onAtmega1284p()) {
+    } else {
+        if constexpr (!TargetBoard::onAtmega1284p()) {
 #ifdef ARDUINO_ARCH_SAMD
-        // we are now on _much_ faster boards if it isn't the 1284p
-        cycleCount = 0;
-        // enable the timer and perform a wait based on the action
-        burstTransactionTimer.enable(true);
-        while (cycleCount != 0);
+            // we are now on _much_ faster boards if it isn't the 1284p
+            cycleCount = 0;
+            // enable the timer and perform a wait based on the action
+            burstTransactionTimer.enable(true);
+            while (cycleCount != 0);
 #endif
+        }
     }
 }
 
