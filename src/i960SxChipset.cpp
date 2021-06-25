@@ -394,6 +394,9 @@ void performNonBurstRead() noexcept {
 
 void performCyclicBurstRead() noexcept {
     processorInterface.updateDataCycle();
+    auto address = processorInterface.getAddress();
+    Serial.print(F("Perform cyclic burst read from 0x"));
+    Serial.println(address, HEX);
     processorInterface.setDataBits(currentThing->read(processorInterface.getAddress(),
                                                       processorInterface.getStyle()));
     processorInterface.signalReady();
@@ -415,6 +418,12 @@ void performNonBurstWrite() noexcept {
 void performCyclicBurstWrite() noexcept {
     // write the given value right here and now
     processorInterface.updateDataCycle();
+    auto address = processorInterface.getAddress();
+    auto value = processorInterface.getDataBits();
+    Serial.print(F("Perform cyclic burst write to 0x"));
+    Serial.print(address, HEX);
+    Serial.print(F(" of value 0x"));
+    Serial.println(value, HEX);
     currentThing->write(processorInterface.getAddress(),
                         processorInterface.getDataBits(),
                         processorInterface.getStyle());

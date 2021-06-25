@@ -163,7 +163,7 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
 uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
-        Serial.println(F("INVOKING PATTERN ENGINE!!!"));
+
         // turn off the cache right now since it will just interfere with write speed
         for (auto& entry : patternCache_) {
             entry = pattern_;
@@ -190,11 +190,14 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
     if (auto src = getThing(srcAddress, LoadStoreStyle::Lower8),
              dest = getThing(destAddress, LoadStoreStyle::Lower8);
             src && dest) {
+        for (int i = 0; i < CopyEngineCacheSize; ++i) {
+             copyEngineBuffer_[i] = 0;
+        }
         auto fullCopies = copyEngineLength_.wholeValue_ / CopyEngineCacheSize;
         auto slop = copyEngineLength_.wholeValue_ % CopyEngineCacheSize;
         Address srcAddrPtr = copyEngineSourceAddress_.wholeValue_;
         Address destAddrPtr = copyEngineDestinationAddress_.wholeValue_;
-        if constexpr (false) {
+        if constexpr (true) {
             Serial.print(F("COPYING FROM 0x"));
             Serial.print(srcAddrPtr, HEX);
             Serial.print(F(" TO 0x"));
@@ -208,7 +211,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
             Serial.println(F("]"));
         }
         for (uint32_t i = 0; i < fullCopies; ++i, srcAddrPtr += CopyEngineCacheSize, destAddrPtr += CopyEngineCacheSize) {
-            if constexpr (false) {
+            if constexpr (true) {
                 Serial.print(F("COPYING FROM 0x"));
                 Serial.print(srcAddrPtr, HEX);
                 Serial.print(F(" TO 0x"));
@@ -218,7 +221,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
             dest->write(destAddrPtr, copyEngineBuffer_, CopyEngineCacheSize);
         }
         if (slop > 0) {
-            if constexpr (false) {
+            if constexpr (true) {
                 Serial.print(F("COPYING FROM 0x"));
                 Serial.print(srcAddrPtr, HEX);
                 Serial.print(F(" TO 0x"));
@@ -227,6 +230,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
             src->read(srcAddrPtr, copyEngineBuffer_, slop);
             dest->write(destAddrPtr, copyEngineBuffer_, slop);
         }
+        signalHaltState(F("COPY ENGINE HALT"));
         return 0;
     } else {
         return -1;
