@@ -463,67 +463,6 @@ void unmappedRead() noexcept {
     }
 }
 
-#if 0
-[[maybe_unused]]
-void processDataRequest() noexcept {
-    processorInterface.updateDataCycle();
-    if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
-        LoadStoreStyle style = processorInterface.getStyle();
-        // do not allow writes or reads into processor internal memory
-        //processorInterface.setDataBits(performRead(burstAddress, style));
-        if (currentThing) {
-            if (processorInterface.isReadOperation()) {
-                processorInterface.setDataBits(currentThing->read(burstAddress, style));
-            } else {
-                currentThing->write(burstAddress, processorInterface.getDataBits(), style);
-            }
-        } else {
-            if (processorInterface.isReadOperation()) {
-                Serial.print(F("UNMAPPED READ FROM 0x"));
-            } else {
-                Serial.print(F("UNMAPPED WRITE OF 0x"));
-                // expensive but something has gone horribly wrong anyway so whatever!
-                Serial.print(processorInterface.getDataBits(), HEX);
-                Serial.print(F(" TO 0x"));
-
-            }
-            Serial.println(burstAddress, HEX);
-            delay(10);
-        }
-    }
-    // setup the proper address and emit this over serial
-    processorInterface.signalReady();
-    if (processorInterface.blastTriggered()) {
-        // we not in burst mode
-        fsm.trigger(ReadyAndNoBurst);
-    }
-    if constexpr (!TargetBoard::onAtmega1284p()) {
-#ifdef ARDUINO_ARCH_SAMD
-        // we are now on _much_ faster boards if it isn't the 1284p
-        cycleCount = 0;
-        // enable the timer and perform a wait based on the action
-        burstTransactionTimer.enable(true);
-        while (cycleCount != 0);
-#endif
-    }
-}
-#endif
-
-#if 0
-void doRecoveryState() noexcept {
-    if (processorInterface.failTriggered()) {
-        fsm.trigger(ChecksumFailure);
-    } else {
-        if (processorInterface.asTriggered()) {
-            fsm.trigger(RequestPending);
-        } else {
-            fsm.trigger(NoRequest);
-        }
-    }
-}
-#endif
-
-
 // ----------------------------------------------------------------
 // setup routines
 // ----------------------------------------------------------------
