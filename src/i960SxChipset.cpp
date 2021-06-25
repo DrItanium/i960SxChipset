@@ -391,9 +391,13 @@ void performBurstWrite() noexcept {
         for (int i = 0; i < 8; ++i) {
             Serial.printf(F("\tburstCache[%d] = 0x%x\n"), i, burstCache[i].wholeValue_);
         }
-        currentThing->blockWrite(processorInterface.get16ByteAlignedBaseAddress(),
-                                 reinterpret_cast<byte*>(burstCache),
-                                 16);
+        auto bytesWritten = currentThing->write(processorInterface.get16ByteAlignedBaseAddress(),
+                                                reinterpret_cast<byte*>(burstCache),
+                                                16);
+        if (bytesWritten != 16) {
+            Serial.printf(F("ONLY %d BYTES WRITTEN DURING WRITE TRANSACTION!\n"), bytesWritten);
+            signalHaltState(F("NOT ENOUGH BYTES WRITTEN"));
+        }
         fsm.trigger(ToBusRecovery);
     }
 }
