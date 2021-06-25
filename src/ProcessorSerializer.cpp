@@ -99,6 +99,9 @@ namespace
         digitalWrite(i960Pinout::GPIOSelect, HIGH);
         return buffer[2];
     }
+    uint8_t readGPIOA(ProcessorInterface::IOExpanderAddress addr) {
+        return read8(addr, MCP23x17Registers::GPIOA);
+    }
     uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
         return read16(addr, MCP23x17Registers::GPIO);
     }
@@ -248,7 +251,7 @@ void ProcessorInterface::newDataCycle() noexcept {
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
-    auto bits = readGPIO16(IOExpanderAddress::MemoryCommitExtras);
+    auto bits = readGPIOA(IOExpanderAddress::MemoryCommitExtras);
     burstAddressBits_ = static_cast<byte>(bits & 0b111);
     auto offsetBurstAddressBits = burstAddressBits_ << 1;
     auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
