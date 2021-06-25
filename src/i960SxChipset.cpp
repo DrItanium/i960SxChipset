@@ -272,7 +272,6 @@ State tRecovery(nullptr,
                 doRecoveryState,
                 nullptr);
 #endif
-State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
 State tBurstRead(nullptr, performBurstRead, nullptr);
 State tBurstWrite(nullptr, performBurstWrite, nullptr);
 State tNonBurstRead(nullptr, performNonBurstRead, nullptr);
@@ -303,7 +302,7 @@ void onDENAsserted() {
 }
 void idleState() noexcept {
     if (processorInterface.failTriggered()) {
-        fsm.trigger(ChecksumFailure);
+        signalHaltState(F("CHECKSUM FAILURE!"));
     } else {
         if (processorInterface.asTriggered()) {
             fsm.trigger(NewRequest);
@@ -533,14 +532,11 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
     fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
-    fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
 #if 0
     fsm.add_transition(&tData, &tRecovery, ReadyAndNoBurst, nullptr);
     fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
     fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
-    fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
-    fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
 #endif
     // we want to commit the burst transaction in a separate state
     fsm.add_transition(&tData, &tBurstWrite, ToBurstWriteTransaction, nullptr);
@@ -705,9 +701,6 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
     while(true) {
         delay(1000);
     }
-}
-void enteringChecksumFailure() noexcept {
-    signalHaltState(F("CHECKSUM FAILURE!"));
 }
 SdFat SD;
 /// @todo Eliminate after MightyCore update
