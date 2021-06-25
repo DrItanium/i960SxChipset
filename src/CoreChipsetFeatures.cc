@@ -126,8 +126,7 @@ CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
         case Registers::CopyEngine_LengthLower: copyEngineLength_.halves[0] = value; break;
         case Registers::CopyEngine_LengthUpper: copyEngineLength_.halves[1] = value; break;
         case Registers::CopyEngine_Doorbell: (void)invokeCopyEngine(); break;
-        default:
-            break;
+        default: break;
     }
 }
 
@@ -185,48 +184,21 @@ CoreChipsetFeatures::invokePatternEngine() noexcept {
 
 uint16_t
 CoreChipsetFeatures::invokeCopyEngine() noexcept {
-    auto srcAddress = copyEngineSourceAddress_.wholeValue_;
-    auto destAddress = copyEngineDestinationAddress_.wholeValue_;
-    if (auto src = getThing(srcAddress, LoadStoreStyle::Lower8),
-             dest = getThing(destAddress, LoadStoreStyle::Lower8);
+    if (auto src = getThing(copyEngineSourceAddress_.wholeValue_, LoadStoreStyle::Lower8),
+             dest = getThing(copyEngineDestinationAddress_.wholeValue_, LoadStoreStyle::Lower8);
             src && dest) {
-        for (int i = 0; i < CopyEngineCacheSize; ++i) {
-             copyEngineBuffer_[i] = 0;
+        for (auto& a : copyEngineBuffer_) {
+            a = 0;
         }
         auto fullCopies = copyEngineLength_.wholeValue_ / CopyEngineCacheSize;
         auto slop = copyEngineLength_.wholeValue_ % CopyEngineCacheSize;
         Address srcAddrPtr = copyEngineSourceAddress_.wholeValue_;
         Address destAddrPtr = copyEngineDestinationAddress_.wholeValue_;
-        if constexpr (false) {
-            Serial.print(F("COPYING FROM 0x"));
-            Serial.print(srcAddrPtr, HEX);
-            Serial.print(F(" TO 0x"));
-            Serial.print(destAddrPtr, HEX);
-            Serial.print(F(" length: 0x"));
-            Serial.println(copyEngineLength_.wholeValue_, HEX);
-            Serial.print(F("Full Copies, Slop: [0x"));
-            Serial.print(fullCopies, HEX);
-            Serial.print(F(", 0x"));
-            Serial.print(slop, HEX);
-            Serial.println(F("]"));
-        }
         for (uint32_t i = 0; i < fullCopies; ++i, srcAddrPtr += CopyEngineCacheSize, destAddrPtr += CopyEngineCacheSize) {
-            if constexpr (false) {
-                Serial.print(F("COPYING FROM 0x"));
-                Serial.print(srcAddrPtr, HEX);
-                Serial.print(F(" TO 0x"));
-                Serial.println(destAddrPtr, HEX);
-            }
             src->read(srcAddrPtr, copyEngineBuffer_, CopyEngineCacheSize);
             dest->write(destAddrPtr, copyEngineBuffer_, CopyEngineCacheSize);
         }
         if (slop > 0) {
-            if constexpr (false) {
-                Serial.print(F("COPYING FROM 0x"));
-                Serial.print(srcAddrPtr, HEX);
-                Serial.print(F(" TO 0x"));
-                Serial.println(destAddrPtr, HEX);
-            }
             src->read(srcAddrPtr, copyEngineBuffer_, slop);
             dest->write(destAddrPtr, copyEngineBuffer_, slop);
         }
@@ -238,7 +210,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
 
 void
 CoreChipsetFeatures::begin() noexcept {
-    if constexpr (true) {
+    if constexpr (false) {
         Serial.print(F("ADDRESS OF LED: 0x"));
         Serial.println(static_cast<uint32_t>(Registers::Led) + 0xFE00'0000, HEX);
         Serial.print(F("BASE ADDRESS OF PATTERN: 0x"));
