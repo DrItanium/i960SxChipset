@@ -204,7 +204,19 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 
 // We are adding extra states to the design when dealing with burst transactions on burst address aware devices
 //
-// NOTE: Tw may turn out to be synthetic
+// Tbr -> Burst Read Action
+// Tbw -> Burst Write Action
+// Tnbr -> Non Burst Read Action
+// Tnbw -> Non Burst Write Action
+// Tur -> Unmapped Read Action
+// Tuw -> Unmapped Write Action
+// Td -> Tbr  via ToBurstReadTransaction
+// Td -> Tbw  via ToBurstWriteTransaction
+// Td -> Tnbr via ToNonBurstReadTransaction
+// Td -> Tnbw via ToNonBurstWriteTransaction
+// Td -> Tur via ToUnmappedReadTransaction
+// Td -> Tuw via ToUnmappedWriteTransaction
+// all of these new states transition to tR via ToBusRecovery
 #ifdef ARDUINO_ARCH_SAMD
 Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
 #endif
@@ -231,11 +243,17 @@ void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
 void doAddressState() noexcept;
-void processDataRequest() noexcept;
+[[maybe_unused]] void processDataRequest() noexcept;
 void dataCycleStart() noexcept;
 void doRecoveryState() noexcept;
 void enteringDataState() noexcept;
 void enteringChecksumFailure() noexcept;
+void performBurstRead() noexcept;
+void performBurstWrite() noexcept;
+void performNonBurstRead() noexcept;
+void performNonBurstWrite() noexcept;
+void unmappedRead() noexcept;
+void unmappedWrite() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
@@ -246,12 +264,18 @@ State tAddr([]() { processorInterface.clearASTrigger(); },
             doAddressState,
             nullptr);
 State tData(enteringDataState,
-            processDataRequest,
+            dataCycleStart,
             nullptr);
 State tRecovery(nullptr,
                 doRecoveryState,
                 nullptr);
 State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
+State tBurstRead(nullptr, performBurstRead, nullptr);
+State tBurstWrite(nullptr, performBurstWrite, nullptr);
+State tNonBurstRead(nullptr, performNonBurstRead, nullptr);
+State tNonBurstWrite(nullptr, performNonBurstWrite, nullptr);
+State tUnmappedRead(nullptr, unmappedRead, nullptr);
+State tUnmappedWrite(nullptr, unmappedWrite, nullptr);
 
 
 void startupState() noexcept {
@@ -296,11 +320,6 @@ enteringDataState() noexcept {
     processorInterface.newDataCycle();
     currentThing = getThing(processorInterface.get16ByteAlignedBaseAddress(), LoadStoreStyle::Full16);
 }
-void commitBurstCache() noexcept {
-    auto baseCacheAddress = processorInterface.get16ByteAlignedBaseAddress();
-    currentThing->blockWrite(baseCacheAddress, reinterpret_cast<byte*>(burstCache), 16);
-    fsm.trigger(ToBusRecovery);
-}
 void dataCycleStart() noexcept {
     processorInterface.newDataCycle();
     bool isReadOperation = processorInterface.isReadOperation();
@@ -316,11 +335,17 @@ void dataCycleStart() noexcept {
         }
     } else {
         // unmapped space (including cpu internal)
+        if (isReadOperation) {
+            // force the data expander to be zero for unmapped reads
+            processorInterface.setDataBits(0);
+        }
         fsm.trigger(isReadOperation ? ToUnmappedReadTransaction : ToUnmappedWriteTransaction);
     }
 }
 void performBurstWrite() noexcept {
     processorInterface.updateDataCycle();
+    Serial.print(F("Burst Write Transaction To 0x"));
+    Serial.println(processorInterface.getAddress(), HEX);
     auto offset = processorInterface.getBurstAddressIndex();
     auto& targetCell = burstCache[offset];
     SplitWord16 dataBits(processorInterface.getDataBits());
@@ -339,12 +364,15 @@ void performBurstWrite() noexcept {
     }
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
-        // we not in burst mode
-        fsm.trigger(ToCommitBurstTransaction);
+        auto baseCacheAddress = processorInterface.get16ByteAlignedBaseAddress();
+        currentThing->blockWrite(baseCacheAddress, reinterpret_cast<byte*>(burstCache), 16);
+        fsm.trigger(ToBusRecovery);
     }
 }
 void performBurstRead() noexcept {
     processorInterface.updateDataCycle();
+    Serial.print(F("Burst Read Transaction From 0x"));
+    Serial.println(processorInterface.getAddress(), HEX);
     // just assign all 16-bits, the processor will choose which bits to care about
     processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_);
     processorInterface.signalReady();
@@ -355,6 +383,8 @@ void performBurstRead() noexcept {
 }
 void performNonBurstRead() noexcept {
     processorInterface.updateDataCycle();
+    Serial.print(F("Read Transaction From 0x"));
+    Serial.println(processorInterface.getAddress(), HEX);
     processorInterface.setDataBits(currentThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
     processorInterface.signalReady();
     fsm.trigger(ToBusRecovery);
@@ -362,6 +392,8 @@ void performNonBurstRead() noexcept {
 void performNonBurstWrite() noexcept {
     // write the given value right here and now
     processorInterface.updateDataCycle();
+    Serial.print(F("Write Transaction To 0x"));
+    Serial.println(processorInterface.getAddress(), HEX);
     currentThing->write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
     processorInterface.signalReady();
     // we not in burst mode
@@ -382,9 +414,6 @@ void unmappedWrite() noexcept {
         fsm.trigger(ToBusRecovery);
     }
 }
-void onEnteringDisallowedRead() noexcept {
-    processorInterface.setDataBits(0);
-}
 void unmappedRead() noexcept {
     // this is used regardless of burst or non burst operations
     processorInterface.updateDataCycle();
@@ -398,6 +427,8 @@ void unmappedRead() noexcept {
         fsm.trigger(ToBusRecovery);
     }
 }
+
+[[maybe_unused]]
 void processDataRequest() noexcept {
     processorInterface.updateDataCycle();
     if (Address burstAddress = processorInterface.getAddress(); burstAddress < 0xFF00'0000) {
@@ -469,6 +500,16 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
     fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
+    auto connectStateToDataAndRecovery = [](auto* state, auto toState) noexcept {
+        fsm.add_transition(&tData, state, toState, nullptr);
+        fsm.add_transition(state, &tRecovery, ToBusRecovery, nullptr);
+    };
+    connectStateToDataAndRecovery(&tBurstRead, ToBurstReadTransaction);
+    connectStateToDataAndRecovery(&tBurstWrite, ToBurstWriteTransaction);
+    connectStateToDataAndRecovery(&tNonBurstRead, ToNonBurstReadTransaction);
+    connectStateToDataAndRecovery(&tNonBurstWrite, ToNonBurstWriteTransaction);
+    connectStateToDataAndRecovery(&tUnmappedRead, ToUnmappedReadTransaction);
+    connectStateToDataAndRecovery(&tUnmappedWrite, ToUnmappedWriteTransaction);
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
