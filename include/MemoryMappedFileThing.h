@@ -70,7 +70,7 @@ protected:
     }
     void
     write8(Address offset, uint8_t value) noexcept override {
-        if (permissions_ != FILE_READ) {
+        if (fileIsWritable()) {
             theFile_.seekSet(offset);
             theFile_.write(value);
         }
@@ -84,17 +84,19 @@ protected:
     }
     void
     write16(Address offset, uint16_t value) noexcept override {
-        if (permissions_ != FILE_READ) {
+        if (fileIsWritable()) {
             theFile_.seekSet(offset);
             theFile_.write(reinterpret_cast<char *>(&value), sizeof(value));
         }
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        if (permissions_ != FILE_READ) {
+        if (fileIsWritable()) {
             theFile_.seek(address);
             auto result = theFile_.write(buf, capacity);
-            // make sure...
-            theFile_.flush();
+            if constexpr (false) {
+                // make sure...
+                theFile_.flush();
+            }
             return result;
         }
         return 0;
@@ -106,6 +108,8 @@ protected:
     }
     [[nodiscard]] constexpr auto getFileSize() const noexcept { return fileSize_; }
     [[nodiscard]] bool supportsBlockTransfers() const noexcept final { return true; }
+    [[nodiscard]] constexpr bool fileIsReadOnly() const noexcept { return permissions_ == FILE_READ; }
+    [[nodiscard]] constexpr bool fileIsWritable() const noexcept { return !fileIsReadOnly(); }
 private:
     File theFile_; // use an SDCard as ram for the time being
     Address maxSize_;
