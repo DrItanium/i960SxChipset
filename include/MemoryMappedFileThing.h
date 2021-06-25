@@ -105,7 +105,7 @@ protected:
         return theFile_.readBytes(buf, capacity);
     }
     [[nodiscard]] constexpr auto getFileSize() const noexcept { return fileSize_; }
-
+    [[nodiscard]] bool supportsBlockTransfers() const noexcept final { return true; }
 private:
     File theFile_; // use an SDCard as ram for the time being
     Address maxSize_;

@@ -174,6 +174,8 @@ public:
         return blockRead(relativeAddress, buffer, count);
     }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
+
+    [[nodiscard]] virtual bool supportsBlockTransfers() const noexcept = 0;
 private:
     Address base_;
     Address end_;
@@ -190,6 +192,7 @@ public:
     IOSpaceThing(Address base, Address end) : Parent(base + SpaceBaseAddress, end + SpaceBaseAddress) { }
     explicit IOSpaceThing(Address base) : Parent(base + SpaceBaseAddress) { }
     ~IOSpaceThing() override = default;
+    [[nodiscard]] bool supportsBlockTransfers() const noexcept override { return false; }
 };
 
 /**
