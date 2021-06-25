@@ -179,8 +179,6 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 // Ti - Idle State
 // Ta - Address State
 // Td - Data State
-// Tr - Recovery State
-// Tw - Wait State
 // TChecksumFailure - Checksum Failure State
 
 // READY - ~READY asserted
@@ -191,16 +189,13 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 // NO REQUEST - ~AS not asserted when in 
 
 // Ti -> Ti via no request
-// Tr -> Ti via no request
-// Tr -> Ta via request pending
 // Ti -> Ta via new request
 // on enter of Ta, set address state to false
 // on enter of Td, burst is sampled
 // Ta -> Td
-// Td -> Tr after signaling ready and no burst (blast low)
+// Td -> Ti after signaling ready and no burst (blast low)
 // Td -> Td after signaling ready and burst (blast high)
 // Ti -> TChecksumFailure if FAIL is asserted
-// Tr -> TChecksumFailure if FAIL is asserted
 
 // We are adding extra states to the design when dealing with burst transactions on burst address aware devices
 //
@@ -249,7 +244,7 @@ void idleState() noexcept;
 void doAddressState() noexcept;
 [[maybe_unused]] void processDataRequest() noexcept;
 void dataCycleStart() noexcept;
-void doRecoveryState() noexcept;
+[[maybe_unused]] void doRecoveryState() noexcept;
 void enteringChecksumFailure() noexcept;
 void performBurstRead() noexcept;
 void performBurstWrite() noexcept;
@@ -272,9 +267,11 @@ State tAddr([]() { processorInterface.clearASTrigger(); },
 State tData(nullptr,
             dataCycleStart,
             nullptr);
+#if 0
 State tRecovery(nullptr,
                 doRecoveryState,
                 nullptr);
+#endif
 State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
 State tBurstRead(nullptr, performBurstRead, nullptr);
 State tBurstWrite(nullptr, performBurstWrite, nullptr);
@@ -467,6 +464,7 @@ void unmappedRead() noexcept {
     }
 }
 
+#if 0
 [[maybe_unused]]
 void processDataRequest() noexcept {
     processorInterface.updateDataCycle();
@@ -510,7 +508,9 @@ void processDataRequest() noexcept {
 #endif
     }
 }
+#endif
 
+#if 0
 void doRecoveryState() noexcept {
     if (processorInterface.failTriggered()) {
         fsm.trigger(ChecksumFailure);
@@ -522,6 +522,7 @@ void doRecoveryState() noexcept {
         }
     }
 }
+#endif
 
 
 // ----------------------------------------------------------------
@@ -534,11 +535,13 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
     fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
-    //fsm.add_transition(&tData, &tRecovery, ReadyAndNoBurst, nullptr);
-    //fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
-    //fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
-    //fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
-    //fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
+#if 0
+    fsm.add_transition(&tData, &tRecovery, ReadyAndNoBurst, nullptr);
+    fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
+    fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
+    fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
+    fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
+#endif
     // we want to commit the burst transaction in a separate state
     fsm.add_transition(&tData, &tBurstWrite, ToBurstWriteTransaction, nullptr);
     fsm.add_transition(&tBurstWrite, &tCommitBurstTransaction, ToCommitBurstTransaction, nullptr);
@@ -571,6 +574,7 @@ void setupPeripherals() {
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
+[[maybe_unused]]
 void setupClockSource() {
 #ifdef ARDUINO_SAMD_FEATHER_M0
     // setup PORTS PA15 and PA20 as clock sources (D
@@ -639,7 +643,9 @@ void setup() {
     while(!Serial) {
         delay(10);
     }
-    setupClockSource();
+    if constexpr (!TargetBoard::onAtmega1284p()) {
+        setupClockSource();
+    }
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
