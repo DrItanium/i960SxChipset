@@ -163,6 +163,7 @@ CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
 uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
+        Serial.println(F("INVOKING PATTERN ENGINE!!!"));
         // turn off the cache right now since it will just interfere with write speed
         for (auto& entry : patternCache_) {
             entry = pattern_;
