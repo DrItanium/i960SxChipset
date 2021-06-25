@@ -528,23 +528,17 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 #ifdef ARDUINO_ARCH_SAMD
 Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
 #endif
-constexpr auto NoRequest = 0;
-constexpr auto NewRequest = 1;
-constexpr auto ReadyAndBurst = 2;
-constexpr auto NotReady = 3;
-constexpr auto ReadyAndNoBurst = 4;
-constexpr auto RequestPending = 5;
-constexpr auto ToDataState = 6;
-constexpr auto PerformSelfTest = 7;
-constexpr auto SelfTestComplete = 8;
-constexpr auto ChecksumFailure = 9;
+constexpr auto NewRequest = 0;
+constexpr auto ReadyAndNoBurst = 1;
+constexpr auto ToDataState = 2;
+constexpr auto PerformSelfTest = 3;
+constexpr auto SelfTestComplete = 4;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
 void enteringDataState() noexcept;
-void enteringChecksumFailure() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
