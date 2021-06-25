@@ -301,23 +301,18 @@ public:
     }
     void
     begin() noexcept override {
-            Serial.println(F("Setting up the seesaw"));
             if (!ss.begin()) {
                 signalHaltState(F("NO SEESAW"));
             }
-            Serial.println(F("seesaw started"));
-            Serial.print(F("Version: "));
-            Serial.println(ss.getVersion(), HEX);
             ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
             ss.tftReset();
             display_.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
             ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
-            Serial.println(F("TFT OK!"));
             display_.fillScreen(ST77XX_BLACK);
             display_.setCursor(0, 0);
             display_.setTextColor(ST77XX_WHITE);
             display_.setTextSize(3);
-            display_.println(F("i960Sx!"));
+            display_.println(F("BOOTING!"));
     }
     void
     clearScreen() {

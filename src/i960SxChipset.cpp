@@ -533,11 +533,6 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
     fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
-#if 0
-    fsm.add_transition(&tData, &tRecovery, ReadyAndNoBurst, nullptr);
-    fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
-    fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
-#endif
     // we want to commit the burst transaction in a separate state
     fsm.add_transition(&tData, &tBurstWrite, ToBurstWriteTransaction, nullptr);
     fsm.add_transition(&tBurstWrite, &tCommitBurstTransaction, ToCommitBurstTransaction, nullptr);
@@ -555,7 +550,6 @@ void setupBusStateMachine() noexcept {
     connectStateToDataAndRecovery(&tCyclicBurstWrite, ToCyclicBurstWriteTransaction);
 }
 void setupPeripherals() {
-    Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
     displayReady = true;
     rom.begin();
@@ -567,8 +561,6 @@ void setupPeripherals() {
     adt7410.begin();
     adxl343.begin();
 #endif
-    // setup the bus things
-    Serial.println(F("Done setting up peripherals..."));
 }
 [[maybe_unused]]
 void setupClockSource() {
@@ -674,14 +666,12 @@ void setup() {
     digitalWrite(i960Pinout::Led, LOW);
     fs.begin();
     chipsetFunctions.begin();
-    Serial.println(F("i960Sx chipset bringup"));
     SPI.begin();
     processorInterface.begin();
     // setup the CPU Interface
     setupBusStateMachine();
     setupPeripherals();
     delay(1000);
-    Serial.println(F("i960Sx chipset brought up fully!"));
     // we want to jump into the code as soon as possible after this point
 }
 void loop() {
