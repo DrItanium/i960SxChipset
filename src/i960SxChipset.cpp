@@ -534,18 +534,18 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
     fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
-    fsm.add_transition(&tData, &tRecovery, ReadyAndNoBurst, nullptr);
-    fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
-    fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
-    fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
-    fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
+    //fsm.add_transition(&tData, &tRecovery, ReadyAndNoBurst, nullptr);
+    //fsm.add_transition(&tRecovery, &tAddr, RequestPending, nullptr);
+    //fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
+    //fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
+    //fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
     // we want to commit the burst transaction in a separate state
     fsm.add_transition(&tData, &tBurstWrite, ToBurstWriteTransaction, nullptr);
     fsm.add_transition(&tBurstWrite, &tCommitBurstTransaction, ToCommitBurstTransaction, nullptr);
-    fsm.add_transition(&tCommitBurstTransaction, &tRecovery, ToBusRecovery, nullptr);
+    fsm.add_transition(&tCommitBurstTransaction, &tIdle, ToBusRecovery, nullptr);
     auto connectStateToDataAndRecovery = [](auto* state, auto toState) noexcept {
         fsm.add_transition(&tData, state, toState, nullptr);
-        fsm.add_transition(state, &tRecovery, ToBusRecovery, nullptr);
+        fsm.add_transition(state, &tIdle, ToBusRecovery, nullptr);
     };
     connectStateToDataAndRecovery(&tBurstRead, ToBurstReadTransaction);
     connectStateToDataAndRecovery(&tNonBurstRead, ToNonBurstReadTransaction);
