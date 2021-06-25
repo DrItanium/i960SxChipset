@@ -438,9 +438,7 @@ void unmappedWrite() noexcept {
     Serial.print(F(" TO 0x"));
     Serial.println(processorInterface.getAddress(), HEX);
     signalHaltState(F("UNMAPPED WRITE!"));
-    if constexpr (false) {
-        processorInterface.signalReady();
-    }
+    processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         // we not in burst mode
         fsm.trigger(ToBusRecovery);
@@ -453,9 +451,7 @@ void unmappedRead() noexcept {
     Serial.print(F("UNMAPPED READ FROM 0x"));
     // expensive but something has gone horribly wrong anyway so whatever!
     Serial.println(processorInterface.getAddress(), HEX);
-    if constexpr (false) {
-        signalHaltState(F("UNMAPPED READ!"));
-    }
+    signalHaltState(F("UNMAPPED READ!"));
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         // we not in burst mode
