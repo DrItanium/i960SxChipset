@@ -242,6 +242,7 @@ constexpr auto ToUnmappedWriteTransaction = 15;
 constexpr auto ToBusRecovery = 16;
 constexpr auto ToCyclicBurstReadTransaction = 17;
 constexpr auto ToCyclicBurstWriteTransaction= 18;
+constexpr auto ToCommitBurstTransaction = 19;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
@@ -258,6 +259,7 @@ void unmappedRead() noexcept;
 void unmappedWrite() noexcept;
 void performCyclicBurstRead() noexcept;
 void performCyclicBurstWrite() noexcept;
+void commitBurstTransaction() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
@@ -283,6 +285,7 @@ State tUnmappedWrite(nullptr, unmappedWrite, nullptr);
 
 State tCyclicBurstRead(nullptr, performCyclicBurstRead, nullptr);
 State tCyclicBurstWrite(nullptr, performCyclicBurstWrite, nullptr);
+State tCommitBurstTransaction(nullptr, commitBurstTransaction, nullptr);
 
 
 void startupState() noexcept {
@@ -368,15 +371,14 @@ void performBurstWrite() noexcept {
     }
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
-        auto bytesWritten = currentThing->write(processorInterface.get16ByteAlignedBaseAddress(),
-                                                reinterpret_cast<byte*>(burstCache),
-                                                16);
-        if (bytesWritten != 16) {
-            Serial.printf(F("ONLY %d BYTES WRITTEN DURING WRITE TRANSACTION!\n"), bytesWritten);
-            signalHaltState(F("NOT ENOUGH BYTES WRITTEN"));
-        }
-        fsm.trigger(ToBusRecovery);
+        fsm.trigger(ToCommitBurstTransaction);
     }
+}
+void commitBurstTransaction() noexcept {
+    currentThing->write(processorInterface.get16ByteAlignedBaseAddress(),
+                        reinterpret_cast<byte*>(burstCache),
+                        16);
+    fsm.trigger(ToBusRecovery);
 }
 void performBurstRead() noexcept {
     processorInterface.updateDataCycle();
@@ -537,12 +539,15 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tRecovery, &tIdle, NoRequest, nullptr);
     fsm.add_transition(&tRecovery, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
+    // we want to commit the burst transaction in a separate state
+    fsm.add_transition(&tData, &tBurstWrite, ToBurstWriteTransaction, nullptr);
+    fsm.add_transition(&tBurstWrite, &tCommitBurstTransaction, ToCommitBurstTransaction, nullptr);
+    fsm.add_transition(&tCommitBurstTransaction, &tRecovery, ToBusRecovery, nullptr);
     auto connectStateToDataAndRecovery = [](auto* state, auto toState) noexcept {
         fsm.add_transition(&tData, state, toState, nullptr);
         fsm.add_transition(state, &tRecovery, ToBusRecovery, nullptr);
     };
     connectStateToDataAndRecovery(&tBurstRead, ToBurstReadTransaction);
-    connectStateToDataAndRecovery(&tBurstWrite, ToBurstWriteTransaction);
     connectStateToDataAndRecovery(&tNonBurstRead, ToNonBurstReadTransaction);
     connectStateToDataAndRecovery(&tNonBurstWrite, ToNonBurstWriteTransaction);
     connectStateToDataAndRecovery(&tUnmappedRead, ToUnmappedReadTransaction);
