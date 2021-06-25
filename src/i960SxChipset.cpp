@@ -506,9 +506,7 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 // Ti - Idle State
 // Ta - Address State
 // Td - Data State
-// Tr - Recovery State
 // Tw - Wait State
-// TChecksumFailure - Checksum Failure State
 
 // READY - ~READY asserted
 // NOT READY - ~READY not asserted
@@ -518,16 +516,13 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 // NO REQUEST - ~AS not asserted when in 
 
 // Ti -> Ti via no request
-// Tr -> Ti via no request
-// Tr -> Ta via request pending
 // Ti -> Ta via new request
 // on enter of Ta, set address state to false
 // on enter of Td, burst is sampled
 // Ta -> Td
-// Td -> Tr after signaling ready and no burst (blast low)
+// Td -> Ti after signaling ready and no burst (blast low)
 // Td -> Td after signaling ready and burst (blast high)
 // Ti -> TChecksumFailure if FAIL is asserted
-// Tr -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
 #ifdef ARDUINO_ARCH_SAMD
@@ -562,7 +557,6 @@ State tAddr([]() { processorInterface.clearASTrigger(); },
 State tData(enteringDataState,
             processDataRequest,
             nullptr);
-State tChecksumFailure(enteringChecksumFailure, nullptr, nullptr);
 
 
 void startupState() noexcept {
@@ -583,7 +577,7 @@ void onDENAsserted() {
 }
 void idleState() noexcept {
     if (processorInterface.failTriggered()) {
-        fsm.trigger(ChecksumFailure);
+        signalHaltState(F("CHECKSUM FAILURE!"));
     } else {
         if (processorInterface.asTriggered()) {
             fsm.trigger(NewRequest);
@@ -656,10 +650,8 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
     fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
-    fsm.add_transition(&tIdle, &tChecksumFailure, ChecksumFailure, nullptr);
     fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
     fsm.add_transition(&tData, &tIdle, ReadyAndNoBurst, nullptr);
-    fsm.add_transition(&tData, &tChecksumFailure, ChecksumFailure, nullptr);
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
@@ -805,9 +797,6 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
     while(true) {
         delay(1000);
     }
-}
-void enteringChecksumFailure() noexcept {
-    signalHaltState(F("CHECKSUM FAILURE!"));
 }
 SdFat SD;
 /// @todo Eliminate after MightyCore update
