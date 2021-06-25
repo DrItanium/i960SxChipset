@@ -322,9 +322,6 @@ volatile uint32_t cycleCount = 0;
 #endif
 Device* currentThing = nullptr;
 void dataCycleStart() noexcept {
-    for (auto& a : burstCache) {
-        a.wholeValue_ = 0;
-    }
     processorInterface.newDataCycle();
     currentThing = getThing(processorInterface.get16ByteAlignedBaseAddress(), LoadStoreStyle::Full16);
     bool isReadOperation = processorInterface.isReadOperation();
@@ -394,19 +391,7 @@ void performBurstWrite() noexcept {
 void performBurstRead() noexcept {
     processorInterface.updateDataCycle();
     // just assign all 16-bits, the processor will choose which bits to care about
-    switch (processorInterface.getStyle()) {
-        case LoadStoreStyle::Full16:
-            processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_);
-            break;
-        case LoadStoreStyle::Upper8:
-            processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_ & 0xFF00);
-            break;
-        case LoadStoreStyle::Lower8:
-            processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_ & 0x00FF);
-            break;
-        default:
-            break;
-    }
+    processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressIndex()].wholeValue_);
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         // we do not need to write anything back
