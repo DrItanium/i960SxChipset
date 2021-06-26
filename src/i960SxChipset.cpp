@@ -43,7 +43,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTDisplayThing.h"
 
 
-bool displayReady = false;
 /**
  * @brief Describes a single cache line which associates an address with 16 bytes of storage
  */
@@ -312,8 +311,7 @@ void dataCycleStart() noexcept {
 }
 void performBurstWrite() noexcept {
     processorInterface.updateDataCycle();
-    auto offset = processorInterface.getBurstAddressIndex();
-    auto& targetCell = burstCache[offset];
+    auto& targetCell = burstCache[processorInterface.getBurstAddressIndex()];
     SplitWord16 dataBits(processorInterface.getDataBits());
     // we've gotten the parts to perform the commit
     processorInterface.signalReady();
@@ -349,18 +347,16 @@ void performBurstRead() noexcept {
 }
 void performNonBurstRead() noexcept {
     processorInterface.updateDataCycle();
-    auto result = currentThing->read(processorInterface.getAddress(),
-                                     processorInterface.getStyle());
-    processorInterface.setDataBits(result);
+    processorInterface.setDataBits(currentThing->read(processorInterface.getAddress(),
+                                                      processorInterface.getStyle()));
     processorInterface.signalReady();
     fsm.trigger(ToBusRecovery);
 }
 
 void performCyclicBurstRead() noexcept {
     processorInterface.updateDataCycle();
-    auto result = currentThing->read(processorInterface.getAddress(),
-                                     processorInterface.getStyle());
-    processorInterface.setDataBits(result);
+    processorInterface.setDataBits(currentThing->read(processorInterface.getAddress(),
+                                                      processorInterface.getStyle()));
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         fsm.trigger(ToBusRecovery);
@@ -369,9 +365,10 @@ void performCyclicBurstRead() noexcept {
 void performNonBurstWrite() noexcept {
     // write the given value right here and now
     processorInterface.updateDataCycle();
+    // save everything first before we tell the processor that we've gotten the items we need
     auto address = processorInterface.getAddress();
-    auto bits = processorInterface.getDataBits();
     auto style = processorInterface.getStyle();
+    auto bits = processorInterface.getDataBits();
     //we've pulled everything off of the bus so signal that we are ready to continue
     processorInterface.signalReady();
     // now call write
@@ -449,7 +446,6 @@ void setupBusStateMachine() noexcept {
 }
 void setupPeripherals() {
     displayCommandSet.begin();
-    displayReady = true;
     rom.begin();
     dataRom.begin();
     ram.begin();
@@ -516,12 +512,6 @@ void loop() {
 [[noreturn]]
 void
 signalHaltState(const __FlashStringHelper* haltMsg) {
-    if (displayReady) {
-        displayCommandSet.clearScreen();
-        displayCommandSet.setCursor(0, 0);
-        displayCommandSet.setTextSize(2);
-        displayCommandSet.println(haltMsg);
-    }
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
