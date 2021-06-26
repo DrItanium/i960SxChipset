@@ -200,7 +200,7 @@ ProcessorInterface::begin() noexcept {
     if (!initialized_) {
         initialized_ = true;
         pinMode(i960Pinout::GPIOSelect, OUTPUT);
-        pinMode(i960Pinout::GPIOSelect, HIGH);
+        digitalWrite(i960Pinout::GPIOSelect, HIGH);
         // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
         // disabled. We can send out a single IOCON.HAEN enable message and all
         // should receive it.
