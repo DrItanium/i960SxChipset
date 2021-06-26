@@ -105,7 +105,6 @@ public:
         uint8_t theSREG = SREG;
         cli();
         PORTC ^= _BV(PC2);
-        //asm("nop");
         PORTC ^= _BV(PC2);
         SREG = theSREG;
     }
