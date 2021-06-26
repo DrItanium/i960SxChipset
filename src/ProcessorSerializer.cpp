@@ -258,7 +258,6 @@ bool readWR() noexcept {
 bool readBLAST() noexcept {
     // PC6 => ~BLAST
     if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-
         return (PINC & _BV(PC6)) == 0;
     } else {
         return DigitalPin<i960Pinout::BLAST_>::isAsserted();
