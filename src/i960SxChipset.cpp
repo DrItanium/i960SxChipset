@@ -113,11 +113,7 @@ public:
 
 ;
 
-#ifndef ADAFRUIT_FEATHER
 using DisplayThing = TFTDisplayThing;
-#else
-using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
-#endif
 DisplayThing displayCommandSet(0x200);
 RAMFile ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
@@ -132,12 +128,6 @@ Device* things[] {
         &ram,
         &chipsetFunctions,
         &displayCommandSet,
-#ifdef ADAFRUIT_FEATHER
-        &lsi3mdl,
-        &lsm6dsox,
-        &adt7410,
-        &adxl343,
-#endif
         &fs,
 };
 
@@ -480,12 +470,6 @@ void setupPeripherals() {
     rom.begin();
     dataRom.begin();
     ram.begin();
-#ifdef ADAFRUIT_FEATHER
-    lsi3mdl.begin();
-    lsm6dsox.begin();
-    adt7410.begin();
-    adxl343.begin();
-#endif
 }
 // the setup routine runs once when you press reset:
 void setup() {
