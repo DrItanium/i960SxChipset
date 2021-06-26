@@ -528,7 +528,7 @@ void setup() {
               i960Pinout::ByteEnable0,
               i960Pinout::ByteEnable1,
               i960Pinout::BurstLast,
-              i960Pinout::Analog7);
+              i960Pinout::FAIL_INPUT);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     digitalWrite(i960Pinout::Led, LOW);

@@ -69,7 +69,7 @@ enum class i960Pinout : decltype(A0) {
     Reset960,          // output
     BLAST_,     // input
     FAIL,         // input
-// PORT A, used to select the spi bus address (not directly used)
+// PORT A, used as part of servicing address requests for speed purposes
     WriteReadCheck,
     BurstAddress1,
     BurstAddress2,
@@ -77,7 +77,7 @@ enum class i960Pinout : decltype(A0) {
     ByteEnable0,
     ByteEnable1,
     BurstLast,
-    Analog7,
+    FAIL_INPUT,
     Count,
 };
 static_assert(static_cast<int>(i960Pinout::Count) == 32);
@@ -143,7 +143,7 @@ constexpr auto isValidPin(i960Pinout p) noexcept {
         case i960Pinout::ByteEnable0:
         case i960Pinout::ByteEnable1:
         case i960Pinout::BurstLast:
-        case i960Pinout::Analog7:
+        case i960Pinout::FAIL_INPUT:
             return true;
         default:
             return false;
@@ -190,7 +190,7 @@ volatile uint8_t& getPort() noexcept {
         case i960Pinout::ByteEnable0:
         case i960Pinout::ByteEnable1:
         case i960Pinout::BurstLast:
-        case i960Pinout::Analog7:
+        case i960Pinout::FAIL_INPUT:
             return PORTD;
         default:
             // force a crash by dereferencing 0
