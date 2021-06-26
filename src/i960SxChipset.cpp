@@ -352,6 +352,8 @@ void performBurstWrite() noexcept {
     auto offset = processorInterface.getBurstAddressIndex();
     auto& targetCell = burstCache[offset];
     SplitWord16 dataBits(processorInterface.getDataBits());
+    // we've gotten the parts to perform the commit
+    processorInterface.signalReady();
     switch (processorInterface.getStyle()) {
         case LoadStoreStyle::Full16:
             targetCell.wholeValue_ = dataBits.wholeValue_;
@@ -365,7 +367,6 @@ void performBurstWrite() noexcept {
         default:
             break;
     }
-    processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         fsm.trigger(ToCommitBurstTransaction);
     }
@@ -408,10 +409,13 @@ void performCyclicBurstRead() noexcept {
 void performNonBurstWrite() noexcept {
     // write the given value right here and now
     processorInterface.updateDataCycle();
-    currentThing->write(processorInterface.getAddress(),
-                        processorInterface.getDataBits(),
-                        processorInterface.getStyle());
+    auto address = processorInterface.getAddress();
+    auto bits = processorInterface.getDataBits();
+    auto style = processorInterface.getStyle();
+    //we've pulled everything off of the bus so signal that we are ready to continue
     processorInterface.signalReady();
+    // now call write
+    currentThing->write(address, bits, style);
     // we not in burst mode
     fsm.trigger(ToBusRecovery);
 }
@@ -419,10 +423,11 @@ void performNonBurstWrite() noexcept {
 void performCyclicBurstWrite() noexcept {
     // write the given value right here and now
     processorInterface.updateDataCycle();
-    currentThing->write(processorInterface.getAddress(),
-                        processorInterface.getDataBits(),
-                        processorInterface.getStyle());
+    auto address = processorInterface.getAddress();
+    auto bits = processorInterface.getDataBits();
+    auto style = processorInterface.getStyle();
     processorInterface.signalReady();
+    currentThing->write(address, bits, style);
     if (processorInterface.blastTriggered()) {
         // we not in burst mode
         fsm.trigger(ToBusRecovery);
