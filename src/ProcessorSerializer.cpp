@@ -270,8 +270,8 @@ ProcessorInterface::newDataCycle() noexcept {
     auto currentBaseAddress_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
     address_ = upperMaskedAddress_;
-    isReadOperation_ = readWR();
-    blastTriggered_ = readBLAST();
+    isReadOperation_ = (PINA & 0b0000'0001) == 0;
+    blastTriggered_ = (PINA & 0b0100'0000) == 0;
 }
 void
 ProcessorInterface::updateDataCycle() noexcept {
