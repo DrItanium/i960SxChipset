@@ -40,142 +40,45 @@ enum class LoadStoreStyle : uint8_t {
 };
 /// @todo fix this pinout for different targets
 enum class i960Pinout : decltype(A0) {
-#ifdef ARDUINO_AVR_ATmega1284
-        // this is described in digial pin order!
-        // leave this one alone
-        // PORT B
-        Led = 0,      // output
-        CLOCK_OUT, // output, unusable
-        AS_,     // input, AVR Int2
-        PWM4, // unused
-        GPIOSelect,        // output
-        MOSI,          // reserved
-        MISO,          // reserved
-        SCK,          // reserved
+    // this is described in digial pin order!
+    // leave this one alone
+// PORT B
+    Led = 0,      // output
+    CLOCK_OUT, // output, unusable
+    AS_,     // input, AVR Int2
+    PWM4, // unused
+    GPIOSelect,        // output
+    MOSI,          // reserved
+    MISO,          // reserved
+    SCK,          // reserved
 // PORT D
-        RX0,          // reserved
-        TX0,          // reserved
-        DEN_,      // AVR Interrupt INT0
-        AVR_INT1,        // AVR Interrupt INT1
-        SPI_BUS_EN, // output
-        DC,     // output
-        DISPLAY_EN, // output
-        SD_EN,      // output
+    RX0,          // reserved
+    TX0,          // reserved
+    DEN_,      // AVR Interrupt INT0
+    AVR_INT1,        // AVR Interrupt INT1
+    SPI_BUS_EN, // output
+    DC,     // output
+    DISPLAY_EN, // output
+    SD_EN,      // output
 // PORT C
-        SCL,          // reserved
-        SDA,          // reserved
-        Ready,      // output
-        Int0_,          // output
-        W_R_,          // input
-        Reset960,          // output
-        BLAST_,     // input
-        FAIL,         // input
+    SCL,          // reserved
+    SDA,          // reserved
+    Ready,      // output
+    Int0_,          // output
+    W_R_,          // input
+    Reset960,          // output
+    BLAST_,     // input
+    FAIL,         // input
 // PORT A, used to select the spi bus address (not directly used)
-        SPI_BUS_A0,
-        SPI_BUS_A1,
-        SPI_BUS_A2,
-        SPI_BUS_A3,
-        SPI_BUS_A4,
-        SPI_BUS_A5,
-        SPI_BUS_A6,
-        SPI_BUS_A7,
-#else
-// in other cases we want to use LED_BUILTIN and anything already pre defined
-    Led = LED_BUILTIN,
-    MOSI = ::MOSI,          // reserved
-    MISO = ::MISO,          // reserved
-    SCK = ::SCK,          // reserved
-    SCL = PIN_WIRE_SCL,          // reserved
-    SDA = PIN_WIRE_SDA,          // reserved
-#ifdef ARDUINO_GRAND_CENTRAL_M4
-        GPIOSelect = ::SS,        // output
-        DC = 8,     // output
-        DISPLAY_EN = 10, // output
-        AS_ = 22,     // input, AVR Int2
-        Int0_ = 23,          // output
-        DEN_ = 24,      // AVR Interrupt INT0
-        BLAST_ = 25,     // input
-        W_R_ = 26,          // input
-        Reset960 = 27,          // output
-        Ready = 28,      // output
-        FAIL = 29,         // input
-        SD_EN = SDCARD_SS_PIN, // don't use onboard sd card slot...
-        // for now, it is [30, 38]
-        SPI_BUS_EN = 30, // output
-        // the display shield I'm using has an SD Card slot as well
-        SD2_EN = 4,
-        SD2_MOSI = MOSI,
-        SD2_MISO = MISO,
-        SD2_SCK = SCK,
-#elif defined(ADAFRUIT_FEATHER_M0)
-    SD_EN = 4,      // output
-    FAIL = 5,         // input
-    AS_ = 6,
-    BLAST_ = 11,     // input
-    DEN_ = 12,
-    W_R_ = 13,          // input
-    SPI_BUS_EN = ::A0,
-    Ready = ::A2,      // output
-    Int0_ = ::A3,          // output
-    Reset960 = ::A4,          // output
-    GPIOSelect = ::A5,        // output
-    DISPLAY_EN = SDA, // done over i2c
-    DC = SDA, // done over i2c
-#elif defined(ARDUINO_NRF52_ADAFRUIT)
-    FAIL = 27,         // input
-    AS_ = 30,
-    SD_EN = 11,      // output
-    BLAST_ = 7,     // input
-    DEN_ = 15,
-    W_R_ = 16,          // input
-    SPI_BUS_EN = ::A0,
-    Ready = ::A2,      // output
-    Int0_ = ::A3,          // output
-    Reset960 = ::A4,          // output
-    GPIOSelect = ::A5,        // output
-    DISPLAY_EN = SDA, // done over i2c
-    DC = SDA, // done over i2c
-#elif defined(ARDUINO_METRO_M4)
-    AS_ = 2,
-    DEN_ = 3,
-    Ready = 4,      // output
-    Int0_ = 5,          // output
-    W_R_ = 6,          // input
-    Reset960 = 7,
-    BLAST_ = 8,     // input
-    FAIL = 9,         // input
-    GPIOSelect = 10,        // output
-    SPI_BUS_EN = ::A0, // output
-    SD_EN = ::A2,
-    DISPLAY_EN = SDA, // done over i2c
-    DC = SDA, // done over i2c
-#else
-#error "PLEASE DEFINE BOARD's PINOUT"
-#endif
-#endif
+    SPI_BUS_A0,
+    SPI_BUS_A1,
+    SPI_BUS_A2,
+    SPI_BUS_A3,
+    SPI_BUS_A4,
+    SPI_BUS_A5,
+    SPI_BUS_A6,
+    SPI_BUS_A7,
     Count,          // special, must be last
-    SD_MOSI =
-#ifdef SDCARD_MOSI_PIN
-        SDCARD_MOSI_PIN
-#else
-        MOSI
-#endif
-        ,
-    SD_MISO =
-#ifdef SDCARD_MISO_PIN
-    SDCARD_MISO_PIN
-#else
-    MISO
-#endif
-    ,
-    SD_SCK =
-#ifdef SDCARD_SCK_PIN
-    SDCARD_SCK_PIN
-#else
-    SCK
-#endif
-    ,
-
 };
 
 /**
