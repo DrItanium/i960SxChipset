@@ -72,6 +72,25 @@ namespace
     constexpr byte IODirBaseAddress = 0x00;
     constexpr byte GPIOBaseAddress = 0x12;
     constexpr byte IOConAddress = 0x0A;
+    void pullGPIOCSLow() noexcept {
+        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
+            PINB |= _BV(PB4);
+        } else {
+            digitalWrite(i960Pinout::GPIOSelect, LOW);
+        }
+    }
+    void pullGPIOCSHigh() noexcept {
+        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
+            PINB |= _BV(PB4);
+        } else {
+            digitalWrite(i960Pinout::GPIOSelect, HIGH);
+        }
+    }
+    void doSPI(uint8_t* buffer, size_t count) noexcept {
+        pullGPIOCSLow();
+        SPI.transfer(buffer, count);
+        pullGPIOCSHigh();
+    }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
                 generateReadOpcode(addr),
@@ -79,17 +98,7 @@ namespace
                 0x00,
                 0x00,
         };
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, LOW);
-        }
-        SPI.transfer(buffer, 4);
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, HIGH);
-        }
+        doSPI(buffer, 4);
         auto lower = static_cast<uint16_t>(buffer[2]);
         auto lowest = static_cast<uint16_t>(buffer[3]) << 8;
         return lower | lowest;
@@ -101,17 +110,7 @@ namespace
                 0x00,
         };
 
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, LOW);
-        }
-        SPI.transfer(buffer, 3);
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, HIGH);
-        }
+        doSPI(buffer, 3);
         return buffer[2];
     }
     uint8_t readGPIOA(ProcessorInterface::IOExpanderAddress addr) {
@@ -127,17 +126,7 @@ namespace
                 static_cast<uint8_t>(value),
                 static_cast<uint8_t>(value >> 8),
         };
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, LOW);
-        }
-        SPI.transfer(buffer, 4);
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, HIGH);
-        }
+        doSPI(buffer, 4);
     }
     void write8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint8_t value) {
         uint8_t buffer[3] = {
@@ -145,17 +134,7 @@ namespace
                 static_cast<byte>(opcode),
                 value
         };
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, LOW);
-        }
-        SPI.transfer(buffer, 3);
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, HIGH);
-        }
+        doSPI(buffer, 3);
     }
     void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
         write16(addr, MCP23x17Registers::GPIO, value);
