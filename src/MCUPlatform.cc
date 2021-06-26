@@ -40,16 +40,6 @@ namespace {
             ERR_STATE("Expecting the 1248p to run at 20MHz");
         }
     }
-    else if constexpr (TargetBoard::onGrandCentralM4()) {
-        if constexpr(!TargetBoard::hasBuiltinSDCard())
-        {
-            ERR_STATE("Grand Central M4 has an onboard SD CARD slot");
-        }
-        if constexpr(!TargetBoard::usesDisplayShield())
-        {
-            ERR_STATE("Expected Grand Central M4 to use the tft shield");
-        }
-    }
     else if constexpr (TargetBoard::onFeatherM0Adalogger()) {
         if constexpr(!TargetBoard::hasBuiltinSDCard())
         {

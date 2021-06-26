@@ -55,8 +55,6 @@ static_assert(20_MHz == 20'000'000);
 #endif
 enum class TargetMCU {
     ATmega1284p,
-    GrandCentralM4,
-    FeatherM0Basic,
     FeatherM0Adalogger,
     Unknown,
 };
@@ -111,9 +109,7 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         false,
         true
 };
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = { 256_KB, 64, 512, 64, 512, 128, 8_MHz, true, true};
 // depends on the board used
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Basic> = { 32_KB, 16, 512, 16, 512, 64, 8_MHz, false, false};
 template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalogger> = { 32_KB, 16, 512, 16, 512, 64, 8_MHz, true, false };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
@@ -146,31 +142,15 @@ public:
     [[nodiscard]] static constexpr auto getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
         return TargetMCU::ATmega1284p;
-#elif defined(ARDUINO_GRAND_CENTRAL_M4)
-        return TargetMCU::GrandCentralM4;
 #elif defined(ADAFRUIT_FEATHER_M0_ADALOGGER)
         return TargetMCU::FeatherM0Adalogger;
-#elif defined(ADAFRUIT_FEATHER_M0_BASIC)
-    return TargetMCU::FeatherM0Basic;
-#elif defined(ADAFRUIT_METRO_M4_EXPRESS)
-    return TargetMCU::MetroM4;
 #else
     return TargetMCU::Unknown;
 #endif
     }
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
-    [[nodiscard]] static constexpr auto onGrandCentralM4() noexcept { return getMCUTarget() == TargetMCU::GrandCentralM4; }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
-    [[nodiscard]] static constexpr auto onFeatherM0Basic() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Basic; }
     [[nodiscard]] static constexpr auto onFeatherM0Adalogger() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Adalogger; }
-    [[nodiscard]] static constexpr auto onFeatherM0() noexcept { return onFeatherM0Basic() || onFeatherM0Adalogger(); }
-    [[nodiscard]] static constexpr auto onFeatherBoard() noexcept {
-#ifdef ADAFRUIT_FEATHER
-        return true;
-#else
-        return false;
-#endif
-    }
 /**
  * @brief Is there an onboard sdcard slot?
  * @return True if defined via the command line
