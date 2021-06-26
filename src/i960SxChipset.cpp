@@ -231,6 +231,25 @@ State tUnmappedWrite(nullptr, unmappedWrite, nullptr);
 State tCyclicBurstRead(nullptr, performCyclicBurstRead, nullptr);
 State tCyclicBurstWrite(nullptr, performCyclicBurstWrite, nullptr);
 
+void setupBusStateMachine() noexcept {
+    fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
+    fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
+    fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
+    fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
+    // we want to commit the burst transaction in a separate state
+    auto connectStateToDataAndRecovery = [](auto* state, auto toState) noexcept {
+        fsm.add_transition(&tData, state, toState, nullptr);
+        fsm.add_transition(state, &tIdle, ToBusRecovery, nullptr);
+    };
+    connectStateToDataAndRecovery(&tBurstWrite, ToBurstWriteTransaction);
+    connectStateToDataAndRecovery(&tBurstRead, ToBurstReadTransaction);
+    connectStateToDataAndRecovery(&tNonBurstRead, ToNonBurstReadTransaction);
+    connectStateToDataAndRecovery(&tNonBurstWrite, ToNonBurstWriteTransaction);
+    connectStateToDataAndRecovery(&tUnmappedRead, ToUnmappedReadTransaction);
+    connectStateToDataAndRecovery(&tUnmappedWrite, ToUnmappedWriteTransaction);
+    connectStateToDataAndRecovery(&tCyclicBurstRead, ToCyclicBurstReadTransaction);
+    connectStateToDataAndRecovery(&tCyclicBurstWrite, ToCyclicBurstWriteTransaction);
+}
 
 void startupState() noexcept {
     if (processorInterface.failTriggered()) {
@@ -407,25 +426,6 @@ void unmappedRead() noexcept {
 // setup routines
 // ----------------------------------------------------------------
 
-void setupBusStateMachine() noexcept {
-    fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
-    fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
-    fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
-    fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
-    // we want to commit the burst transaction in a separate state
-    auto connectStateToDataAndRecovery = [](auto* state, auto toState) noexcept {
-        fsm.add_transition(&tData, state, toState, nullptr);
-        fsm.add_transition(state, &tIdle, ToBusRecovery, nullptr);
-    };
-    connectStateToDataAndRecovery(&tBurstWrite, ToBurstWriteTransaction);
-    connectStateToDataAndRecovery(&tBurstRead, ToBurstReadTransaction);
-    connectStateToDataAndRecovery(&tNonBurstRead, ToNonBurstReadTransaction);
-    connectStateToDataAndRecovery(&tNonBurstWrite, ToNonBurstWriteTransaction);
-    connectStateToDataAndRecovery(&tUnmappedRead, ToUnmappedReadTransaction);
-    connectStateToDataAndRecovery(&tUnmappedWrite, ToUnmappedWriteTransaction);
-    connectStateToDataAndRecovery(&tCyclicBurstRead, ToCyclicBurstReadTransaction);
-    connectStateToDataAndRecovery(&tCyclicBurstWrite, ToCyclicBurstWriteTransaction);
-}
 void setupPeripherals() {
     displayCommandSet.begin();
     rom.begin();
