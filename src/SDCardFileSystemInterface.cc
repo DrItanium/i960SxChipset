@@ -354,19 +354,12 @@ SDCardFilesystemInterface::readFile() noexcept {
         return -1;
     } else {
         Address baseAddress = address_.wholeValue_;
-        Address count = count_.wholeValue_;
-#if 0
-        Serial.print(F("readFile: [0x"));
-        Serial.print(baseAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(count, HEX);
-        Serial.println(F("]"));
-#endif
         if (auto thing = getThing(baseAddress, LoadStoreStyle::Lower8); !thing) {
             errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
             return -1;
         } else {
             uint32_t bytesRead = 0;
+            Address count = count_.wholeValue_;
             if (count == 0) {
                 result_.words[0] = 0;
                 return 0;
@@ -380,13 +373,6 @@ SDCardFilesystemInterface::readFile() noexcept {
                 } else {
                     auto times = count / TransferBufferSize;
                     auto spillOver = count % TransferBufferSize;
-#if 0
-                    Serial.print(F("[TIMES, SPILLOVER]: [0x"));
-                    Serial.print(times, HEX);
-                    Serial.print(F(", 0x"));
-                    Serial.print(spillOver, HEX);
-                    Serial.println(F("]"));
-#endif
                     Address a = baseAddress;
                     for (Address i = 0;
                          i < times;
@@ -395,10 +381,6 @@ SDCardFilesystemInterface::readFile() noexcept {
                         (void) thing->write(a, transferBuffer_, actualBytesRead);
                         bytesRead += actualBytesRead;
                     }
-#if 0
-                    Serial.print(F("SPILL OVER TO 0x"));
-                    Serial.println(a, HEX);
-#endif
                     result_.words[0] = bytesRead;
                     if (spillOver > 0) {
                         uint32_t leftOverBytesRead = theFile.read(transferBuffer_, spillOver);

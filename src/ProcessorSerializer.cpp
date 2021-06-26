@@ -63,7 +63,6 @@ namespace
         IPOL = IPOLA,
     };
 
-    SPISettings theSettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0);
     constexpr byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<uint8_t>(address) & 0b111) << 1) | 1;
     }
