@@ -70,14 +70,14 @@ enum class i960Pinout : decltype(A0) {
     BLAST_,     // input
     FAIL,         // input
 // PORT A, used to select the spi bus address (not directly used)
-    SPI_BUS_A0,
-    SPI_BUS_A1,
-    SPI_BUS_A2,
-    SPI_BUS_A3,
-    SPI_BUS_A4,
-    SPI_BUS_A5,
-    SPI_BUS_A6,
-    SPI_BUS_A7,
+    WriteReadCheck,
+    BurstAddress1,
+    BurstAddress2,
+    BurstAddress3,
+    ByteEnable0,
+    ByteEnable1,
+    BurstLast,
+    Analog7,
     Count,
 };
 static_assert(static_cast<int>(i960Pinout::Count) == 32);
@@ -136,14 +136,14 @@ constexpr auto isValidPin(i960Pinout p) noexcept {
         case i960Pinout::Reset960:          // output
         case i960Pinout::BLAST_:     // input
         case i960Pinout::FAIL:         // input
-        case i960Pinout::SPI_BUS_A0:
-        case i960Pinout::SPI_BUS_A1:
-        case i960Pinout::SPI_BUS_A2:
-        case i960Pinout::SPI_BUS_A3:
-        case i960Pinout::SPI_BUS_A4:
-        case i960Pinout::SPI_BUS_A5:
-        case i960Pinout::SPI_BUS_A6:
-        case i960Pinout::SPI_BUS_A7:
+        case i960Pinout::WriteReadCheck:
+        case i960Pinout::BurstAddress1:
+        case i960Pinout::BurstAddress2:
+        case i960Pinout::BurstAddress3:
+        case i960Pinout::ByteEnable0:
+        case i960Pinout::ByteEnable1:
+        case i960Pinout::BurstLast:
+        case i960Pinout::Analog7:
             return true;
         default:
             return false;
@@ -183,14 +183,14 @@ volatile uint8_t& getPort() noexcept {
         case i960Pinout::FAIL:         // input
         return PORTC;
 // PORT A: used to select the spi bus address (not directly used)
-        case i960Pinout::SPI_BUS_A0:
-        case i960Pinout::SPI_BUS_A1:
-        case i960Pinout::SPI_BUS_A2:
-        case i960Pinout::SPI_BUS_A3:
-        case i960Pinout::SPI_BUS_A4:
-        case i960Pinout::SPI_BUS_A5:
-        case i960Pinout::SPI_BUS_A6:
-        case i960Pinout::SPI_BUS_A7:
+        case i960Pinout::WriteReadCheck:
+        case i960Pinout::BurstAddress1:
+        case i960Pinout::BurstAddress2:
+        case i960Pinout::BurstAddress3:
+        case i960Pinout::ByteEnable0:
+        case i960Pinout::ByteEnable1:
+        case i960Pinout::BurstLast:
+        case i960Pinout::Analog7:
             return PORTD;
         default:
             // force a crash by dereferencing 0
