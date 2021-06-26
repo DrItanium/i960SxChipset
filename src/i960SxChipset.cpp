@@ -119,24 +119,12 @@ ROMDataSection dataRom;
 SDCardFilesystemInterface fs(0x300);
 
 // list of io memory devices to walk through
-Device* things[] {
-        &rom,
-        &dataRom,
-        &ram,
+Device* ioSpaceThings[] {
         &chipsetFunctions,
         &displayCommandSet,
         &fs,
 };
 
-Device*
-getThing(Address address, LoadStoreStyle style) noexcept {
-    for (auto* currentThing : things) {
-        if (currentThing->respondsTo(address, style)) {
-            return currentThing;
-        }
-    }
-    return nullptr;
-}
 
 // ----------------------------------------------------------------
 // state machine
@@ -532,3 +520,25 @@ void operator delete[](void * ptr, size_t)
 }
 
 #endif // end language is C++14 or greater
+Device*
+getThing(Address address, LoadStoreStyle style) noexcept {
+    if (address < RAMFile::RamStartingAddress) {
+        // okay we have two devices to look through now
+        if (address < ROMDataSection::ROMStart) {
+            return &rom;
+        } else {
+            return &dataRom;
+        }
+    } else {
+        if (address < RAMFile::RamEndingAddress) {
+            return &ram;
+        } else {
+            for (auto* currentThing : ioSpaceThings) {
+                if (currentThing->respondsTo(address, style)) {
+                    return currentThing;
+                }
+            }
+        }
+        return nullptr;
+    }
+}
