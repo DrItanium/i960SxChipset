@@ -69,24 +69,18 @@ namespace
     constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
-    inline void pullGPIOCSLow() noexcept {
+    inline void doSPI(uint8_t* buffer, size_t count) noexcept {
         if constexpr (ProcessorInterface::ExperimentalPinChanges) {
             PINB |= _BV(PB4);
         } else {
             digitalWrite(i960Pinout::GPIOSelect, LOW);
         }
-    }
-    inline void pullGPIOCSHigh() noexcept {
+        SPI.transfer(buffer, count);
         if constexpr (ProcessorInterface::ExperimentalPinChanges) {
             PINB |= _BV(PB4);
         } else {
             digitalWrite(i960Pinout::GPIOSelect, HIGH);
         }
-    }
-    inline void doSPI(uint8_t* buffer, size_t count) noexcept {
-        pullGPIOCSLow();
-        SPI.transfer(buffer, count);
-        pullGPIOCSHigh();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
