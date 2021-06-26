@@ -133,11 +133,9 @@ namespace
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
     SPI.beginTransaction(theSettings);
-    if constexpr (false) {
-        if (dataLinesDirection_ != 0xFFFF) {
-            dataLinesDirection_ = 0xFFFF;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
-        }
+    if (dataLinesDirection_ != 0xFFFF) {
+        dataLinesDirection_ = 0xFFFF;
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     }
     auto result = readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
     SPI.endTransaction();
@@ -147,11 +145,9 @@ ProcessorInterface::getDataBits() noexcept {
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
     SPI.beginTransaction(theSettings);
-    if constexpr (false) {
-        if (dataLinesDirection_ != 0) {
-            dataLinesDirection_ = 0;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
-        }
+    if (dataLinesDirection_ != 0) {
+        dataLinesDirection_ = 0;
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     }
     writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
     SPI.endTransaction();
@@ -241,31 +237,25 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 void
 ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
-    isReadOperation_ = (PINA & 0b0000'0001) == 0;
     // configure the data lines once at the beginning of the transaction
-    if (isReadOperation_) {
-        dataLinesDirection_ = 0xFFFF;
-    } else {
-        dataLinesDirection_ = 0;
-    }
     SPI.beginTransaction(theSettings);
     auto lower16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>());
     auto upper16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines>()) << 16;
     // update the ordering to make sure since we are overwriting things
-    writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     SPI.endTransaction();
     auto currentBaseAddress_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
     address_ = upperMaskedAddress_;
+    isReadOperation_ = (PINA & 0b0000'0001) == 0;
     blastTriggered_ = (PINA & 0b0100'0000) == 0;
 }
 void
 ProcessorInterface::updateDataCycle() noexcept {
-        auto bits = PINA;
-        auto offsetBits = bits & 0b00001110;
-        burstAddressBits_ = offsetBits >> 1;
-        auto byteEnableBits = (bits >> 4) & 0b11;
-        lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
-        address_ = upperMaskedAddress_ | offsetBits;
-        blastTriggered_ = (bits & 0b0100'0000) == 0;
+    auto bits = PINA;
+    auto offsetBits = bits & 0b00001110;
+    burstAddressBits_ = offsetBits >> 1;
+    auto byteEnableBits = (bits >> 4) & 0b11;
+    lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
+    address_ = upperMaskedAddress_ | offsetBits;
+    blastTriggered_ = (bits & 0b0100'0000) == 0;
 }
