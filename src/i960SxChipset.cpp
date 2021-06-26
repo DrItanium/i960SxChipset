@@ -316,9 +316,6 @@ void doAddressState() noexcept {
 }
 
 
-#ifndef ARDUINO_AVR_ATmega1284
-volatile uint32_t cycleCount = 0;
-#endif
 Device* currentThing = nullptr;
 void dataCycleStart() noexcept {
     processorInterface.newDataCycle();
