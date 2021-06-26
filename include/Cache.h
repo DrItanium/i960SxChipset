@@ -323,11 +323,11 @@ public:
     }
 public:
     void enableCache() noexcept override {
-        _enabled = true;
+        enabled_ = true;
     }
     void disableCache() noexcept override {
-        if (_enabled) {
-            _enabled = false;
+        if (enabled_) {
+            enabled_ = false;
             invalidateEntireCache();
         }
     }

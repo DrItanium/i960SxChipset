@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "TFTDisplayThing.h"
+#include "Cache.h"
 
 
 /**
@@ -113,7 +114,8 @@ public:
 TFTDisplayThing displayCommandSet(0x200);
 // we want to only put a data cache on the text section
 RAMFile ram;
-ROMTextSection rom;
+ROMTextSection textSection;
+DataCache<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()> rom(textSection);
 ROMDataSection dataRom;
 
 SDCardFilesystemInterface fs(0x300);
