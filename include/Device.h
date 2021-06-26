@@ -176,6 +176,8 @@ public:
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
 
     [[nodiscard]] virtual bool supportsBlockTransfers() const noexcept = 0;
+    virtual void disableCache() noexcept { }
+    virtual void enableCache() noexcept { }
 private:
     Address base_;
     Address end_;
