@@ -111,11 +111,9 @@ public:
     ~ROMDataSection() override = default;
 };
 
-;
-
-using DisplayThing = TFTDisplayThing;
-DisplayThing displayCommandSet(0x200);
-RAMFile ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+TFTDisplayThing displayCommandSet(0x200);
+// we want to only put a data cache on the text section
+RAMFile ram;
 ROMTextSection rom;
 ROMDataSection dataRom;
 

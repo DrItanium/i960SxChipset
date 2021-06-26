@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "MCUPlatform.h"
 #include "Device.h"
-template<uint32_t size = 16>
+template<uint32_t size>
 struct CacheLine {
 public:
     union MemoryElement {
@@ -141,7 +141,7 @@ private:
     bool valid_ = false;
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
-template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
+template<uint32_t numLines, uint32_t cacheLineSize>
 class DataCache : public Device {
 public:
     using Parent = Device;
