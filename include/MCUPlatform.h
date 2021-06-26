@@ -37,25 +37,12 @@ constexpr unsigned long long int operator "" _MHz(unsigned long long int value) 
 static_assert(2_KHz == 2'000);
 static_assert(2_MHz == 2'000'000);
 static_assert(20_MHz == 20'000'000);
-#ifdef ARDUINO_SAMD_FEATHER_M0
-#define ADAFRUIT_FEATHER_M0
-#ifdef HAS_BUILTIN_SDCARD
-#define ADAFRUIT_FEATHER_M0_ADALOGGER
-#else /* !defined(HAS_BUILTIN_SDCARD) */
-#define ADAFRUIT_FEATHER_M0_BASIC
-#endif
-#endif
-
-#if defined(ARDUINO_SAMD_FEATHER_M0)
-#define ADAFRUIT_FEATHER
-#endif
 
 #ifndef NUM_ANALOG_OUTPUTS
 #define NUM_ANALOG_OUTPUTS 0
 #endif
 enum class TargetMCU {
     ATmega1284p,
-    FeatherM0Adalogger,
     Unknown,
 };
 class MCUConfiguration final {
@@ -110,7 +97,6 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         true
 };
 // depends on the board used
-template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalogger> = { 32_KB, 16, 512, 16, 512, 64, 8_MHz, true, false };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
     return true;
@@ -121,20 +107,6 @@ template<> constexpr MCUConfiguration BoardDescription<TargetMCU::FeatherM0Adalo
 
 class TargetBoard {
 public:
-    [[nodiscard]] static constexpr auto cpuIsARMArchitecture() noexcept {
-#ifdef __arm__
-        return true;
-#else
-        return false;
-#endif
-    }
-    [[nodiscard]] static constexpr auto cpuIsAVRArchitecture() noexcept {
-#if defined(__AVR) || defined(__AVR__)
-        return true;
-#else
-        return false;
-#endif
-    }
     [[nodiscard]] static constexpr auto getCPUFrequency() noexcept { return F_CPU; }
     [[nodiscard]] static constexpr auto getDigitalPinCount() noexcept { return NUM_DIGITAL_PINS; }
     [[nodiscard]] static constexpr auto getAnalogInputCount() noexcept { return NUM_ANALOG_INPUTS; }
@@ -150,7 +122,6 @@ public:
     }
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
-    [[nodiscard]] static constexpr auto onFeatherM0Adalogger() noexcept { return getMCUTarget() == TargetMCU::FeatherM0Adalogger; }
 /**
  * @brief Is there an onboard sdcard slot?
  * @return True if defined via the command line

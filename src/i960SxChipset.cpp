@@ -41,13 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "TFTDisplayThing.h"
-#ifdef ADAFRUIT_FEATHER
-#include "FeatherWingPeripherals.h"
-#endif
 
-#if defined(ARDUINO_GRAND_CENTRAL_M4)
-#include <Adafruit_ZeroTimer.h>
-#endif
 
 bool displayReady = false;
 /**
@@ -130,12 +124,6 @@ ROMTextSection rom;
 ROMDataSection dataRom;
 
 SDCardFilesystemInterface fs(0x300);
-#ifdef ADAFRUIT_FEATHER
-AdafruitLIS3MDLThing lsi3mdl(0x1000);
-AdafruitLSM6DSOXThing lsm6dsox(0x1100);
-AdafruitADT7410Thing adt7410(0x1200);
-AdafruitADXL343Thing adxl343(0x1300);
-#endif
 
 // list of io memory devices to walk through
 Device* things[] {
@@ -499,33 +487,12 @@ void setupPeripherals() {
     adxl343.begin();
 #endif
 }
-[[maybe_unused]]
-void setupClockSource() {
-#ifdef ARDUINO_SAMD_FEATHER_M0
-    // setup PORTS PA15 and PA20 as clock sources (D
-    GCLK->GENDIV.reg = GCLK_GENDIV_ID(4) | GCLK_GENDIV_DIV(2);
-    GCLK->GENCTRL.reg = GCLK_GENCTRL_OE | GCLK_GENCTRL_GENEN | GCLK_GENCTRL_ID(4) | GCLK_GENCTRL_SRC_DFLL48M;
-    while (GCLK->STATUS.bit.SYNCBUSY);// Syncronize write to GENCTRL reg.
-    GCLK->GENDIV.reg = GCLK_GENDIV_ID(1) | GCLK_GENDIV_DIV(1);
-    GCLK->GENCTRL.reg = GCLK_GENCTRL_OE | GCLK_GENCTRL_GENEN | GCLK_GENCTRL_ID(1) | GCLK_GENCTRL_SRC_DFLL48M;
-    while (GCLK->STATUS.bit.SYNCBUSY);// Syncronize write to GENCTRL reg.
-    GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC6_TC7_Val) | GCLK_CLKCTRL_GEN(GCLK_CLKCTRL_GEN_GCLK4_Val) | GCLK_CLKCTRL_CLKEN;
-    PORT->Group[0].PMUX[20/2].reg |= PORT_PMUX_PMUXE_H;
-    PORT->Group[0].PINCFG[20].reg |= PORT_PINCFG_PMUXEN; // enable mux for pin PA20
-    GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val) | GCLK_CLKCTRL_GEN(GCLK_CLKCTRL_GEN_GCLK1_Val) | GCLK_CLKCTRL_CLKEN;
-    PORT->Group[0].PMUX[15/2].reg |= PORT_PMUX_PMUXO_H;
-    PORT->Group[0].PINCFG[15].reg |= PORT_PINCFG_PMUXEN;
-#endif
-}
 // the setup routine runs once when you press reset:
 void setup() {
 
     Serial.begin(115200);
     while(!Serial) {
         delay(10);
-    }
-    if constexpr (!TargetBoard::onAtmega1284p()) {
-        setupClockSource();
     }
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire

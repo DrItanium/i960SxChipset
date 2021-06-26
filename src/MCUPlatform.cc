@@ -28,8 +28,6 @@ namespace {
     template<typename T>
     constexpr bool compileTimeSanityCheck() noexcept {
 #define ERR_STATE(msg) static_assert(false_v< T > , "Sanity check failed: " msg ); return false
-
-    if constexpr (TargetBoard::onAtmega1284p()) {
         if constexpr(!TargetBoard::usesDisplayShield()) {
             ERR_STATE("Expected 1284p to use the tft shield");
         }
@@ -39,17 +37,6 @@ namespace {
         if constexpr (TargetBoard::getCPUFrequency() != 20_MHz) {
             ERR_STATE("Expecting the 1248p to run at 20MHz");
         }
-    }
-    else if constexpr (TargetBoard::onFeatherM0Adalogger()) {
-        if constexpr(!TargetBoard::hasBuiltinSDCard())
-        {
-            ERR_STATE("Feather M0 Adalogger has an onboard SD CARD slot");
-        }
-        if constexpr(TargetBoard::usesDisplayShield())
-        {
-            ERR_STATE("Feather M0 Adalogger cannot use the display shield");
-        }
-    }
 #undef ERR_STATE
     return true;
 }
