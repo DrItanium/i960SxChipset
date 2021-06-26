@@ -263,7 +263,8 @@ bool readBLAST() noexcept {
         return DigitalPin<i960Pinout::BLAST_>::isAsserted();
     }
 }
-void ProcessorInterface::newDataCycle() noexcept {
+void
+ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
     SPI.beginTransaction(theSettings);
     auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
@@ -275,7 +276,8 @@ void ProcessorInterface::newDataCycle() noexcept {
     isReadOperation_ = readWR();
     blastTriggered_ = readBLAST();
 }
-void ProcessorInterface::updateDataCycle() noexcept {
+void
+ProcessorInterface::updateDataCycle() noexcept {
     auto bits = readGPIOA(IOExpanderAddress::MemoryCommitExtras);
     burstAddressBits_ = static_cast<byte>(bits & 0b111);
     auto offsetBurstAddressBits = burstAddressBits_ << 1;
@@ -283,4 +285,17 @@ void ProcessorInterface::updateDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
     address_ = upperMaskedAddress_ | offsetBurstAddressBits;
     blastTriggered_ = readBLAST();
+}
+void
+ProcessorInterface::signalReady() noexcept {
+    if constexpr (ExperimentalPinChanges) {
+        uint8_t theSREG = SREG;
+        cli();
+        PORTC ^= _BV(PC2);
+        //asm("nop");
+        PORTC ^= _BV(PC2);
+        SREG = theSREG;
+    } else {
+        DigitalPin<i960Pinout::Ready>::pulse();
+    }
 }
