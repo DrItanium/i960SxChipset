@@ -90,7 +90,6 @@ public:
     [[nodiscard]] uint16_t getDataBits() noexcept;
     void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] constexpr auto getStyle() const noexcept { return lss_; }
-    //[[nodiscard]] bool isWriteOperation() const noexcept;
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
     static constexpr auto computeAddressStart(Address start, Address size, Address count) noexcept {
@@ -115,7 +114,7 @@ public:
     static constexpr bool ExperimentalPinChanges = true;
     [[nodiscard]] bool failTriggered() const noexcept {
         if constexpr (ExperimentalPinChanges) {
-            return (PINC & _BV(PC7)) != 0;
+            return (PINA & 0b1000'0000) != 0;
         } else {
             return DigitalPin<i960Pinout::FAIL>::isAsserted();
         }
