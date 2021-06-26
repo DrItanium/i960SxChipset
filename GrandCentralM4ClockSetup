@@ -1,0 +1,51 @@
+#ifdef ARDUINO_ARCH_SAMD
+void
+TC3_Handler()
+{
+    Adafruit_ZeroTimer::timerHandler(3);
+}
+#endif
+#ifdef ARDUINO_GRAND_CENTRAL_M4
+    // pins on the digital block with access to the GCLK are:
+    // 36 - GCLK / IO3
+    // 37 - GCLK / IO2
+    // 38 - GCLK / IO1
+    // 39 - GCLK / IO0
+    // let's choose pin 39 for this purpose
+    constexpr auto theTimerFrequency = 10_MHz;
+    constexpr auto ClockDivider_10MHZ = 6;
+    constexpr auto ClockDivider_12MHZ = 5;
+    constexpr auto ClockDivider_15MHZ = 4;
+    constexpr auto ClockDivider_20MHZ = 3;
+    constexpr auto ClockDivider_40MHZ = 2; // THIS IS ALSO DAMN DANGEROUS
+    constexpr auto ClockDivider_80MHZ = 1; // DEAR GOD DO NOT USE THIS!!!!
+    GCLK->GENCTRL[0].reg = GCLK_GENCTRL_DIV(ClockDivider_10MHZ) |
+                           GCLK_GENCTRL_IDC |
+                           GCLK_GENCTRL_GENEN |
+                           GCLK_GENCTRL_OE |
+                           GCLK_GENCTRL_SRC_DPLL0;
+    while(GCLK->SYNCBUSY.bit.GENCTRL0);
+    PORT->Group[g_APinDescription[39].ulPort].PINCFG[g_APinDescription[39].ulPin].bit.PMUXEN = 1;
+    // enable on pin 39 or PB14
+    PORT->Group[g_APinDescription[39].ulPort].PMUX[g_APinDescription[39].ulPin >> 1].reg |= PORT_PMUX_PMUXE(MUX_PB14M_GCLK_IO0);
+    // now we need to setup a timer which will count 10 MHz cycles and trigger an interrupt each time
+    uint32_t compare = TargetBoard::getCPUFrequency() / theTimerFrequency;
+    auto prescaler = TC_CLOCK_PRESCALER_DIV1;
+#if 0
+    Serial.print(F("Compare: "));
+    Serial.println(compare);
+    Serial.print(F("Divider: "));
+    Serial.println(divider);
+    Serial.print(F("Prescaler: "));
+    Serial.println(prescaler);
+#endif
+    burstTransactionTimer.enable(false);
+    burstTransactionTimer.configure(prescaler, TC_COUNTER_SIZE_16BIT, TC_WAVE_GENERATION_MATCH_FREQ);
+    burstTransactionTimer.setCompare(0, compare);
+    burstTransactionTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0,
+                                      []() {
+                                          ++cycleCount;
+                                          burstTransactionTimer.enable(false);
+                                      });
+
+#endif
