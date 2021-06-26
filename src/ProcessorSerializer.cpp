@@ -268,7 +268,23 @@ byte ProcessorInterface::readPortZGPIORegister() noexcept {
 void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
     write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOB, value);
 }
+bool readWR() noexcept {
+    // get result from PC4 (W/R)
+    if constexpr (ProcessorInterface::ExperimentalPinChanges) {
+        return (PINC & _BV(PC4)) == 0;
+    } else {
+        return DigitalPin<i960Pinout::W_R_>::isAsserted();
+    }
+}
+bool readBLAST() noexcept {
+    // PC6 => ~BLAST
+    if constexpr (ProcessorInterface::ExperimentalPinChanges) {
 
+        return (PINC & _BV(PC6)) == 0;
+    } else {
+        return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    }
+}
 void ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
     SPI.beginTransaction(theSettings);
@@ -278,9 +294,8 @@ void ProcessorInterface::newDataCycle() noexcept {
     auto currentBaseAddress_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
     address_ = upperMaskedAddress_;
-    // get result from PC4 (W/R)
-    isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    isReadOperation_ = readWR();
+    blastTriggered_ = readBLAST();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
     auto bits = readGPIOA(IOExpanderAddress::MemoryCommitExtras);
@@ -289,5 +304,5 @@ void ProcessorInterface::updateDataCycle() noexcept {
     auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
     lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
     address_ = upperMaskedAddress_ | offsetBurstAddressBits;
-    blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    blastTriggered_ = readBLAST();
 }
