@@ -35,7 +35,7 @@ class SDCardFilesystemInterface : public IOSpaceThing {
 public:
     static constexpr uint8_t FixedPathSize = 80;
     static constexpr auto MaxFileCount = TargetBoard::maximumNumberOfOpenFilesFromSDCard();
-    static constexpr auto TransferBufferSize = 512;
+    static constexpr auto TransferBufferSize = 16;
 public:
     explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
     void begin() noexcept override;
