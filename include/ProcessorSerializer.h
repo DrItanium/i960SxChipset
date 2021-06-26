@@ -99,7 +99,7 @@ public:
     void clearDENTrigger() noexcept { denTriggered_ = false; }
     void triggerAS() noexcept { asTriggered_ = true; }
     void triggerDEN() noexcept { denTriggered_ = true; }
-    [[nodiscard]] bool failTriggered() const noexcept { return (PINA & 0b1000'0000) != 0; }
+    [[nodiscard]] static bool failTriggered() noexcept { return (PINA & 0b1000'0000) != 0; }
     [[nodiscard]] bool blastTriggered() const noexcept { return blastTriggered_; }
     static void signalReady() noexcept {
         uint8_t theSREG = SREG;
@@ -128,7 +128,7 @@ public:
     [[nodiscard]] constexpr auto get16ByteAlignedBaseAddress() const noexcept { return upperMaskedAddress_; }
     [[nodiscard]] constexpr auto getBurstAddressIndex() const noexcept { return burstAddressBits_; }
 private:
-    void updateOutputLatch() noexcept;
+    void updateOutputLatch() const noexcept;
 private:
     uint16_t dataLinesDirection_ = 0xFFFF;
     Address upperMaskedAddress_ = 0;

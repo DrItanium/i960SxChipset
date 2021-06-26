@@ -62,6 +62,7 @@ namespace
         GPINTEN = GPINTENA,
         IPOL = IPOLA,
     };
+
     SPISettings theSettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0);
     constexpr byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<uint8_t>(address) & 0b111) << 1) | 1;
@@ -75,7 +76,7 @@ namespace
         PINB |= _BV(PB4);
     }
     template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
-    uint16_t read16() noexcept {
+    inline uint16_t read16() noexcept {
         uint8_t buffer[4] = {
                 generateReadOpcode(addr),
                 static_cast<byte>(opcode),
@@ -88,7 +89,7 @@ namespace
         return lower | lowest;
     }
     template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
-    uint8_t read8() noexcept {
+    inline uint8_t read8() noexcept {
         uint8_t buffer[3] = {
                 generateReadOpcode(addr),
                 static_cast<byte>(opcode),
@@ -103,7 +104,7 @@ namespace
         return read16<addr, MCP23x17Registers::GPIO>();
     }
     template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
-    void write16(uint16_t value) noexcept {
+    inline void write16(uint16_t value) noexcept {
         uint8_t buffer[4] = {
                 generateWriteOpcode(addr),
                 static_cast<byte>(opcode),
@@ -113,7 +114,7 @@ namespace
         doSPI(buffer, 4);
     }
     template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
-    void write8(uint8_t value) noexcept {
+    inline void write8(uint8_t value) noexcept {
         uint8_t buffer[3] = {
                 generateWriteOpcode(addr),
                 static_cast<byte>(opcode),
@@ -122,42 +123,42 @@ namespace
         doSPI(buffer, 3);
     }
     template<ProcessorInterface::IOExpanderAddress addr>
-    void writeGPIO16(uint16_t value) noexcept {
+    inline void writeGPIO16(uint16_t value) noexcept {
         write16<addr, MCP23x17Registers::GPIO>(value);
     }
     template<ProcessorInterface::IOExpanderAddress addr>
-    void writeDirection(uint16_t value) noexcept {
+    inline void writeDirection(uint16_t value) noexcept {
         write16<addr, MCP23x17Registers::IODIR>(value);
     }
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
-    SPI.beginTransaction(theSettings);
+    //SPI.beginTransaction(theSettings);
     if (dataLinesDirection_ != 0xFFFF) {
         dataLinesDirection_ = 0xFFFF;
         writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     }
     auto result = readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
-    SPI.endTransaction();
+    //SPI.endTransaction();
     return result;
 }
 
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    SPI.beginTransaction(theSettings);
+    //SPI.beginTransaction(theSettings);
     if (dataLinesDirection_ != 0) {
         dataLinesDirection_ = 0;
         writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     }
     writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
-    SPI.endTransaction();
+    //SPI.endTransaction();
 }
 
 
 
 
 void
-ProcessorInterface::updateOutputLatch() noexcept {
+ProcessorInterface::updateOutputLatch() const noexcept {
     // construct the bit pattern as needed
     byte latchValue = 0;
     if (holdValue_ && lockValue_) {
@@ -238,11 +239,11 @@ void
 ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
     // configure the data lines once at the beginning of the transaction
-    SPI.beginTransaction(theSettings);
+    //SPI.beginTransaction(theSettings);
     auto lower16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>() & 0xFFF0);
     auto upper16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines>()) << 16;
     // update the ordering to make sure since we are overwriting things
-    SPI.endTransaction();
+    //SPI.endTransaction();
     auto currentBaseAddress_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = currentBaseAddress_;
     address_ = currentBaseAddress_;
