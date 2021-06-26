@@ -275,18 +275,23 @@ ProcessorInterface::newDataCycle() noexcept {
 }
 void
 ProcessorInterface::updateDataCycle() noexcept {
-    auto bits = readGPIOA(IOExpanderAddress::MemoryCommitExtras);
-    burstAddressBits_ = static_cast<byte>(bits & 0b111);
-    auto offsetBurstAddressBits = burstAddressBits_ << 1;
-    auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
-    lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
-    address_ = upperMaskedAddress_ | offsetBurstAddressBits;
-    blastTriggered_ = readBLAST();
-    auto portRead = PINA;
-    Serial.print(F("IO EXPANDER BITS: 0x"));
-    Serial.println(bits & 0b11111, HEX);
-    Serial.print(F("PINA RESULTS: 0x"));
-    Serial.println((portRead >> 1) & 0b11111, HEX);
+    if constexpr (ExperimentalPinChanges) {
+        auto bits = PINA;
+        auto offsetBits = bits & 0b00001110;
+        burstAddressBits_ = offsetBits >> 1;
+        auto byteEnableBits = (bits >> 4) & 0b11;
+        lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
+        address_ = upperMaskedAddress_ | offsetBits;
+        blastTriggered_ = (bits & 0b0100'0000) == 0;
+    } else {
+        auto bits = readGPIOA(IOExpanderAddress::MemoryCommitExtras);
+        burstAddressBits_ = static_cast<byte>(bits & 0b111);
+        auto offsetBurstAddressBits = burstAddressBits_ << 1;
+        auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
+        lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
+        address_ = upperMaskedAddress_ | offsetBurstAddressBits;
+        blastTriggered_ = readBLAST();
+    }
 }
 void
 ProcessorInterface::signalReady() noexcept {
