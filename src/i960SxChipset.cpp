@@ -533,12 +533,12 @@ getThing(Address address, LoadStoreStyle style) noexcept {
         if (address < RAMFile::RamEndingAddress) {
             return &ram;
         } else {
-            for (auto* currentThing : ioSpaceThings) {
-                if (currentThing->respondsTo(address, style)) {
-                    return currentThing;
+            for (auto* curr : ioSpaceThings) {
+                if (curr->respondsTo(address, style)) {
+                    return curr;
                 }
             }
+            return nullptr;
         }
-        return nullptr;
     }
 }
