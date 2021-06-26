@@ -112,9 +112,27 @@ public:
     void clearDENTrigger() noexcept { denTriggered_ = false; }
     void triggerAS() noexcept { asTriggered_ = true; }
     void triggerDEN() noexcept { denTriggered_ = true; }
-    [[nodiscard]] bool failTriggered() const noexcept { return DigitalPin<i960Pinout::FAIL>::isAsserted(); }
+    static constexpr bool ExperimentalPinChanges = true;
+    [[nodiscard]] bool failTriggered() const noexcept {
+        if constexpr (ExperimentalPinChanges) {
+            return (PINC & _BV(PC7)) != 0;
+        } else {
+            return DigitalPin<i960Pinout::FAIL>::isAsserted();
+        }
+    }
     [[nodiscard]] bool blastTriggered() const noexcept { return blastTriggered_; }
-    void signalReady() noexcept { DigitalPin<i960Pinout::Ready>::pulse(); }
+    void signalReady() noexcept {
+        if constexpr (ExperimentalPinChanges) {
+            uint8_t theSREG = SREG;
+            cli();
+            PORTC ^= _BV(PC2);
+            asm("nop");
+            PORTC ^= _BV(PC2);
+            SREG = theSREG;
+        } else {
+            DigitalPin<i960Pinout::Ready>::pulse();
+        }
+    }
 public:
     void setPortZDirectionRegister(byte value) noexcept;
     byte getPortZDirectionRegister() noexcept;
