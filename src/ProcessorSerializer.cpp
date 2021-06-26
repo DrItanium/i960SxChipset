@@ -70,17 +70,9 @@ namespace
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
     inline void doSPI(uint8_t* buffer, size_t count) noexcept {
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, LOW);
-        }
+        PINB |= _BV(PB4);
         SPI.transfer(buffer, count);
-        if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-            PINB |= _BV(PB4);
-        } else {
-            digitalWrite(i960Pinout::GPIOSelect, HIGH);
-        }
+        PINB |= _BV(PB4);
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
@@ -103,9 +95,6 @@ namespace
 
         doSPI(buffer, 3);
         return buffer[2];
-    }
-    uint8_t readGPIOA(ProcessorInterface::IOExpanderAddress addr) {
-        return read8(addr, MCP23x17Registers::GPIOA);
     }
     uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
         return read16(addr, MCP23x17Registers::GPIO);
@@ -238,22 +227,6 @@ byte ProcessorInterface::readPortZGPIORegister() noexcept {
 void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
     write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOB, value);
 }
-bool readWR() noexcept {
-    // get result from PC4 (W/R)
-    if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-        return (PINC & _BV(PC4)) == 0;
-    } else {
-        return DigitalPin<i960Pinout::W_R_>::isAsserted();
-    }
-}
-bool readBLAST() noexcept {
-    // PC6 => ~BLAST
-    if constexpr (ProcessorInterface::ExperimentalPinChanges) {
-        return (PINC & _BV(PC6)) == 0;
-    } else {
-        return DigitalPin<i960Pinout::BLAST_>::isAsserted();
-    }
-}
 void
 ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
@@ -269,7 +242,6 @@ ProcessorInterface::newDataCycle() noexcept {
 }
 void
 ProcessorInterface::updateDataCycle() noexcept {
-    if constexpr (ExperimentalPinChanges) {
         auto bits = PINA;
         auto offsetBits = bits & 0b00001110;
         burstAddressBits_ = offsetBits >> 1;
@@ -277,26 +249,4 @@ ProcessorInterface::updateDataCycle() noexcept {
         lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
         address_ = upperMaskedAddress_ | offsetBits;
         blastTriggered_ = (bits & 0b0100'0000) == 0;
-    } else {
-        auto bits = readGPIOA(IOExpanderAddress::MemoryCommitExtras);
-        burstAddressBits_ = static_cast<byte>(bits & 0b111);
-        auto offsetBurstAddressBits = burstAddressBits_ << 1;
-        auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
-        lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
-        address_ = upperMaskedAddress_ | offsetBurstAddressBits;
-        blastTriggered_ = readBLAST();
-    }
-}
-void
-ProcessorInterface::signalReady() noexcept {
-    if constexpr (ExperimentalPinChanges) {
-        uint8_t theSREG = SREG;
-        cli();
-        PORTC ^= _BV(PC2);
-        //asm("nop");
-        PORTC ^= _BV(PC2);
-        SREG = theSREG;
-    } else {
-        DigitalPin<i960Pinout::Ready>::pulse();
-    }
 }
