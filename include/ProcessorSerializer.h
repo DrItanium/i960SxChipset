@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "Pinout.h"
 
-class ProcessorInterface {
+class ProcessorInterface final {
 public:
     static ProcessorInterface&
     getInterface() noexcept {
@@ -101,7 +101,7 @@ public:
     void triggerDEN() noexcept { denTriggered_ = true; }
     [[nodiscard]] bool failTriggered() const noexcept { return (PINA & 0b1000'0000) != 0; }
     [[nodiscard]] bool blastTriggered() const noexcept { return blastTriggered_; }
-    void signalReady() const noexcept {
+    static void signalReady() noexcept {
         uint8_t theSREG = SREG;
         cli();
         PORTC ^= _BV(PC2);
