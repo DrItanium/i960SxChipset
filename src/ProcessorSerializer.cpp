@@ -74,7 +74,8 @@ namespace
         SPI.transfer(buffer, count);
         PINB |= _BV(PB4);
     }
-    uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
+    template<ProcessorInterface::IOExpanderAddress addr>
+    uint16_t read16(MCP23x17Registers opcode) noexcept {
         uint8_t buffer[4] = {
                 generateReadOpcode(addr),
                 static_cast<byte>(opcode),
@@ -86,7 +87,8 @@ namespace
         auto lowest = static_cast<uint16_t>(buffer[3]) << 8;
         return lower | lowest;
     }
-    uint8_t read8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
+    template<ProcessorInterface::IOExpanderAddress addr>
+    uint8_t read8(MCP23x17Registers opcode) noexcept {
         uint8_t buffer[3] = {
                 generateReadOpcode(addr),
                 static_cast<byte>(opcode),
@@ -96,10 +98,12 @@ namespace
         doSPI(buffer, 3);
         return buffer[2];
     }
-    uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
-        return read16(addr, MCP23x17Registers::GPIO);
+    template<ProcessorInterface::IOExpanderAddress addr>
+    inline uint16_t readGPIO16() noexcept {
+        return read16<addr>(MCP23x17Registers::GPIO);
     }
-    void write16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint16_t value) {
+    template<ProcessorInterface::IOExpanderAddress addr>
+    void write16(MCP23x17Registers opcode, uint16_t value) noexcept {
         uint8_t buffer[4] = {
                 generateWriteOpcode(addr),
                 static_cast<byte>(opcode),
@@ -108,7 +112,8 @@ namespace
         };
         doSPI(buffer, 4);
     }
-    void write8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint8_t value) {
+    template<ProcessorInterface::IOExpanderAddress addr>
+    void write8(MCP23x17Registers opcode, uint8_t value) noexcept {
         uint8_t buffer[3] = {
                 generateWriteOpcode(addr),
                 static_cast<byte>(opcode),
@@ -116,21 +121,25 @@ namespace
         };
         doSPI(buffer, 3);
     }
-    void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
-        write16(addr, MCP23x17Registers::GPIO, value);
+    template<ProcessorInterface::IOExpanderAddress addr>
+    void writeGPIO16(uint16_t value) noexcept {
+        write16<addr>(MCP23x17Registers::GPIO, value);
     }
-    void writeDirection(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
-        write16(addr, MCP23x17Registers::IODIR, value);
+    template<ProcessorInterface::IOExpanderAddress addr>
+    void writeDirection(uint16_t value) noexcept {
+        write16<addr>(MCP23x17Registers::IODIR, value);
     }
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
     SPI.beginTransaction(theSettings);
-    if (dataLinesDirection_ != 0xFFFF) {
-        dataLinesDirection_ = 0xFFFF;
-        writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
+    if constexpr (false) {
+        if (dataLinesDirection_ != 0xFFFF) {
+            dataLinesDirection_ = 0xFFFF;
+            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        }
     }
-    auto result = readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
+    auto result = readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
     SPI.endTransaction();
     return result;
 }
@@ -138,11 +147,13 @@ ProcessorInterface::getDataBits() noexcept {
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
     SPI.beginTransaction(theSettings);
-    if (dataLinesDirection_ != 0) {
-        dataLinesDirection_ = 0;
-        writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
+    if constexpr (false) {
+        if (dataLinesDirection_ != 0) {
+            dataLinesDirection_ = 0;
+            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        }
     }
-    writeGPIO16(ProcessorInterface::IOExpanderAddress::DataLines, value);
+    writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
     SPI.endTransaction();
 }
 
@@ -160,7 +171,7 @@ ProcessorInterface::updateOutputLatch() noexcept {
     } else if (!holdValue_ && lockValue_) {
        latchValue = 0b1000'0000;
     }
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, latchValue);
+    write8<IOExpanderAddress::MemoryCommitExtras> (MCP23x17Registers::OLATA, latchValue);
 }
 void
 ProcessorInterface::setHOLDPin(bool value) noexcept {
@@ -188,56 +199,64 @@ ProcessorInterface::begin() noexcept {
         // should receive it.
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
-        auto iocon = read8(ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON);
-        write8(ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, iocon | 0b0000'1000);
+        auto iocon = read8<ProcessorInterface::IOExpanderAddress::DataLines>(MCP23x17Registers::IOCON);
+        write8<ProcessorInterface::IOExpanderAddress::DataLines>(MCP23x17Registers::IOCON, iocon | 0b0000'1000);
         // now all devices tied to this ~CS pin have separate addresses
         // make each of these inputs
-        writeDirection(IOExpanderAddress::Lower16Lines, 0xFFFF);
-        writeDirection(IOExpanderAddress::Upper16Lines, 0xFFFF);
-        writeDirection(IOExpanderAddress::DataLines, dataLinesDirection_);
-        writeDirection(IOExpanderAddress::MemoryCommitExtras, 0x005F);
+        writeDirection<IOExpanderAddress::Lower16Lines>( 0xFFFF);
+        writeDirection<IOExpanderAddress::Upper16Lines>( 0xFFFF);
+        writeDirection<IOExpanderAddress::DataLines>(dataLinesDirection_);
+        writeDirection<IOExpanderAddress::MemoryCommitExtras>(0x005F);
         // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
-        write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, 0b1000'0000);
+        write8<IOExpanderAddress::MemoryCommitExtras> (MCP23x17Registers::OLATA, 0b1000'0000);
 
     }
 }
 void
 ProcessorInterface::setPortZDirectionRegister(byte value) noexcept {
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IODIRB, value);
+    write8<IOExpanderAddress::MemoryCommitExtras>(MCP23x17Registers::IODIRB, value);
 }
 byte
 ProcessorInterface::getPortZDirectionRegister() noexcept {
-    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IODIRB);
+    return read8<IOExpanderAddress::MemoryCommitExtras>(MCP23x17Registers::IODIRB);
 }
 void ProcessorInterface::setPortZPolarityRegister(byte value) noexcept {
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IPOLB, value);
+    write8<IOExpanderAddress::MemoryCommitExtras>(MCP23x17Registers::IPOLB, value);
 }
 byte ProcessorInterface::getPortZPolarityRegister() noexcept {
-    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IPOLB);
+    return read8<IOExpanderAddress::MemoryCommitExtras>(MCP23x17Registers::IPOLB);
 }
 void ProcessorInterface::setPortZPullupResistorRegister(byte value) noexcept {
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPPUB, value);
+    write8<IOExpanderAddress::MemoryCommitExtras>(MCP23x17Registers::GPPUB, value);
 }
 byte ProcessorInterface::getPortZPullupResistorRegister() noexcept {
-    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPPUB);
+    return read8<IOExpanderAddress::MemoryCommitExtras>(MCP23x17Registers::GPPUB);
 }
 byte ProcessorInterface::readPortZGPIORegister() noexcept {
-    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOB);
+    return read8<IOExpanderAddress::MemoryCommitExtras>(MCP23x17Registers::GPIOB);
 }
 void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOB, value);
+    write8<IOExpanderAddress::MemoryCommitExtras>(MCP23x17Registers::GPIOB, value);
 }
 void
 ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
+    isReadOperation_ = (PINA & 0b0000'0001) == 0;
+    // configure the data lines once at the beginning of the transaction
+    if (isReadOperation_) {
+        dataLinesDirection_ = 0xFFFF;
+    } else {
+        dataLinesDirection_ = 0;
+    }
     SPI.beginTransaction(theSettings);
-    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
-    auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
+    auto lower16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>());
+    auto upper16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines>()) << 16;
+    // update the ordering to make sure since we are overwriting things
+    writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     SPI.endTransaction();
     auto currentBaseAddress_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
     address_ = upperMaskedAddress_;
-    isReadOperation_ = (PINA & 0b0000'0001) == 0;
     blastTriggered_ = (PINA & 0b0100'0000) == 0;
 }
 void
