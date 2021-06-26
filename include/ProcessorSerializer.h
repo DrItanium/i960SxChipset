@@ -99,7 +99,6 @@ public:
     void clearDENTrigger() noexcept { denTriggered_ = false; }
     void triggerAS() noexcept { asTriggered_ = true; }
     void triggerDEN() noexcept { denTriggered_ = true; }
-    static constexpr bool ExperimentalPinChanges = true;
     [[nodiscard]] bool failTriggered() const noexcept { return (PINA & 0b1000'0000) != 0; }
     [[nodiscard]] bool blastTriggered() const noexcept { return blastTriggered_; }
     void signalReady() const noexcept {
