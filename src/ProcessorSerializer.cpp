@@ -239,13 +239,13 @@ ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
     // configure the data lines once at the beginning of the transaction
     SPI.beginTransaction(theSettings);
-    auto lower16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>());
+    auto lower16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>() & 0xFFF0);
     auto upper16Addr = static_cast<Address>(readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines>()) << 16;
     // update the ordering to make sure since we are overwriting things
     SPI.endTransaction();
     auto currentBaseAddress_ = lower16Addr | upper16Addr;
-    upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
-    address_ = upperMaskedAddress_;
+    upperMaskedAddress_ = currentBaseAddress_;
+    address_ = currentBaseAddress_;
     isReadOperation_ = (PINA & 0b0000'0001) == 0;
     blastTriggered_ = (PINA & 0b0100'0000) == 0;
 }
