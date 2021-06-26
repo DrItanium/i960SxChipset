@@ -480,6 +480,7 @@ void setup() {
     fs.begin();
     chipsetFunctions.begin();
     SPI.begin();
+    SPI.setClockDivider(SPI_CLOCK_DIV2);
     processorInterface.begin();
     // setup the CPU Interface
     setupBusStateMachine();
