@@ -78,9 +78,9 @@ enum class i960Pinout : decltype(A0) {
     SPI_BUS_A5,
     SPI_BUS_A6,
     SPI_BUS_A7,
-    Count,          // special, must be last
+    Count,
 };
-
+static_assert(static_cast<int>(i960Pinout::Count) == 32);
 /**
  * @brief If both the display en and dc pins are bound to sda or scl then communication is taking place over i2c
  */
@@ -110,6 +110,95 @@ inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
 inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));
 }
+constexpr auto isValidPin(i960Pinout p) noexcept {
+    switch (p) {
+        case i960Pinout::Led:      // output
+        case i960Pinout::CLOCK_OUT: // output: unusable
+        case i960Pinout::AS_:     // input: AVR Int2
+        case i960Pinout::PWM4: // unused
+        case i960Pinout::GPIOSelect:        // output
+        case i960Pinout::MOSI:          // reserved
+        case i960Pinout::MISO:          // reserved
+        case i960Pinout::SCK:          // reserved
+        case i960Pinout::RX0:          // reserved
+        case i960Pinout::TX0:          // reserved
+        case i960Pinout::DEN_:      // AVR Interrupt INT0
+        case i960Pinout::AVR_INT1:        // AVR Interrupt INT1
+        case i960Pinout::SPI_BUS_EN: // output
+        case i960Pinout::DC:     // output
+        case i960Pinout::DISPLAY_EN: // output
+        case i960Pinout::SD_EN:      // output
+        case i960Pinout::SCL:          // reserved
+        case i960Pinout::SDA:          // reserved
+        case i960Pinout::Ready:      // output
+        case i960Pinout::Int0_:          // output
+        case i960Pinout::W_R_:          // input
+        case i960Pinout::Reset960:          // output
+        case i960Pinout::BLAST_:     // input
+        case i960Pinout::FAIL:         // input
+        case i960Pinout::SPI_BUS_A0:
+        case i960Pinout::SPI_BUS_A1:
+        case i960Pinout::SPI_BUS_A2:
+        case i960Pinout::SPI_BUS_A3:
+        case i960Pinout::SPI_BUS_A4:
+        case i960Pinout::SPI_BUS_A5:
+        case i960Pinout::SPI_BUS_A6:
+        case i960Pinout::SPI_BUS_A7:
+            return true;
+        default:
+            return false;
+    }
+}
+template<i960Pinout targetPin>
+volatile uint8_t& getPort() noexcept {
+    static_assert(isValidPin(targetPin), "Invalid Pin found, cannot bind to a port!");
+    switch (targetPin) {
+        case i960Pinout::Led:      // output
+        case i960Pinout::CLOCK_OUT: // output: unusable
+        case i960Pinout::AS_:     // input: AVR Int2
+        case i960Pinout::PWM4: // unused
+        case i960Pinout::GPIOSelect:        // output
+        case i960Pinout::MOSI:          // reserved
+        case i960Pinout::MISO:          // reserved
+        case i960Pinout::SCK:          // reserved
+            return PORTB;
+// PORT D
+        case i960Pinout::RX0:          // reserved
+        case i960Pinout::TX0:          // reserved
+        case i960Pinout::DEN_:      // AVR Interrupt INT0
+        case i960Pinout::AVR_INT1:        // AVR Interrupt INT1
+        case i960Pinout::SPI_BUS_EN: // output
+        case i960Pinout::DC:     // output
+        case i960Pinout::DISPLAY_EN: // output
+        case i960Pinout::SD_EN:      // output
+        return PORTD;
+// PORT C
+        case i960Pinout::SCL:          // reserved
+        case i960Pinout::SDA:          // reserved
+        case i960Pinout::Ready:      // output
+        case i960Pinout::Int0_:          // output
+        case i960Pinout::W_R_:          // input
+        case i960Pinout::Reset960:          // output
+        case i960Pinout::BLAST_:     // input
+        case i960Pinout::FAIL:         // input
+        return PORTC;
+// PORT A: used to select the spi bus address (not directly used)
+        case i960Pinout::SPI_BUS_A0:
+        case i960Pinout::SPI_BUS_A1:
+        case i960Pinout::SPI_BUS_A2:
+        case i960Pinout::SPI_BUS_A3:
+        case i960Pinout::SPI_BUS_A4:
+        case i960Pinout::SPI_BUS_A5:
+        case i960Pinout::SPI_BUS_A6:
+        case i960Pinout::SPI_BUS_A7:
+            return PORTD;
+        default:
+            // force a crash by dereferencing 0
+            return *(reinterpret_cast<volatile uint8_t*>(0));
+    }
+}
+
+
 
 template<i960Pinout pin>
 struct DigitalPin {
