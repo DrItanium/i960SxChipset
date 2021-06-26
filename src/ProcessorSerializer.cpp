@@ -282,6 +282,11 @@ ProcessorInterface::updateDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
     address_ = upperMaskedAddress_ | offsetBurstAddressBits;
     blastTriggered_ = readBLAST();
+    auto portRead = PINA;
+    Serial.print(F("IO EXPANDER BITS: 0x"));
+    Serial.println(bits & 0b11111, HEX);
+    Serial.print(F("PINA RESULTS: 0x"));
+    Serial.println((portRead >> 1) & 0b11111, HEX);
 }
 void
 ProcessorInterface::signalReady() noexcept {
