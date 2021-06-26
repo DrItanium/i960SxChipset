@@ -183,25 +183,19 @@ Device* ioSpaceThings[] {
 Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
 #endif
 SplitWord16 burstCache[16 / sizeof(SplitWord16)] = { { 0 }  };
-constexpr auto NoRequest = 0;
-constexpr auto NewRequest = 1;
-constexpr auto ReadyAndBurst = 2;
-constexpr auto NotReady = 3;
-constexpr auto ReadyAndNoBurst = 4;
-constexpr auto RequestPending = 5;
-constexpr auto ToDataState = 6;
-constexpr auto PerformSelfTest = 7;
-constexpr auto SelfTestComplete = 8;
-constexpr auto ChecksumFailure = 9;
-constexpr auto ToBurstReadTransaction = 10;
-constexpr auto ToBurstWriteTransaction = 11;
-constexpr auto ToNonBurstReadTransaction = 12;
-constexpr auto ToNonBurstWriteTransaction = 13;
-constexpr auto ToUnmappedReadTransaction = 14;
-constexpr auto ToUnmappedWriteTransaction = 15;
-constexpr auto ToBusRecovery = 16;
-constexpr auto ToCyclicBurstReadTransaction = 17;
-constexpr auto ToCyclicBurstWriteTransaction= 18;
+constexpr auto NewRequest = 0;
+constexpr auto ToDataState = 1;
+constexpr auto PerformSelfTest = 2;
+constexpr auto SelfTestComplete = 3;
+constexpr auto ToBurstReadTransaction = 4;
+constexpr auto ToBurstWriteTransaction = 5;
+constexpr auto ToNonBurstReadTransaction = 6;
+constexpr auto ToNonBurstWriteTransaction = 7;
+constexpr auto ToUnmappedReadTransaction = 8;
+constexpr auto ToUnmappedWriteTransaction = 9;
+constexpr auto ToBusRecovery = 10;
+constexpr auto ToCyclicBurstReadTransaction = 11;
+constexpr auto ToCyclicBurstWriteTransaction= 12;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
