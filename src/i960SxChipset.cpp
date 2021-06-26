@@ -213,7 +213,6 @@ constexpr auto ToUnmappedWriteTransaction = 15;
 constexpr auto ToBusRecovery = 16;
 constexpr auto ToCyclicBurstReadTransaction = 17;
 constexpr auto ToCyclicBurstWriteTransaction= 18;
-constexpr auto ToCommitBurstTransaction = 19;
 void startupState() noexcept;
 void systemTestState() noexcept;
 void idleState() noexcept;
@@ -221,7 +220,6 @@ void doAddressState() noexcept;
 [[maybe_unused]] void processDataRequest() noexcept;
 void dataCycleStart() noexcept;
 [[maybe_unused]] void doRecoveryState() noexcept;
-void enteringChecksumFailure() noexcept;
 void performBurstRead() noexcept;
 void performBurstWrite() noexcept;
 void performNonBurstRead() noexcept;
@@ -230,7 +228,6 @@ void unmappedRead() noexcept;
 void unmappedWrite() noexcept;
 void performCyclicBurstRead() noexcept;
 void performCyclicBurstWrite() noexcept;
-void commitBurstTransaction() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
@@ -243,11 +240,6 @@ State tAddr([]() { processorInterface.clearASTrigger(); },
 State tData(nullptr,
             dataCycleStart,
             nullptr);
-#if 0
-State tRecovery(nullptr,
-                doRecoveryState,
-                nullptr);
-#endif
 State tBurstRead(nullptr, performBurstRead, nullptr);
 State tBurstWrite(nullptr, performBurstWrite, nullptr);
 State tNonBurstRead(nullptr, performNonBurstRead, nullptr);
@@ -257,7 +249,6 @@ State tUnmappedWrite(nullptr, unmappedWrite, nullptr);
 
 State tCyclicBurstRead(nullptr, performCyclicBurstRead, nullptr);
 State tCyclicBurstWrite(nullptr, performCyclicBurstWrite, nullptr);
-State tCommitBurstTransaction(nullptr, commitBurstTransaction, nullptr);
 
 
 void startupState() noexcept {
@@ -340,14 +331,11 @@ void performBurstWrite() noexcept {
             break;
     }
     if (processorInterface.blastTriggered()) {
-        fsm.trigger(ToCommitBurstTransaction);
+        currentThing->write(processorInterface.get16ByteAlignedBaseAddress(),
+                            reinterpret_cast<byte*>(burstCache),
+                            16);
+        fsm.trigger(ToBusRecovery);
     }
-}
-void commitBurstTransaction() noexcept {
-    currentThing->write(processorInterface.get16ByteAlignedBaseAddress(),
-                        reinterpret_cast<byte*>(burstCache),
-                        16);
-    fsm.trigger(ToBusRecovery);
 }
 void performBurstRead() noexcept {
     processorInterface.updateDataCycle();
@@ -446,13 +434,11 @@ void setupBusStateMachine() noexcept {
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
     fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
     // we want to commit the burst transaction in a separate state
-    fsm.add_transition(&tData, &tBurstWrite, ToBurstWriteTransaction, nullptr);
-    fsm.add_transition(&tBurstWrite, &tCommitBurstTransaction, ToCommitBurstTransaction, nullptr);
-    fsm.add_transition(&tCommitBurstTransaction, &tIdle, ToBusRecovery, nullptr);
     auto connectStateToDataAndRecovery = [](auto* state, auto toState) noexcept {
         fsm.add_transition(&tData, state, toState, nullptr);
         fsm.add_transition(state, &tIdle, ToBusRecovery, nullptr);
     };
+    connectStateToDataAndRecovery(&tBurstWrite, ToBurstWriteTransaction);
     connectStateToDataAndRecovery(&tBurstRead, ToBurstReadTransaction);
     connectStateToDataAndRecovery(&tNonBurstRead, ToNonBurstReadTransaction);
     connectStateToDataAndRecovery(&tNonBurstWrite, ToNonBurstWriteTransaction);
