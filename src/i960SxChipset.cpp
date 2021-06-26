@@ -295,7 +295,6 @@ void doAddressState() noexcept {
 Device* currentThing = nullptr;
 void dataCycleStart() noexcept {
     processorInterface.newDataCycle();
-    currentThing = getThing(processorInterface.get16ByteAlignedBaseAddress(), LoadStoreStyle::Full16);
     bool isReadOperation = processorInterface.isReadOperation();
     auto align16BaseAddress = processorInterface.get16ByteAlignedBaseAddress();
     currentThing = getThing(align16BaseAddress, LoadStoreStyle::Full16);
