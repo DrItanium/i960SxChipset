@@ -73,11 +73,15 @@ public:
     }
     // all of these overrides are written from the perspective that the mcu will only ever be interfacing with a single psram chip at a time
     // thus all of the internal routines are written assuming that the work has already been done to setup the spi bus correctly
-    size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
+    uint32_t blockWrite(Address address, uint8_t *buf, uint32_t capacity) noexcept override {
         // divide up the writes into writes of 8 bytes to prevent data loss
+        auto times = capacity / 8;
+        auto slop = capacity % 8;
+        size_t
+        for (size_t i = 0; i)
         return 0;
     }
-    size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
+    uint32_t blockRead(Address address, uint8_t *buf, uint32_t capacity) noexcept override {
         // divide up the reads into reads of 8 bytes to prevent data loss
         return 0;
     }

@@ -131,10 +131,10 @@ public:
      * @param size the number of bytes to transfer
      * @return the number of bytes actually read into the buffer
      */
-    virtual size_t read(uint32_t baseAddress, byte* buffer, size_t size) noexcept {
+    virtual uint32_t read(uint32_t baseAddress, byte* buffer, uint32_t size) noexcept {
         auto relativeAddress = makeAddressRelative(baseAddress);
         // compute how many bytes we can actually write within this memory thing in case the buffer spans multiple devices
-        size_t count = size;
+        uint32_t count = size;
         if (auto actualLength = lengthFollowingTargetAddress(baseAddress); size > actualLength) {
             count = actualLength;
         }
