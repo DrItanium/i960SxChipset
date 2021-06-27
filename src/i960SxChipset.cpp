@@ -742,7 +742,15 @@ void setup() {
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
               i960Pinout::Led,
-              i960Pinout::Int0_);
+              i960Pinout::Int0_,
+              i960Pinout::SPI_BUS_A0,
+              i960Pinout::SPI_BUS_A1,
+              i960Pinout::SPI_BUS_A2,
+              i960Pinout::SPI_BUS_A3,
+              i960Pinout::SPI_BUS_A4,
+              i960Pinout::SPI_BUS_A5,
+              i960Pinout::SPI_BUS_A6,
+              i960Pinout::SPI_BUS_A7 );
     PinAsserter<i960Pinout::Reset960> holdi960InReset;
     // all of these pins need to be pulled high
     digitalWriteBlock(HIGH,
