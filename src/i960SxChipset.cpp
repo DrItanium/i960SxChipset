@@ -829,7 +829,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     digitalWrite(i960Pinout::Led, LOW);
-    psramTest();
+    //psramTest();
     fs.begin();
     chipsetFunctions.begin();
     Serial.println(F("i960Sx chipset bringup"));
