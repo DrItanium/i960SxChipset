@@ -94,13 +94,37 @@ public:
         return commandStream[4];
     }
     uint16_t read16(Address address) noexcept override {
-        return MemoryThing::read16(address);
+        byte commandStream[] = {
+                static_cast<byte>(Opcode::Read),
+                static_cast<byte>(address >> 16),
+                static_cast<byte>(address >> 8),
+                static_cast<byte>(address),
+                0, // storage cell
+                0,
+        };
+        performSPITransaction(commandStream, 6);
+        return static_cast<uint16_t>(readBuffer[4]) | (static_cast<uint16_t>(readBuffer[5]) << 8);
     }
     void write8(Address address, uint8_t value) noexcept override {
-        MemoryThing::write8(address, value);
+        byte commandStream[] = {
+                static_cast<byte>(Opcode::Write),
+                static_cast<byte>(address >> 16),
+                static_cast<byte>(address >> 8),
+                static_cast<byte>(address),
+                value,
+        };
+        performSPITransaction(commandStream, 5);
     }
     void write16(Address address, uint16_t value) noexcept override {
-        MemoryThing::write16(address, value);
+        byte commandStream[] = {
+                static_cast<byte>(Opcode::Write),
+                static_cast<byte>(address >> 16),
+                static_cast<byte>(address >> 8),
+                static_cast<byte>(address),
+                value,
+                value >> 8,
+        };
+        performSPITransaction(commandStream, 6);
     }
     /**
      * @brief Make the address relative to a single block of memory and setup the spi bus device
