@@ -66,7 +66,7 @@ public:
     void begin() noexcept override {
         /// @todo align to 16-byte addresses
         for (int i = 0; i < 8; ++i) {
-            setCurrentPSRAMBlock(id);
+            setCurrentPSRAMBlock(i);
             sendResetEnable();
             sendReset();
         }
@@ -77,9 +77,46 @@ public:
         // divide up the writes into writes of 8 bytes to prevent data loss
         auto times = capacity / 8;
         auto slop = capacity % 8;
-        size_t
-        for (size_t i = 0; i)
-        return 0;
+        uint32_t currAddress = address;
+        uint8_t* theBuf = buf;
+        for (uint32_t i = 0; i < times; ++i) {
+            uint8_t commandStream[] = {
+                    static_cast<byte>(Opcode::Write),
+                    static_cast<byte>(currAddress >> 16),
+                    static_cast<byte>(currAddress >> 8),
+                    static_cast<byte>(currAddress),
+                    buf[0],
+                    buf[1],
+                    buf[2],
+                    buf[3],
+                    buf[4],
+                    buf[5],
+                    buf[6],
+                    buf[7],
+            };
+            performSPITransaction(commandStream, 12);
+            currAddress += 8;
+            theBuf += 8;
+        }
+        if (slop != 0) {
+            // while this is reading from illegal memory, who cares since I am going to gate it with the slop parameter
+            uint8_t commandStream[] = {
+                    static_cast<byte>(Opcode::Write),
+                    static_cast<byte>(currAddress >> 16),
+                    static_cast<byte>(currAddress >> 8),
+                    static_cast<byte>(currAddress),
+                    buf[0],
+                    buf[1],
+                    buf[2],
+                    buf[3],
+                    buf[4],
+                    buf[5],
+                    buf[6],
+                    buf[7],
+            };
+            performSPITransaction(commandStream, slop);
+        }
+        return capacity;
     }
     uint32_t blockRead(Address address, uint8_t *buf, uint32_t capacity) noexcept override {
         // divide up the reads into reads of 8 bytes to prevent data loss
@@ -107,7 +144,7 @@ public:
                 0,
         };
         performSPITransaction(commandStream, 6);
-        return static_cast<uint16_t>(readBuffer[4]) | (static_cast<uint16_t>(readBuffer[5]) << 8);
+        return static_cast<uint16_t>(commandStream[4]) | (static_cast<uint16_t>(commandStream[5]) << 8);
     }
     void write8(Address address, uint8_t value) noexcept override {
         byte commandStream[] = {

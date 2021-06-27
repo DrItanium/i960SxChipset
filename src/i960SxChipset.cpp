@@ -47,7 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef ADAFRUIT_FEATHER
 #include "FeatherWingPeripherals.h"
 #endif
-
+#include "PSRAMBlock.h"
 #if defined(ARDUINO_GRAND_CENTRAL_M4)
 #include <Adafruit_ZeroTimer.h>
 #endif
