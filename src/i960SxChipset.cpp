@@ -285,6 +285,7 @@ void doAddressState() noexcept {
 
 
 Device* currentThing = nullptr;
+constexpr auto CacheBlockTransfers = false;
 void dataCycleStart() noexcept {
     processorInterface.newDataCycle();
     bool isReadOperation = processorInterface.isReadOperation();
@@ -292,7 +293,7 @@ void dataCycleStart() noexcept {
     currentThing = getThing(align16BaseAddress, LoadStoreStyle::Full16);
     if (currentThing) {
         if (!processorInterface.blastTriggered()) {
-            if (currentThing->supportsBlockTransfers()) {
+            if (CacheBlockTransfers && currentThing->supportsBlockTransfers()) {
                 currentThing->read(align16BaseAddress, reinterpret_cast<byte*>(burstCache), 16);
                 // read into the burst cache as part of data cycle startup
                 fsm.trigger(isReadOperation ? ToBurstReadTransaction : ToBurstWriteTransaction);
@@ -303,11 +304,6 @@ void dataCycleStart() noexcept {
             fsm.trigger(isReadOperation ? ToNonBurstReadTransaction : ToNonBurstWriteTransaction);
         }
     } else {
-        // unmapped space (including cpu internal)
-        if (isReadOperation) {
-            // force the data expander to be zero for unmapped reads
-            processorInterface.setDataBits(0);
-        }
         fsm.trigger(isReadOperation ? ToUnmappedReadTransaction : ToUnmappedWriteTransaction);
     }
 }
@@ -416,6 +412,7 @@ void unmappedRead() noexcept {
     // expensive but something has gone horribly wrong anyway so whatever!
     Serial.println(processorInterface.getAddress(), HEX);
     signalHaltState(F("UNMAPPED READ!"));
+    processorInterface.setDataBits(0);
     processorInterface.signalReady();
     if (processorInterface.blastTriggered()) {
         // we not in burst mode
