@@ -748,8 +748,8 @@ void psramTest() noexcept {
                 static_cast<byte>(j >> 16),
                 static_cast<byte>(j >> 8),
                 static_cast<byte>(j),
-                static_cast<byte>(j >> 8),
                 static_cast<byte>(j),
+                static_cast<byte>(j >> 8),
             };
             byte readBuffer[6] {
                     0b0000'0011, // write
