@@ -94,7 +94,7 @@ protected:
             theFile_.seek(address);
             auto result = theFile_.write(buf, capacity);
             // make sure...
-            theFile_.flush();
+            //theFile_.flush();
             return result;
         }
         return 0;
