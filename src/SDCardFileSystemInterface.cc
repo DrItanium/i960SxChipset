@@ -366,11 +366,14 @@ SDCardFilesystemInterface::readFile() noexcept {
             } else {
                 // we can keep the cache on at this point in time now
                 if (count > 0 && count <= TransferBufferSize) {
+                    thing->disableCache();
                     bytesRead = theFile.read(transferBuffer_, count);
                     (void) thing->write(baseAddress, transferBuffer_, bytesRead);
                     result_.words[0] = bytesRead;
+                    thing->enableCache();
                     return 0;
                 } else {
+                    thing->disableCache();
                     auto times = count / TransferBufferSize;
                     auto spillOver = count % TransferBufferSize;
                     Address a = baseAddress;
@@ -386,6 +389,7 @@ SDCardFilesystemInterface::readFile() noexcept {
                         uint32_t leftOverBytesRead = theFile.read(transferBuffer_, spillOver);
                         result_.words[0] += thing->write(a, transferBuffer_, leftOverBytesRead);
                     }
+                    thing->enableCache();
                     return 0;
                 }
             }

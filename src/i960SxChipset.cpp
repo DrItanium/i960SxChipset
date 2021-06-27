@@ -113,7 +113,8 @@ public:
 
 TFTDisplayThing displayCommandSet(0x200);
 // we want to only put a data cache on the text section
-RAMFile ram;
+RAMFile theRAM;
+DataCache<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()> ram(theRAM);
 ROMTextSection textSection;
 DataCache<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()> rom(textSection);
 ROMDataSection dataRom;
