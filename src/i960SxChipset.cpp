@@ -727,6 +727,20 @@ void setupClockSource() {
 void psramTest() noexcept {
     SPI.begin();
     Serial.println(F("PSRAM TEST"));
+    thePSRAMBlock.begin();
+    for (uint32_t address = 0x8000'0000; address < thePSRAMBlock.getEndAddress(); address += 2) {
+        auto compare = static_cast<uint16_t>(address);
+        thePSRAMBlock.write(address, compare, LoadStoreStyle::Full16);
+        auto result = thePSRAMBlock.read(address, LoadStoreStyle::Full16);
+        if (compare != result) {
+            Serial.print(F("MISMATCH! GOT 0x"));
+            Serial.print(result, HEX);
+            Serial.print(F(" WANTED: 0x"));
+            Serial.println(compare, HEX);
+            delay(10);
+        }
+    }
+#if 0
     SPISettings tmp(8_MHz, MSBFIRST, SPI_MODE0);
     SPI.beginTransaction(tmp);
     for (int i = 0; i < 8; ++i) {
@@ -778,6 +792,7 @@ void psramTest() noexcept {
         }
     }
     SPI.endTransaction();
+#endif
     Serial.println(F("PSRAM TEST DONE!"));
     while (true) {
         delay(1000);
