@@ -726,12 +726,17 @@ void setupClockSource() {
 [[noreturn]]
 void psramTest() noexcept {
     Serial.println(F("PSRAM TEST"));
-    digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
-    SPI.transfer(0x66);
-    digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-    digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
-    SPI.transfer(0x99);
-    digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+    SPISettings tmp(1_MHz, MSBFIRST, SPI_MODE0);
+    SPI.beginTransaction(tmp);
+    for (int i = 0; i < 8; ++i) {
+        processorInterface.setSPIBusIndex(i);
+        digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+        SPI.transfer(0x66);
+        digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+        digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+        SPI.transfer(0x99);
+        digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+    }
     for (uint8_t i = 0; i < 8; ++i) {
         processorInterface.setSPIBusIndex(i) ;
         // rw16 test
@@ -771,6 +776,7 @@ void psramTest() noexcept {
             }
         }
     }
+    SPI.endTransaction();
     Serial.println(F("PSRAM TEST DONE!"));
     while (true) {
         delay(1000);
@@ -822,8 +828,6 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     digitalWrite(i960Pinout::Led, LOW);
-    SPI.begin();
-    psramTest();
     fs.begin();
     chipsetFunctions.begin();
     Serial.println(F("i960Sx chipset bringup"));
