@@ -255,3 +255,22 @@ void ProcessorInterface::updateDataCycle() noexcept {
     address_ = upperMaskedAddress_ | burstAddressBits;
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
+
+void ProcessorInterface::setSPIBusIndex(uint8_t index) noexcept {
+    if constexpr (TargetBoard::onAtmega1284p()) {
+        // just write to PORTA if it is exists
+#ifndef PORTA
+        PORTA = index;
+#endif
+    }
+}
+
+uint8_t ProcessorInterface::getSPIBusIndex() const noexcept {
+    if constexpr (TargetBoard::onAtmega1284p()) {
+#ifndef PORTA
+        return PORTA;
+#else
+        return 0;
+#endif
+    }
+}

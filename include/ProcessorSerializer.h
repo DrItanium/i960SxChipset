@@ -128,6 +128,8 @@ public:
     void newDataCycle() noexcept;
     void updateDataCycle() noexcept;
     [[nodiscard]] constexpr bool isReadOperation() const noexcept { return isReadOperation_; }
+    void setSPIBusIndex(uint8_t index) noexcept;
+    uint8_t getSPIBusIndex() const noexcept;
 private:
     void updateOutputLatch() noexcept;
 private:
