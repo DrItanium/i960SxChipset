@@ -114,13 +114,60 @@ public:
                     buf[6],
                     buf[7],
             };
-            performSPITransaction(commandStream, slop);
+            performSPITransaction(commandStream, slop + 4);
         }
         return capacity;
     }
     uint32_t blockRead(Address address, uint8_t *buf, uint32_t capacity) noexcept override {
         // divide up the reads into reads of 8 bytes to prevent data loss
-        return 0;
+            auto times = capacity / 8;
+            auto slop = capacity % 8;
+            uint32_t currAddress = address;
+            uint8_t* theBuf = buf;
+            for (uint32_t i = 0; i < times; ++i) {
+                uint8_t commandStream[] = {
+                        static_cast<byte>(Opcode::Read),
+                        static_cast<byte>(currAddress >> 16),
+                        static_cast<byte>(currAddress >> 8),
+                        static_cast<byte>(currAddress),
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                };
+                performSPITransaction(commandStream, 12);
+                for (int j = 0; j < 8; ++j) {
+                    theBuf[j] = commandStream[4 + i];
+                }
+                currAddress += 8;
+                theBuf += 8;
+            }
+            if (slop != 0) {
+                // while this is reading from illegal memory, who cares since I am going to gate it with the slop parameter
+                uint8_t commandStream[] = {
+                        static_cast<byte>(Opcode::Read),
+                        static_cast<byte>(currAddress >> 16),
+                        static_cast<byte>(currAddress >> 8),
+                        static_cast<byte>(currAddress),
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                };
+                performSPITransaction(commandStream, slop + 4);
+                for (uint32_t i = 0; i < slop; ++i) {
+                    theBuf[i] = commandStream[4 + i];
+                }
+            }
+            return capacity;
     }
     uint8_t read8(Address address) noexcept override {
         // setup the command stream
