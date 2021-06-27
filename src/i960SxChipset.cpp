@@ -114,8 +114,8 @@ public:
 TFTDisplayThing displayCommandSet(0x200);
 // we want to only put a data cache on the text section
 RAMFile ram;
-ROMTextSection rom;
-//DataCache<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()> rom(textSection);
+ROMTextSection textSection;
+DataCache<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()> rom(textSection);
 ROMDataSection dataRom;
 
 SDCardFilesystemInterface fs(0x300);
