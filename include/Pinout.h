@@ -315,11 +315,15 @@ inline void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
 }
 
 template<i960Pinout pinId>
-class PinAsserter {
-public:
+struct PinAsserter final {
+    using Self = PinAsserter<pinId>;
     static_assert(DigitalPin<pinId>::isOutputPin());
-    PinAsserter() { DigitalPin<pinId>::assertPin(); }
-    ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
+    PinAsserter() noexcept { DigitalPin<pinId>::assertPin(); }
+    ~PinAsserter() noexcept { DigitalPin<pinId>::deassertPin(); }
+    PinAsserter(const Self&) = delete;
+    PinAsserter(Self&&) = delete;
+    PinAsserter& operator=(const Self&) = delete;
+    PinAsserter& operator=(Self&&) = delete;
 };
 
 
