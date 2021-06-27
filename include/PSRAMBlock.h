@@ -25,6 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_PSRAMBLOCK_H
 #define I960SXCHIPSET_PSRAMBLOCK_H
+#include <SPI.h>
 #include "MCUPlatform.h"
 #include "MemoryThing.h"
 #include "ProcessorSerializer.h"
@@ -37,9 +38,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<byte blockAddress, i960Pinout enable = i960Pinout::SPI_BUS_EN>
 class PSRAMBlock : public MemoryThing {
 public:
+    static const SPISettings& getSPISettings() noexcept {
+        static SPISettings tmp(8_MHz, MSBFIRST, SPI_MODE0);
+        return tmp;
+    }
     enum class Opcode : byte {
         ResetEnable = 0x66,
         Reset = 0x99,
+        Write = 0b0000'0010,
+        Read = 0b0000'0011,
     };
     static_assert (blockAddress < 32, "Can only have up to 32 different PSRAMBlocks on the SPI Bus");
     static constexpr auto EnablePin = enable;
@@ -64,6 +71,8 @@ public:
             sendReset();
         }
     }
+    // all of these overrides are written from the perspective that the mcu will only ever be interfacing with a single psram chip at a time
+    // thus all of the internal routines are written assuming that the work has already been done to setup the spi bus correctly
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // divide up the writes into writes of 8 bytes to prevent data loss
         return 0;
@@ -73,7 +82,16 @@ public:
         return 0;
     }
     uint8_t read8(Address address) noexcept override {
-        return MemoryThing::read8(address);
+        // setup the command stream
+        byte commandStream[] = {
+           static_cast<byte>(Opcode::Read),
+           static_cast<byte>(address >> 16),
+           static_cast<byte>(address >> 8),
+           static_cast<byte>(address),
+            0, // storage cell
+        };
+        performSPITransaction(commandStream, 5);
+        return commandStream[4];
     }
     uint16_t read16(Address address) noexcept override {
         return MemoryThing::read16(address);
@@ -85,17 +103,22 @@ public:
         MemoryThing::write16(address, value);
     }
     /**
-     * @brief Make the address relative to the entire block of memory, not a single device
+     * @brief Make the address relative to a single block of memory and setup the spi bus device
      * @param input The address to modify
-     * @return The masked address
+     * @return The masked address relative to a single device
      */
-    Address makeAddressRelative(Address input) const noexcept override {
-        return getInternalBlockAddress(input);
+    [[nodiscard]] Address makeAddressRelative(Address input) const noexcept override {
+        // first, set the appropriate device id
+        setCurrentPSRAMBlockFromAddress(input);
+        // then return the address into the block we have selected
+        return getOffsetAddress(input);
     }
 private:
     void performSPITransaction(byte* command, size_t length) const noexcept {
+        SPI.beginTransaction(getSPISettings());
         EnablePinManager trigger;
         SPI.transfer(command, length);
+        SPI.endTransaction();
     }
     static constexpr byte getDeviceId(Address targetAddress) noexcept {
         return (targetAddress >> 23) & 0b111;
@@ -122,12 +145,16 @@ private:
         setCurrentPSRAMBlock(getDeviceId(targetAddress));
     }
     void sendResetEnable() const noexcept {
+        SPI.beginTransaction(getSPISettings());
         EnablePinManager trigger;
         SPI.transfer(static_cast<byte>(Opcode::ResetEnable));
+        SPI.endTransaction();
     }
     void sendReset() const noexcept {
+        SPI.beginTransaction(getSPISettings());
         EnablePinManager trigger;
         SPI.transfer(static_cast<byte>(Opcode::Reset));
+        SPI.endTransaction();
     }
 
 };
