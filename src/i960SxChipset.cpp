@@ -723,6 +723,59 @@ void setupClockSource() {
 
 #endif
 }
+[[noreturn]]
+void psramTest() noexcept {
+    Serial.println(F("PSRAM TEST"));
+    digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+    SPI.transfer(0x66);
+    digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+    digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+    SPI.transfer(0x99);
+    digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+    for (uint8_t i = 0; i < 8; ++i) {
+        processorInterface.setSPIBusIndex(i) ;
+        // rw16 test
+        for (uint32_t j = 0; j < 0x80'0000; ++j) {
+            auto compare = static_cast<uint16_t>(j);
+            byte writeBuffer[6] {
+                0b0000'0010, // write
+                static_cast<byte>(j >> 16),
+                static_cast<byte>(j >> 8),
+                static_cast<byte>(j),
+                static_cast<byte>(j >> 8),
+                static_cast<byte>(j),
+            };
+            byte readBuffer[6] {
+                    0b0000'0011, // write
+                    static_cast<byte>(j >> 16),
+                    static_cast<byte>(j >> 8),
+                    static_cast<byte>(j),
+                    0,
+                    0,
+            };
+            digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+            SPI.transfer(writeBuffer, 6);
+            digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+
+            digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+            SPI.transfer(readBuffer, 6);
+            digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+            auto result = static_cast<uint16_t>(readBuffer[4]) |
+                          (static_cast<uint16_t>(readBuffer[5]) << 8);
+            if (compare != result) {
+                Serial.print(F("MISMATCH! GOT 0x"));
+                Serial.print(result, HEX);
+                Serial.print(F(" WANTED: 0x"));
+                Serial.println(compare, HEX);
+                delay(10);
+            }
+        }
+    }
+    Serial.println(F("PSRAM TEST DONE!"));
+    while (true) {
+        delay(1000);
+    }
+}
 // the setup routine runs once when you press reset:
 void setup() {
 
@@ -769,6 +822,8 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     digitalWrite(i960Pinout::Led, LOW);
+    SPI.begin();
+    psramTest();
     fs.begin();
     chipsetFunctions.begin();
     Serial.println(F("i960Sx chipset bringup"));
