@@ -725,8 +725,9 @@ void setupClockSource() {
 }
 [[noreturn]]
 void psramTest() noexcept {
+    SPI.begin();
     Serial.println(F("PSRAM TEST"));
-    SPISettings tmp(1_MHz, MSBFIRST, SPI_MODE0);
+    SPISettings tmp(8_MHz, MSBFIRST, SPI_MODE0);
     SPI.beginTransaction(tmp);
     for (int i = 0; i < 8; ++i) {
         processorInterface.setSPIBusIndex(i);
@@ -765,8 +766,8 @@ void psramTest() noexcept {
             digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
             SPI.transfer(readBuffer, 6);
             digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-            auto result = static_cast<uint16_t>(readBuffer[4]) |
-                          (static_cast<uint16_t>(readBuffer[5]) << 8);
+            auto result = static_cast<uint16_t>(readBuffer[5]) |
+                          (static_cast<uint16_t>(readBuffer[4]) << 8);
             if (compare != result) {
                 Serial.print(F("MISMATCH! GOT 0x"));
                 Serial.print(result, HEX);
@@ -828,6 +829,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     digitalWrite(i960Pinout::Led, LOW);
+    psramTest();
     fs.begin();
     chipsetFunctions.begin();
     Serial.println(F("i960Sx chipset bringup"));
