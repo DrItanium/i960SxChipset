@@ -225,7 +225,16 @@ public:
         // then return the address into the block we have selected
         return getOffsetAddress(input);
     }
+    /// @todo A block read/write may span multiple internal devices. We will need to be aware of this and handle it with block read and write operations
+
 private:
+    static constexpr bool blockSpansMultipleDevices(Address address, uint32_t length) noexcept {
+        return getDeviceId(address) != getDeviceId(address + length);
+    }
+    static constexpr Address getNumberOfBytesLeftInCurrentDevice(Address address) noexcept {
+        return CapacityPerChip - getOffsetAddress(address);
+    }
+    // sanity checks
     void performSPITransaction(byte* command, size_t length) const noexcept {
         SPI.beginTransaction(getSPISettings());
         EnablePinManager trigger;

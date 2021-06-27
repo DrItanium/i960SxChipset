@@ -32,12 +32,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 class MemoryThing {
 public:
-    MemoryThing(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) { }
+    static constexpr auto MinimumThingSize = 16;
+    MemoryThing(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) {
+        if (endAddress < baseAddress)  {
+            signalHaltState(F("START ADDRESS IS GREATER THAN END ADDRESS. HALTING!"));
+        }
+        if (auto difference = endAddress - baseAddress; difference == 0) {
+            signalHaltState(F("MEMORY THING ERROR. THING TAKES UP NO SPACE. START AND END ADDRESSES ARE EQUAL!"));
+        } else if (difference < 16) {
+            // we want to make sure that there is no way to have strange code spans within a 16-byte boundary. This greatly simplifies
+            // the thing lookup code
+            signalHaltState(F("All memory things must map to a minimum 16-bytes in the memory map! HALTING"));
+        }
+    }
     /**
-     * @brief Construct a memory thing that is only concerned with a single address
+     * @brief Construct a memory thing that is only concerned with a block of 16 addresses
      * @param baseAddress
      */
-    explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 1) { }
+    explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 16) { }
     virtual ~MemoryThing() = default;
     virtual uint32_t blockWrite(Address address, uint8_t* buf, uint32_t capacity) noexcept { return 0; }
     virtual uint32_t blockRead(Address address, uint8_t* buf, uint32_t capacity) noexcept { return 0; }
