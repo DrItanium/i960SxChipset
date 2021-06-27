@@ -89,7 +89,7 @@ protected:
             theFile_.write(reinterpret_cast<char *>(&value), sizeof(value));
         }
     }
-    size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
+    uint32_t blockWrite(Address address, uint8_t *buf, uint32_t capacity) noexcept override {
         if (permissions_ != FILE_READ) {
             theFile_.seek(address);
             auto result = theFile_.write(buf, capacity);
@@ -99,7 +99,7 @@ protected:
         }
         return 0;
     }
-    size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
+    uint32_t blockRead(Address address, uint8_t *buf, uint32_t capacity) noexcept override {
         // at this point the methods that call this will have fixed up the addresses and sizes to prevent spanning across this file
         theFile_.seek(address);
         return theFile_.readBytes(buf, capacity);

@@ -199,7 +199,7 @@ public:
                 static_cast<byte>(address >> 16),
                 static_cast<byte>(address >> 8),
                 static_cast<byte>(address),
-                value,
+                static_cast<byte>(value),
         };
         performSPITransaction(commandStream, 5);
     }
@@ -209,8 +209,8 @@ public:
                 static_cast<byte>(address >> 16),
                 static_cast<byte>(address >> 8),
                 static_cast<byte>(address),
-                value,
-                value >> 8,
+                static_cast<byte>(value),
+                static_cast<byte>(value >> 8),
         };
         performSPITransaction(commandStream, 6);
     }

@@ -39,8 +39,8 @@ public:
      */
     explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 1) { }
     virtual ~MemoryThing() = default;
-    virtual size_t blockWrite(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
-    virtual size_t blockRead(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
+    virtual uint32_t blockWrite(Address address, uint8_t* buf, uint32_t capacity) noexcept { return 0; }
+    virtual uint32_t blockRead(Address address, uint8_t* buf, uint32_t capacity) noexcept { return 0; }
     [[nodiscard]] virtual uint8_t read8(Address address) noexcept { return 0; }
     [[nodiscard]] virtual uint16_t read16(Address address) noexcept { return 0; }
     virtual void write8(Address address, uint8_t value) noexcept { }

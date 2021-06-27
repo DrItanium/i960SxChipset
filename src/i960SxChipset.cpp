@@ -63,7 +63,7 @@ ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 // ----------------------------------------------------------------
 
 CoreChipsetFeatures chipsetFunctions(0);
-
+PSRAMBlock<0b00000> thePSRAMBlock(0x8000'0000);
 
 
 class RAMFile : public MemoryMappedFile {
