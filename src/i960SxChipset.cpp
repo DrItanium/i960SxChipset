@@ -736,7 +736,9 @@ void psramTest() noexcept {
             Serial.print(F("MISMATCH! GOT 0x"));
             Serial.print(result, HEX);
             Serial.print(F(" WANTED: 0x"));
-            Serial.println(compare, HEX);
+            Serial.print(compare, HEX);
+            Serial.print(F(" at address 0x"));
+            Serial.println(address, HEX);
             delay(10);
         }
     }
