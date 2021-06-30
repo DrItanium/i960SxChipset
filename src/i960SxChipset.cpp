@@ -539,6 +539,7 @@ void idleState() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
 void enteringDataState() noexcept;
+void exitingDataState() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
@@ -550,7 +551,7 @@ State tAddr([]() { processorInterface.clearASTrigger(); },
             nullptr);
 State tData(enteringDataState,
             processDataRequest,
-            nullptr);
+            exitingDataState);
 
 
 void startupState() noexcept {
@@ -588,9 +589,11 @@ void doAddressState() noexcept {
 
 
 uint32_t cycleCount = 0;
+SPISettings theSettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0);
 void
 enteringDataState() noexcept {
     // when we do the transition, record the information we need
+    SPI.beginTransaction(theSettings);
     processorInterface.newDataCycle();
 }
 void processDataRequest() noexcept {
@@ -633,6 +636,11 @@ void processDataRequest() noexcept {
 #endif
         }
     }
+}
+
+void
+exitingDataState() noexcept {
+    SPI.endTransaction();
 }
 
 

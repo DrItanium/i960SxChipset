@@ -62,7 +62,6 @@ namespace
         GPINTEN = GPINTENA,
         IPOL = IPOLA,
     };
-    SPISettings theSettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0);
     constexpr byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<uint8_t>(address) & 0b111) << 1) | 1;
     }
@@ -133,25 +132,21 @@ namespace
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
-    SPI.beginTransaction(theSettings);
     if (dataLinesDirection_ != 0xFFFF) {
         dataLinesDirection_ = 0xFFFF;
         writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
     }
     auto result = readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
-    SPI.endTransaction();
     return result;
 }
 
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    SPI.beginTransaction(theSettings);
     if (dataLinesDirection_ != 0) {
         dataLinesDirection_ = 0;
         writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
     }
     writeGPIO16(ProcessorInterface::IOExpanderAddress::DataLines, value);
-    SPI.endTransaction();
 }
 
 
@@ -238,19 +233,15 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 
 void ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
-    SPI.beginTransaction(theSettings);
     auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines) & 0xFFF0);
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
-    SPI.endTransaction();
     upperMaskedAddress_ = lower16Addr | upper16Addr;
     address_ = upperMaskedAddress_;
     isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
-    SPI.beginTransaction(theSettings);
     auto bits = read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
-    SPI.endTransaction();
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
     address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
