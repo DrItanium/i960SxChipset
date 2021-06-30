@@ -532,21 +532,13 @@ void systemTestState() noexcept;
 void idleState() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
-void enteringDataState() noexcept;
-void exitingDataState() noexcept;
 void enteringAddressState() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
+State tIdle(nullptr, idleState, nullptr);
+State tAddr(nullptr, doAddressState, nullptr);
+State tData(nullptr, processDataRequest, nullptr);
 Fsm fsm(&tStart);
-State tIdle(nullptr,
-            idleState,
-            nullptr);
-State tAddr(enteringAddressState,
-            doAddressState,
-            nullptr);
-State tData(enteringDataState,
-            processDataRequest,
-            exitingDataState);
 
 
 void startupState() noexcept {
@@ -567,9 +559,6 @@ void onASAsserted() {
 void onDENAsserted() {
     denTriggered = true;
 }
-void enteringAddressState() noexcept {
-    asTriggered = false;
-}
 void idleState() noexcept {
     if (processorInterface.failTriggered()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
@@ -580,9 +569,11 @@ void idleState() noexcept {
     }
 }
 void doAddressState() noexcept {
-    if (denTriggered) {
-        fsm.trigger(ToDataState);
+    asTriggered = false;
+    while (!denTriggered) {
+        // wait until den is triggered
     }
+    fsm.trigger(ToDataState);
 }
 
 
@@ -591,10 +582,6 @@ uint32_t cycleCount = 0;
 SPISettings theSettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0);
 MemoryThing* theThing = nullptr;
 SplitWord16 burstCache[8] = { 0 };
-void
-enteringDataState() noexcept {
-    denTriggered = false;
-}
 void waitTillNexti960SxCycle() noexcept {
 #ifdef ARDUINO_ARCH_SAMD
     // we are now on _much_ faster boards if it isn't the 1284p
@@ -605,6 +592,7 @@ void waitTillNexti960SxCycle() noexcept {
 #endif
 }
 void processDataRequest() noexcept {
+    denTriggered = false;
     // keep processing data requests until we
     // when we do the transition, record the information we need
     SPI.beginTransaction(theSettings);
@@ -711,9 +699,6 @@ void processDataRequest() noexcept {
     SPI.endTransaction();
 }
 
-void
-exitingDataState() noexcept {
-}
 
 
 // ----------------------------------------------------------------
