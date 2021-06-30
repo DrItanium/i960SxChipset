@@ -453,8 +453,11 @@ DisplayThing displayCommandSet(0x200);
 RAMFile ramSection; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection textSection;
 ROMDataSection dataRom;
-ROMThing rom(textSection);
-RAMThing ram(ramSection);
+ROMThing cachedRom(textSection);
+RAMThing cachedRam(ramSection);
+
+MemoryThing& rom = cachedRom;
+MemoryThing& ram = cachedRam;
 
 SDCardFilesystemInterface fs(0x300);
 #ifdef ADAFRUIT_FEATHER
