@@ -203,4 +203,6 @@ union SplitWord16 {
     uint16_t wholeValue_ = 0;
     uint8_t bytes[2];
 };
+static_assert(!TargetBoard::cpuIsARMArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");
+static_assert(TargetBoard::cpuIsAVRArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");
 #endif //I960SXCHIPSET_MCUPLATFORM_H
