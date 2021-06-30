@@ -823,10 +823,10 @@ void setup() {
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state
-    while (!processorInterface.failTriggered()) { }
+    while (!processorInterface.failTriggered());
     // now wait until we leave self test state
-    while (processorInterface.failTriggered()) { }
-
+    while (processorInterface.failTriggered());
+    // at this point we are in idle so we are safe to loaf around a bit
 }
 void loop() {
     fsm.run_machine();
