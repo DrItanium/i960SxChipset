@@ -625,44 +625,25 @@ void waitTillNexti960SxCycle() noexcept {
 #endif
 }
 void processDataRequest() noexcept {
-    if (processorInterface.isReadOperation()) {
-        for (int i = 0; i < 16; ++i) {
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
+    for (int i = 0; i < 16; ++i) {
+        processorInterface.updateDataCycle();
+        // do not allow writes or reads into processor internal memory
+        Address burstAddress = processorInterface.getAddress();
+        LoadStoreStyle style = processorInterface.getStyle();
+        if (processorInterface.isReadOperation()) {
             processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // setup the proper address and emit this over serial
-            processorInterface.signalReady();
-            if (processorInterface.blastTriggered()) {
-                // we not in burst mode
-                fsm.trigger(ReadyAndNoBurst);
-                return;
-            } else {
-                if constexpr (!TargetBoard::onAtmega1284p()) {
-                    waitTillNexti960SxCycle();
-                }
-            }
+        } else {
+            theThing->write(burstAddress, processorInterface.getDataBits(), style);
         }
-    } else {
-        for (int i = 0; i < 16; ++i) {
-            processorInterface.updateDataCycle();
-            auto bits = processorInterface.getDataBits();
-            // do not allow writes or reads into processor internal memory
-            // setup the proper address and emit this over serial
-            processorInterface.signalReady();
-            // the ready signal means that we have pulled the data off of the bus successfully
-            theThing->write(processorInterface.getAddress(),
-                            bits,
-                            processorInterface.getStyle());
-            if (processorInterface.blastTriggered()) {
-                // we not in burst mode
-                fsm.trigger(ReadyAndNoBurst);
-                return;
-            } else {
-                if constexpr (!TargetBoard::onAtmega1284p()) {
-                    waitTillNexti960SxCycle();
-                }
+        // setup the proper address and emit this over serial
+        processorInterface.signalReady();
+        if (processorInterface.blastTriggered()) {
+            // we not in burst mode
+            fsm.trigger(ReadyAndNoBurst);
+            return;
+        } else {
+            if constexpr (!TargetBoard::onAtmega1284p()) {
+                waitTillNexti960SxCycle();
             }
         }
     }
