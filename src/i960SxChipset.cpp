@@ -525,32 +525,15 @@ Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone o
 constexpr auto NewRequest = 0;
 constexpr auto ReadyAndNoBurst = 1;
 constexpr auto ToDataState = 2;
-constexpr auto PerformSelfTest = 3;
-constexpr auto SelfTestComplete = 4;
-void startupState() noexcept;
-void systemTestState() noexcept;
 void idleState() noexcept;
 void doAddressState() noexcept;
 void processDataRequest() noexcept;
-void enteringAddressState() noexcept;
-State tStart(nullptr, startupState, nullptr);
-State tSystemTest(nullptr, systemTestState, nullptr);
 State tIdle(nullptr, idleState, nullptr);
 State tAddr(nullptr, doAddressState, nullptr);
 State tData(nullptr, processDataRequest, nullptr);
-Fsm fsm(&tStart);
+Fsm fsm(&tIdle);
 
 
-void startupState() noexcept {
-    if (processorInterface.failTriggered()) {
-        fsm.trigger(PerformSelfTest);
-    }
-}
-void systemTestState() noexcept {
-    if (!processorInterface.failTriggered()) {
-        fsm.trigger(SelfTestComplete);
-    }
-}
 bool asTriggered = false;
 bool denTriggered = false;
 void onASAsserted() {
@@ -706,8 +689,6 @@ void processDataRequest() noexcept {
 // ----------------------------------------------------------------
 
 void setupBusStateMachine() noexcept {
-    fsm.add_transition(&tStart, &tSystemTest, PerformSelfTest, nullptr);
-    fsm.add_transition(&tSystemTest, &tIdle, SelfTestComplete, nullptr);
     fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
     fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
     fsm.add_transition(&tData, &tIdle, ReadyAndNoBurst, nullptr);
@@ -809,36 +790,43 @@ void setup() {
               i960Pinout::GPIOSelect,
               i960Pinout::Led,
               i960Pinout::Int0_);
-    PinAsserter<i960Pinout::Reset960> holdi960InReset;
-    // all of these pins need to be pulled high
-    digitalWriteBlock(HIGH,
-                      i960Pinout::SPI_BUS_EN,
-                      i960Pinout::SD_EN,
-                      i960Pinout::DISPLAY_EN,
-                      i960Pinout::Ready,
-                      i960Pinout::GPIOSelect,
-                      i960Pinout::Int0_);
-    setupPins(INPUT,
-              i960Pinout::BLAST_,
-              i960Pinout::AS_,
-              i960Pinout::W_R_,
-              i960Pinout::DEN_,
-              i960Pinout::FAIL);
-    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-    digitalWrite(i960Pinout::Led, LOW);
-    theThing = &rom;
-    fs.begin();
-    chipsetFunctions.begin();
-    Serial.println(F("i960Sx chipset bringup"));
-    SPI.begin();
-    processorInterface.begin();
-    // setup the CPU Interface
-    setupBusStateMachine();
-    setupPeripherals();
-    delay(1000);
-    Serial.println(F("i960Sx chipset brought up fully!"));
-    // we want to jump into the code as soon as possible after this point
+    {
+        PinAsserter<i960Pinout::Reset960> holdi960InReset;
+        // all of these pins need to be pulled high
+        digitalWriteBlock(HIGH,
+                          i960Pinout::SPI_BUS_EN,
+                          i960Pinout::SD_EN,
+                          i960Pinout::DISPLAY_EN,
+                          i960Pinout::Ready,
+                          i960Pinout::GPIOSelect,
+                          i960Pinout::Int0_);
+        setupPins(INPUT,
+                  i960Pinout::BLAST_,
+                  i960Pinout::AS_,
+                  i960Pinout::W_R_,
+                  i960Pinout::DEN_,
+                  i960Pinout::FAIL);
+        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
+        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
+        digitalWrite(i960Pinout::Led, LOW);
+        theThing = &rom;
+        fs.begin();
+        chipsetFunctions.begin();
+        Serial.println(F("i960Sx chipset bringup"));
+        SPI.begin();
+        processorInterface.begin();
+        // setup the CPU Interface
+        setupBusStateMachine();
+        setupPeripherals();
+        delay(1000);
+        Serial.println(F("i960Sx chipset brought up fully!"));
+    }
+    // at this point we have started execution of the i960
+    // wait until we enter self test state
+    while (!processorInterface.failTriggered()) { }
+    // now wait until we leave self test state
+    while (processorInterface.failTriggered()) { }
+
 }
 void loop() {
     fsm.run_machine();
