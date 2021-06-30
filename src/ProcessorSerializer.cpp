@@ -78,10 +78,9 @@ namespace
                 0x00,
                 0x00,
         };
-
-        digitalWrite(i960Pinout::GPIOSelect, LOW);
+        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
         SPI.transfer(buffer, 4);
-        digitalWrite(i960Pinout::GPIOSelect, HIGH);
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
         auto lower = static_cast<uint16_t>(buffer[2]);
         auto lowest = static_cast<uint16_t>(buffer[3]) << 8;
         return lower | lowest;
@@ -93,9 +92,9 @@ namespace
                 0x00,
         };
 
-        digitalWrite(i960Pinout::GPIOSelect, LOW);
+        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
         SPI.transfer(buffer, 3);
-        digitalWrite(i960Pinout::GPIOSelect, HIGH);
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
         return buffer[2];
     }
     uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
@@ -109,9 +108,9 @@ namespace
                 static_cast<uint8_t>(value),
                 static_cast<uint8_t>(value >> 8),
         };
-        digitalWrite(i960Pinout::GPIOSelect, LOW);
+        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
         SPI.transfer(buffer, 4);
-        digitalWrite(i960Pinout::GPIOSelect, HIGH);
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
     }
     void write8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint8_t value) {
         uint8_t buffer[3] = {
@@ -119,9 +118,9 @@ namespace
                 static_cast<byte>(opcode),
                 value
         };
-        digitalWrite(i960Pinout::GPIOSelect, LOW);
+        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
         SPI.transfer(buffer, 3);
-        digitalWrite(i960Pinout::GPIOSelect, HIGH);
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
     }
     void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
         write16(addr, MCP23x17Registers::GPIO, value);

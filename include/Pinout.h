@@ -227,6 +227,15 @@ inline void pulse() {
     thePort ^= getPinMask<pin>();
     SREG = theSREG;
 }
+template<i960Pinout pin>
+inline void toggle() {
+    // save registers and do the pulse
+    uint8_t theSREG = SREG;
+    cli();
+    auto& thePort = getAssociatedOutputPort<pin>();
+    thePort ^= getPinMask<pin>();
+    SREG = theSREG;
+}
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);
@@ -275,6 +284,9 @@ struct DigitalPin {
         inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
         inline static void pulse() noexcept {   \
             ::pulse<pin>();                                     \
+        }                                       \
+        inline static void togglePin() noexcept { \
+            ::toggle<pin>(); \
         } \
     }
 #define DefInputPin(pin, asserted, deasserted) \
