@@ -942,6 +942,10 @@ void loop() {
         }
     } while (true);
     SPI.endTransaction();
+    // immediately check after we are done to see if a fail has been triggered
+    if (processorInterface.failTriggered()) {
+        signalHaltState(F("CHECKSUM FAILURE!"));
+    }
 }
 
 [[noreturn]]
