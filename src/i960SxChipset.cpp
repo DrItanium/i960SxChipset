@@ -450,11 +450,11 @@ using DisplayThing = TFTShieldThing;
 using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
 #endif
 DisplayThing displayCommandSet(0x200);
-RAMFile ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
-ROMTextSection rom;
+RAMFile ramSection; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+ROMTextSection textSection;
 ROMDataSection dataRom;
-//ROMThing rom(textSection);
-//RAMThing ram(ramSection);
+ROMThing rom(textSection);
+RAMThing ram(ramSection);
 
 SDCardFilesystemInterface fs(0x300);
 #ifdef ADAFRUIT_FEATHER
@@ -596,8 +596,8 @@ enteringDataState() noexcept {
     // when we do the transition, record the information we need
     SPI.beginTransaction(theSettings);
     processorInterface.newDataCycle();
-    if ((!theThing) || (!theThing->respondsTo(processorInterface.get16ByteAlignedAddress(), LoadStoreStyle::Full16))) {
-        theThing = getThing(processorInterface.get16ByteAlignedAddress(), LoadStoreStyle::Full16);
+    if (!theThing->respondsTo(processorInterface.getAddress(), LoadStoreStyle::Full16)) {
+        theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
     }
     if (!theThing) {
         // halt here because we've entered into unmapped memory state
@@ -611,7 +611,7 @@ enteringDataState() noexcept {
 
         }
         Serial.println(processorInterface.getAddress(), HEX);
-        delay(10);
+        signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
 }
 void processDataRequest() noexcept {
@@ -774,6 +774,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     digitalWrite(i960Pinout::Led, LOW);
+    theThing = &rom;
     fs.begin();
     chipsetFunctions.begin();
     Serial.println(F("i960Sx chipset bringup"));
