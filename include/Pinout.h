@@ -245,6 +245,18 @@ inline void digitalWrite() {
     }
     SREG = theSREG;
 }
+template<i960Pinout pin>
+inline void digitalWrite(decltype(HIGH) value) noexcept {
+    uint8_t theSREG = SREG;
+    cli();
+    auto& thePort = getAssociatedOutputPort<pin>();
+    if (value == LOW) {
+        thePort &= ~getPinMask<pin>();
+    } else {
+        thePort |= getPinMask<pin>();
+    }
+    SREG = theSREG;
+}
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);
@@ -293,7 +305,7 @@ struct DigitalPin {
         static constexpr auto getDeassertionState() noexcept { return deasserted; } \
         inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState()>(); } \
         inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
-        inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
+        inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
         inline static void pulse() noexcept {   \
             ::pulse<pin>();                                     \
         }                                       \
