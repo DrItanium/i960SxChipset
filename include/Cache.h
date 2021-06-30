@@ -128,8 +128,7 @@ private:
      * @brief The cache line contents itself
      */
     SplitWord16 components_[ComponentSize];
-    static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!"
-    "");
+    static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!");
     bool dirty_ = false;
     bool valid_ = false;
 };
@@ -216,26 +215,17 @@ private:
      * @return The line that was updated
      */
     ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
+        // instead of using random directly, use an incrementing counter to choose a line to invalidate
+        // thus at no point will we actually know what we've dropped.
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
         cacheEmpty_ = false;
-        for (ASingleCacheLine &line : lines_) {
-            if (!line.isValid()) {
-                line.reset(alignedAddress, thing_);
-                return line;
-            }
-        }
-        // we had no free elements so choose one to replace
-        auto targetCacheLine = random(NumberOfCacheLines);
-        ASingleCacheLine &replacementLine = lines_[targetCacheLine];
-        // generate an aligned address
+        auto lineToFlush = cacheIndex_;
+        auto& replacementLine = lines_[lineToFlush];
         replacementLine.reset(alignedAddress, thing_);
+        cacheIndex_++;
+        cacheIndex_ %= NumberOfCacheLines;
         return replacementLine;
     }
-private:
-    MemoryThing& thing_;
-    ASingleCacheLine lines_[NumberOfCacheLines];
-    bool cacheEmpty_ = true;
-    bool enabled_ = true;
 public:
     uint8_t read8(Address address) noexcept override {
         if (enabled_) {
@@ -331,5 +321,11 @@ private:
             cacheEmpty_ = true;
         }
     }
+private:
+    MemoryThing& thing_;
+    ASingleCacheLine lines_[NumberOfCacheLines];
+    bool cacheEmpty_ = true;
+    bool enabled_ = true;
+    uint16_t cacheIndex_ = 0;
 };
 #endif //I960SXCHIPSET_CACHE_H
