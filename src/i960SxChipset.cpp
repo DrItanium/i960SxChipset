@@ -590,18 +590,22 @@ void doAddressState() noexcept {
 
 uint32_t cycleCount = 0;
 SPISettings theSettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0);
+MemoryThing* theThing = nullptr;
 void
 enteringDataState() noexcept {
     // when we do the transition, record the information we need
     SPI.beginTransaction(theSettings);
     processorInterface.newDataCycle();
+    if ((!theThing) || (!theThing->respondsTo(processorInterface.get16ByteAlignedAddress(), LoadStoreStyle::Full16))) {
+        theThing = getThing(processorInterface.get16ByteAlignedAddress(), LoadStoreStyle::Full16);
+    }
 }
 void processDataRequest() noexcept {
     processorInterface.updateDataCycle();
     // do not allow writes or reads into processor internal memory
     Address burstAddress = processorInterface.getAddress();
     LoadStoreStyle style = processorInterface.getStyle();
-    if (auto theThing = getThing(burstAddress, style); theThing) {
+    if (theThing) {
         if (processorInterface.isReadOperation()) {
             processorInterface.setDataBits(theThing->read(burstAddress, style));
         } else {

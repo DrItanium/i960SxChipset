@@ -128,6 +128,7 @@ public:
     void newDataCycle() noexcept;
     void updateDataCycle() noexcept;
     [[nodiscard]] constexpr bool isReadOperation() const noexcept { return isReadOperation_; }
+    [[nodiscard]] constexpr auto get16ByteAlignedAddress() const noexcept { return upperMaskedAddress_; }
 private:
     void updateOutputLatch() noexcept;
 private:
