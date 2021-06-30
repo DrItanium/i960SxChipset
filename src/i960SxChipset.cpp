@@ -594,6 +594,18 @@ SplitWord16 burstCache[8] = { 0 };
 void
 enteringDataState() noexcept {
     denTriggered = false;
+}
+void waitTillNexti960SxCycle() noexcept {
+#ifdef ARDUINO_ARCH_SAMD
+    // we are now on _much_ faster boards if it isn't the 1284p
+    cycleCount = 0;
+    // enable the timer and perform a wait based on the action
+    burstTransactionTimer.enable(true);
+    while (cycleCount != 0);
+#endif
+}
+void processDataRequest() noexcept {
+    // keep processing data requests until we
     // when we do the transition, record the information we need
     SPI.beginTransaction(theSettings);
     processorInterface.newDataCycle();
@@ -614,105 +626,93 @@ enteringDataState() noexcept {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-}
-void waitTillNexti960SxCycle() noexcept {
-#ifdef ARDUINO_ARCH_SAMD
-    // we are now on _much_ faster boards if it isn't the 1284p
-    cycleCount = 0;
-    // enable the timer and perform a wait based on the action
-    burstTransactionTimer.enable(true);
-    while (cycleCount != 0);
-#endif
-}
-void processDataRequest() noexcept {
-    // keep processing data requests until we
-    //do {
-    processorInterface.updateDataCycle();
-    // do not allow writes or reads into processor internal memory
-    Address burstAddress = processorInterface.getAddress();
-    LoadStoreStyle style = processorInterface.getStyle();
-    if (processorInterface.isReadOperation()) {
-        processorInterface.setDataBits(theThing->read(burstAddress, style));
-    } else {
-        theThing->write(burstAddress, processorInterface.getDataBits(), style);
-    }
-    // setup the proper address and emit this over serial
-    processorInterface.signalReady();
-    if (processorInterface.blastTriggered()) {
-        fsm.trigger(ReadyAndNoBurst);
-        // we not in burst mode
-        return;
-    } else {
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            waitTillNexti960SxCycle();
+    do {
+        processorInterface.updateDataCycle();
+        // do not allow writes or reads into processor internal memory
+        Address burstAddress = processorInterface.getAddress();
+        LoadStoreStyle style = processorInterface.getStyle();
+        if (processorInterface.isReadOperation()) {
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+        } else {
+            theThing->write(burstAddress, processorInterface.getDataBits(), style);
         }
-    }
-    processorInterface.updateDataCycle();
-    // do not allow writes or reads into processor internal memory
-    burstAddress = processorInterface.getAddress();
-    style = processorInterface.getStyle();
-    if (processorInterface.isReadOperation()) {
-        processorInterface.setDataBits(theThing->read(burstAddress, style));
-    } else {
-        theThing->write(burstAddress, processorInterface.getDataBits(), style);
-    }
-    // setup the proper address and emit this over serial
-    processorInterface.signalReady();
-    if (processorInterface.blastTriggered()) {
-        fsm.trigger(ReadyAndNoBurst);
-        // we not in burst mode
-        return;
-    } else {
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            waitTillNexti960SxCycle();
+        // setup the proper address and emit this over serial
+        processorInterface.signalReady();
+        if (processorInterface.blastTriggered()) {
+            fsm.trigger(ReadyAndNoBurst);
+            // we not in burst mode
+            break;
+        } else {
+            if constexpr (!TargetBoard::onAtmega1284p()) {
+                waitTillNexti960SxCycle();
+            }
         }
-    }
-    processorInterface.updateDataCycle();
-    // do not allow writes or reads into processor internal memory
-    burstAddress = processorInterface.getAddress();
-    style = processorInterface.getStyle();
-    if (processorInterface.isReadOperation()) {
-        processorInterface.setDataBits(theThing->read(burstAddress, style));
-    } else {
-        theThing->write(burstAddress, processorInterface.getDataBits(), style);
-    }
-    // setup the proper address and emit this over serial
-    processorInterface.signalReady();
-    if (processorInterface.blastTriggered()) {
-        fsm.trigger(ReadyAndNoBurst);
-        // we not in burst mode
-        return;
-    } else {
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            waitTillNexti960SxCycle();
+        processorInterface.updateDataCycle();
+        // do not allow writes or reads into processor internal memory
+        burstAddress = processorInterface.getAddress();
+        style = processorInterface.getStyle();
+        if (processorInterface.isReadOperation()) {
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+        } else {
+            theThing->write(burstAddress, processorInterface.getDataBits(), style);
         }
-    }
-    processorInterface.updateDataCycle();
-    // do not allow writes or reads into processor internal memory
-    burstAddress = processorInterface.getAddress();
-    style = processorInterface.getStyle();
-    if (processorInterface.isReadOperation()) {
-        processorInterface.setDataBits(theThing->read(burstAddress, style));
-    } else {
-        theThing->write(burstAddress, processorInterface.getDataBits(), style);
-    }
-    // setup the proper address and emit this over serial
-    processorInterface.signalReady();
-    if (processorInterface.blastTriggered()) {
-        fsm.trigger(ReadyAndNoBurst);
-        // we not in burst mode
-        return;
-    } else {
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            waitTillNexti960SxCycle();
+        // setup the proper address and emit this over serial
+        processorInterface.signalReady();
+        if (processorInterface.blastTriggered()) {
+            fsm.trigger(ReadyAndNoBurst);
+            // we not in burst mode
+            break;
+        } else {
+            if constexpr (!TargetBoard::onAtmega1284p()) {
+                waitTillNexti960SxCycle();
+            }
         }
-    }
-    //} while (true);
+        processorInterface.updateDataCycle();
+        // do not allow writes or reads into processor internal memory
+        burstAddress = processorInterface.getAddress();
+        style = processorInterface.getStyle();
+        if (processorInterface.isReadOperation()) {
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+        } else {
+            theThing->write(burstAddress, processorInterface.getDataBits(), style);
+        }
+        // setup the proper address and emit this over serial
+        processorInterface.signalReady();
+        if (processorInterface.blastTriggered()) {
+            fsm.trigger(ReadyAndNoBurst);
+            // we not in burst mode
+            break;
+        } else {
+            if constexpr (!TargetBoard::onAtmega1284p()) {
+                waitTillNexti960SxCycle();
+            }
+        }
+        processorInterface.updateDataCycle();
+        // do not allow writes or reads into processor internal memory
+        burstAddress = processorInterface.getAddress();
+        style = processorInterface.getStyle();
+        if (processorInterface.isReadOperation()) {
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+        } else {
+            theThing->write(burstAddress, processorInterface.getDataBits(), style);
+        }
+        // setup the proper address and emit this over serial
+        processorInterface.signalReady();
+        if (processorInterface.blastTriggered()) {
+            fsm.trigger(ReadyAndNoBurst);
+            // we not in burst mode
+            break;
+        } else {
+            if constexpr (!TargetBoard::onAtmega1284p()) {
+                waitTillNexti960SxCycle();
+            }
+        }
+    } while (true);
+    SPI.endTransaction();
 }
 
 void
 exitingDataState() noexcept {
-    SPI.endTransaction();
 }
 
 
