@@ -160,11 +160,19 @@ public:
     }
     static_assert(DataCacheSize <= TargetBoard::oneFourthSRAMAmountInBytes(), "Overall cache size must be less than or equal to one fourth of SRAM");
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
-    explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
+    explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) {
+        // start with the first entry
+        lastUsedCacheLine_ = &lines_[0];
+
+    }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
+        if (lastUsedCacheLine_->respondsTo(targetAddress)) {
+            return lastUsedCacheLine_->getByte(targetAddress);
+        }
         for (const ASingleCacheLine & line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
+                lastUsedCacheLine_ = &const_cast<ASingleCacheLine &>(line);
                 return line.getByte(targetAddress);
             }
         }
@@ -174,9 +182,13 @@ public:
 
     }
     [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
+        if (lastUsedCacheLine_->respondsTo(targetAddress)) {
+            return lastUsedCacheLine_->getWord(targetAddress);
+        }
         for (const ASingleCacheLine& line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
+                lastUsedCacheLine_ = &const_cast<ASingleCacheLine &>(line);
                 return line.getWord(targetAddress);
             }
         }
@@ -185,10 +197,16 @@ public:
         return cacheMiss(targetAddress).getWord(targetAddress);
     }
     void setByte(uint32_t targetAddress, uint8_t value) noexcept {
+        if (lastUsedCacheLine_->respondsTo(targetAddress)) {
+            lastUsedCacheLine_->setByte(targetAddress, value);
+            return;
+        }
+        // oh we need to look for it instead
         for (ASingleCacheLine & line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
                 line.setByte(targetAddress, value);
+                lastUsedCacheLine_ = &const_cast<ASingleCacheLine &>(line);
                 return;
             }
         }
@@ -197,9 +215,14 @@ public:
         cacheMiss(targetAddress).setByte(targetAddress, value);
     }
     void setWord(uint32_t targetAddress, uint16_t value) noexcept {
+        if (lastUsedCacheLine_->respondsTo(targetAddress)) {
+            lastUsedCacheLine_->setWord(targetAddress, value);
+            return;
+        }
         for (ASingleCacheLine& line : lines_) {
             if (line.respondsTo(targetAddress)) {
                 // cache hit!
+                lastUsedCacheLine_ = &const_cast<ASingleCacheLine &>(line);
                 line.setWord(targetAddress, value);
                 return;
             }
@@ -218,12 +241,13 @@ private:
         // instead of using random directly, use an incrementing counter to choose a line to invalidate
         // thus at no point will we actually know what we've dropped.
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
-        cacheEmpty_ = false;
         auto lineToFlush = cacheIndex_;
         auto& replacementLine = lines_[lineToFlush];
         replacementLine.reset(alignedAddress, thing_);
-        cacheIndex_++;
+        ++cacheIndex_;
         cacheIndex_ %= NumberOfCacheLines;
+        cacheEmpty_ = false;
+        lastUsedCacheLine_ = &replacementLine;
         return replacementLine;
     }
 public:
@@ -324,6 +348,7 @@ private:
 private:
     MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
+    ASingleCacheLine* lastUsedCacheLine_ = nullptr;
     bool cacheEmpty_ = true;
     bool enabled_ = true;
     uint16_t cacheIndex_ = 0;
