@@ -232,7 +232,6 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 }
 
 void ProcessorInterface::newDataCycle() noexcept {
-    clearDENTrigger();
     auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
     upperMaskedAddress_ = 0xFFFF'FFF0 & (lower16Addr | upper16Addr);

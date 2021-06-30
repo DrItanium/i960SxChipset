@@ -534,13 +534,14 @@ void doAddressState() noexcept;
 void processDataRequest() noexcept;
 void enteringDataState() noexcept;
 void exitingDataState() noexcept;
+void enteringAddressState() noexcept;
 State tStart(nullptr, startupState, nullptr);
 State tSystemTest(nullptr, systemTestState, nullptr);
 Fsm fsm(&tStart);
 State tIdle(nullptr,
             idleState,
             nullptr);
-State tAddr([]() { processorInterface.clearASTrigger(); },
+State tAddr(enteringAddressState,
             doAddressState,
             nullptr);
 State tData(enteringDataState,
@@ -558,24 +559,28 @@ void systemTestState() noexcept {
         fsm.trigger(SelfTestComplete);
     }
 }
-
+bool asTriggered = false;
+bool denTriggered = false;
 void onASAsserted() {
-    processorInterface.triggerAS();
+    asTriggered = true;
 }
 void onDENAsserted() {
-    processorInterface.triggerDEN();
+    denTriggered = true;
+}
+void enteringAddressState() noexcept {
+    asTriggered = false;
 }
 void idleState() noexcept {
     if (processorInterface.failTriggered()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     } else {
-        if (processorInterface.asTriggered()) {
+        if (asTriggered) {
             fsm.trigger(NewRequest);
         }
     }
 }
 void doAddressState() noexcept {
-    if (processorInterface.denTriggered()) {
+    if (denTriggered) {
         fsm.trigger(ToDataState);
     }
 }
@@ -588,6 +593,7 @@ MemoryThing* theThing = nullptr;
 SplitWord16 burstCache[8] = { 0 };
 void
 enteringDataState() noexcept {
+    denTriggered = false;
     // when we do the transition, record the information we need
     SPI.beginTransaction(theSettings);
     processorInterface.newDataCycle();

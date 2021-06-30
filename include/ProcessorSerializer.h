@@ -106,12 +106,6 @@ public:
         return - (satPtr + pcrbPtr + startIP);
     }
 
-    [[nodiscard]] constexpr auto asTriggered() const noexcept { return asTriggered_; }
-    [[nodiscard]] constexpr auto denTriggered() const noexcept { return denTriggered_; }
-    void clearASTrigger() noexcept { asTriggered_ = false; }
-    void clearDENTrigger() noexcept { denTriggered_ = false; }
-    void triggerAS() noexcept { asTriggered_ = true; }
-    void triggerDEN() noexcept { denTriggered_ = true; }
     [[nodiscard]] bool failTriggered() const noexcept { return DigitalPin<i960Pinout::FAIL>::isAsserted(); }
     [[nodiscard]] bool blastTriggered() const noexcept { return blastTriggered_; }
     void signalReady() noexcept { DigitalPin<i960Pinout::Ready>::pulse(); }
@@ -137,8 +131,6 @@ private:
     Address address_ = 0;
     LoadStoreStyle lss_ = LoadStoreStyle::None;
     bool initialized_ = false;
-    bool asTriggered_ = false;
-    bool denTriggered_ = false;
     bool isReadOperation_ = false;
     bool lockValue_ = true;
     bool holdValue_ = false;
