@@ -217,4 +217,8 @@ union SplitWord128 {
     uint32_t words[16/sizeof(uint32_t)];
     uint64_t quads[16/sizeof(uint64_t)];
 };
+union SplitWord16 {
+    uint16_t wholeValue_ = 0;
+    uint8_t bytes[2];
+};
 #endif //I960SXCHIPSET_MCUPLATFORM_H

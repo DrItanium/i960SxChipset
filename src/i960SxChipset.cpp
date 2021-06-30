@@ -591,6 +591,7 @@ void doAddressState() noexcept {
 uint32_t cycleCount = 0;
 SPISettings theSettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0);
 MemoryThing* theThing = nullptr;
+SplitWord16 burstCache[8] = { 0 };
 void
 enteringDataState() noexcept {
     // when we do the transition, record the information we need
