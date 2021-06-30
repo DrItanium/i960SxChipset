@@ -697,7 +697,6 @@ void loop() {
     denTriggered = false;
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    SPI.beginTransaction(theSettings);
     processorInterface.newDataCycle();
     if (!theThing->respondsTo(processorInterface.getAddress(), LoadStoreStyle::Full16)) {
         theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
@@ -738,11 +737,12 @@ void loop() {
         do {
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
+            auto bits = processorInterface.getDataBits();
             // setup the proper address and emit this over serial
             processorInterface.signalReady();
+            Address burstAddress = processorInterface.getAddress();
+            LoadStoreStyle style = processorInterface.getStyle();
+            theThing->write(burstAddress, bits, style);
             if (processorInterface.blastTriggered()) {
                 // we not in burst mode
                 break;
@@ -753,7 +753,6 @@ void loop() {
             }
         } while (true);
     }
-    SPI.endTransaction();
     // immediately check after we are done to see if a fail has been triggered
     if (processorInterface.failTriggered()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
