@@ -650,9 +650,9 @@ void processDataRequest() noexcept {
             // do not allow writes or reads into processor internal memory
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
+            processorInterface.signalReady();
             // the ready signal means that we have pulled the data off of the bus successfully
             theThing->write(burstAddress, processorInterface.getDataBits(), style);
-            processorInterface.signalReady();
             if (processorInterface.blastTriggered()) {
                 // we not in burst mode
                 fsm.trigger(ReadyAndNoBurst);
