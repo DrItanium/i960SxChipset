@@ -43,7 +43,6 @@ public:
         auto offsetId = base & 1;
         return components_[componentId].bytes[offsetId];
     }
-    [[nodiscard]] constexpr auto cacheDirty() const noexcept { return dirty_; }
     void setByte(uint32_t address, uint8_t value) noexcept {
         dirty_ = true;
         auto base = computeCacheByteOffset(address);
@@ -61,6 +60,7 @@ public:
     static constexpr auto CacheLineSize = size;
     static constexpr auto ComponentSize = CacheLineSize / sizeof(SplitWord16);
     static constexpr auto CacheByteMask = CacheLineSize - 1;
+    static constexpr auto AlignedOffsetMask = ~CacheByteMask;
     static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
         switch (lineSize) {
             case 16:
@@ -89,7 +89,7 @@ public:
         return computeCacheByteOffset(targetAddress) >> 1;
     }
     [[nodiscard]] static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
-        return targetAddress & ~CacheByteMask;
+        return targetAddress & AlignedOffsetMask;
     }
     void reset(uint32_t address, MemoryThing& thing) noexcept {
         byte* buf = reinterpret_cast<byte*>(components_);
@@ -308,8 +308,6 @@ public:
             return thing_.blockRead(address, buf, capacity);
         }
     }
-    [[nodiscard]] const MemoryThing& getBackingStore() const noexcept { return thing_; }
-    [[nodiscard]] MemoryThing& getBackingStore() noexcept { return thing_; }
     void disableCache() noexcept override {
         if (enabled_) {
             enabled_ = false;
