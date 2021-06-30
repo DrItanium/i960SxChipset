@@ -716,27 +716,43 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    do {
-        processorInterface.updateDataCycle();
-        // do not allow writes or reads into processor internal memory
-        Address burstAddress = processorInterface.getAddress();
-        LoadStoreStyle style = processorInterface.getStyle();
-        if (processorInterface.isReadOperation()) {
+    if (processorInterface.isReadOperation()) {
+        do {
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            Address burstAddress = processorInterface.getAddress();
+            LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
-        } else {
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
-        }
-        // setup the proper address and emit this over serial
-        processorInterface.signalReady();
-        if (processorInterface.blastTriggered()) {
-            // we not in burst mode
-            break;
-        } else {
-            if constexpr (!TargetBoard::onAtmega1284p()) {
-                waitTillNexti960SxCycle();
+            // setup the proper address and emit this over serial
+            processorInterface.signalReady();
+            if (processorInterface.blastTriggered()) {
+                // we not in burst mode
+                break;
+            } else {
+                if constexpr (!TargetBoard::onAtmega1284p()) {
+                    waitTillNexti960SxCycle();
+                }
             }
-        }
-    } while (true);
+        } while (true);
+    } else {
+        do {
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            Address burstAddress = processorInterface.getAddress();
+            LoadStoreStyle style = processorInterface.getStyle();
+            theThing->write(burstAddress, processorInterface.getDataBits(), style);
+            // setup the proper address and emit this over serial
+            processorInterface.signalReady();
+            if (processorInterface.blastTriggered()) {
+                // we not in burst mode
+                break;
+            } else {
+                if constexpr (!TargetBoard::onAtmega1284p()) {
+                    waitTillNexti960SxCycle();
+                }
+            }
+        } while (true);
+    }
     SPI.endTransaction();
     // immediately check after we are done to see if a fail has been triggered
     if (processorInterface.failTriggered()) {
