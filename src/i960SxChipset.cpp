@@ -30,7 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// - C++17
 /// Board Platform: MightyCore
 #include <SPI.h>
-#include <Fsm.h>
 #include <SdFat.h>
 
 #include <Adafruit_TFTShield18.h>
@@ -484,54 +483,9 @@ MemoryThing* things[] {
 };
 
 
-// ----------------------------------------------------------------
-// state machine
-// ----------------------------------------------------------------
-// The bootup process has a separate set of states
-// TStart - Where we start
-// TSystemTest - Processor performs self test
-//
-// TStart -> TSystemTest via FAIL being asserted
-// TSystemTest -> Ti via FAIL being deasserted
-// 
-// State machine will stay here for the duration
-// State diagram based off of i960SA/SB Reference manual
-// Basic Bus States
-// Ti - Idle State
-// Ta - Address State
-// Td - Data State
-// Tw - Wait State
-
-// READY - ~READY asserted
-// NOT READY - ~READY not asserted
-// BURST - ~BLAST not asserted
-// NO BURST - ~BLAST asserted
-// NEW REQUEST - ~AS asserted
-// NO REQUEST - ~AS not asserted when in 
-
-// Ti -> Ti via no request
-// Ti -> Ta via new request
-// on enter of Ta, set address state to false
-// on enter of Td, burst is sampled
-// Ta -> Td
-// Td -> Ti after signaling ready and no burst (blast low)
-// Td -> Td after signaling ready and burst (blast high)
-// Ti -> TChecksumFailure if FAIL is asserted
-
-// NOTE: Tw may turn out to be synthetic
 #ifdef ARDUINO_ARCH_SAMD
 Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
 #endif
-constexpr auto NewRequest = 0;
-constexpr auto ReadyAndNoBurst = 1;
-constexpr auto ToDataState = 2;
-void idleState() noexcept;
-void doAddressState() noexcept;
-void processDataRequest() noexcept;
-State tIdle(nullptr, idleState, nullptr);
-State tAddr(nullptr, doAddressState, nullptr);
-State tData(nullptr, processDataRequest, nullptr);
-Fsm fsm(&tIdle);
 
 
 bool asTriggered = false;
@@ -541,22 +495,6 @@ void onASAsserted() {
 }
 void onDENAsserted() {
     denTriggered = true;
-}
-void idleState() noexcept {
-    if (processorInterface.failTriggered()) {
-        signalHaltState(F("CHECKSUM FAILURE!"));
-    } else {
-        if (asTriggered) {
-            fsm.trigger(NewRequest);
-        }
-    }
-}
-void doAddressState() noexcept {
-    asTriggered = false;
-    while (!denTriggered) {
-        // wait until den is triggered
-    }
-    fsm.trigger(ToDataState);
 }
 
 
@@ -574,125 +512,11 @@ void waitTillNexti960SxCycle() noexcept {
     while (cycleCount != 0);
 #endif
 }
-void processDataRequest() noexcept {
-    denTriggered = false;
-    // keep processing data requests until we
-    // when we do the transition, record the information we need
-    SPI.beginTransaction(theSettings);
-    processorInterface.newDataCycle();
-    if (!theThing->respondsTo(processorInterface.getAddress(), LoadStoreStyle::Full16)) {
-        theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
-    }
-    if (!theThing) {
-        // halt here because we've entered into unmapped memory state
-        if (processorInterface.isReadOperation()) {
-            Serial.print(F("UNMAPPED READ FROM 0x"));
-        } else {
-            Serial.print(F("UNMAPPED WRITE OF 0x"));
-            // expensive but something has gone horribly wrong anyway so whatever!
-            Serial.print(processorInterface.getDataBits(), HEX);
-            Serial.print(F(" TO 0x"));
-
-        }
-        Serial.println(processorInterface.getAddress(), HEX);
-        signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
-    }
-    do {
-        processorInterface.updateDataCycle();
-        // do not allow writes or reads into processor internal memory
-        Address burstAddress = processorInterface.getAddress();
-        LoadStoreStyle style = processorInterface.getStyle();
-        if (processorInterface.isReadOperation()) {
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-        } else {
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
-        }
-        // setup the proper address and emit this over serial
-        processorInterface.signalReady();
-        if (processorInterface.blastTriggered()) {
-            fsm.trigger(ReadyAndNoBurst);
-            // we not in burst mode
-            break;
-        } else {
-            if constexpr (!TargetBoard::onAtmega1284p()) {
-                waitTillNexti960SxCycle();
-            }
-        }
-        processorInterface.updateDataCycle();
-        // do not allow writes or reads into processor internal memory
-        burstAddress = processorInterface.getAddress();
-        style = processorInterface.getStyle();
-        if (processorInterface.isReadOperation()) {
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-        } else {
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
-        }
-        // setup the proper address and emit this over serial
-        processorInterface.signalReady();
-        if (processorInterface.blastTriggered()) {
-            fsm.trigger(ReadyAndNoBurst);
-            // we not in burst mode
-            break;
-        } else {
-            if constexpr (!TargetBoard::onAtmega1284p()) {
-                waitTillNexti960SxCycle();
-            }
-        }
-        processorInterface.updateDataCycle();
-        // do not allow writes or reads into processor internal memory
-        burstAddress = processorInterface.getAddress();
-        style = processorInterface.getStyle();
-        if (processorInterface.isReadOperation()) {
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-        } else {
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
-        }
-        // setup the proper address and emit this over serial
-        processorInterface.signalReady();
-        if (processorInterface.blastTriggered()) {
-            fsm.trigger(ReadyAndNoBurst);
-            // we not in burst mode
-            break;
-        } else {
-            if constexpr (!TargetBoard::onAtmega1284p()) {
-                waitTillNexti960SxCycle();
-            }
-        }
-        processorInterface.updateDataCycle();
-        // do not allow writes or reads into processor internal memory
-        burstAddress = processorInterface.getAddress();
-        style = processorInterface.getStyle();
-        if (processorInterface.isReadOperation()) {
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-        } else {
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
-        }
-        // setup the proper address and emit this over serial
-        processorInterface.signalReady();
-        if (processorInterface.blastTriggered()) {
-            fsm.trigger(ReadyAndNoBurst);
-            // we not in burst mode
-            break;
-        } else {
-            if constexpr (!TargetBoard::onAtmega1284p()) {
-                waitTillNexti960SxCycle();
-            }
-        }
-    } while (true);
-    SPI.endTransaction();
-}
-
-
 
 // ----------------------------------------------------------------
 // setup routines
 // ----------------------------------------------------------------
 
-void setupBusStateMachine() noexcept {
-    fsm.add_transition(&tIdle, &tAddr, NewRequest, nullptr);
-    fsm.add_transition(&tAddr, &tData, ToDataState, nullptr);
-    fsm.add_transition(&tData, &tIdle, ReadyAndNoBurst, nullptr);
-}
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
@@ -815,8 +639,6 @@ void setup() {
         Serial.println(F("i960Sx chipset bringup"));
         SPI.begin();
         processorInterface.begin();
-        // setup the CPU Interface
-        setupBusStateMachine();
         setupPeripherals();
         delay(1000);
         Serial.println(F("i960Sx chipset brought up fully!"));
@@ -828,6 +650,41 @@ void setup() {
     while (processorInterface.failTriggered());
     // at this point we are in idle so we are safe to loaf around a bit
 }
+// ----------------------------------------------------------------
+// state machine
+// ----------------------------------------------------------------
+// The bootup process has a separate set of states
+// TStart - Where we start
+// TSystemTest - Processor performs self test
+//
+// TStart -> TSystemTest via FAIL being asserted
+// TSystemTest -> Ti via FAIL being deasserted
+//
+// State machine will stay here for the duration
+// State diagram based off of i960SA/SB Reference manual
+// Basic Bus States
+// Ti - Idle State
+// Ta - Address State
+// Td - Data State
+// Tw - Wait State
+
+// READY - ~READY asserted
+// NOT READY - ~READY not asserted
+// BURST - ~BLAST not asserted
+// NO BURST - ~BLAST asserted
+// NEW REQUEST - ~AS asserted
+// NO REQUEST - ~AS not asserted when in
+
+// Ti -> Ti via no request
+// Ti -> Ta via new request
+// on enter of Ta, set address state to false
+// on enter of Td, burst is sampled
+// Ta -> Td
+// Td -> Ti after signaling ready and no burst (blast low)
+// Td -> Td after signaling ready and burst (blast high)
+// Ti -> TChecksumFailure if FAIL is asserted
+
+// NOTE: Tw may turn out to be synthetic
 void loop() {
     //fsm.run_machine();
     if (processorInterface.failTriggered()) {
@@ -872,7 +729,6 @@ void loop() {
         // setup the proper address and emit this over serial
         processorInterface.signalReady();
         if (processorInterface.blastTriggered()) {
-            fsm.trigger(ReadyAndNoBurst);
             // we not in burst mode
             break;
         } else {
@@ -892,7 +748,6 @@ void loop() {
         // setup the proper address and emit this over serial
         processorInterface.signalReady();
         if (processorInterface.blastTriggered()) {
-            fsm.trigger(ReadyAndNoBurst);
             // we not in burst mode
             break;
         } else {
@@ -912,7 +767,6 @@ void loop() {
         // setup the proper address and emit this over serial
         processorInterface.signalReady();
         if (processorInterface.blastTriggered()) {
-            fsm.trigger(ReadyAndNoBurst);
             // we not in burst mode
             break;
         } else {
@@ -932,7 +786,6 @@ void loop() {
         // setup the proper address and emit this over serial
         processorInterface.signalReady();
         if (processorInterface.blastTriggered()) {
-            fsm.trigger(ReadyAndNoBurst);
             // we not in burst mode
             break;
         } else {
