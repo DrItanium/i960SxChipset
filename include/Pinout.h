@@ -81,6 +81,54 @@ enum class i960Pinout : decltype(A0) {
     Count,          // special, must be last
 
 };
+template<i960Pinout pin>
+constexpr bool isValidPan = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
+static_assert(!isValidPan<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
+static_assert(isValidPan<i960Pinout::Led>, "The Led pin should be a valid pin!");
+template<i960Pinout pin>
+[[nodiscard]] decltype(auto) getAssociatedPort() noexcept {
+    static_assert(isValidPan<pin>, "INVALID PIN PROVIDED");
+    switch (pin) {
+        case i960Pinout::SPI_BUS_A0:
+        case i960Pinout::SPI_BUS_A1:
+        case i960Pinout::SPI_BUS_A2:
+        case i960Pinout::SPI_BUS_A3:
+        case i960Pinout::SPI_BUS_A4:
+        case i960Pinout::SPI_BUS_A5:
+        case i960Pinout::SPI_BUS_A6:
+        case i960Pinout::SPI_BUS_A7:
+            return PORTA;
+        case i960Pinout::SCL:          // reserved
+        case i960Pinout::SDA:          // reserved
+        case i960Pinout::Ready:      // output
+        case i960Pinout::Int0_:          // output
+        case i960Pinout::W_R_:          // input
+        case i960Pinout::Reset960:          // output
+        case i960Pinout::BLAST_:     // input
+        case i960Pinout::FAIL:         // input
+            return PORTC;
+        case i960Pinout::Led:      // output
+        case i960Pinout::CLOCK_OUT: // output: unusable
+        case i960Pinout::AS_:     // input: AVR Int2
+        case i960Pinout::PWM4: // unused
+        case i960Pinout::GPIOSelect:        // output
+        case i960Pinout::MOSI:          // reserved
+        case i960Pinout::MISO:          // reserved
+        case i960Pinout::SCK:          // reserved
+            return PORTB;
+        case i960Pinout::RX0:          // reserved
+        case i960Pinout::TX0:          // reserved
+        case i960Pinout::DEN_:      // AVR Interrupt INT0
+        case i960Pinout::AVR_INT1:        // AVR Interrupt INT1
+        case i960Pinout::SPI_BUS_EN: // output
+        case i960Pinout::DC:     // output
+        case i960Pinout::DISPLAY_EN: // output
+        case i960Pinout::SD_EN:      // output
+            return PORTD;
+        default:
+            return PORTA;
+    }
+}
 
 
 
