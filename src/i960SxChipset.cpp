@@ -625,26 +625,24 @@ void waitTillNexti960SxCycle() noexcept {
 #endif
 }
 void processDataRequest() noexcept {
-    for (int i = 0; i < 16; ++i) {
-        processorInterface.updateDataCycle();
-        // do not allow writes or reads into processor internal memory
-        Address burstAddress = processorInterface.getAddress();
-        LoadStoreStyle style = processorInterface.getStyle();
-        if (processorInterface.isReadOperation()) {
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-        } else {
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
-        }
-        // setup the proper address and emit this over serial
-        processorInterface.signalReady();
-        if (processorInterface.blastTriggered()) {
-            // we not in burst mode
-            fsm.trigger(ReadyAndNoBurst);
-            return;
-        } else {
-            if constexpr (!TargetBoard::onAtmega1284p()) {
-                waitTillNexti960SxCycle();
-            }
+    processorInterface.updateDataCycle();
+    // do not allow writes or reads into processor internal memory
+    Address burstAddress = processorInterface.getAddress();
+    LoadStoreStyle style = processorInterface.getStyle();
+    if (processorInterface.isReadOperation()) {
+        processorInterface.setDataBits(theThing->read(burstAddress, style));
+    } else {
+        theThing->write(burstAddress, processorInterface.getDataBits(), style);
+    }
+    // setup the proper address and emit this over serial
+    processorInterface.signalReady();
+    if (processorInterface.blastTriggered()) {
+        // we not in burst mode
+        fsm.trigger(ReadyAndNoBurst);
+        return;
+    } else {
+        if constexpr (!TargetBoard::onAtmega1284p()) {
+            waitTillNexti960SxCycle();
         }
     }
 }
