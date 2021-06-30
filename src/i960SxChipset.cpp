@@ -640,7 +640,9 @@ void processDataRequest() noexcept {
         // we not in burst mode
         fsm.trigger(ReadyAndNoBurst);
     } else {
-        waitTillNexti960SxCycle();
+        if constexpr (!TargetBoard::onAtmega1284p()) {
+            waitTillNexti960SxCycle();
+        }
     }
 }
 
