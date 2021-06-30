@@ -473,15 +473,6 @@ uint32_t cycleCount = 0;
 SPISettings theSettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0);
 MemoryThing* theThing = nullptr;
 SplitWord16 burstCache[8] = { 0 };
-void waitTillNexti960SxCycle() noexcept {
-#ifdef ARDUINO_ARCH_SAMD
-    // we are now on _much_ faster boards if it isn't the 1284p
-    cycleCount = 0;
-    // enable the timer and perform a wait based on the action
-    burstTransactionTimer.enable(true);
-    while (cycleCount != 0);
-#endif
-}
 
 // ----------------------------------------------------------------
 // setup routines
@@ -630,10 +621,6 @@ void loop() {
             if (processorInterface.blastTriggered()) {
                 // we not in burst mode
                 return;
-            } else {
-                if constexpr (!TargetBoard::onAtmega1284p()) {
-                    waitTillNexti960SxCycle();
-                }
             }
         } while (true);
     } else {
@@ -649,10 +636,6 @@ void loop() {
             if (processorInterface.blastTriggered()) {
                 // we not in burst mode
                 return;
-            } else {
-                if constexpr (!TargetBoard::onAtmega1284p()) {
-                    waitTillNexti960SxCycle();
-                }
             }
         } while (true);
     }
