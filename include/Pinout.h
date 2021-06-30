@@ -82,12 +82,12 @@ enum class i960Pinout : decltype(A0) {
 
 };
 template<i960Pinout pin>
-constexpr bool isValidPan = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
-static_assert(!isValidPan<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
-static_assert(isValidPan<i960Pinout::Led>, "The Led pin should be a valid pin!");
+constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
+static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
+static_assert(isValidPin<i960Pinout::Led>, "The Led pin should be a valid pin!");
 template<i960Pinout pin>
-[[nodiscard]] volatile unsigned char& getAssociatedOutputPort() noexcept {
-    static_assert(isValidPan<pin>, "INVALID PIN PROVIDED");
+[[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
+    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
         case i960Pinout::SPI_BUS_A0:
         case i960Pinout::SPI_BUS_A1:
@@ -131,8 +131,8 @@ template<i960Pinout pin>
 }
 
 template<i960Pinout pin>
-[[nodiscard]] volatile unsigned char& getAssociatedInputPort() noexcept {
-    static_assert(isValidPan<pin>, "INVALID PIN PROVIDED");
+[[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
+    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
         case i960Pinout::SPI_BUS_A0:
         case i960Pinout::SPI_BUS_A1:
@@ -175,8 +175,8 @@ template<i960Pinout pin>
     }
 }
 template<i960Pinout pin>
-[[nodiscard]] decltype(auto) getPinMask() noexcept {
-    static_assert(isValidPan<pin>, "INVALID PIN PROVIDED");
+[[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
+    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
         case i960Pinout::SPI_BUS_A0: return _BV(PA0) ;
         case i960Pinout::SPI_BUS_A1: return _BV(PA1);
@@ -218,7 +218,7 @@ template<i960Pinout pin>
 }
 
 template<i960Pinout pin>
-inline void pulse() {
+inline void pulse() noexcept {
     // save registers and do the pulse
     uint8_t theSREG = SREG;
     cli();
@@ -228,9 +228,22 @@ inline void pulse() {
     SREG = theSREG;
 }
 template<i960Pinout pin>
-inline void toggle() {
+inline void toggle() noexcept {
     auto& thePort = getAssociatedInputPort<pin>();
     thePort |= getPinMask<pin>();
+}
+
+template<i960Pinout pin, decltype(HIGH) value>
+inline void digitalWrite() {
+    uint8_t theSREG = SREG;
+    cli();
+    auto& thePort = getAssociatedOutputPort<pin>();
+    if constexpr (value == LOW) {
+        thePort &= ~getPinMask<pin>();
+    } else {
+        thePort |= getPinMask<pin>();
+    }
+    SREG = theSREG;
 }
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
@@ -240,7 +253,10 @@ inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
 inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
     pinMode(static_cast<int>(ip), value);
 }
-
+template<i960Pinout pin>
+inline auto digitalRead() noexcept {
+    return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
+}
 inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));
 }
@@ -275,8 +291,8 @@ struct DigitalPin {
         static constexpr auto getDirection() noexcept { return OUTPUT; } \
         static constexpr auto getAssertionState() noexcept { return asserted; } \
         static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-        inline static void assertPin() noexcept { digitalWrite(pin, getAssertionState()); } \
-        inline static void deassertPin() noexcept { digitalWrite(pin, getDeassertionState()); } \
+        inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState()>(); } \
+        inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
         inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
         inline static void pulse() noexcept {   \
             ::pulse<pin>();                                     \
@@ -301,30 +317,9 @@ struct DigitalPin {
         static constexpr auto getDirection() noexcept { return INPUT; } \
         static constexpr auto getAssertionState() noexcept { return asserted; } \
         static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-        inline static auto read() noexcept { return digitalRead(pin); } \
+        inline static auto read() noexcept { return digitalRead<pin>(); } \
         inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
         inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
-    }
-
-#define DefInputPullupPin(pin, asserted, deasserted) \
-    template<> \
-    struct DigitalPin< pin > { \
-        static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-        DigitalPin() = delete; \
-        ~DigitalPin() = delete; \
-        DigitalPin(const DigitalPin&) = delete; \
-        DigitalPin(DigitalPin&&) = delete; \
-        DigitalPin& operator=(const DigitalPin&) = delete; \
-        DigitalPin& operator=(DigitalPin&&) = delete; \
-        static constexpr auto isInputPin() noexcept { return true; } \
-        static constexpr auto isOutputPin() noexcept { return false; } \
-        static constexpr auto getPin() noexcept { return pin; } \
-        static constexpr auto getDirection() noexcept { return INPUT_PULLUP; } \
-        static constexpr auto getAssertionState() noexcept { return asserted; } \
-        static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-        inline static bool isAsserted() noexcept { return digitalRead(pin) == getAssertionState(); } \
-        inline static bool isDeasserted() noexcept { return digitalRead(pin) == getDeassertionState(); } \
-        inline static auto read() noexcept { return digitalRead(pin); } \
     }
 
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
@@ -340,7 +335,6 @@ DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
-#undef DefInputPullupPin
 
 template<typename ... Pins>
 inline void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
