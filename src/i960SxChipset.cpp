@@ -40,17 +40,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryThing.h"
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
-#include "OPL2Thing.h"
 #include "CoreChipsetFeatures.h"
 #include "Cache.h"
-#ifdef ADAFRUIT_FEATHER
-#include "FeatherWingPeripherals.h"
-#endif
 
-#if defined(ARDUINO_GRAND_CENTRAL_M4)
-#include <Adafruit_ZeroTimer.h>
-#endif
-//OPL2Thing<i960Pinout::SPI_BUS_A0, i960Pinout::SPI_BUS_A1, i960Pinout::SPI_BUS_A2> thingy(0x1000);
 
 bool displayReady = false;
 /**
@@ -443,11 +435,7 @@ private:
 
 };
 
-#ifndef ADAFRUIT_FEATHER
 using DisplayThing = TFTShieldThing;
-#else
-using DisplayThing = AdafruitFeatherWingDisplay128x32Thing;
-#endif
 DisplayThing displayCommandSet(0x200);
 RAMFile ramSection; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection textSection;
@@ -459,30 +447,15 @@ MemoryThing& rom = cachedRom;
 MemoryThing& ram = cachedRam;
 
 SDCardFilesystemInterface fs(0x300);
-#ifdef ADAFRUIT_FEATHER
-AdafruitLIS3MDLThing lsi3mdl(0x1000);
-AdafruitLSM6DSOXThing lsm6dsox(0x1100);
-AdafruitADT7410Thing adt7410(0x1200);
-AdafruitADXL343Thing adxl343(0x1300);
-#endif
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
         &chipsetFunctions,
         &displayCommandSet,
-#ifdef ADAFRUIT_FEATHER
-        &lsi3mdl,
-        &lsm6dsox,
-        &adt7410,
-        &adxl343,
-#endif
         &fs,
 };
 
 
-#ifdef ARDUINO_ARCH_SAMD
-Adafruit_ZeroTimer burstTransactionTimer(3); // I'm not going to be using tone on the grand central
-#endif
 
 
 bool asTriggered = false;
@@ -521,75 +494,8 @@ void setupPeripherals() {
     rom.begin();
     dataRom.begin();
     ram.begin();
-#ifdef ADAFRUIT_FEATHER
-    lsi3mdl.begin();
-    lsm6dsox.begin();
-    adt7410.begin();
-    adxl343.begin();
-#endif
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
-}
-void setupClockSource() {
-#ifdef ARDUINO_SAMD_FEATHER_M0
-    // setup PORTS PA15 and PA20 as clock sources (D
-    GCLK->GENDIV.reg = GCLK_GENDIV_ID(4) | GCLK_GENDIV_DIV(2);
-    GCLK->GENCTRL.reg = GCLK_GENCTRL_OE | GCLK_GENCTRL_GENEN | GCLK_GENCTRL_ID(4) | GCLK_GENCTRL_SRC_DFLL48M;
-    while (GCLK->STATUS.bit.SYNCBUSY);// Syncronize write to GENCTRL reg.
-    GCLK->GENDIV.reg = GCLK_GENDIV_ID(1) | GCLK_GENDIV_DIV(1);
-    GCLK->GENCTRL.reg = GCLK_GENCTRL_OE | GCLK_GENCTRL_GENEN | GCLK_GENCTRL_ID(1) | GCLK_GENCTRL_SRC_DFLL48M;
-    while (GCLK->STATUS.bit.SYNCBUSY);// Syncronize write to GENCTRL reg.
-    GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC6_TC7_Val) | GCLK_CLKCTRL_GEN(GCLK_CLKCTRL_GEN_GCLK4_Val) | GCLK_CLKCTRL_CLKEN;
-    PORT->Group[0].PMUX[20/2].reg |= PORT_PMUX_PMUXE_H;
-    PORT->Group[0].PINCFG[20].reg |= PORT_PINCFG_PMUXEN; // enable mux for pin PA20
-    GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID(GCLK_CLKCTRL_ID_TC4_TC5_Val) | GCLK_CLKCTRL_GEN(GCLK_CLKCTRL_GEN_GCLK1_Val) | GCLK_CLKCTRL_CLKEN;
-    PORT->Group[0].PMUX[15/2].reg |= PORT_PMUX_PMUXO_H;
-    PORT->Group[0].PINCFG[15].reg |= PORT_PINCFG_PMUXEN;
-#endif
-#ifdef ARDUINO_GRAND_CENTRAL_M4
-    // pins on the digital block with access to the GCLK are:
-    // 36 - GCLK / IO3
-    // 37 - GCLK / IO2
-    // 38 - GCLK / IO1
-    // 39 - GCLK / IO0
-    // let's choose pin 39 for this purpose
-    constexpr auto theTimerFrequency = 10_MHz;
-    constexpr auto ClockDivider_10MHZ = 6;
-    constexpr auto ClockDivider_12MHZ = 5;
-    constexpr auto ClockDivider_15MHZ = 4;
-    constexpr auto ClockDivider_20MHZ = 3;
-    constexpr auto ClockDivider_40MHZ = 2; // THIS IS ALSO DAMN DANGEROUS
-    constexpr auto ClockDivider_80MHZ = 1; // DEAR GOD DO NOT USE THIS!!!!
-    GCLK->GENCTRL[0].reg = GCLK_GENCTRL_DIV(ClockDivider_10MHZ) |
-                           GCLK_GENCTRL_IDC |
-                           GCLK_GENCTRL_GENEN |
-                           GCLK_GENCTRL_OE |
-                           GCLK_GENCTRL_SRC_DPLL0;
-    while(GCLK->SYNCBUSY.bit.GENCTRL0);
-    PORT->Group[g_APinDescription[39].ulPort].PINCFG[g_APinDescription[39].ulPin].bit.PMUXEN = 1;
-    // enable on pin 39 or PB14
-    PORT->Group[g_APinDescription[39].ulPort].PMUX[g_APinDescription[39].ulPin >> 1].reg |= PORT_PMUX_PMUXE(MUX_PB14M_GCLK_IO0);
-    // now we need to setup a timer which will count 10 MHz cycles and trigger an interrupt each time
-    uint32_t compare = TargetBoard::getCPUFrequency() / theTimerFrequency;
-    auto prescaler = TC_CLOCK_PRESCALER_DIV1;
-#if 0
-    Serial.print(F("Compare: "));
-    Serial.println(compare);
-    Serial.print(F("Divider: "));
-    Serial.println(divider);
-    Serial.print(F("Prescaler: "));
-    Serial.println(prescaler);
-#endif
-    burstTransactionTimer.enable(false);
-    burstTransactionTimer.configure(prescaler, TC_COUNTER_SIZE_16BIT, TC_WAVE_GENERATION_MATCH_FREQ);
-    burstTransactionTimer.setCompare(0, compare);
-    burstTransactionTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0,
-                                      []() {
-                                          ++cycleCount;
-                                          burstTransactionTimer.enable(false);
-                                      });
-
-#endif
 }
 // the setup routine runs once when you press reset:
 void setup() {
@@ -598,7 +504,6 @@ void setup() {
     while(!Serial) {
         delay(10);
     }
-    setupClockSource();
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
@@ -808,11 +713,3 @@ void operator delete[](void * ptr, size_t)
 }
 
 #endif // end language is C++14 or greater
-
-#ifdef ARDUINO_ARCH_SAMD
-void
-TC3_Handler()
-{
-    Adafruit_ZeroTimer::timerHandler(3);
-}
-#endif
