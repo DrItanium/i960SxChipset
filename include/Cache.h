@@ -34,14 +34,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<uint32_t size = 16>
 struct CacheLine {
 public:
-    union MemoryElement {
-        explicit MemoryElement(uint16_t value = 0) noexcept : wordValue(value) { }
-        uint16_t wordValue;
-        uint8_t bytes[sizeof(uint16_t)];
-    };
-public:
     [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
-        return valid_ && (address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize));
+        return valid_ && ((address_ <= targetAddress) && (targetAddress < endAddress_));
     }
     [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
         auto base = computeCacheByteOffset(targetAddress);
@@ -49,7 +43,6 @@ public:
         auto offsetId = base & 1;
         return components_[componentId].bytes[offsetId];
     }
-    [[nodiscard]] constexpr auto getBaseAddress() const noexcept { return address_; }
     [[nodiscard]] constexpr auto cacheDirty() const noexcept { return dirty_; }
     void setByte(uint32_t address, uint8_t value) noexcept {
         dirty_ = true;
@@ -59,15 +52,14 @@ public:
         components_[componentId].bytes[offsetId] = value;
     }
     [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
-        return components_[computeCacheWordOffset(targetAddress)].wordValue;
+        return components_[computeCacheWordOffset(targetAddress)].wholeValue_;
     }
     void setWord(uint32_t targetAddress, uint16_t value) noexcept {
         dirty_ = true;
-        components_[computeCacheWordOffset(targetAddress)].wordValue = value;
+        components_[computeCacheWordOffset(targetAddress)].wholeValue_ = value;
     }
-    [[nodiscard]] constexpr auto getCacheLineSize() const noexcept { return CacheLineSize; }
     static constexpr auto CacheLineSize = size;
-    static constexpr auto ComponentSize = CacheLineSize / sizeof(MemoryElement);
+    static constexpr auto ComponentSize = CacheLineSize / sizeof(SplitWord16);
     static constexpr auto CacheByteMask = CacheLineSize - 1;
     static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
         switch (lineSize) {
@@ -90,16 +82,15 @@ public:
     }
     static_assert(isLegalCacheLineSize(CacheLineSize),
     "CacheLineSize must be 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768");
-    static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
+    [[nodiscard]] static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
         return targetAddress & CacheByteMask;
     }
-    static constexpr uint32_t computeCacheWordOffset(uint32_t targetAddress) noexcept {
+    [[nodiscard]] static constexpr uint32_t computeCacheWordOffset(uint32_t targetAddress) noexcept {
         return computeCacheByteOffset(targetAddress) >> 1;
     }
-    static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
+    [[nodiscard]] static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
         return targetAddress & ~CacheByteMask;
     }
-    [[nodiscard]] MemoryElement* getMemoryBlock() noexcept { return components_; }
     void reset(uint32_t address, MemoryThing& thing) noexcept {
         byte* buf = reinterpret_cast<byte*>(components_);
         if (valid_ && dirty_) {
@@ -108,6 +99,7 @@ public:
         dirty_ = false;
         valid_ = true;
         address_ = address;
+        endAddress_ = address + CacheLineSize;
         thing.read(address_, buf, CacheLineSize);
     }
     /**
@@ -123,17 +115,19 @@ public:
         dirty_ = false;
         valid_ = false;
         address_ = 0;
+        endAddress_ = 0;
     }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
     /**
      * @brief The base address of the cache line
      */
-    uint32_t address_;
+    uint32_t address_ = 0;
+    uint32_t endAddress_ = 0;
     /**
      * @brief The cache line contents itself
      */
-    MemoryElement components_[ComponentSize];
+    SplitWord16 components_[ComponentSize];
     static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!"
     "");
     bool dirty_ = false;
