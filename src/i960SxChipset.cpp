@@ -468,9 +468,6 @@ AdafruitADXL343Thing adxl343(0x1300);
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
-        &rom,
-        &dataRom,
-        &ram,
         &chipsetFunctions,
         &displayCommandSet,
 #ifdef ADAFRUIT_FEATHER
@@ -690,11 +687,11 @@ void loop() {
     if (processorInterface.failTriggered()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
-    while (!asTriggered);
-    asTriggered = false;
-    // wait until den is triggered via interrupt
-    while (!denTriggered);
+    // both as and den must be triggered before we can actually
+    // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
+    while (!asTriggered && !denTriggered);
     denTriggered = false;
+    asTriggered = false;
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
@@ -716,6 +713,7 @@ void loop() {
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
     if (processorInterface.isReadOperation()) {
+
         do {
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
@@ -772,23 +770,27 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
 
 MemoryThing*
 getThing(Address address, LoadStoreStyle style) noexcept {
-    if (address < RAMFile::RamStartingAddress) {
-        if (address >= ROMDataSection::ROMStart) {
-            return &dataRom;
+    if (address < 0xFF00'0000) {
+        if (address < RAMFile::RamStartingAddress) {
+            if (address >= ROMDataSection::ROMStart) {
+                return &dataRom;
+            } else {
+                return &rom;
+            }
         } else {
-            return &rom;
+            if (address < RAMFile::RamEndingAddress) {
+                return &ram;
+            } else {
+                for (auto *currentThing : things) {
+                    if (currentThing->respondsTo(address, style)) {
+                        return currentThing;
+                    }
+                }
+                return nullptr;
+            }
         }
     } else {
-        if (address < RAMFile::RamEndingAddress) {
-            return &ram;
-        } else {
-            for (auto* currentThing : things) {
-                if (currentThing->respondsTo(address, style)) {
-                    return currentThing;
-                }
-            }
-            return nullptr;
-        }
+        return nullptr;
     }
 }
 SdFat SD;
