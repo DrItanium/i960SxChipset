@@ -233,10 +233,10 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 
 void ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
-    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines) & 0xFFF0);
+    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
-    upperMaskedAddress_ = lower16Addr | upper16Addr;
-    address_ = upperMaskedAddress_;
+    upperMaskedAddress_ = 0xFFFF'FFF0 & (lower16Addr | upper16Addr);
+    address_ = lower16Addr | upper16Addr;
     isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
