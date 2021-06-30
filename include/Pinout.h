@@ -229,12 +229,8 @@ inline void pulse() {
 }
 template<i960Pinout pin>
 inline void toggle() {
-    // save registers and do the pulse
-    uint8_t theSREG = SREG;
-    cli();
-    auto& thePort = getAssociatedOutputPort<pin>();
-    thePort ^= getPinMask<pin>();
-    SREG = theSREG;
+    auto& thePort = getAssociatedInputPort<pin>();
+    thePort |= getPinMask<pin>();
 }
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {

@@ -71,6 +71,11 @@ namespace
     constexpr byte IODirBaseAddress = 0x00;
     constexpr byte GPIOBaseAddress = 0x12;
     constexpr byte IOConAddress = 0x0A;
+    inline void doSPI(uint8_t* buffer, size_t count) {
+        DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+        SPI.transfer(buffer, count);
+        DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+    }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
                 generateReadOpcode(addr),
@@ -78,9 +83,7 @@ namespace
                 0x00,
                 0x00,
         };
-        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
-        SPI.transfer(buffer, 4);
-        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
+        doSPI(buffer, 4);
         auto lower = static_cast<uint16_t>(buffer[2]);
         auto lowest = static_cast<uint16_t>(buffer[3]) << 8;
         return lower | lowest;
@@ -92,9 +95,7 @@ namespace
                 0x00,
         };
 
-        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
-        SPI.transfer(buffer, 3);
-        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
+        doSPI(buffer, 3);
         return buffer[2];
     }
     uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
@@ -108,9 +109,7 @@ namespace
                 static_cast<uint8_t>(value),
                 static_cast<uint8_t>(value >> 8),
         };
-        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
-        SPI.transfer(buffer, 4);
-        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
+        doSPI(buffer, 4);
     }
     void write8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint8_t value) {
         uint8_t buffer[3] = {
@@ -118,9 +117,7 @@ namespace
                 static_cast<byte>(opcode),
                 value
         };
-        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
-        SPI.transfer(buffer, 3);
-        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
+        doSPI(buffer, 3);
     }
     void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
         write16(addr, MCP23x17Registers::GPIO, value);
