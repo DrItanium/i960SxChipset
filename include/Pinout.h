@@ -86,7 +86,7 @@ constexpr bool isValidPan = static_cast<byte>(pin) < static_cast<byte>(i960Pinou
 static_assert(!isValidPan<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
 static_assert(isValidPan<i960Pinout::Led>, "The Led pin should be a valid pin!");
 template<i960Pinout pin>
-[[nodiscard]] decltype(auto) getAssociatedPort() noexcept {
+[[nodiscard]] volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPan<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
         case i960Pinout::SPI_BUS_A0:
@@ -127,6 +127,93 @@ template<i960Pinout pin>
             return PORTD;
         default:
             return PORTA;
+    }
+}
+
+template<i960Pinout pin>
+[[nodiscard]] volatile unsigned char& getAssociatedInputPort() noexcept {
+    static_assert(isValidPan<pin>, "INVALID PIN PROVIDED");
+    switch (pin) {
+        case i960Pinout::SPI_BUS_A0:
+        case i960Pinout::SPI_BUS_A1:
+        case i960Pinout::SPI_BUS_A2:
+        case i960Pinout::SPI_BUS_A3:
+        case i960Pinout::SPI_BUS_A4:
+        case i960Pinout::SPI_BUS_A5:
+        case i960Pinout::SPI_BUS_A6:
+        case i960Pinout::SPI_BUS_A7:
+            return PINA;
+        case i960Pinout::SCL:          // reserved
+        case i960Pinout::SDA:          // reserved
+        case i960Pinout::Ready:      // output
+        case i960Pinout::Int0_:          // output
+        case i960Pinout::W_R_:          // input
+        case i960Pinout::Reset960:          // output
+        case i960Pinout::BLAST_:     // input
+        case i960Pinout::FAIL:         // input
+            return PINC;
+        case i960Pinout::Led:      // output
+        case i960Pinout::CLOCK_OUT: // output: unusable
+        case i960Pinout::AS_:     // input: AVR Int2
+        case i960Pinout::PWM4: // unused
+        case i960Pinout::GPIOSelect:        // output
+        case i960Pinout::MOSI:          // reserved
+        case i960Pinout::MISO:          // reserved
+        case i960Pinout::SCK:          // reserved
+            return PINB;
+        case i960Pinout::RX0:          // reserved
+        case i960Pinout::TX0:          // reserved
+        case i960Pinout::DEN_:      // AVR Interrupt INT0
+        case i960Pinout::AVR_INT1:        // AVR Interrupt INT1
+        case i960Pinout::SPI_BUS_EN: // output
+        case i960Pinout::DC:     // output
+        case i960Pinout::DISPLAY_EN: // output
+        case i960Pinout::SD_EN:      // output
+            return PIND;
+        default:
+            return PORTA;
+    }
+}
+template<i960Pinout pin>
+[[nodiscard]] decltype(auto) getPinMask() noexcept {
+    static_assert(isValidPan<pin>, "INVALID PIN PROVIDED");
+    switch (pin) {
+        case i960Pinout::SPI_BUS_A0: return _BV(PA0) ;
+        case i960Pinout::SPI_BUS_A1: return _BV(PA1);
+        case i960Pinout::SPI_BUS_A2: return _BV(PA2);
+        case i960Pinout::SPI_BUS_A3: return _BV(PA3);
+        case i960Pinout::SPI_BUS_A4: return _BV(PA4);
+        case i960Pinout::SPI_BUS_A5: return _BV(PA5);
+        case i960Pinout::SPI_BUS_A6: return _BV(PA6);
+        case i960Pinout::SPI_BUS_A7: return _BV(PA7);
+        case i960Pinout::SCL:        return _BV(PC0);
+        case i960Pinout::SDA:        return _BV(PC1);
+        case i960Pinout::Ready:      return _BV(PC2);
+        case i960Pinout::Int0_:      return _BV(PC3);
+        case i960Pinout::W_R_:       return _BV(PC4);
+        case i960Pinout::Reset960:   return _BV(PC5);
+        case i960Pinout::BLAST_:     return _BV(PC6);
+        case i960Pinout::FAIL:       return _BV(PC7);
+
+        case i960Pinout::Led:      return _BV(PB0);
+        case i960Pinout::CLOCK_OUT:  return _BV(PB1);
+        case i960Pinout::AS_:     return _BV(PB2);
+        case i960Pinout::PWM4:    return _BV(PB3);
+        case i960Pinout::GPIOSelect:        return _BV(PB4);
+        case i960Pinout::MOSI:         return _BV(PB5) ;
+        case i960Pinout::MISO:         return _BV(PB6) ;
+        case i960Pinout::SCK:          return _BV(PB7);
+
+        case i960Pinout::RX0:          return _BV(PD0);
+        case i960Pinout::TX0:          return _BV(PD1);
+        case i960Pinout::DEN_:          return _BV(PD2);
+        case i960Pinout::AVR_INT1:        return _BV(PD3);
+        case i960Pinout::SPI_BUS_EN: return _BV(PD4);
+        case i960Pinout::DC:     return _BV(PD5);
+        case i960Pinout::DISPLAY_EN: return _BV(PD6);
+        case i960Pinout::SD_EN:     return _BV(PD7);
+        default:
+            return 0xFF;
     }
 }
 
@@ -177,12 +264,11 @@ struct DigitalPin {
         inline static void assertPin() noexcept { digitalWrite(pin, getAssertionState()); } \
         inline static void deassertPin() noexcept { digitalWrite(pin, getDeassertionState()); } \
         inline static void write(decltype(LOW) value) noexcept { digitalWrite(pin, value); } \
-        inline static void pulse() noexcept { \
+        inline static void pulse() noexcept {   \
             assertPin(); \
             deassertPin(); \
         } \
     }
-
 #define DefInputPin(pin, asserted, deasserted) \
     template<> \
     struct DigitalPin< pin > { \
