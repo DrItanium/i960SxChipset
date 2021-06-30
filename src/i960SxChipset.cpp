@@ -726,7 +726,7 @@ void loop() {
             processorInterface.signalReady();
             if (processorInterface.blastTriggered()) {
                 // we not in burst mode
-                break;
+                return;
             } else {
                 if constexpr (!TargetBoard::onAtmega1284p()) {
                     waitTillNexti960SxCycle();
@@ -745,17 +745,13 @@ void loop() {
             theThing->write(burstAddress, bits, style);
             if (processorInterface.blastTriggered()) {
                 // we not in burst mode
-                break;
+                return;
             } else {
                 if constexpr (!TargetBoard::onAtmega1284p()) {
                     waitTillNexti960SxCycle();
                 }
             }
         } while (true);
-    }
-    // immediately check after we are done to see if a fail has been triggered
-    if (processorInterface.failTriggered()) {
-        signalHaltState(F("CHECKSUM FAILURE!"));
     }
 }
 
