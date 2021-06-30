@@ -480,15 +480,6 @@ MemoryThing* things[] {
         &fs,
 };
 
-MemoryThing*
-getThing(Address address, LoadStoreStyle style) noexcept {
-    for (auto* currentThing : things) {
-        if (currentThing->respondsTo(address, style)) {
-            return currentThing;
-        }
-    }
-    return nullptr;
-}
 
 // ----------------------------------------------------------------
 // state machine
@@ -629,26 +620,6 @@ void processDataRequest() noexcept {
     // do not allow writes or reads into processor internal memory
     Address burstAddress = processorInterface.getAddress();
     LoadStoreStyle style = processorInterface.getStyle();
-    if (processorInterface.isReadOperation()) {
-        processorInterface.setDataBits(theThing->read(burstAddress, style));
-    } else {
-        theThing->write(burstAddress, processorInterface.getDataBits(), style);
-    }
-    // setup the proper address and emit this over serial
-    processorInterface.signalReady();
-    if (processorInterface.blastTriggered()) {
-        // we not in burst mode
-        fsm.trigger(ReadyAndNoBurst);
-        return;
-    } else {
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            waitTillNexti960SxCycle();
-        }
-    }
-    processorInterface.updateDataCycle();
-    // do not allow writes or reads into processor internal memory
-    burstAddress = processorInterface.getAddress();
-    style = processorInterface.getStyle();
     if (processorInterface.isReadOperation()) {
         processorInterface.setDataBits(theThing->read(burstAddress, style));
     } else {
@@ -828,6 +799,28 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
+    }
+}
+
+MemoryThing*
+getThing(Address address, LoadStoreStyle style) noexcept {
+    if (address < RAMFile::RamStartingAddress) {
+        if (address >= ROMDataSection::ROMStart) {
+            return &dataRom;
+        } else {
+            return &rom;
+        }
+    } else {
+        if (address < RAMFile::RamEndingAddress) {
+            return &ram;
+        } else {
+            for (auto* currentThing : things) {
+                if (currentThing->respondsTo(address, style)) {
+                    return currentThing;
+                }
+            }
+            return nullptr;
+        }
     }
 }
 SdFat SD;
