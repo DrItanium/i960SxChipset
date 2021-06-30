@@ -102,6 +102,7 @@ namespace
     uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
         return read16(addr, MCP23x17Registers::GPIO);
     }
+
     void write16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint16_t value) {
         uint8_t buffer[4] = {
                 generateWriteOpcode(addr),
@@ -248,7 +249,9 @@ void ProcessorInterface::newDataCycle() noexcept {
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
-    auto bits = readGPIO16(IOExpanderAddress::MemoryCommitExtras);
+    SPI.beginTransaction(theSettings);
+    auto bits = read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
+    SPI.endTransaction();
     auto burstAddressBits = static_cast<byte>((bits & 0b111) << 1);
     auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
     lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
