@@ -32,12 +32,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 class MemoryThing {
 public:
-    MemoryThing(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) { }
+    MemoryThing(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) {
+        if (endAddress < baseAddress) {
+            signalHaltState(F("End address comes before base address"));
+        }
+        if ((endAddress - baseAddress) < 16) {
+            signalHaltState(F("Minimum mapped size of a memory thing must be 16-bytes"));
+        }
+        if ((baseAddress & 0b1111) != 0) {
+            signalHaltState(F("memory things must be aligned to 16 byte boundaries"));
+        }
+    }
     /**
      * @brief Construct a memory thing that is only concerned with a single address
      * @param baseAddress
      */
-    explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 1) { }
+    explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 16) { }
     virtual ~MemoryThing() = default;
     virtual size_t blockWrite(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
     virtual size_t blockRead(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
