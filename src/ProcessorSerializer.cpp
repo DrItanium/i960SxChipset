@@ -239,11 +239,10 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 void ProcessorInterface::newDataCycle() noexcept {
     clearDENTrigger();
     SPI.beginTransaction(theSettings);
-    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
+    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines) & 0xFFF0);
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
     SPI.endTransaction();
-    auto currentBaseAddress_ = lower16Addr | upper16Addr;
-    upperMaskedAddress_ = 0xFFFFFFF0 & currentBaseAddress_;
+    upperMaskedAddress_ = lower16Addr | upper16Addr;
     address_ = upperMaskedAddress_;
     isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -252,9 +251,7 @@ void ProcessorInterface::updateDataCycle() noexcept {
     SPI.beginTransaction(theSettings);
     auto bits = read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
     SPI.endTransaction();
-    auto burstAddressBits = static_cast<byte>((bits & 0b111) << 1);
-    auto byteEnableBits = static_cast<byte>((bits & 0b11000) >> 3);
-    lss_ = static_cast<LoadStoreStyle>(byteEnableBits);
-    address_ = upperMaskedAddress_ | burstAddressBits;
+    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
+    address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
     blastTriggered_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
