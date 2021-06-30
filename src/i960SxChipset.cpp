@@ -563,6 +563,7 @@ void systemTestState() noexcept {
         fsm.trigger(SelfTestComplete);
     }
 }
+
 void onASAsserted() {
     processorInterface.triggerAS();
 }
