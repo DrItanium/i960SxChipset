@@ -608,211 +608,32 @@ void loop() {
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-        // check to see if we are entering a burst transaction or not
-        if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-            // non burst transaction so no need to check BLAST_ we already know
+        do {
             processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
+            auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // setup the proper address and emit this over serial
             DigitalPin<i960Pinout::Ready>::pulse();
-            return;
-        } else {
-            // burst transaction, so manually unwind it as we know it can only run a maximum of eight half words or 16 bytes
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // first cycle will never end here, so instead just signal and go on
-            DigitalPin<i960Pinout::Ready>::pulse();
-            // transaction 2
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // first cycle will never end here, so instead just signal and go on
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                return;
+            if (blastAsserted) {
+                break;
             }
-            DigitalPin<i960Pinout::Ready>::pulse();
-            // transaction 3
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // first cycle will never end here, so instead just signal and go on
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // first cycle will never end here, so instead just signal and go on
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // first cycle will never end here, so instead just signal and go on
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                // first time I see a legit use of goto
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // first cycle will never end here, so instead just signal and go on
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                // first time I see a legit use of goto
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // first cycle will never end here, so instead just signal and go on
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                // first time I see a legit use of goto
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (DigitalPin<i960Pinout::BLAST_>::isDeasserted()) {
-                signalHaltState(F("MORE THAN EIGHT HALF WORDS WERE REQUESTED IN A SINGLE TRANSACTION"));
-            }
-            processorInterface.updateDataCycle();
-            // do not allow writes or reads into processor internal memory
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // last section of the transaction
-            DigitalPin<i960Pinout::Ready>::pulse();
-            return;
-        }
+        } while (true);
     } else {
-        if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+        do {
             // not in burst mode so just do a single transaction
             processorInterface.updateDataCycle();
+            auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             // do not allow writes or reads into processor internal memory
             auto bits = processorInterface.getDataBits();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, bits, style);
             DigitalPin<i960Pinout::Ready>::pulse();
-            return;
-        } else {
-            // we are in burst mode so multiple transactions are necessary
-            processorInterface.updateDataCycle();
-            auto bits = processorInterface.getDataBits();
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
-            theThing->write(burstAddress, bits, style);
-            DigitalPin<i960Pinout::Ready>::pulse();
-
-            processorInterface.updateDataCycle();
-            bits = processorInterface.getDataBits();
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            theThing->write(burstAddress, bits, style);
-            // setup the proper address and emit this over serial
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                return;
+            if (blastAsserted) {
+                break;
             }
-            DigitalPin<i960Pinout::Ready>::pulse();
-
-            processorInterface.updateDataCycle();
-            bits = processorInterface.getDataBits();
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            theThing->write(burstAddress, bits, style);
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-
-            processorInterface.updateDataCycle();
-            bits = processorInterface.getDataBits();
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            theThing->write(burstAddress, bits, style);
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-
-            processorInterface.updateDataCycle();
-            bits = processorInterface.getDataBits();
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            theThing->write(burstAddress, bits, style);
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-
-            processorInterface.updateDataCycle();
-            bits = processorInterface.getDataBits();
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            theThing->write(burstAddress, bits, style);
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-            processorInterface.updateDataCycle();
-            bits = processorInterface.getDataBits();
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            theThing->write(burstAddress, bits, style);
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                return;
-            }
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (DigitalPin<i960Pinout::BLAST_>::isDeasserted()) {
-                signalHaltState(F("MORE THAN EIGHT HALF WORDS WERE REQUESTED IN A SINGLE TRANSACTION"));
-            }
-            processorInterface.updateDataCycle();
-            bits = processorInterface.getDataBits();
-            burstAddress = processorInterface.getAddress();
-            style = processorInterface.getStyle();
-            theThing->write(burstAddress, bits, style);
-            DigitalPin<i960Pinout::Ready>::pulse();
-            return;
-        }
+        } while(true);
     }
 }
 
