@@ -536,9 +536,10 @@ void setup() {
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state
-    while (!processorInterface.failTriggered());
+    while (DigitalPin<i960Pinout::FAIL>::isDeasserted());
+
     // now wait until we leave self test state
-    while (processorInterface.failTriggered());
+    while (DigitalPin<i960Pinout::FAIL>::isAsserted());
     // at this point we are in idle so we are safe to loaf around a bit
 }
 // ----------------------------------------------------------------
@@ -578,7 +579,7 @@ void setup() {
 // NOTE: Tw may turn out to be synthetic
 void loop() {
     //fsm.run_machine();
-    if (processorInterface.failTriggered()) {
+    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
     // both as and den must be triggered before we can actually
@@ -586,6 +587,7 @@ void loop() {
     while (!asTriggered && !denTriggered);
     denTriggered = false;
     asTriggered = false;
+    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
@@ -594,7 +596,7 @@ void loop() {
     }
     if (!theThing) {
         // halt here because we've entered into unmapped memory state
-        if (processorInterface.isReadOperation()) {
+        if (isReadOperation) {
             Serial.print(F("UNMAPPED READ FROM 0x"));
         } else {
             Serial.print(F("UNMAPPED WRITE OF 0x"));
@@ -606,8 +608,9 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    if (processorInterface.isReadOperation()) {
+    if (isReadOperation) {
         do {
+            auto blastTriggered = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
             Address burstAddress = processorInterface.getAddress();
@@ -615,13 +618,14 @@ void loop() {
             processorInterface.setDataBits(theThing->read(burstAddress, style));
             // setup the proper address and emit this over serial
             processorInterface.signalReady();
-            if (processorInterface.blastTriggered()) {
+            if (blastTriggered) {
                 // we not in burst mode
                 return;
             }
         } while (true);
     } else {
         do {
+            auto blastTriggered = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
             auto bits = processorInterface.getDataBits();
@@ -630,7 +634,7 @@ void loop() {
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, bits, style);
-            if (processorInterface.blastTriggered()) {
+            if (blastTriggered) {
                 // we not in burst mode
                 return;
             }

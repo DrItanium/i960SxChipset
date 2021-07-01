@@ -107,7 +107,6 @@ public:
     }
 
     [[nodiscard]] bool failTriggered() const noexcept { return DigitalPin<i960Pinout::FAIL>::isAsserted(); }
-    [[nodiscard]] bool blastTriggered() const noexcept { return blastTriggered_; }
     void signalReady() noexcept { DigitalPin<i960Pinout::Ready>::pulse(); }
 public:
     void setPortZDirectionRegister(byte value) noexcept;
@@ -121,8 +120,6 @@ public:
 
     void newDataCycle() noexcept;
     void updateDataCycle() noexcept;
-    [[nodiscard]] constexpr bool isReadOperation() const noexcept { return isReadOperation_; }
-    [[nodiscard]] constexpr auto get16ByteAlignedAddress() const noexcept { return upperMaskedAddress_; }
 private:
     void updateOutputLatch() noexcept;
 private:
@@ -131,10 +128,8 @@ private:
     Address address_ = 0;
     LoadStoreStyle lss_ = LoadStoreStyle::None;
     bool initialized_ = false;
-    bool isReadOperation_ = false;
     bool lockValue_ = true;
     bool holdValue_ = false;
-    bool blastTriggered_ = false;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes
