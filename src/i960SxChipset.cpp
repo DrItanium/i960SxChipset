@@ -610,42 +610,68 @@ void loop() {
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
     if (isReadOperation) {
-        do {
+        // check to see if we are entering a burst transaction or not
+        if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+            // non burst transaction so no need to check BLAST_ we already know
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
             // setup the proper address and emit this over serial
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                // first time I see a legit use of goto
-                goto top;
-            } else {
-                DigitalPin<i960Pinout::Ready>::pulse();
-            }
-        } while (true);
+            DigitalPin<i960Pinout::Ready>::pulse();
+            goto top;
+        } else {
+            // burst transaction
+            do {
+                processorInterface.updateDataCycle();
+                // do not allow writes or reads into processor internal memory
+                Address burstAddress = processorInterface.getAddress();
+                LoadStoreStyle style = processorInterface.getStyle();
+                processorInterface.setDataBits(theThing->read(burstAddress, style));
+                // setup the proper address and emit this over serial
+                if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                    DigitalPin<i960Pinout::Ready>::pulse();
+                    // we not in burst mode
+                    // first time I see a legit use of goto
+                    goto top;
+                } else {
+                    DigitalPin<i960Pinout::Ready>::pulse();
+                }
+            } while (true);
+        }
     } else {
-
-        do {
+        if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+            // not in burst mode so just do a single transaction
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
             auto bits = processorInterface.getDataBits();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, bits, style);
-            // setup the proper address and emit this over serial
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                // first time I see a legit use of goto
-                goto top;
-            } else {
-                DigitalPin<i960Pinout::Ready>::pulse();
-            }
+            DigitalPin<i960Pinout::Ready>::pulse();
+            goto top;
+        } else {
+            // we are in burst mode so multiple transactions are necessary
+            do {
+                processorInterface.updateDataCycle();
+                // do not allow writes or reads into processor internal memory
+                auto bits = processorInterface.getDataBits();
+                Address burstAddress = processorInterface.getAddress();
+                LoadStoreStyle style = processorInterface.getStyle();
+                theThing->write(burstAddress, bits, style);
+                // setup the proper address and emit this over serial
+                if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                    DigitalPin<i960Pinout::Ready>::pulse();
+                    // we not in burst mode
+                    // first time I see a legit use of goto
+                    goto top;
+                } else {
+                    DigitalPin<i960Pinout::Ready>::pulse();
+                }
 
-        } while (true);
+            } while (true);
+        }
     }
 }
 
