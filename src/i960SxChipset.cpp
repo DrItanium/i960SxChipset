@@ -607,13 +607,12 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     do {
         processorInterface.updateDataCycle();
         auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         Address burstAddress = processorInterface.getAddress();
         LoadStoreStyle style = processorInterface.getStyle();
-        if (isReadOperation) {
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             processorInterface.setDataBits(theThing->read(burstAddress, style));
         } else {
             theThing->write(burstAddress, processorInterface.getDataBits(), style);
