@@ -611,14 +611,13 @@ void loop() {
     }
     if (isReadOperation) {
         do {
-            auto blastTriggered = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
             // setup the proper address and emit this over serial
-            if (blastTriggered) {
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
                 DigitalPin<i960Pinout::Ready>::pulse();
                 // we not in burst mode
                 // first time I see a legit use of goto
@@ -630,7 +629,6 @@ void loop() {
     } else {
 
         do {
-            auto blastTriggered = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
             auto bits = processorInterface.getDataBits();
@@ -638,7 +636,7 @@ void loop() {
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, bits, style);
             // setup the proper address and emit this over serial
-            if (blastTriggered) {
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
                 DigitalPin<i960Pinout::Ready>::pulse();
                 // we not in burst mode
                 // first time I see a legit use of goto
