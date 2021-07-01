@@ -618,10 +618,13 @@ void loop() {
             LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
             // setup the proper address and emit this over serial
-            DigitalPin<i960Pinout::Ready>::pulse();
             if (blastTriggered) {
+                DigitalPin<i960Pinout::Ready>::pulse();
                 // we not in burst mode
+                // first time I see a legit use of goto
                 goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
             }
         } while (true);
     } else {
@@ -635,12 +638,15 @@ void loop() {
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, bits, style);
             // setup the proper address and emit this over serial
-            DigitalPin<i960Pinout::Ready>::pulse();
             if (blastTriggered) {
+                DigitalPin<i960Pinout::Ready>::pulse();
                 // we not in burst mode
                 // first time I see a legit use of goto
                 goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
             }
+
         } while (true);
     }
 }
