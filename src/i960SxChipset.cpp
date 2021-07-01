@@ -606,53 +606,35 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    if (processorInterface.blastTriggered()) {
-        processorInterface.updateDataCycle();
-        Address burstAddress = processorInterface.getAddress();
-        LoadStoreStyle style = processorInterface.getStyle();
-        if (processorInterface.isReadOperation()) {
+    if (processorInterface.isReadOperation()) {
+        do {
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            Address burstAddress = processorInterface.getAddress();
+            LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
             // setup the proper address and emit this over serial
             processorInterface.signalReady();
-        } else {
+            if (processorInterface.blastTriggered()) {
+                // we not in burst mode
+                return;
+            }
+        } while (true);
+    } else {
+        do {
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
             auto bits = processorInterface.getDataBits();
             // setup the proper address and emit this over serial
             processorInterface.signalReady();
+            Address burstAddress = processorInterface.getAddress();
+            LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, bits, style);
-        }
-        return;
-    } else {
-        // burst transaction
-        if (processorInterface.isReadOperation()) {
-            do {
-                processorInterface.updateDataCycle();
-                // do not allow writes or reads into processor internal memory
-                Address burstAddress = processorInterface.getAddress();
-                LoadStoreStyle style = processorInterface.getStyle();
-                processorInterface.setDataBits(theThing->read(burstAddress, style));
-                // setup the proper address and emit this over serial
-                processorInterface.signalReady();
-                if (processorInterface.blastTriggered()) {
-                    // we not in burst mode
-                    return;
-                }
-            } while (true);
-        } else {
-            do {
-                processorInterface.updateDataCycle();
-                // do not allow writes or reads into processor internal memory
-                auto bits = processorInterface.getDataBits();
-                // setup the proper address and emit this over serial
-                processorInterface.signalReady();
-                Address burstAddress = processorInterface.getAddress();
-                LoadStoreStyle style = processorInterface.getStyle();
-                theThing->write(burstAddress, bits, style);
-                if (processorInterface.blastTriggered()) {
-                    // we not in burst mode
-                    return;
-                }
-            } while (true);
-        }
+            if (processorInterface.blastTriggered()) {
+                // we not in burst mode
+                return;
+            }
+        } while (true);
     }
 }
 
