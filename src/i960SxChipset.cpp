@@ -587,13 +587,13 @@ void loop() {
     while (!asTriggered && !denTriggered);
     denTriggered = false;
     asTriggered = false;
-    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
     if (!theThing->respondsTo(processorInterface.getAddress(), LoadStoreStyle::Full16)) {
         theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
     }
+    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (!theThing) {
         // halt here because we've entered into unmapped memory state
         if (isReadOperation) {
@@ -617,7 +617,7 @@ void loop() {
             LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
             // setup the proper address and emit this over serial
-            processorInterface.signalReady();
+            DigitalPin<i960Pinout::Ready>::pulse();
             if (blastTriggered) {
                 // we not in burst mode
                 return;
@@ -630,7 +630,7 @@ void loop() {
             // do not allow writes or reads into processor internal memory
             auto bits = processorInterface.getDataBits();
             // setup the proper address and emit this over serial
-            processorInterface.signalReady();
+            DigitalPin<i960Pinout::Ready>::pulse();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, bits, style);
