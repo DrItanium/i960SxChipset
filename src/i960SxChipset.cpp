@@ -622,23 +622,114 @@ void loop() {
             DigitalPin<i960Pinout::Ready>::pulse();
             goto top;
         } else {
-            // burst transaction
-            do {
-                processorInterface.updateDataCycle();
-                // do not allow writes or reads into processor internal memory
-                Address burstAddress = processorInterface.getAddress();
-                LoadStoreStyle style = processorInterface.getStyle();
-                processorInterface.setDataBits(theThing->read(burstAddress, style));
-                // setup the proper address and emit this over serial
-                if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    // we not in burst mode
-                    // first time I see a legit use of goto
-                    goto top;
-                } else {
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                }
-            } while (true);
+            // burst transaction, so manually unwind it as we know it can only run a maximum of eight half words or 16 bytes
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            Address burstAddress = processorInterface.getAddress();
+            LoadStoreStyle style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            // first cycle will never end here, so instead just signal and go on
+            DigitalPin<i960Pinout::Ready>::pulse();
+            // transaction 2
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            burstAddress = processorInterface.getAddress();
+            style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            // first cycle will never end here, so instead just signal and go on
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                DigitalPin<i960Pinout::Ready>::pulse();
+                // we not in burst mode
+                // first time I see a legit use of goto
+                goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
+            }
+            // transaction 3
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            burstAddress = processorInterface.getAddress();
+            style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            // first cycle will never end here, so instead just signal and go on
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                DigitalPin<i960Pinout::Ready>::pulse();
+                // we not in burst mode
+                // first time I see a legit use of goto
+                goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
+            }
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            burstAddress = processorInterface.getAddress();
+            style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            // first cycle will never end here, so instead just signal and go on
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                DigitalPin<i960Pinout::Ready>::pulse();
+                // we not in burst mode
+                // first time I see a legit use of goto
+                goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
+            }
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            burstAddress = processorInterface.getAddress();
+            style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            // first cycle will never end here, so instead just signal and go on
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                DigitalPin<i960Pinout::Ready>::pulse();
+                // we not in burst mode
+                // first time I see a legit use of goto
+                goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
+            }
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            burstAddress = processorInterface.getAddress();
+            style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            // first cycle will never end here, so instead just signal and go on
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                DigitalPin<i960Pinout::Ready>::pulse();
+                // we not in burst mode
+                // first time I see a legit use of goto
+                goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
+            }
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            burstAddress = processorInterface.getAddress();
+            style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            // first cycle will never end here, so instead just signal and go on
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                DigitalPin<i960Pinout::Ready>::pulse();
+                // we not in burst mode
+                // first time I see a legit use of goto
+                goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
+            }
+            processorInterface.updateDataCycle();
+            // do not allow writes or reads into processor internal memory
+            burstAddress = processorInterface.getAddress();
+            style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            // first cycle will never end here, so instead just signal and go on
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                DigitalPin<i960Pinout::Ready>::pulse();
+                // we not in burst mode
+                // first time I see a legit use of goto
+                goto top;
+            } else {
+                DigitalPin<i960Pinout::Ready>::pulse();
+            }
         }
     } else {
         if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
