@@ -716,20 +716,17 @@ void loop() {
             } else {
                 DigitalPin<i960Pinout::Ready>::pulse();
             }
+            if (DigitalPin<i960Pinout::BLAST_>::isDeasserted()) {
+                signalHaltState(F("MORE THAN EIGHT HALF WORDS WERE REQUESTED IN A SINGLE TRANSACTION"));
+            }
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
             burstAddress = processorInterface.getAddress();
             style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
-            // first cycle will never end here, so instead just signal and go on
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // we not in burst mode
-                // first time I see a legit use of goto
-                goto top;
-            } else {
-                DigitalPin<i960Pinout::Ready>::pulse();
-            }
+            // last section of the transaction
+            DigitalPin<i960Pinout::Ready>::pulse();
+            goto top;
         }
     } else {
         if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
