@@ -579,6 +579,7 @@ void setup() {
 // NOTE: Tw may turn out to be synthetic
 void loop() {
     //fsm.run_machine();
+    top:
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
@@ -620,23 +621,25 @@ void loop() {
             DigitalPin<i960Pinout::Ready>::pulse();
             if (blastTriggered) {
                 // we not in burst mode
-                return;
+                goto top;
             }
         } while (true);
     } else {
+
         do {
             auto blastTriggered = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             processorInterface.updateDataCycle();
             // do not allow writes or reads into processor internal memory
             auto bits = processorInterface.getDataBits();
-            // setup the proper address and emit this over serial
-            DigitalPin<i960Pinout::Ready>::pulse();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, bits, style);
+            // setup the proper address and emit this over serial
+            DigitalPin<i960Pinout::Ready>::pulse();
             if (blastTriggered) {
                 // we not in burst mode
-                return;
+                // first time I see a legit use of goto
+                goto top;
             }
         } while (true);
     }
