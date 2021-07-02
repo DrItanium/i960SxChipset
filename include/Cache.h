@@ -117,6 +117,14 @@ public:
         address_ = address;
         thing.read(address_, buf, CacheLineSize);
     }
+    void invalidate(MemoryThing& thing) noexcept {
+        if (valid_ && dirty_) {
+            thing.write(address_, reinterpret_cast<byte*>(components_), CacheLineSize);
+        }
+        dirty_ = false;
+        valid_ = false;
+        address_ = 0;
+    }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
     /**
@@ -223,19 +231,35 @@ private:
     }
 public:
     uint8_t read8(Address address) noexcept override {
-        return getByte(address);
+        if (enabled_) {
+            return getByte(address);
+        } else {
+            return thing_.read8(address) ;
+        }
     }
     uint16_t read16(Address address) noexcept override {
-        return getWord(address);
+        if (enabled_) {
+            return getWord(address);
+        } else {
+            return thing_.read16(address) ;
+        }
     }
     [[nodiscard]] bool respondsTo(Address address) const noexcept override {
         return thing_.respondsTo(address);
     }
     void write8(Address address, uint8_t value) noexcept override {
+        if (enabled_) {
             setByte(address, value);
+        } else {
+            thing_.write8(address, value);
+        }
     }
     void write16(Address address, uint16_t value) noexcept override {
-        setWord(address, value);
+        if (enabled_) {
+            setWord(address, value);
+        } else {
+            thing_.write16(address, value);
+        }
     }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
@@ -248,21 +272,47 @@ public:
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // use the cache where it makes sense
-        size_t numWritten = 0;
-        for (size_t i = 0; i < capacity; ++i, ++address, ++numWritten) {
-            setByte(address, buf[i]);
+        if (enabled_) {
+            size_t numWritten = 0;
+            for (size_t i = 0; i < capacity; ++i, ++address, ++numWritten) {
+                setByte(address, buf[i]);
+            }
+            return numWritten;
+        } else {
+           return thing_.blockWrite(address, buf, capacity);
         }
-        return numWritten;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        size_t numRead = 0;
-        for (size_t i = 0; i < capacity; ++i, ++address, ++numRead) {
-            buf[i] = getByte(address);
+        if (enabled_) {
+            size_t numRead = 0;
+            for (size_t i = 0; i < capacity; ++i, ++address, ++numRead) {
+                buf[i] = getByte(address);
+            }
+            return numRead;
+        } else {
+            return thing_.blockRead(address, buf, capacity);
         }
-        return numRead;
+    }
+    void disableCache() noexcept override {
+        if (enabled_) {
+            enabled_ = false;
+            invalidate();
+        }
+    }
+    void enableCache() noexcept override {
+        if (!enabled_) {
+            enabled_ = true;
+        }
+    }
+private:
+    void invalidate() noexcept {
+        for (auto& line : lines_) {
+            line.invalidate(thing_);
+        }
     }
 private:
     MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
+    bool enabled_ = true;
 };
 #endif //I960SXCHIPSET_CACHE_H

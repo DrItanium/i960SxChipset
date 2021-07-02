@@ -150,11 +150,39 @@ public:
         }
         return blockRead(relativeAddress, buffer, count);
     }
+    /**
+     * @brief Turn off any sort of caching that this memory thing has
+     */
+    virtual void disableCache() noexcept { }
+    /**
+     * @brief Reactivate any sort of caching this memory thing has
+     */
+    virtual void enableCache() noexcept { }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
 private:
     Address base_;
     Address end_;
 };
+
+/**
+ * @brief Turn cache enable and disable actions into RAII
+ */
+struct TemporarilyDisableThingCache final {
+public:
+    explicit TemporarilyDisableThingCache(MemoryThing* theThing) : thing_(theThing) {
+        if (thing_) {
+            thing_->disableCache();
+        }
+    }
+    ~TemporarilyDisableThingCache() {
+        if (thing_) {
+            thing_->enableCache();
+        }
+    }
+private:
+    MemoryThing* thing_;
+};
+
 
 /**
  * @brief An intermediate type which automatically adds the IOBaseAddress to the start and end addresses
