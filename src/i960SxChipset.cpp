@@ -409,7 +409,7 @@ public:
     }
 private:
     Adafruit_ST7735 display_;
-    Opcodes command_;
+    Opcodes command_ = Opcodes::None;
     int16_t x_ = 0;
     int16_t y_ = 0;
     int16_t w_ = 0;
