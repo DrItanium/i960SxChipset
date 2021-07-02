@@ -181,7 +181,7 @@ public:
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
     explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
-        return getCacheLine().getByte(targetAddress);
+        return getCacheLine(targetAddress).getByte(targetAddress);
     }
     [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
         return getCacheLine(targetAddress).getWord(targetAddress);
