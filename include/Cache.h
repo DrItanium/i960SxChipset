@@ -31,6 +31,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <Arduino.h>
 #include "MCUPlatform.h"
+constexpr auto numberOfAddressBitsForGivenByteSize(uint32_t numBytes) noexcept {
+    switch (numBytes) {
+        case 1: return 0;
+        case 2: return 1;
+        case 4: return 2;
+        case 8: return 3;
+        case 16: return 4;
+        case 32: return 5;
+        case 64: return 6;
+        case 128: return 7;
+        case 256: return 8;
+        case 512: return 9;
+        case 1024: return 10;
+        case 2048: return 11;
+        case 4096: return 12;
+        case 8192: return 13;
+        case 16384: return 14;
+        case 32768: return 15;
+        default: return 0;
+    }
+}
 template<uint32_t size = 16>
 struct CacheLine {
 public:
@@ -57,10 +78,6 @@ public:
         dirty_ = true;
         components_[computeCacheWordOffset(targetAddress)].wholeValue_ = value;
     }
-    static constexpr auto CacheLineSize = size;
-    static constexpr auto ComponentSize = CacheLineSize / sizeof(SplitWord16);
-    static constexpr auto CacheByteMask = CacheLineSize - 1;
-    static constexpr auto AlignedOffsetMask = ~CacheByteMask;
     static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
         switch (lineSize) {
             case 16:
@@ -69,19 +86,18 @@ public:
             case 128:
             case 256:
             case 512:
-            case 1024:
-            case 2048:
-            case 4096:
-            case 8192:
-            case 16384:
-            case 32768:
                 return true;
             default:
                 return false;
         }
     }
-    static_assert(isLegalCacheLineSize(CacheLineSize),
-    "CacheLineSize must be 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768");
+    static constexpr auto CacheLineSize = size;
+    static constexpr auto ComponentSize = CacheLineSize / sizeof(SplitWord16);
+    static constexpr auto CacheByteMask = CacheLineSize - 1;
+    static constexpr auto AlignedOffsetMask = ~CacheByteMask;
+    static constexpr auto CacheOffsetBitConsumption = numberOfAddressBitsForGivenByteSize(CacheLineSize);
+    static_assert(isLegalCacheLineSize(CacheLineSize), "CacheLineSize must be 16, 32, 64, 128, 256, or 512 bytes");
+    static_assert(CacheOffsetBitConsumption != 0, "Invalid number of bits consumed by this cache line!");
     [[nodiscard]] static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
         return targetAddress & CacheByteMask;
     }
@@ -141,6 +157,10 @@ public:
     static constexpr auto NumberOfCacheLinesMask = numLines - 1;
     static constexpr auto CacheLineSize = cacheLineSize;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
+    static constexpr auto CacheLineAddressMask = ASingleCacheLine::CacheByteMask;
+    static constexpr auto TagOffsetShiftAmount = numberOfAddressBitsForGivenByteSize(ASingleCacheLine::CacheOffsetBitConsumption);
+    //we want this mask to start immediately after the the cache line mask
+    static constexpr Address TagOffsetMask = NumberOfCacheLinesMask << TagOffsetShiftAmount;
     static constexpr auto isLegalNumberOfCacheLines(uint32_t num) noexcept {
         switch (num) {
             case 1:
@@ -156,76 +176,46 @@ public:
             default:
                 return false;
         }
-
     }
     static_assert(DataCacheSize <= TargetBoard::oneFourthSRAMAmountInBytes(), "Overall cache size must be less than or equal to one fourth of SRAM");
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
-    explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) {
-        // start with the first entry
-
-    }
+    explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
-        for (const ASingleCacheLine & line : lines_) {
-            if (line.respondsTo(targetAddress)) {
-                // cache hit!
-                return line.getByte(targetAddress);
-            }
-        }
-        // cache miss
-        // need to replace a cache line
-        return cacheMiss(targetAddress).getByte(targetAddress);
-
+        return getCacheLine().getByte(targetAddress);
     }
     [[nodiscard]] uint16_t getWord(uint32_t targetAddress) noexcept {
-        for (const ASingleCacheLine& line : lines_) {
-            if (line.respondsTo(targetAddress)) {
-                // cache hit!
-                return line.getWord(targetAddress);
-            }
-        }
-        // cache miss
-        // need to replace a cache line
-        return cacheMiss(targetAddress).getWord(targetAddress);
+        return getCacheLine(targetAddress).getWord(targetAddress);
     }
     void setByte(uint32_t targetAddress, uint8_t value) noexcept {
-        // oh we need to look for it instead
-        for (ASingleCacheLine & line : lines_) {
-            if (line.respondsTo(targetAddress)) {
-                // cache hit!
-                line.setByte(targetAddress, value);
-                return;
-            }
-        }
-        // cache miss
-        // need to replace a cache line
-        cacheMiss(targetAddress).setByte(targetAddress, value);
+        getCacheLine(targetAddress).setByte(targetAddress, value);
     }
     void setWord(uint32_t targetAddress, uint16_t value) noexcept {
-        for (ASingleCacheLine& line : lines_) {
-            if (line.respondsTo(targetAddress)) {
-                // cache hit!
-                line.setWord(targetAddress, value);
-                return;
-            }
-        }
-        // cache miss
-        // need to replace a cache line
-        cacheMiss(targetAddress).setWord(targetAddress, value);
+        getCacheLine(targetAddress).setWord(targetAddress, value);
     }
 private:
-
+    static constexpr auto computeTargetLine(uint32_t address) noexcept {
+        if constexpr (NumberOfCacheLines == 0) {
+            return 0;
+        } else {
+            // we want the bits following the offset into the cache line itself
+            return (address & (~TagOffsetMask)) >> TagOffsetShiftAmount; // make sure that we actually get the thing itself
+        }
+    }
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
      * @param targetAddress
      * @return The line that was updated
      */
-    ASingleCacheLine& cacheMiss(uint32_t targetAddress) noexcept {
+    ASingleCacheLine& getCacheLine(uint32_t targetAddress) noexcept {
         // instead of using random directly, use an incrementing counter to choose a line to invalidate
         // thus at no point will we actually know what we've dropped.
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
-        auto lineToFlush = cacheIndex_;
-        auto& replacementLine = lines_[lineToFlush];
-        replacementLine.reset(alignedAddress, thing_);
+        auto lineToCheck = computeTargetLine(alignedAddress);
+        auto& replacementLine = lines_[lineToCheck];
+        // now check and see if that line needs to be replaced or not
+        if (!replacementLine.respondsTo(alignedAddress)) {
+            replacementLine.reset(alignedAddress, thing_);
+        }
         return replacementLine;
     }
 public:
