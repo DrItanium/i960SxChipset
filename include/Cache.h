@@ -56,7 +56,7 @@ template<uint32_t size = 16>
 struct CacheLine {
 public:
     [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
-        return valid_ && ((address_ <= targetAddress) && (targetAddress < endAddress_));
+        return valid_ && ((address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize)));
     }
     [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
         auto base = computeCacheByteOffset(targetAddress);
@@ -115,7 +115,6 @@ public:
         dirty_ = false;
         valid_ = true;
         address_ = address;
-        endAddress_ = address + CacheLineSize;
         thing.read(address_, buf, CacheLineSize);
     }
     /**
@@ -131,7 +130,6 @@ public:
         dirty_ = false;
         valid_ = false;
         address_ = 0;
-        endAddress_ = 0;
     }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
@@ -139,7 +137,6 @@ private:
      * @brief The base address of the cache line
      */
     uint32_t address_ = 0;
-    uint32_t endAddress_ = 0;
     /**
      * @brief The cache line contents itself
      */
