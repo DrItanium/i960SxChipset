@@ -213,6 +213,7 @@ public:
         cacheMiss(targetAddress).setWord(targetAddress, value);
     }
 private:
+
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
      * @param targetAddress
@@ -225,9 +226,6 @@ private:
         auto lineToFlush = cacheIndex_;
         auto& replacementLine = lines_[lineToFlush];
         replacementLine.reset(alignedAddress, thing_);
-        ++cacheIndex_;
-        cacheIndex_ %= NumberOfCacheLines;
-        cacheEmpty_ = false;
         return replacementLine;
     }
 public:
@@ -318,18 +316,13 @@ private:
      * @brief Commit all entries in the cache back to the underlying memory type
      */
     void invalidateEntireCache() noexcept {
-        if (!cacheEmpty_) {
-            for (auto &line : lines_) {
-                line.invalidate(thing_);
-            }
-            cacheEmpty_ = true;
+        for (auto &line : lines_) {
+            line.invalidate(thing_);
         }
     }
 private:
     MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
-    bool cacheEmpty_ = true;
     bool enabled_ = true;
-    uint16_t cacheIndex_ = 0;
 };
 #endif //I960SXCHIPSET_CACHE_H
