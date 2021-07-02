@@ -187,7 +187,7 @@ private:
             return 0;
         } else {
             // we want the bits following the offset into the cache line itself
-            return (address & (~TagOffsetMask)) >> TagOffsetShiftAmount; // make sure that we actually get the thing itself
+            return (address & (TagOffsetMask)) >> TagOffsetShiftAmount; // make sure that we actually get the thing itself
         }
     }
     /**
@@ -200,21 +200,23 @@ private:
         // thus at no point will we actually know what we've dropped.
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
         auto lineToCheck = computeTargetLine(alignedAddress);
-        if constexpr (false) {
-            Serial.print(F("ALIGNED ADDRESS 0x"));
-            Serial.println(alignedAddress, HEX);
-            Serial.print(F("Tag Offset Shift Amount: 0x"));
-            Serial.println(TagOffsetShiftAmount, HEX);
-            Serial.print(F("Tag Offset Mask: 0x"));
-            Serial.println(TagOffsetMask, HEX);
-            Serial.print(F("~Tag Offset Mask: 0x"));
-            Serial.println(~TagOffsetMask, HEX);
-            Serial.print(F("LINE TO CHECK "));
-            Serial.println(lineToCheck, HEX);
-        }
         auto& replacementLine = lines_[lineToCheck];
         // now check and see if that line needs to be replaced or not
         if (!replacementLine.respondsTo(alignedAddress)) {
+            if constexpr (false) {
+                Serial.print(F("\t0x"));
+                Serial.print(alignedAddress, HEX);
+                if constexpr (false) {
+                    Serial.print(F(", 0x"));
+                    Serial.print(TagOffsetShiftAmount, HEX);
+                    Serial.print(F(", 0x"));
+                    Serial.print(TagOffsetMask, HEX);
+                    Serial.print(F(", 0x"));
+                    Serial.print(~TagOffsetMask, HEX);
+                }
+                Serial.print(F(", 0x"));
+                Serial.println(lineToCheck, HEX);
+            }
             replacementLine.reset(alignedAddress, thing_);
         }
         return replacementLine;
