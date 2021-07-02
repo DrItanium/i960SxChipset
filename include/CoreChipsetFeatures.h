@@ -118,9 +118,10 @@ private:
     static uint8_t readLed() noexcept;
     [[nodiscard]] uint16_t invokePatternEngine() noexcept;
     [[nodiscard]] uint16_t invokeCopyEngine() noexcept;
-    static constexpr auto CopyEngineCacheSize = 512 / 4;
-    static constexpr auto PatternEngineCacheEntries = 32 / 4;
-    static constexpr auto PatternEngineCacheSizeInBytes = sizeof(SplitWord128) * PatternEngineCacheEntries;
+    static constexpr auto UnderlyingCacheSizeInBytes = 512;
+    static constexpr auto CopyEngineCacheSize = UnderlyingCacheSizeInBytes;
+    static constexpr auto PatternEngineCacheSizeInBytes = UnderlyingCacheSizeInBytes;
+    static constexpr auto PatternEngineCacheEntries = PatternEngineCacheSizeInBytes / sizeof(SplitWord128);
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
@@ -130,7 +131,9 @@ private:
     SplitWord32 copyEngineSourceAddress_;
     SplitWord32 copyEngineDestinationAddress_;
     SplitWord32 copyEngineLength_;
-    uint8_t copyEngineBuffer_[CopyEngineCacheSize] = { 0 };
-    SplitWord128 patternCache_[PatternEngineCacheEntries] = { 0 };
+    union {
+        uint8_t copyEngineBuffer_[CopyEngineCacheSize] = { 0 };
+        SplitWord128 patternCache_[PatternEngineCacheEntries];
+    };
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
