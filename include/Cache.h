@@ -147,7 +147,7 @@ public:
     static constexpr auto CacheLineSize = cacheLineSize;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
     static constexpr auto CacheLineAddressMask = ASingleCacheLine::CacheByteMask;
-    static constexpr auto TagOffsetShiftAmount = numberOfAddressBitsForGivenByteSize(ASingleCacheLine::CacheOffsetBitConsumption);
+    static constexpr auto TagOffsetShiftAmount = ASingleCacheLine::CacheOffsetBitConsumption;
     //we want this mask to start immediately after the the cache line mask
     static constexpr Address TagOffsetMask = NumberOfCacheLinesMask << TagOffsetShiftAmount;
     static constexpr auto isLegalNumberOfCacheLines(uint32_t num) noexcept {
@@ -200,6 +200,18 @@ private:
         // thus at no point will we actually know what we've dropped.
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
         auto lineToCheck = computeTargetLine(alignedAddress);
+        if constexpr (false) {
+            Serial.print(F("ALIGNED ADDRESS 0x"));
+            Serial.println(alignedAddress, HEX);
+            Serial.print(F("Tag Offset Shift Amount: 0x"));
+            Serial.println(TagOffsetShiftAmount, HEX);
+            Serial.print(F("Tag Offset Mask: 0x"));
+            Serial.println(TagOffsetMask, HEX);
+            Serial.print(F("~Tag Offset Mask: 0x"));
+            Serial.println(~TagOffsetMask, HEX);
+            Serial.print(F("LINE TO CHECK "));
+            Serial.println(lineToCheck, HEX);
+        }
         auto& replacementLine = lines_[lineToCheck];
         // now check and see if that line needs to be replaced or not
         if (!replacementLine.respondsTo(alignedAddress)) {
@@ -231,10 +243,6 @@ public:
     void begin() noexcept override {
         thing_.begin();
         // since we have all the time in the world on startup, just fill the cache up to speed up startup
-        for (Address i = 0; i < NumberOfCacheLines; ++i) {
-            // fill the cache up before booting up
-            (void)getByte(i * CacheLineSize);
-        }
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // use the cache where it makes sense
