@@ -220,35 +220,19 @@ private:
     }
 public:
     uint8_t read8(Address address) noexcept override {
-        if (enabled_) {
-            return getByte(address);
-        } else {
-            return thing_.read8(address);
-        }
+        return getByte(address);
     }
     uint16_t read16(Address address) noexcept override {
-        if (enabled_) {
-            return getWord(address);
-        } else {
-            return thing_.read16(address);
-        }
+        return getWord(address);
     }
     [[nodiscard]] bool respondsTo(Address address) const noexcept override {
         return thing_.respondsTo(address);
     }
     void write8(Address address, uint8_t value) noexcept override {
-        if (enabled_) {
             setByte(address, value);
-        } else {
-            thing_.write8(address, value);
-        }
     }
     void write16(Address address, uint16_t value) noexcept override {
-        if (enabled_) {
-            setWord(address, value);
-        } else {
-            thing_.write16(address, value);
-        }
+        setWord(address, value);
     }
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
@@ -264,58 +248,22 @@ public:
         }
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        //return MemoryThing::blockWrite(address, buf, capacity);
-        /// @todo see if it makes more sense to require that the user disables the cache if they need to do such a thing
-
-        if (enabled_) {
-            // use the cache where it makes sense
-            size_t numWritten = 0;
-            for (size_t i = 0; i < capacity; ++i, ++address, ++numWritten) {
-                setByte(address, buf[i]);
-            }
-            return numWritten;
-        } else {
-            // directly write to the backing store
-            return thing_.blockWrite(address, buf, capacity);
+        // use the cache where it makes sense
+        size_t numWritten = 0;
+        for (size_t i = 0; i < capacity; ++i, ++address, ++numWritten) {
+            setByte(address, buf[i]);
         }
+        return numWritten;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        // we want to directly read from the underlying memory thing using the buffer so we need to do cache coherency checks as well
-        /// @todo figure out if we actually need to disable the cache when performing a read from memory. I don't think we need to actually
-        if (enabled_) {
-            size_t numRead = 0;
-            for (size_t i = 0; i < capacity; ++i, ++address, ++numRead) {
-                buf[i] = getByte(address);
-            }
-            return numRead;
-        } else {
-            // when the cache is disabled do the direct reads and writes
-            return thing_.blockRead(address, buf, capacity);
+        size_t numRead = 0;
+        for (size_t i = 0; i < capacity; ++i, ++address, ++numRead) {
+            buf[i] = getByte(address);
         }
-    }
-    void disableCache() noexcept override {
-        if (enabled_) {
-            enabled_ = false;
-            invalidateEntireCache();
-        }
-    }
-    void enableCache() noexcept override {
-        if (!enabled_) {
-            enabled_ = true;
-        }
-    }
-private:
-    /**
-     * @brief Commit all entries in the cache back to the underlying memory type
-     */
-    void invalidateEntireCache() noexcept {
-        for (auto &line : lines_) {
-            line.invalidate(thing_);
-        }
+        return numRead;
     }
 private:
     MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
-    bool enabled_ = true;
 };
 #endif //I960SXCHIPSET_CACHE_H
