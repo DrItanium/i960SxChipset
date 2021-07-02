@@ -117,20 +117,6 @@ public:
         address_ = address;
         thing.read(address_, buf, CacheLineSize);
     }
-    /**
-     * @brief Invalidate the cache line and mark it as invalid
-     * @param thing The memory thing to commit to
-     */
-    void invalidate(MemoryThing& thing) noexcept {
-        if (valid_ && dirty_) {
-            byte *buf = reinterpret_cast<byte *>(components_);
-            thing.write(address_, buf, CacheLineSize);
-            // purge the contents of memory
-        }
-        dirty_ = false;
-        valid_ = false;
-        address_ = 0;
-    }
     [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
     /**
@@ -142,8 +128,11 @@ private:
      */
     SplitWord16 components_[ComponentSize];
     static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!");
-    bool dirty_ = false;
-    bool valid_ = false;
+    union {
+        byte status_ = 0;
+        bool dirty_ : 1;
+        bool valid_ : 1;
+    };
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
