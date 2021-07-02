@@ -177,6 +177,7 @@ SDCardFilesystemInterface::write16(Address address, uint16_t value) noexcept {
                 command_ = static_cast<SDCardOperations>(value);
                 break;
             case Registers::FileId:
+                /// @todo perform sanity check that this is a valid file id right here and now
                 fileId_ = value;
                 break;
             case Registers::ModeBits:
@@ -344,6 +345,7 @@ SDCardFilesystemInterface::openFile() noexcept {
 }
 uint16_t
 SDCardFilesystemInterface::readFile() noexcept {
+    /// @todo simplify this code to just return a byte or not
     // we have the fileId, address to read into within memory, and the number of items to write
     if (fileId_ >= MaxFileCount) {
         // bad file id!
@@ -371,7 +373,6 @@ SDCardFilesystemInterface::readFile() noexcept {
                 result_.words[0] = 0;
                 return 0;
             } else {
-                TemporarilyDisableThingCache disableCacheForThing(thing);
                 // we can keep the cache on at this point in time now
                 if (count > 0 && count <= TransferBufferSize) {
                     bytesRead = theFile.read(transferBuffer_, count);
@@ -389,9 +390,7 @@ SDCardFilesystemInterface::readFile() noexcept {
                     Serial.println(F("]"));
 #endif
                     Address a = baseAddress;
-                    for (Address i = 0;
-                         i < times;
-                         ++i, a += TransferBufferSize) {
+                    for (Address i = 0; i < times; ++i, a += TransferBufferSize) {
                         uint32_t actualBytesRead = theFile.read(transferBuffer_, TransferBufferSize);
                         (void) thing->write(a, transferBuffer_, actualBytesRead);
                         bytesRead += actualBytesRead;
