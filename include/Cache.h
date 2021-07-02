@@ -130,8 +130,11 @@ private:
     static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!");
     union {
         byte status_ = 0;
-        bool dirty_ : 1;
-        bool valid_ : 1;
+        struct
+        {
+            bool dirty_: 1;
+            bool valid_: 1;
+        };
     };
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
