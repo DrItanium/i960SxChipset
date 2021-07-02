@@ -67,7 +67,7 @@ public:
     void setByte(uint32_t address, uint8_t value) noexcept {
         dirty_ = true;
         auto base = computeCacheByteOffset(address);
-        auto componentId = computeCacheWordOffset(address);
+        auto componentId = base >> 1;
         auto offsetId = base & 1;
         components_[componentId].bytes[offsetId] = value;
     }
