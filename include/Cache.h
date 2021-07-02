@@ -257,8 +257,11 @@ public:
 
     void begin() noexcept override {
         thing_.begin();
-        // cache the first entry
-        (void)getByte(0);
+        // since we have all the time in the world on startup, just fill the cache up to speed up startup
+        for (Address i = 0; i < NumberOfCacheLines; ++i) {
+            // fill the cache up before booting up
+            (void)getByte(i * CacheLineSize);
+        }
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         //return MemoryThing::blockWrite(address, buf, capacity);
