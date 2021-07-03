@@ -147,16 +147,18 @@ private:
     };
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
-template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
+template<uint32_t numLines = 16, uint32_t cacheLineSize = 32, uint32_t wayCount = 2>
 class DataCache : public MemoryThing {
 public:
     using ASingleCacheLine = CacheLine<cacheLineSize>;
+    static constexpr auto NumberOfWays = wayCount;
+    static constexpr auto CacheLineSize = cacheLineSize;
     static constexpr auto NumberOfCacheLines = numLines;
     static constexpr auto NumberOfCacheLinesMask = numLines - 1;
-    static constexpr auto CacheLineSize = cacheLineSize;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
     static constexpr auto CacheLineAddressMask = ASingleCacheLine::CacheByteMask;
     static constexpr auto TagOffsetShiftAmount = ASingleCacheLine::CacheOffsetBitConsumption;
+    static_assert(NumberOfWays > 0, "Must have a minimum of 1 way");
     //we want this mask to start immediately after the the cache line mask
     static constexpr Address TagOffsetMask = NumberOfCacheLinesMask << TagOffsetShiftAmount;
     static constexpr auto isLegalNumberOfCacheLines(uint32_t num) noexcept {
@@ -175,8 +177,22 @@ public:
                 return false;
         }
     }
+    static constexpr auto isLegalNumberOfWays(uint32_t num) noexcept {
+        switch (num) {
+            case 1:
+            case 2:
+            case 4:
+            case 8:
+            case 16:
+            case 32:
+                return true;
+            default:
+                return false;
+        }
+    }
     static_assert(DataCacheSize <= TargetBoard::oneFourthSRAMAmountInBytes(), "Overall cache size must be less than or equal to one fourth of SRAM");
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
+    static_assert(isLegalNumberOfWays(NumberOfWays));
     explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
         return getCacheLine(targetAddress).getByte(targetAddress);
@@ -210,25 +226,40 @@ private:
         auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
         auto lineToCheck = computeTargetLine(alignedAddress);
         auto& replacementLine = lines_[lineToCheck];
-        // now check and see if that line needs to be replaced or not
-        if (!replacementLine.respondsTo(alignedAddress)) {
-            if constexpr (false) {
-                Serial.print(F("\t0x"));
-                Serial.print(alignedAddress, HEX);
-                if constexpr (false) {
-                    Serial.print(F(", 0x"));
-                    Serial.print(TagOffsetShiftAmount, HEX);
-                    Serial.print(F(", 0x"));
-                    Serial.print(TagOffsetMask, HEX);
-                    Serial.print(F(", 0x"));
-                    Serial.print(~TagOffsetMask, HEX);
-                }
-                Serial.print(F(", 0x"));
-                Serial.println(lineToCheck, HEX);
+        if constexpr (NumberOfWays == 1) {
+            if (!replacementLine[0].respondsTo(alignedAddress)) {
+                replacementLine[0].reset(alignedAddress, thing_);
             }
-            replacementLine.reset(alignedAddress, thing_);
+            return replacementLine[0];
+        } else if constexpr (NumberOfWays == 2) {
+            if (auto& way0 = replacementLine[0]; way0.respondsTo(alignedAddress)) {
+                return way0;
+            } else if (auto& way1 = replacementLine[1]; way1.respondsTo(alignedAddress)) {
+                return way1;
+            } else {
+                auto& resultantWay = replacementLine[wayToEliminate & 1];
+                ++wayToEliminate;
+                resultantWay.reset(alignedAddress, thing_);
+                return resultantWay;
+            }
+            // okay we have a mismatch so instead choose one to reset
+        } else {
+            ASingleCacheLine* firstFreeCacheLine = nullptr;
+            for (uint32_t index = 0; index < NumberOfWays; ++index) {
+                if (auto& way = replacementLine[index]; way.respondsTo(alignedAddress)) {
+                    return way;
+                } else if ((!way.isValid()) && (!firstFreeCacheLine)) {
+                    firstFreeCacheLine = &way;
+                }
+            }
+            if (!firstFreeCacheLine) {
+                // we need to choose a cacheLine to use "randomly"
+                firstFreeCacheLine = &replacementLine[wayToEliminate % NumberOfWays];
+                ++wayToEliminate;
+            }
+            firstFreeCacheLine->reset(alignedAddress, thing_);
+            return *firstFreeCacheLine;
         }
-        return replacementLine;
     }
 public:
     uint8_t read8(Address address) noexcept override {
@@ -308,12 +339,15 @@ public:
 private:
     void invalidate() noexcept {
         for (auto& line : lines_) {
-            line.invalidate(thing_);
+            for (auto& way : line) {
+                way.invalidate(thing_);
+            }
         }
     }
 private:
     MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
     bool enabled_ = true;
+    byte wayToEliminate = 0;
 };
 #endif //I960SXCHIPSET_CACHE_H
