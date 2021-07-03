@@ -84,18 +84,18 @@ CoreChipsetFeatures::read16(Address address) noexcept {
         case Registers::PatternEngine_ActualPattern101: return pattern_.shorts[5];
         case Registers::PatternEngine_ActualPattern110: return pattern_.shorts[6];
         case Registers::PatternEngine_ActualPattern111: return pattern_.shorts[7];
-        case Registers::PatternEngine_LengthLower: return patternLength_.halves[0]; break;
-        case Registers::PatternEngine_LengthUpper: return patternLength_.halves[1]; break;
-        case Registers::PatternEngine_StartAddressLower: return patternAddress_.halves[0]; break;
-        case Registers::PatternEngine_StartAddressUpper: return patternAddress_.halves[1]; break;
+        case Registers::PatternEngine_LengthLower: return patternLength_.halves[0];
+        case Registers::PatternEngine_LengthUpper: return patternLength_.halves[1];
+        case Registers::PatternEngine_StartAddressLower: return patternAddress_.halves[0];
+        case Registers::PatternEngine_StartAddressUpper: return patternAddress_.halves[1];
         case Registers::PatternEngine_Doorbell: return invokePatternEngine();
-        case Registers::CopyEngine_DestinationAddressLower: return copyEngineDestinationAddress_.halves[0]; break;
-        case Registers::CopyEngine_DestinationAddressUpper: return copyEngineDestinationAddress_.halves[1] ; break;
-        case Registers::CopyEngine_SourceAddressLower: return copyEngineSourceAddress_.halves[0] ; break;
-        case Registers::CopyEngine_SourceAddressUpper: return copyEngineSourceAddress_.halves[1] ; break;
-        case Registers::CopyEngine_LengthLower: return copyEngineLength_.halves[0] ; break;
-        case Registers::CopyEngine_LengthUpper: return copyEngineLength_.halves[1] ; break;
-        case Registers::CopyEngine_Doorbell: return invokeCopyEngine(); break;
+        case Registers::CopyEngine_DestinationAddressLower: return copyEngineDestinationAddress_.halves[0];
+        case Registers::CopyEngine_DestinationAddressUpper: return copyEngineDestinationAddress_.halves[1] ;
+        case Registers::CopyEngine_SourceAddressLower: return copyEngineSourceAddress_.halves[0] ;
+        case Registers::CopyEngine_SourceAddressUpper: return copyEngineSourceAddress_.halves[1] ;
+        case Registers::CopyEngine_LengthLower: return copyEngineLength_.halves[0] ;
+        case Registers::CopyEngine_LengthUpper: return copyEngineLength_.halves[1] ;
+        case Registers::CopyEngine_Doorbell: return invokeCopyEngine();
         default: return 0;
     }
 }
