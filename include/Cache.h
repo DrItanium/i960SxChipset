@@ -86,6 +86,7 @@ public:
             case 128:
             case 256:
             case 512:
+            case 1024:
                 return true;
             default:
                 return false;
