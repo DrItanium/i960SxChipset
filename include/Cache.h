@@ -154,7 +154,6 @@ public:
     static constexpr auto NumberOfWays = wayCount;
     static constexpr auto CacheLineSize = cacheLineSize;
     static constexpr auto NumberOfCacheLines = numLines;
-    static constexpr auto NumberOfCacheLinesMask = numLines - 1;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
     static constexpr auto NumberOfCacheSets = DataCacheSize / (CacheLineSize * NumberOfWays);
     static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
