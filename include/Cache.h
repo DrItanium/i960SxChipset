@@ -156,20 +156,22 @@ public:
     static constexpr auto NumberOfCacheLines = numLines;
     static constexpr auto NumberOfCacheLinesMask = numLines - 1;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
-    static constexpr auto NumSets = DataCacheSize / (CacheLineSize * NumberOfWays);
+    static constexpr auto NumberOfCacheSets = DataCacheSize / (CacheLineSize * NumberOfWays);
     static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
     static constexpr auto CacheLineAddressMask = ASingleCacheLine::CacheByteMask;
     static constexpr auto TagOffsetShiftAmount = ASingleCacheLine::CacheOffsetBitConsumption;
     static constexpr auto Address_OffsetBitCount = ASingleCacheLine :: CacheOffsetBitConsumption;
-    static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumSets);
+    static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumberOfCacheSets);
     static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
     union CacheAddress {
+        constexpr explicit CacheAddress(uint32_t baseValue = 0) noexcept : rawValue(baseValue) { }
         uint32_t rawValue = 0;
         struct {
             uint32_t offset : Address_OffsetBitCount;
             uint32_t index : Address_SetIndexBitCount;
             uint32_t tag : Address_TagBitCount;
         };
+        [[nodiscard]] constexpr uint32_t getAlignedAddress() const noexcept { return ASingleCacheLine ::computeAlignedOffset( rawValue); }
     };
     static_assert(sizeof(CacheAddress) == sizeof(uint32_t));
     static_assert(NumberOfWays > 0, "Must have a minimum of 1 way");
@@ -237,11 +239,10 @@ private:
     ASingleCacheLine& getCacheLine(uint32_t targetAddress) noexcept {
         // instead of using random directly, use an incrementing counter to choose a line to invalidate
         // thus at no point will we actually know what we've dropped.
-        if constexpr (NumberOfWays == 1) {
+        if constexpr (CacheAddress addr(targetAddress); IsDirectMappedCache) {
             // direct mapped cache
-            auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
-            auto lineToCheck = computeTargetLine(alignedAddress);
-            auto& replacementLine = lines_[lineToCheck];
+            auto alignedAddress = addr.getAlignedAddress();
+            auto& replacementLine = lines_[addr.index];
             if (!replacementLine.respondsTo(alignedAddress)) {
                 replacementLine.reset(alignedAddress, thing_);
             }
