@@ -158,8 +158,6 @@ public:
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
     static constexpr auto NumberOfCacheSets = DataCacheSize / (CacheLineSize * NumberOfWays);
     static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
-    static constexpr auto CacheLineAddressMask = ASingleCacheLine::CacheByteMask;
-    static constexpr auto TagOffsetShiftAmount = ASingleCacheLine::CacheOffsetBitConsumption;
     static constexpr auto Address_OffsetBitCount = ASingleCacheLine :: CacheOffsetBitConsumption;
     static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumberOfCacheSets);
     static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
@@ -175,8 +173,6 @@ public:
     };
     static_assert(sizeof(CacheAddress) == sizeof(uint32_t));
     static_assert(NumberOfWays > 0, "Must have a minimum of 1 way");
-    //we want this mask to start immediately after the the cache line mask
-    static constexpr Address TagOffsetMask = NumberOfCacheLinesMask << TagOffsetShiftAmount;
     static constexpr auto isLegalNumberOfCacheLines(uint32_t num) noexcept {
         switch (num) {
             case 1:
@@ -223,14 +219,6 @@ public:
         getCacheLine(targetAddress).setWord(targetAddress, value);
     }
 private:
-    static constexpr auto computeTargetLine(uint32_t address) noexcept {
-        if constexpr (NumberOfCacheLines == 0) {
-            return 0;
-        } else {
-            // we want the bits following the offset into the cache line itself
-            return (address & (TagOffsetMask)) >> TagOffsetShiftAmount; // make sure that we actually get the thing itself
-        }
-    }
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
      * @param targetAddress
