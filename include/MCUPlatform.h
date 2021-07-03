@@ -62,8 +62,10 @@ public:
     constexpr MCUConfiguration(uint32_t sramSize,
                                uint32_t dataCacheLineCount,
                                uint32_t dataCacheLineSize,
+                               uint32_t dataCacheWayCount,
                                uint32_t instructionCacheLineCount,
                                uint32_t instructionCacheLineSize,
+                               uint32_t instructionCacheWayCount,
                                uint32_t maxOpenFiles,
                                uint32_t ioExpanderSpeedCap,
                                bool hasBuiltinSDCard,
@@ -74,6 +76,8 @@ public:
                              instructionCacheLineSize_(instructionCacheLineSize),
                              maximumNumberOfOpenFiles_(maxOpenFiles),
                              ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
+                             instructionWayCount_(instructionCacheWayCount),
+                             dataWayCount_(dataCacheWayCount),
                              builtinSDCard_(hasBuiltinSDCard),
                              usesDisplayShield_(usesDisplayShield) { }
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
@@ -85,6 +89,8 @@ public:
     [[nodiscard]] constexpr auto hasBuiltinSDCard() const noexcept { return builtinSDCard_; }
     [[nodiscard]] constexpr auto usesDisplayShield() const noexcept { return usesDisplayShield_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
+    [[nodiscard]] constexpr auto getDataCacheWayCount() const noexcept { return dataWayCount_; }
+    [[nodiscard]] constexpr auto getInstructionCacheWayCount() const noexcept { return instructionWayCount_; }
 private:
     uint32_t sramAmount_;
     uint32_t dataCacheLineCount_;
@@ -93,16 +99,18 @@ private:
     uint32_t instructionCacheLineSize_;
     uint32_t maximumNumberOfOpenFiles_;
     uint32_t ioExpanderPeripheralSpeed_;
+    uint32_t instructionWayCount_;
+    uint32_t dataWayCount_;
     bool builtinSDCard_;
     bool usesDisplayShield_;
 };
 template<TargetMCU mcu>
-constexpr MCUConfiguration BoardDescription = {0, 8, 512, 8, 512, 32, 10_MHz, false, false};
+constexpr MCUConfiguration BoardDescription = {0, 8, 512, 1, 8, 512, 1, 32, 10_MHz, false, false};
 template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         16_KB,
-        256, 16,
-        256, 16,
+        256, 16, 1,
+        256, 16, 1,
         32,
         10_MHz,
         false,

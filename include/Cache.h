@@ -156,8 +156,22 @@ public:
     static constexpr auto NumberOfCacheLines = numLines;
     static constexpr auto NumberOfCacheLinesMask = numLines - 1;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
+    static constexpr auto NumSets = DataCacheSize / (CacheLineSize * NumberOfWays);
+    static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
     static constexpr auto CacheLineAddressMask = ASingleCacheLine::CacheByteMask;
     static constexpr auto TagOffsetShiftAmount = ASingleCacheLine::CacheOffsetBitConsumption;
+    static constexpr auto Address_OffsetBitCount = ASingleCacheLine :: CacheOffsetBitConsumption;
+    static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumSets);
+    static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
+    union CacheAddress {
+        uint32_t rawValue = 0;
+        struct {
+            uint32_t offset : Address_OffsetBitCount;
+            uint32_t index : Address_SetIndexBitCount;
+            uint32_t tag : Address_TagBitCount;
+        };
+    };
+    static_assert(sizeof(CacheAddress) == sizeof(uint32_t));
     static_assert(NumberOfWays > 0, "Must have a minimum of 1 way");
     //we want this mask to start immediately after the the cache line mask
     static constexpr Address TagOffsetMask = NumberOfCacheLinesMask << TagOffsetShiftAmount;
@@ -322,4 +336,24 @@ private:
     ASingleCacheLine lines_[NumberOfCacheLines];
     bool enabled_ = true;
 };
+// Sanity checks to make sure that my math is right
+static_assert(DataCache<256,16,1>::Address_OffsetBitCount == 4);
+static_assert(DataCache<256,16,1>::Address_SetIndexBitCount == 8);
+static_assert(DataCache<256,16,1>::Address_TagBitCount == 20);
+static_assert(DataCache<256,16,2>::Address_OffsetBitCount == 4);
+static_assert(DataCache<256,16,2>::Address_SetIndexBitCount == 7);
+static_assert(DataCache<256,16,2>::Address_TagBitCount == 21);
+static_assert(DataCache<256,16,4>::Address_OffsetBitCount == 4);
+static_assert(DataCache<256,16,4>::Address_SetIndexBitCount == 6);
+static_assert(DataCache<256,16,4>::Address_TagBitCount == 22);
+static_assert(DataCache<256,16,8>::Address_OffsetBitCount == 4);
+static_assert(DataCache<256,16,8>::Address_SetIndexBitCount == 5);
+static_assert(DataCache<256,16,8>::Address_TagBitCount == 23);
+static_assert(DataCache<256,16,16>::Address_OffsetBitCount == 4);
+static_assert(DataCache<256,16,16>::Address_SetIndexBitCount == 4);
+static_assert(DataCache<256,16,16>::Address_TagBitCount == 24);
+static_assert(DataCache<256,16,32>::Address_OffsetBitCount == 4);
+static_assert(DataCache<256,16,32>::Address_SetIndexBitCount == 3);
+static_assert(DataCache<256,16,32>::Address_TagBitCount == 25);
+
 #endif //I960SXCHIPSET_CACHE_H
