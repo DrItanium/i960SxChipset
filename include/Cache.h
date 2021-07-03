@@ -147,7 +147,7 @@ private:
     };
 };
 static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
-template<uint32_t numLines = 16, uint32_t cacheLineSize = 32, uint32_t wayCount = 2>
+template<uint32_t numLines = 16, uint32_t cacheLineSize = 32, uint32_t wayCount = 1>
 class DataCache : public MemoryThing {
 public:
     using ASingleCacheLine = CacheLine<cacheLineSize>;
@@ -223,42 +223,17 @@ private:
     ASingleCacheLine& getCacheLine(uint32_t targetAddress) noexcept {
         // instead of using random directly, use an incrementing counter to choose a line to invalidate
         // thus at no point will we actually know what we've dropped.
-        auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
-        auto lineToCheck = computeTargetLine(alignedAddress);
-        auto& replacementLine = lines_[lineToCheck];
         if constexpr (NumberOfWays == 1) {
-            if (!replacementLine[0].respondsTo(alignedAddress)) {
-                replacementLine[0].reset(alignedAddress, thing_);
+            // direct mapped cache
+            auto alignedAddress = ASingleCacheLine::computeAlignedOffset(targetAddress);
+            auto lineToCheck = computeTargetLine(alignedAddress);
+            auto& replacementLine = lines_[lineToCheck];
+            if (!replacementLine.respondsTo(alignedAddress)) {
+                replacementLine.reset(alignedAddress, thing_);
             }
-            return replacementLine[0];
-        } else if constexpr (NumberOfWays == 2) {
-            if (auto& way0 = replacementLine[0]; way0.respondsTo(alignedAddress)) {
-                return way0;
-            } else if (auto& way1 = replacementLine[1]; way1.respondsTo(alignedAddress)) {
-                return way1;
-            } else {
-                auto& resultantWay = replacementLine[wayToEliminate & 1];
-                ++wayToEliminate;
-                resultantWay.reset(alignedAddress, thing_);
-                return resultantWay;
-            }
-            // okay we have a mismatch so instead choose one to reset
+            return replacementLine;
         } else {
-            ASingleCacheLine* firstFreeCacheLine = nullptr;
-            for (uint32_t index = 0; index < NumberOfWays; ++index) {
-                if (auto& way = replacementLine[index]; way.respondsTo(alignedAddress)) {
-                    return way;
-                } else if ((!way.isValid()) && (!firstFreeCacheLine)) {
-                    firstFreeCacheLine = &way;
-                }
-            }
-            if (!firstFreeCacheLine) {
-                // we need to choose a cacheLine to use "randomly"
-                firstFreeCacheLine = &replacementLine[wayToEliminate % NumberOfWays];
-                ++wayToEliminate;
-            }
-            firstFreeCacheLine->reset(alignedAddress, thing_);
-            return *firstFreeCacheLine;
+            signalHaltState(F("MULTI WAY CACHES ARE UNIMPLEMENTED!"));
         }
     }
 public:
@@ -339,15 +314,12 @@ public:
 private:
     void invalidate() noexcept {
         for (auto& line : lines_) {
-            for (auto& way : line) {
-                way.invalidate(thing_);
-            }
+            line.invalidate(thing_);
         }
     }
 private:
     MemoryThing& thing_;
     ASingleCacheLine lines_[NumberOfCacheLines];
     bool enabled_ = true;
-    byte wayToEliminate = 0;
 };
 #endif //I960SXCHIPSET_CACHE_H
