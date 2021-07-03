@@ -79,8 +79,12 @@ public:
         }
     }
 };
-using RAMThing = DataCache<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>;
-using ROMThing = DataCache<TargetBoard::numberOfInstructionCacheLines(), TargetBoard::getInstructionCacheLineSize()>;
+using RAMThing = DataCache<TargetBoard::numberOfDataCacheLines(),
+        TargetBoard::getDataCacheLineSize(),
+        TargetBoard::getDataCacheWayCount()>;
+using ROMThing = DataCache<TargetBoard::numberOfInstructionCacheLines(),
+        TargetBoard::getInstructionCacheLineSize(),
+        TargetBoard::getInstructionCacheWayCount()>;
 
 class ROMTextSection : public MemoryMappedFile {
 public:

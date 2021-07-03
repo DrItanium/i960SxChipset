@@ -181,6 +181,8 @@ public:
     [[nodiscard]] static constexpr auto getInstructionCacheLineSize() noexcept { return BoardDescription<getMCUTarget()>.getInstructionCacheLineSize(); }
     [[nodiscard]] static constexpr auto maximumNumberOfOpenFilesFromSDCard() noexcept { return BoardDescription<getMCUTarget()>.getMaximumNumberOfOpenFiles(); }
     [[nodiscard]] static constexpr auto runIOExpanderSPIInterfaceAt() noexcept { return BoardDescription<getMCUTarget()>.runIOExpanderSPIInterfaceAt(); }
+    [[nodiscard]] static constexpr auto getInstructionCacheWayCount() noexcept { return BoardDescription<getMCUTarget()>.getInstructionCacheWayCount(); }
+    [[nodiscard]] static constexpr auto getDataCacheWayCount() noexcept { return BoardDescription<getMCUTarget()>.getDataCacheWayCount(); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
