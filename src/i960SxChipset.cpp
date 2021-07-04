@@ -501,8 +501,10 @@ struct CacheEntry {
         backingThing = nullptr;
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
-    [[nodiscard]] SplitWord16& get(byte offset) noexcept { return data[offset & 0b111]; }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b111]; }
+private:
+    [[nodiscard]] SplitWord16& get(byte offset) noexcept { return data[offset & 0b111]; }
+public:
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         dirty_ = true;
         switch (auto& target = get(offset);style) {
