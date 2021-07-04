@@ -525,7 +525,7 @@ private:
         };
     };
 };
-constexpr auto NumberOfCacheLines = 256;
+constexpr auto NumberOfCacheLines = 512;
 constexpr auto CacheLineMask = NumberOfCacheLines - 1;
 constexpr uint16_t computeTagIndex(Address address) noexcept {
     return static_cast<uint16_t>(address >> 4) & CacheLineMask;
