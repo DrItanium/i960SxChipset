@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
-#include "Cache.h"
 
 
 bool displayReady = false;
@@ -79,11 +78,6 @@ public:
         }
     }
 };
-using RAMThing = DataCache<TargetBoard::numberOfDataCacheLines(),
-        TargetBoard::getDataCacheLineSize()>;
-using ROMThing = DataCache<TargetBoard::numberOfInstructionCacheLines(),
-        TargetBoard::getInstructionCacheLineSize()>;
-
 class ROMTextSection : public MemoryMappedFile {
 public:
     static constexpr Address ROMStart = 0;
