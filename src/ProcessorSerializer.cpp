@@ -232,12 +232,14 @@ void ProcessorInterface::newDataCycle() noexcept {
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
     upperMaskedAddress_ = 0xFFFF'FFF0 & (lower16Addr | upper16Addr);
     address_ = lower16Addr | upper16Addr;
+    blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
     auto bits = PINA;
     auto byteEnableBits = static_cast<byte>(bits & 0b1110);
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
     address_ = upperMaskedAddress_ | byteEnableBits;
+    blastAsserted_ = (bits & 0b0100'0000) == 0;
     //auto bits = read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
     //lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
     //address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);

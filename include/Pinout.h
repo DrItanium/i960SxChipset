@@ -76,7 +76,7 @@ enum class i960Pinout : decltype(A0) {
         BA3,
         BE0,
         BE1,
-        SPI_BUS_A6,
+        BLAST2,
         SPI_BUS_A7,
     Count,          // special, must be last
 
@@ -95,7 +95,7 @@ template<i960Pinout pin>
         case i960Pinout::BA3:
         case i960Pinout::BE0:
         case i960Pinout::BE1:
-        case i960Pinout::SPI_BUS_A6:
+        case i960Pinout::BLAST2:
         case i960Pinout::SPI_BUS_A7:
             return PORTA;
         case i960Pinout::SCL:          // reserved
@@ -140,7 +140,7 @@ template<i960Pinout pin>
         case i960Pinout::BA3:
         case i960Pinout::BE0:
         case i960Pinout::BE1:
-        case i960Pinout::SPI_BUS_A6:
+        case i960Pinout::BLAST2:
         case i960Pinout::SPI_BUS_A7:
             return PINA;
         case i960Pinout::SCL:          // reserved
@@ -184,7 +184,7 @@ template<i960Pinout pin>
         case i960Pinout::BA3: return _BV(PA3);
         case i960Pinout::BE0: return _BV(PA4);
         case i960Pinout::BE1: return _BV(PA5);
-        case i960Pinout::SPI_BUS_A6: return _BV(PA6);
+        case i960Pinout::BLAST2: return _BV(PA6);
         case i960Pinout::SPI_BUS_A7: return _BV(PA7);
         case i960Pinout::SCL:        return _BV(PC0);
         case i960Pinout::SDA:        return _BV(PC1);

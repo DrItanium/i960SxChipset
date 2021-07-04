@@ -529,7 +529,7 @@ void setup() {
                   i960Pinout::BA3,
                   i960Pinout::BE0,
                   i960Pinout::BE1,
-                  i960Pinout::SPI_BUS_A6,
+                  i960Pinout::BLAST2,
                   i960Pinout::SPI_BUS_A7);
 
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);

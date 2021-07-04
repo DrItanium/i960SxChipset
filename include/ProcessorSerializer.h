@@ -88,6 +88,7 @@ public:
     void begin() noexcept;
     [[nodiscard]] constexpr Address getAddress() const noexcept { return address_; }
     [[nodiscard]] uint16_t getDataBits() noexcept;
+    [[nodiscard]] constexpr auto isBurstLast() const noexcept { return blastAsserted_; }
     void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] constexpr auto getStyle() const noexcept { return lss_; }
     //[[nodiscard]] bool isWriteOperation() const noexcept;
@@ -115,6 +116,7 @@ private:
     bool initialized_ = false;
     bool lockValue_ = true;
     bool holdValue_ = false;
+    bool blastAsserted_ = false;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes
