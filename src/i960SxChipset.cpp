@@ -475,6 +475,8 @@ void onDENAsserted() {
 // ----------------------------------------------------------------
 
 MemoryThing* theThing = nullptr;
+Address burstCacheTag = 0;
+SplitWord16 burstCache[8];
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
@@ -482,6 +484,9 @@ void setupPeripherals() {
     rom.begin();
     dataRom.begin();
     ram.begin();
+    // load the burstCache with the first 16 bytes in memory
+    burstCacheTag = 0;
+    rom.read(0, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
@@ -541,6 +546,7 @@ void setup() {
         setupPeripherals();
         delay(1000);
         Serial.println(F("i960Sx chipset brought up fully!"));
+
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state
@@ -585,7 +591,6 @@ void setup() {
 // Ti -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
-SplitWord16 burstCache[8];
 void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
@@ -624,10 +629,10 @@ void loop() {
             processorInterface.setDataBits(theThing->read(address, style));
             DigitalPin<i960Pinout::Ready>::pulse();
         } else {
-            theThing->read(processorInterface.getAlignedAddress(), reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
-            processorInterface.updateDataCycle();
-            processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressBits()].wholeValue_);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            if (burstCacheTag != processorInterface.getAlignedAddress()) {
+                burstCacheTag = processorInterface.getAlignedAddress();
+                theThing->read(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            }
             do {
                 processorInterface.updateDataCycle();
                 processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressBits()].wholeValue_);
@@ -646,24 +651,10 @@ void loop() {
             theThing->write(burstAddress, processorInterface.getDataBits(), style);
             DigitalPin<i960Pinout::Ready>::pulse();
         } else {
-            theThing->read(processorInterface.getAlignedAddress(), reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
-            processorInterface.updateDataCycle();
-            auto& targetCacheEntry = burstCache[processorInterface.getBurstAddressBits()];
-            LoadStoreStyle style = processorInterface.getStyle();
-            switch (SplitWord16 theBits(processorInterface.getDataBits()); style) {
-                case LoadStoreStyle::Full16:
-                    targetCacheEntry = theBits;
-                    break;
-                case LoadStoreStyle::Upper8:
-                    targetCacheEntry.bytes[1] = theBits.bytes[1];
-                    break;
-                case LoadStoreStyle::Lower8:
-                    targetCacheEntry.bytes[0] = theBits.bytes[0];
-                    break;
-                default:
-                    signalHaltState(F("BAD LOAD STORE STYLE!"));
+            if (burstCacheTag != processorInterface.getAlignedAddress()) {
+                burstCacheTag = processorInterface.getAlignedAddress();
+                theThing->read(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
             }
-            DigitalPin<i960Pinout::Ready>::pulse();
             do {
                 processorInterface.updateDataCycle();
                 auto& targetCacheEntry = burstCache[processorInterface.getBurstAddressBits()];
@@ -686,7 +677,8 @@ void loop() {
                     break;
                 }
             } while (true);
-            theThing->write(processorInterface.getAlignedAddress(), reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            // we need to commit the data back to the burst cache right now for safety, later on we can make this be more lazy
+            theThing->write(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
         }
     }
 }
