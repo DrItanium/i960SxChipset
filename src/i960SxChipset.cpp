@@ -472,24 +472,28 @@ MemoryThing* theThing = nullptr;
 
 class CacheEntry {
 public:
-    constexpr bool valid() const noexcept { return backingThing; }
+    constexpr bool valid() const noexcept { return valid_; }
     constexpr bool isDirty() const noexcept { return dirty_; }
+private:
+public:
     void reset(Address newTag, MemoryThing& thing) noexcept {
         if (valid() && isDirty()) {
+            auto* backingThing = getThing(tag, LoadStoreStyle::Full16);
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
         }
         dirty_ = false;
+        valid_ = true;
         tag = newTag;
-        backingThing = &thing;
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof(data));
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
+            auto* backingThing = getThing(tag, LoadStoreStyle::Full16);
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
         }
         dirty_ = false;
+        valid_ = false;
         tag = 0;
-        backingThing = nullptr;
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b111]; }
@@ -511,10 +515,15 @@ public:
         }
     }
 private:
-    Address tag = 0;
-    bool dirty_ = false;
     SplitWord16 data[8];
-    MemoryThing* backingThing = nullptr;
+    Address tag = 0;
+    union {
+        byte controlBits = 0;
+        struct {
+            bool valid_ : 1;
+            bool dirty_ : 1;
+        };
+    };
 };
 constexpr auto NumberOfCacheLines = 256;
 constexpr auto CacheLineMask = NumberOfCacheLines - 1;
