@@ -132,8 +132,6 @@ public:
             dirty_ = false;
             valid_ = true;
             addr.rawValue = address;
-            Serial.print(F("New Address: 0x"));
-            Serial.println(address, HEX);
             thing.read(address, buf, CacheLineSize);
         }
         void invalidate(MemoryThing& thing) noexcept {
@@ -229,32 +227,55 @@ private:
             return replacementLine;
         } else if constexpr (NumberOfWays == 2) {
             auto targetSetIndex = addr.index * NumberOfWays;
-            Serial.print(F("TARGET SET INDEX: 0x"));
-            Serial.println(targetSetIndex, HEX);
             if (auto& way0 = lines_[targetSetIndex]; way0.respondsTo(addr.tag)) {
                 return way0;
             } else if (auto& way1 = lines_[targetSetIndex+1]; way1.respondsTo(addr.tag)) {
                 return way1;
             } else {
                 if (!way0.isValid()) {
-                    Serial.println(F("USING WAY0 FOR INITIAL CACHE"));
                     way0.reset(addr.getAlignedAddress(), thing_) ;
                     return way0;
                 } else if (!way1.isValid()) {
-                    Serial.println(F("USING WAY1 FOR INITIAL CACHE"));
                     way1.reset(addr.getAlignedAddress(), thing_);
                     return way1;
                 } else {
-                    Serial.println(F("CACHE MISS!"));
                     // we hit a cache miss so choose one of the two to jettison
-                    ++wayToDiscard;
-                    auto& targetWay = wayToDiscard & 1 ? way1 : way0;
+                    auto& targetWay = lines_[targetSetIndex + random(NumberOfWays)];
                     targetWay.reset(addr.getAlignedAddress(), thing_);
                     return targetWay;
                 }
             }
-            // lets brain out two way set associativity
-            // each set is comprised of two lines, we need to choose
+        } else if constexpr (NumberOfWays == 4) {
+            auto targetSetIndex = addr.index * NumberOfWays;
+            // straight line the code despite it being a pain in the ass
+            if (auto& way0 = lines_[targetSetIndex]; way0.respondsTo(addr.tag)) {
+                return way0;
+            } else if (auto& way1 = lines_[targetSetIndex+1]; way1.respondsTo(addr.tag)) {
+                return way1;
+            } else if (auto& way2 = lines_[targetSetIndex+2]; way2.respondsTo(addr.tag)) {
+                return way2;
+            } else if (auto& way3 = lines_[targetSetIndex+3]; way3.respondsTo(addr.tag)) {
+                return way3;
+            } else {
+                if (!way0.isValid()) {
+                    way0.reset(addr.getAlignedAddress(), thing_) ;
+                    return way0;
+                } else if (!way1.isValid()) {
+                    way1.reset(addr.getAlignedAddress(), thing_);
+                    return way1;
+                } else if (!way2.isValid()) {
+                    way2.reset(addr.getAlignedAddress(), thing_);
+                    return way2;
+                } else if (!way3.isValid()) {
+                    way3.reset(addr.getAlignedAddress(), thing_);
+                    return way3;
+                } else {
+                    // we hit a cache miss so choose one of the two to jettison
+                    auto& targetWay = lines_[targetSetIndex + random(NumberOfWays)];
+                    targetWay.reset(addr.getAlignedAddress(), thing_);
+                    return targetWay;
+                }
+            }
         } else {
             signalHaltState(F("MULTI WAY CACHES ARE UNIMPLEMENTED!"));
         }
@@ -344,7 +365,6 @@ private:
     MemoryThing& thing_;
     Line lines_[NumberOfCacheLines];
     bool enabled_ = true;
-    uint8_t wayToDiscard = 0;
 };
 // Sanity checks to make sure that my math is right
 static_assert(DataCache<256,16,1>::Address_OffsetBitCount == 4);
