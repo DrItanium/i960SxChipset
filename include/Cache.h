@@ -261,9 +261,10 @@ private:
             }
         } else {
             auto targetSetIndex = addr.index * NumberOfWays;
+            auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
             Line* firstEmptyWay = nullptr;
-            for (unsigned i = 0; i < NumberOfWays; ++i) {
-                if (auto& way = lines_[targetSetIndex + i]; way.respondsTo(addr.tag)) {
+            for (auto i = targetSetIndex; i < targetSetIndexEnd; ++i) {
+                if (auto& way = lines_[i]; way.respondsTo(addr.tag)) {
                     return way;
                 } else if (!way.isValid() && !firstEmptyWay) {
                     firstEmptyWay = &way;
