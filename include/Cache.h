@@ -262,18 +262,19 @@ private:
         } else {
             auto targetSetIndex = addr.index * NumberOfWays;
             auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
-            Line* anInvalidLine = nullptr;
+            int invalidLineIndex = -1;
             for (auto i = targetSetIndex; i < targetSetIndexEnd; ++i) {
                 if (auto& way = lines_[i]; way.respondsTo(addr.tag)) {
                     return way;
-                } else if (!way.isValid && !anInvalidLine) {
-                    anInvalidLine = way;
+                } else if (!way.isValid() && invalidLineIndex == -1) {
+                    invalidLineIndex = i;
                 }
             }
             // okay we didn't find a match so instead we need to populate things
-            if (anInvalidLine) {
-                anInvalidLine->reset(addr.getAlignedAddress(), thing_);
-                return *anInvalidLine;
+            if (invalidLineIndex != -1) {
+                auto& way = lines_[invalidLineIndex];
+                way.reset(addr.getAlignedAddress(), thing_);
+                return way;
             } else {
                 // we hit a cache miss so choose one of the two to jettison
                 auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
