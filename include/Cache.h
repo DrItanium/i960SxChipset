@@ -234,11 +234,39 @@ private:
         // thus at no point will we actually know what we've dropped.
         if constexpr (CacheAddress addr(targetAddress); IsDirectMappedCache) {
             // direct mapped cache
-            auto& replacementLine = lines_[addr.index];
+            auto &replacementLine = lines_[addr.index];
             if (!replacementLine.respondsTo(addr.tag)) {
                 replacementLine.reset(addr.index, addr.getAlignedAddress(), thing_);
             }
             return replacementLine;
+        } else if (NumberOfWays == 2) {
+            auto targetSetIndex = addr.index * NumberOfWays;
+            if (auto& way0 = lines_[targetSetIndex]; way0.respondsTo(addr.tag)) {
+                return way0;
+            } else if (auto& way1 = lines_[targetSetIndex+1]; way1.respondsTo(addr.tag)) {
+                return way1;
+            } else {
+                if (!way0.isValid()) {
+                    way0.reset(addr.index, addr.getAlignedAddress(), thing_) ;
+                    return way0;
+                } else if (!way1.isValid()) {
+                    way1.reset(addr.index, addr.getAlignedAddress(), thing_);
+                    return way1;
+                } else {
+                    // we hit a cache miss so choose one of the two to jettison
+                    if (wayToDiscard & 1) {
+                        way0.reset(addr.index, addr.getAlignedAddress(), thing_);
+                        ++wayToDiscard;
+                        return way0;
+                    } else {
+                        way1.reset(addr.index, addr.getAlignedAddress(), thing_);
+                        ++wayToDiscard;
+                        return way1;
+                    }
+                }
+            }
+            // lets brain out two way set associativity
+            // each set is comprised of two lines, we need to choose
         } else {
             signalHaltState(F("MULTI WAY CACHES ARE UNIMPLEMENTED!"));
         }
@@ -320,7 +348,7 @@ public:
     }
 private:
     void invalidate() noexcept {
-        for (int i = 0; i < NumberOfCacheLines; ++i) {
+        for (Address i = 0; i < NumberOfCacheLines; ++i) {
             lines_[i].invalidate(i, thing_);
         }
     }
@@ -328,6 +356,7 @@ private:
     MemoryThing& thing_;
     Line lines_[NumberOfCacheLines];
     bool enabled_ = true;
+    uint8_t wayToDiscard = 0;
 };
 // Sanity checks to make sure that my math is right
 static_assert(DataCache<256,16,1>::Address_OffsetBitCount == 4);
