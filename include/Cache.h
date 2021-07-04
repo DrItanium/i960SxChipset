@@ -153,8 +153,14 @@ public:
          */
         SplitWord16 components_[ComponentSize];
         static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!");
-        bool dirty_ = false;
-        bool valid_ = false;
+        union {
+            byte status_ = 0;
+            struct
+            {
+                bool dirty_: 1;
+                bool valid_: 1;
+            };
+        };
     };
     static_assert(sizeof(CacheAddress) == sizeof(uint32_t));
     static_assert(NumberOfWays > 0, "Must have a minimum of 1 way");
