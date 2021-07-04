@@ -57,8 +57,10 @@ class DataCache : public MemoryThing {
 public:
     struct Line {
     public:
-        [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
-            return valid_ && ((address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize)));
+        [[nodiscard]] constexpr bool respondsTo(uint32_t targetTag) const noexcept {
+            // just do a comparison with this design
+            return valid_ && (targetTag == tag_);
+            //return valid_ && ((address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize)));
         }
         [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
             auto base = computeCacheByteOffset(targetAddress);
@@ -110,30 +112,37 @@ public:
         [[nodiscard]] static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
             return targetAddress & AlignedOffsetMask;
         }
-        void reset(uint32_t address, MemoryThing& thing) noexcept {
+        void reset(uint32_t oldIndex, uint32_t address, MemoryThing& thing) noexcept {
             byte* buf = reinterpret_cast<byte*>(components_);
             if (valid_ && dirty_) {
-                thing.write(address_, buf, CacheLineSize);
+                CacheAddress addr;
+                addr.index = oldIndex;
+                addr.tag = tag_;
+                thing.write(addr.getAlignedAddress(), buf, CacheLineSize);
             }
             dirty_ = false;
             valid_ = true;
-            address_ = address;
-            thing.read(address_, buf, CacheLineSize);
+            CacheAddress newAddr(address);
+            tag_ = newAddr.tag;
+            thing.read(newAddr.getAlignedAddress(), buf, CacheLineSize);
         }
-        void invalidate(MemoryThing& thing) noexcept {
+        void invalidate(uint32_t oldIndex, MemoryThing& thing) noexcept {
             if (valid_ && dirty_) {
-                thing.write(address_, reinterpret_cast<byte*>(components_), CacheLineSize);
+                CacheAddress addr;
+                addr.index = oldIndex;
+                addr.tag = tag_;
+                thing.write(addr.getAlignedAddress(), reinterpret_cast<byte*>(components_), CacheLineSize);
             }
             dirty_ = false;
             valid_ = false;
-            address_ = 0;
+            tag_ = 0;
         }
         [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
     private:
         /**
          * @brief The base address of the cache line
          */
-        uint32_t address_ = 0;
+        uint32_t tag_ = 0;
         /**
          * @brief The cache line contents itself
          */
@@ -225,10 +234,9 @@ private:
         // thus at no point will we actually know what we've dropped.
         if constexpr (CacheAddress addr(targetAddress); IsDirectMappedCache) {
             // direct mapped cache
-            auto alignedAddress = addr.getAlignedAddress();
             auto& replacementLine = lines_[addr.index];
-            if (!replacementLine.respondsTo(alignedAddress)) {
-                replacementLine.reset(alignedAddress, thing_);
+            if (!replacementLine.respondsTo(addr.tag)) {
+                replacementLine.reset(addr.index, addr.getAlignedAddress(), thing_);
             }
             return replacementLine;
         } else {
@@ -312,8 +320,8 @@ public:
     }
 private:
     void invalidate() noexcept {
-        for (auto& line : lines_) {
-            line.invalidate(thing_);
+        for (int i = 0; i < NumberOfCacheLines; ++i) {
+            lines_[i].invalidate(i, thing_);
         }
     }
 private:
