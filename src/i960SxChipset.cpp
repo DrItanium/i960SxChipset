@@ -524,7 +524,7 @@ CacheEntry entries[2];
 void invalidateGlobalCache() noexcept {
     // commit all entries back
     for (auto& entry : entries) {
-        entries->invalidate();
+        entry.invalidate();
     }
 }
 void setupPeripherals() {

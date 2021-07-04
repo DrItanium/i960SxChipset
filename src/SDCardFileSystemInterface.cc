@@ -373,6 +373,7 @@ SDCardFilesystemInterface::readFile() noexcept {
                 result_.words[0] = 0;
                 return 0;
             } else {
+                invalidateGlobalCache();
                 TemporarilyDisableThingCache cacheOff(thing);
                 // we can keep the cache on at this point in time now
                 if (count > 0 && count <= TransferBufferSize) {
