@@ -222,8 +222,7 @@ private:
         return y;
     }
     uint8_t getCacheLineToEvict() noexcept {
-        auto counter = evictionCounter++;
-        return counter % NumberOfWays;
+        return (evictionCounter++) % NumberOfWays;
     }
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
@@ -262,10 +261,9 @@ private:
             }
         } else {
             auto targetSetIndex = addr.index * NumberOfWays;
-            auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
             Line* firstEmptyWay = nullptr;
-            for (auto i = targetSetIndex; i < targetSetIndexEnd; ++i) {
-                if (auto& way = lines_[i]; way.respondsTo(addr.tag)) {
+            for (unsigned i = 0; i < NumberOfWays; ++i) {
+                if (auto& way = lines_[targetSetIndex + i]; way.respondsTo(addr.tag)) {
                     return way;
                 } else if (!way.isValid() && !firstEmptyWay) {
                     firstEmptyWay = &way;
