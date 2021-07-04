@@ -239,48 +239,23 @@ private:
                 replacementLine.reset(addr.getAlignedAddress(), thing_);
             }
             return replacementLine;
-        } else if constexpr (NumberOfWays == 2) {
-            auto targetSetIndex = addr.index * NumberOfWays;
-            if (auto& way0 = lines_[targetSetIndex]; way0.respondsTo(addr.tag)) {
-                return way0;
-            } else if (auto& way1 = lines_[targetSetIndex+1]; way1.respondsTo(addr.tag)) {
-                return way1;
-            } else {
-                if (!way0.isValid()) {
-                    way0.reset(addr.getAlignedAddress(), thing_) ;
-                    return way0;
-                } else if (!way1.isValid()) {
-                    way1.reset(addr.getAlignedAddress(), thing_);
-                    return way1;
-                } else {
-                    // we hit a cache miss so choose one of the two to jettison
-                    auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
-                    targetWay.reset(addr.getAlignedAddress(), thing_);
-                    return targetWay;
-                }
-            }
         } else {
             auto targetSetIndex = addr.index * NumberOfWays;
             auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
-            int invalidLineIndex = -1;
             for (auto i = targetSetIndex; i < targetSetIndexEnd; ++i) {
                 if (auto& way = lines_[i]; way.respondsTo(addr.tag)) {
                     return way;
-                } else if (!way.isValid() && invalidLineIndex == -1) {
-                    invalidLineIndex = i;
+                } else if (!way.isValid()) {
+                    // assume that if the way is not valid then it has never been used or is just cleared out and that later ways do not contain valid ways
+                    way.reset(addr.getAlignedAddress(), thing_);
+                    return way;
                 }
             }
             // okay we didn't find a match so instead we need to populate things
-            if (invalidLineIndex != -1) {
-                auto& way = lines_[invalidLineIndex];
-                way.reset(addr.getAlignedAddress(), thing_);
-                return way;
-            } else {
-                // we hit a cache miss so choose one of the two to jettison
-                auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
-                targetWay.reset(addr.getAlignedAddress(), thing_);
-                return targetWay;
-            }
+            // we hit a cache miss so choose one of the two to jettison
+            auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
+            targetWay.reset(addr.getAlignedAddress(), thing_);
+            return targetWay;
         }
     }
 public:
