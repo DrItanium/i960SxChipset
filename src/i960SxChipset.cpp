@@ -662,27 +662,23 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
 
 MemoryThing*
 getThing(Address address, LoadStoreStyle style) noexcept {
-    if (address < 0xFF00'0000) {
-        if (address < RAMFile::RamStartingAddress) {
-            if (address >= ROMDataSection::ROMStart) {
-                return &dataRom;
-            } else {
-                return &rom;
-            }
+    if (address < RAMFile::RamStartingAddress) {
+        if (address >= ROMDataSection::ROMStart) {
+            return &dataRom;
         } else {
-            if (address < RAMFile::RamEndingAddress) {
-                return &ram;
-            } else {
-                for (auto *currentThing : things) {
-                    if (currentThing->respondsTo(address, style)) {
-                        return currentThing;
-                    }
-                }
-                return nullptr;
-            }
+            return &rom;
         }
     } else {
-        return nullptr;
+        if (address < RAMFile::RamEndingAddress) {
+            return &ram;
+        } else {
+            for (auto *currentThing : things) {
+                if (currentThing->respondsTo(address, style)) {
+                    return currentThing;
+                }
+            }
+            return nullptr;
+        }
     }
 }
 SdFat SD;
