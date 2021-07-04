@@ -80,11 +80,9 @@ public:
     }
 };
 using RAMThing = DataCache<TargetBoard::numberOfDataCacheLines(),
-        TargetBoard::getDataCacheLineSize(),
-        TargetBoard::getDataCacheWayCount()>;
+        TargetBoard::getDataCacheLineSize()>;
 using ROMThing = DataCache<TargetBoard::numberOfInstructionCacheLines(),
-        TargetBoard::getInstructionCacheLineSize(),
-        TargetBoard::getInstructionCacheWayCount()>;
+        TargetBoard::getInstructionCacheLineSize()>;
 
 class ROMTextSection : public MemoryMappedFile {
 public:

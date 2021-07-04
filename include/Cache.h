@@ -52,7 +52,7 @@ constexpr auto numberOfAddressBitsForGivenByteSize(uint32_t numBytes) noexcept {
         default: return 0;
     }
 }
-template<uint32_t numLines = 16, uint32_t cacheLineSize = 32, uint32_t wayCount = 1>
+template<uint32_t numLines = 16, uint32_t cacheLineSize = 32>
 class DataCache : public MemoryThing {
 public:
     static constexpr auto CacheLineSize = cacheLineSize;
@@ -60,12 +60,9 @@ public:
     static constexpr auto CacheByteMask = CacheLineSize - 1;
     static constexpr auto AlignedOffsetMask = ~CacheByteMask;
     static constexpr auto CacheOffsetBitConsumption = numberOfAddressBitsForGivenByteSize(CacheLineSize);
-    static constexpr auto NumberOfWays = wayCount;
     static constexpr auto NumberOfCacheLines = numLines;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
-    static constexpr auto NumberOfCacheSets = DataCacheSize / (CacheLineSize * NumberOfWays);
-    static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
-    static constexpr auto IsSetAssociativeCache = NumberOfWays > 1;
+    static constexpr auto NumberOfCacheSets = DataCacheSize / CacheLineSize;
     static constexpr auto Address_OffsetBitCount = CacheOffsetBitConsumption;
     static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumberOfCacheSets);
     static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
@@ -163,7 +160,6 @@ public:
         };
     };
     static_assert(sizeof(CacheAddress) == sizeof(uint32_t));
-    static_assert(NumberOfWays > 0, "Must have a minimum of 1 way");
     static constexpr auto isLegalNumberOfCacheLines(uint32_t num) noexcept {
         switch (num) {
             case 1:
@@ -195,7 +191,6 @@ public:
     }
     static_assert(DataCacheSize <= TargetBoard::oneFourthSRAMAmountInBytes(), "Overall cache size must be less than or equal to one fourth of SRAM");
     static_assert(isLegalNumberOfCacheLines(NumberOfCacheLines));
-    static_assert(isLegalNumberOfWays(NumberOfWays));
     explicit DataCache(MemoryThing& backingStore) : MemoryThing(backingStore.getBaseAddress(), backingStore.getEndAddress()), thing_(backingStore) { }
     [[nodiscard]] uint8_t getByte(uint32_t targetAddress) noexcept {
         return getCacheLine(targetAddress).getByte(targetAddress);
@@ -210,53 +205,19 @@ public:
         getCacheLine(targetAddress).setWord(targetAddress, value);
     }
 private:
-    static uint8_t fastRandom(uint16_t seed) {
-        // taken from https://engineeringnotes.blogspot.com/2015/07/a-fast-random-function-for-arduinoc.html
-        static uint16_t y = 0;
-        if (seed != 0) {
-            y += (seed & 0x1FFF);
-        }
-        y ^= (y << 2);
-        y ^= (y >> 7);
-        y ^= (y << 7);
-        return y;
-    }
-    uint8_t getCacheLineToEvict() noexcept {
-        return (evictionCounter++) % NumberOfWays;
-    }
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
      * @param targetAddress
      * @return The line that was updated
      */
     Line& getCacheLine(uint32_t targetAddress) noexcept {
-        // instead of using random directly, use an incrementing counter to choose a line to invalidate
-        // thus at no point will we actually know what we've dropped.
-        if constexpr (CacheAddress addr(targetAddress); IsDirectMappedCache) {
             // direct mapped cache
+            CacheAddress addr(targetAddress);
             auto &replacementLine = lines_[addr.index];
             if (!replacementLine.respondsTo(addr.tag)) {
                 replacementLine.reset(addr.getAlignedAddress(), thing_);
             }
             return replacementLine;
-        } else {
-            auto targetSetIndex = addr.index * NumberOfWays;
-            auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
-            for (auto i = targetSetIndex; i < targetSetIndexEnd; ++i) {
-                if (auto& way = lines_[i]; way.respondsTo(addr.tag)) {
-                    return way;
-                } else if (!way.isValid()) {
-                    // assume that if the way is not valid then it has never been used or is just cleared out and that later ways do not contain valid ways
-                    way.reset(addr.getAlignedAddress(), thing_);
-                    return way;
-                }
-            }
-            // okay we didn't find a match so instead we need to populate things
-            // we hit a cache miss so choose one of the two to jettison
-            auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
-            targetWay.reset(addr.getAlignedAddress(), thing_);
-            return targetWay;
-        }
     }
 public:
     uint8_t read8(Address address) noexcept override {
@@ -343,26 +304,6 @@ private:
     MemoryThing& thing_;
     Line lines_[NumberOfCacheLines];
     bool enabled_ = true;
-    uint8_t evictionCounter = 0;
 };
-// Sanity checks to make sure that my math is right
-static_assert(DataCache<256,16,1>::Address_OffsetBitCount == 4);
-static_assert(DataCache<256,16,1>::Address_SetIndexBitCount == 8);
-static_assert(DataCache<256,16,1>::Address_TagBitCount == 20);
-static_assert(DataCache<256,16,2>::Address_OffsetBitCount == 4);
-static_assert(DataCache<256,16,2>::Address_SetIndexBitCount == 7);
-static_assert(DataCache<256,16,2>::Address_TagBitCount == 21);
-static_assert(DataCache<256,16,4>::Address_OffsetBitCount == 4);
-static_assert(DataCache<256,16,4>::Address_SetIndexBitCount == 6);
-static_assert(DataCache<256,16,4>::Address_TagBitCount == 22);
-static_assert(DataCache<256,16,8>::Address_OffsetBitCount == 4);
-static_assert(DataCache<256,16,8>::Address_SetIndexBitCount == 5);
-static_assert(DataCache<256,16,8>::Address_TagBitCount == 23);
-static_assert(DataCache<256,16,16>::Address_OffsetBitCount == 4);
-static_assert(DataCache<256,16,16>::Address_SetIndexBitCount == 4);
-static_assert(DataCache<256,16,16>::Address_TagBitCount == 24);
-static_assert(DataCache<256,16,32>::Address_OffsetBitCount == 4);
-static_assert(DataCache<256,16,32>::Address_SetIndexBitCount == 3);
-static_assert(DataCache<256,16,32>::Address_TagBitCount == 25);
 
 #endif //I960SXCHIPSET_CACHE_H
