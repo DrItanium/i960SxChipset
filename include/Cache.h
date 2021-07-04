@@ -261,21 +261,23 @@ private:
             }
         } else {
             auto targetSetIndex = addr.index * NumberOfWays;
-            auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
-            Line* firstEmptyWay = nullptr;
-            for (auto i = targetSetIndex; i < targetSetIndexEnd; ++i) {
-                if (auto& way = lines_[i]; way.respondsTo(addr.tag)) {
-                    return way;
-                } else if (!way.isValid() && !firstEmptyWay) {
-                    firstEmptyWay = &way;
+            Line* setStart = &lines_[targetSetIndex];
+            Line* way = setStart;
+            Line* anInvalidLine = nullptr;
+            for (auto i = 0; i < NumberOfWays; ++i, ++way) {
+                if (way->respondsTo(addr.tag)) {
+                    return *way;
+                } else if (!way->isValid) {
+                    anInvalidLine = way;
                 }
             }
-            if (firstEmptyWay) {
-                firstEmptyWay->reset(addr.getAlignedAddress(), thing_);
-                return *firstEmptyWay;
+            // okay we didn't find a match so instead we need to populate things
+            if (anInvalidLine) {
+                anInvalidLine->reset(addr.getAlignedAddress(), thing_);
+                return *anInvalidLine;
             } else {
                 // we hit a cache miss so choose one of the two to jettison
-                auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
+                auto& targetWay = setStart[getCacheLineToEvict()];
                 targetWay.reset(addr.getAlignedAddress(), thing_);
                 return targetWay;
             }
