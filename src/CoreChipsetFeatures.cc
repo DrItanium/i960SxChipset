@@ -243,7 +243,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
 
 void
 CoreChipsetFeatures::begin() noexcept {
-    if constexpr (true) {
+    if constexpr (false) {
         Serial.print(F("ADDRESS OF LED: 0x"));
         Serial.println(static_cast<uint32_t>(Registers::Led) + 0xFE00'0000, HEX);
         Serial.print(F("BASE ADDRESS OF PATTERN: 0x"));

@@ -520,12 +520,10 @@ private:
         };
     };
 };
-constexpr auto NumberOfCacheLines = 512;
-constexpr auto CacheLineMask = NumberOfCacheLines - 1;
-constexpr uint16_t computeTagIndex(Address address) noexcept {
-    return static_cast<uint16_t>(address >> 4) & CacheLineMask;
+constexpr uint8_t computeTagIndex(Address address) noexcept {
+    return static_cast<uint8_t>(address >> 4);
 }
-CacheEntry entries[NumberOfCacheLines];
+CacheEntry entries[256];
 void invalidateGlobalCache() noexcept {
     // commit all entries back
     for (auto& entry : entries) {
@@ -539,9 +537,6 @@ void setupPeripherals() {
     rom.begin();
     dataRom.begin();
     ram.begin();
-    // load the burstCache with the first 16 bytes in memory
-    entries[0].reset(0, rom);
-    entries[1].reset(0x10, rom);
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
