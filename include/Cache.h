@@ -62,10 +62,8 @@ public:
     static constexpr auto CacheOffsetBitConsumption = numberOfAddressBitsForGivenByteSize(CacheLineSize);
     static constexpr auto NumberOfCacheLines = numLines;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
-    static constexpr auto NumberOfCacheSets = DataCacheSize / CacheLineSize;
-    static constexpr auto Address_OffsetBitCount = CacheOffsetBitConsumption;
-    static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumberOfCacheSets);
-    static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
+    static constexpr auto CacheIndexBitConsumption = numberOfAddressBitsForGivenByteSize(NumberOfCacheLines);
+    static constexpr auto CacheIndexMask = NumberOfCacheLines - 1;
     static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
         switch (lineSize) {
             case 16:
@@ -82,42 +80,42 @@ public:
     }
     static_assert(isLegalCacheLineSize(CacheLineSize), "CacheLineSize must be 16, 32, 64, 128, 256, or 512 bytes");
     static_assert(CacheOffsetBitConsumption != 0, "Invalid number of bits consumed by this cache line!");
-    union CacheAddress {
-        constexpr explicit CacheAddress(uint32_t baseValue = 0) noexcept : rawValue(baseValue) { }
-        uint32_t rawValue = 0;
-        struct {
-            uint32_t offset : Address_OffsetBitCount;
-            uint32_t index : Address_SetIndexBitCount;
-            uint32_t tag : Address_TagBitCount;
-        };
-        [[nodiscard]] constexpr uint32_t getAlignedAddress() const noexcept { return Line ::computeAlignedOffset( rawValue); }
-        [[nodiscard]] constexpr auto getByteOffset() const noexcept { return offset & 1; }
-        [[nodiscard]] constexpr auto getComponentIndex() const noexcept { return offset >> 1; }
-    };
+    [[nodiscard]] static constexpr auto getAlignedAddress(uint32_t address) noexcept {
+        return address & AlignedOffsetMask;
+    }
+    [[nodiscard]] static constexpr auto getLineOffset(uint32_t address) noexcept {
+        return address & CacheByteMask;
+    }
+    [[nodiscard]] static constexpr auto getComponentIndex(uint32_t address) noexcept {
+        return (getLineOffset(address)>> 1);
+    }
+    [[nodiscard]] static constexpr byte getByteOffset(uint32_t address) noexcept {
+        return static_cast<byte>(address & 1);
+    }
+    [[nodiscard]] static constexpr auto getLineIndex(uint32_t address) noexcept {
+        return (address >> CacheOffsetBitConsumption) & CacheIndexMask;
+    }
     struct Line {
     public:
-        [[nodiscard]] constexpr bool respondsTo(uint32_t targetTag) const noexcept {
+        [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
+
             // just do a comparison with this design
-            return valid_ && (targetTag == addr.tag);
+            return valid_ && (getAlignedAddress(targetAddress) == addr);
             //return valid_ && ((address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize)));
         }
-        [[nodiscard]] constexpr uint8_t getByte(uint32_t address) const noexcept { return getByte(CacheAddress{address}); }
-        [[nodiscard]] constexpr uint8_t getByte(CacheAddress targetAddress) const noexcept {
-            return components_[targetAddress.getComponentIndex()].bytes[targetAddress.getByteOffset()];
+        [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
+            return components_[getComponentIndex(targetAddress)].bytes[getByteOffset(targetAddress)];
         }
-        inline void setByte(uint32_t address, uint8_t value) noexcept  { setByte(CacheAddress{address}, value); }
-        void setByte(CacheAddress address, uint8_t value) noexcept {
+        void setByte(uint32_t address, uint8_t value) noexcept {
             dirty_ = true;
-            components_[address.getComponentIndex()].bytes[address.getByteOffset()] = value;
+            components_[getComponentIndex(address)].bytes[getByteOffset(address)] = value;
         }
-        [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept { return getWord(CacheAddress{targetAddress}); }
-        [[nodiscard]] constexpr uint16_t getWord(CacheAddress targetAddress) const noexcept {
-            return components_[targetAddress.getComponentIndex()].wholeValue_;
+        [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
+            return components_[getComponentIndex(targetAddress)].wholeValue_;
         }
-        inline void setWord(uint32_t targetAddress, uint16_t value) noexcept { setWord(CacheAddress{targetAddress}, value); }
-        void setWord(CacheAddress targetAddress, uint16_t value) noexcept {
+        void setWord(uint32_t targetAddress, uint16_t value) noexcept {
             dirty_ = true;
-            components_[targetAddress.getComponentIndex()].wholeValue_ = value;
+            components_[getComponentIndex(targetAddress)].wholeValue_ = value;
         }
         [[nodiscard]] static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
             return targetAddress & AlignedOffsetMask;
@@ -125,26 +123,26 @@ public:
         void reset(uint32_t address, MemoryThing& thing) noexcept {
             byte* buf = reinterpret_cast<byte*>(components_);
             if (valid_ && dirty_) {
-                thing.write(addr.getAlignedAddress(), buf, CacheLineSize);
+                thing.write(addr, buf, CacheLineSize);
             }
             dirty_ = false;
             valid_ = true;
-            addr.rawValue = address;
-            thing.read(address, buf, CacheLineSize);
+            addr = address;
+            thing.read(addr, buf, CacheLineSize);
         }
         void invalidate(MemoryThing& thing) noexcept {
             if (valid_ && dirty_) {
-                thing.write(addr.getAlignedAddress(), reinterpret_cast<byte*>(components_), CacheLineSize);
+                thing.write(addr, reinterpret_cast<byte*>(components_), CacheLineSize);
             }
             status_ = 0;
-            addr.rawValue = 0;
+            addr = 0;
         }
         [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
     private:
         /**
          * @brief The base address of the cache line
          */
-         CacheAddress addr;
+         uint32_t addr;
         /**
          * @brief The cache line contents itself
          */
@@ -159,7 +157,6 @@ public:
             };
         };
     };
-    static_assert(sizeof(CacheAddress) == sizeof(uint32_t));
     static constexpr auto isLegalNumberOfCacheLines(uint32_t num) noexcept {
         switch (num) {
             case 1:
@@ -171,19 +168,6 @@ public:
             case 64:
             case 128:
             case 256:
-                return true;
-            default:
-                return false;
-        }
-    }
-    static constexpr auto isLegalNumberOfWays(uint32_t num) noexcept {
-        switch (num) {
-            case 1:
-            case 2:
-            case 4:
-            case 8:
-            case 16:
-            case 32:
                 return true;
             default:
                 return false;
@@ -205,6 +189,9 @@ public:
         getCacheLine(targetAddress).setWord(targetAddress, value);
     }
 private:
+    static constexpr auto getReplacementLineOffset(uint32_t address) noexcept {
+
+    }
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
      * @param targetAddress
@@ -212,10 +199,11 @@ private:
      */
     Line& getCacheLine(uint32_t targetAddress) noexcept {
             // direct mapped cache
-            CacheAddress addr(targetAddress);
-            auto &replacementLine = lines_[addr.index];
-            if (!replacementLine.respondsTo(addr.tag)) {
-                replacementLine.reset(addr.getAlignedAddress(), thing_);
+            auto alignedAddress = getAlignedAddress(targetAddress);
+            auto lineIndex = getLineOffset(targetAddress);
+            auto &replacementLine = lines_[lineIndex];
+            if (!replacementLine.respondsTo(alignedAddress)) {
+                replacementLine.reset(alignedAddress, thing_);
             }
             return replacementLine;
     }
@@ -306,4 +294,8 @@ private:
     bool enabled_ = true;
 };
 
+static_assert(DataCache<256, 16>::getAlignedAddress(0x16) == 0x10);
+static_assert(DataCache<256, 16>::getLineOffset(0x16) == 0x6);
+static_assert(DataCache<256, 16>::CacheIndexBitConsumption == 8);
+static_assert(DataCache<256, 16>::getLineIndex(0xFDED16) == 0xD1);
 #endif //I960SXCHIPSET_CACHE_H
