@@ -210,6 +210,17 @@ public:
         getCacheLine(targetAddress).setWord(targetAddress, value);
     }
 private:
+    static uint8_t fastRandom(uint16_t seed) {
+        // taken from https://engineeringnotes.blogspot.com/2015/07/a-fast-random-function-for-arduinoc.html
+        static uint16_t y = 0;
+        if (seed != 0) {
+            y += (seed & 0x1FFF);
+        }
+        y ^= (y << 2);
+        y ^= (y >> 7);
+        y ^= (y << 7);
+        return y;
+    }
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
      * @param targetAddress
@@ -239,8 +250,9 @@ private:
                     way1.reset(addr.getAlignedAddress(), thing_);
                     return way1;
                 } else {
+
                     // we hit a cache miss so choose one of the two to jettison
-                    auto& targetWay = lines_[targetSetIndex + random(NumberOfWays)];
+                    auto& targetWay = lines_[(targetSetIndex + (fastRandom(NumberOfWays)) % NumberOfWays)];
                     targetWay.reset(addr.getAlignedAddress(), thing_);
                     return targetWay;
                 }
@@ -271,7 +283,7 @@ private:
                     return way3;
                 } else {
                     // we hit a cache miss so choose one of the two to jettison
-                    auto& targetWay = lines_[targetSetIndex + random(NumberOfWays)];
+                    auto& targetWay = lines_[targetSetIndex + (fastRandom(NumberOfWays) % NumberOfWays)];
                     targetWay.reset(addr.getAlignedAddress(), thing_);
                     return targetWay;
                 }
