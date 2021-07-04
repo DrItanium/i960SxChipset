@@ -439,11 +439,11 @@ private:
 
 using DisplayThing = TFTShieldThing;
 DisplayThing displayCommandSet(0x200);
-RAMFile ramSection; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
-ROMTextSection textSection;
+RAMFile ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+ROMTextSection rom;
 ROMDataSection dataRom;
-ROMThing rom(textSection);
-RAMThing ram(ramSection);
+//ROMThing rom(textSection);
+//RAMThing ram(ramSection);
 
 
 SDCardFilesystemInterface fs(0x300);
