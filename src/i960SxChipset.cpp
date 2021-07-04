@@ -619,16 +619,21 @@ void loop() {
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-        do {
+        if (processorInterface.isBurstLast()) {
             processorInterface.updateDataCycle();
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
+            processorInterface.setDataBits(theThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
             DigitalPin<i960Pinout::Ready>::pulse();
-            if (processorInterface.isBurstLast()) {
-                break;
-            }
-        } while (true);
+        } else {
+            theThing->read(processorInterface.getAlignedAddress(), reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            do {
+                processorInterface.updateDataCycle();
+                processorInterface.setDataBits(theThing->read(burstCache[processorInterface.getBurstAddressBits()].wholeValue_, processorInterface.getStyle()));
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (processorInterface.isBurstLast()) {
+                    break;
+                }
+            } while (true);
+        }
     } else {
         if (processorInterface.isBurstLast()) {
             // single element transaction so nothing to cache here
