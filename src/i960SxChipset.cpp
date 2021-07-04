@@ -442,11 +442,9 @@ DisplayThing displayCommandSet(0x200);
 RAMFile ramSection; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection textSection;
 ROMDataSection dataRom;
-ROMThing cachedRom(textSection);
-RAMThing cachedRam(ramSection);
+ROMThing rom(textSection);
+RAMThing ram(ramSection);
 
-MemoryThing& rom = cachedRom;
-MemoryThing& ram = cachedRam;
 
 SDCardFilesystemInterface fs(0x300);
 
@@ -621,13 +619,18 @@ void loop() {
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
         if (processorInterface.isBurstLast()) {
             processorInterface.updateDataCycle();
-            processorInterface.setDataBits(theThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
+            auto address = processorInterface.getAddress();
+            auto style = processorInterface.getStyle();
+            processorInterface.setDataBits(theThing->read(address, style));
             DigitalPin<i960Pinout::Ready>::pulse();
         } else {
             theThing->read(processorInterface.getAlignedAddress(), reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            processorInterface.updateDataCycle();
+            processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressBits()].wholeValue_);
+            DigitalPin<i960Pinout::Ready>::pulse();
             do {
                 processorInterface.updateDataCycle();
-                processorInterface.setDataBits(theThing->read(burstCache[processorInterface.getBurstAddressBits()].wholeValue_, processorInterface.getStyle()));
+                processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressBits()].wholeValue_);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (processorInterface.isBurstLast()) {
                     break;
@@ -644,6 +647,23 @@ void loop() {
             DigitalPin<i960Pinout::Ready>::pulse();
         } else {
             theThing->read(processorInterface.getAlignedAddress(), reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            processorInterface.updateDataCycle();
+            auto& targetCacheEntry = burstCache[processorInterface.getBurstAddressBits()];
+            LoadStoreStyle style = processorInterface.getStyle();
+            switch (SplitWord16 theBits(processorInterface.getDataBits()); style) {
+                case LoadStoreStyle::Full16:
+                    targetCacheEntry = theBits;
+                    break;
+                case LoadStoreStyle::Upper8:
+                    targetCacheEntry.bytes[1] = theBits.bytes[1];
+                    break;
+                case LoadStoreStyle::Lower8:
+                    targetCacheEntry.bytes[0] = theBits.bytes[0];
+                    break;
+                default:
+                    signalHaltState(F("BAD LOAD STORE STYLE!"));
+            }
+            DigitalPin<i960Pinout::Ready>::pulse();
             do {
                 processorInterface.updateDataCycle();
                 auto& targetCacheEntry = burstCache[processorInterface.getBurstAddressBits()];
