@@ -189,20 +189,15 @@ public:
         getCacheLine(targetAddress).setWord(targetAddress, value);
     }
 private:
-    static constexpr auto getReplacementLineOffset(uint32_t address) noexcept {
-
-    }
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
      * @param targetAddress
      * @return The line that was updated
      */
-    Line& getCacheLine(uint32_t targetAddress) noexcept {
+    inline Line& getCacheLine(uint32_t targetAddress) noexcept {
             // direct mapped cache
-            auto alignedAddress = getAlignedAddress(targetAddress);
-            auto lineIndex = getLineOffset(targetAddress);
-            auto &replacementLine = lines_[lineIndex];
-            if (!replacementLine.respondsTo(alignedAddress)) {
+            auto &replacementLine = lines_[getLineIndex(targetAddress)];
+            if (auto alignedAddress = getAlignedAddress(targetAddress); !replacementLine.respondsTo(alignedAddress)) {
                 replacementLine.reset(alignedAddress, thing_);
             }
             return replacementLine;
