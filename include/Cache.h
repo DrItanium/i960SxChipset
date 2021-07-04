@@ -233,7 +233,7 @@ private:
             // direct mapped cache
             auto &replacementLine = lines_[addr.index];
             if (!replacementLine.respondsTo(addr.tag)) {
-                replacementLine.reset(addr.index, addr.getAlignedAddress(), thing_);
+                replacementLine.reset(addr.getAlignedAddress(), thing_);
             }
             return replacementLine;
         } else if constexpr (NumberOfWays == 2) {
@@ -250,14 +250,13 @@ private:
                     way1.reset(addr.getAlignedAddress(), thing_);
                     return way1;
                 } else {
-
                     // we hit a cache miss so choose one of the two to jettison
                     auto& targetWay = lines_[(targetSetIndex + (fastRandom(NumberOfWays)) % NumberOfWays)];
                     targetWay.reset(addr.getAlignedAddress(), thing_);
                     return targetWay;
                 }
             }
-        } else if constexpr (NumberOfWays == 4) {
+        } else {
             auto targetSetIndex = addr.index * NumberOfWays;
             auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
             Line* firstEmptyWay = nullptr;
@@ -277,8 +276,6 @@ private:
                 targetWay.reset(addr.getAlignedAddress(), thing_);
                 return targetWay;
             }
-        } else {
-            signalHaltState(F("MULTI WAY CACHES ARE UNIMPLEMENTED!"));
         }
     }
 public:
