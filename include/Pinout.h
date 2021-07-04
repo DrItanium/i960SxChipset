@@ -70,12 +70,12 @@ enum class i960Pinout : decltype(A0) {
         BLAST_,     // input
         FAIL,         // input
 // PORT A, used to select the spi bus address (not directly used)
-        SPI_BUS_A0,
-        SPI_BUS_A1,
-        SPI_BUS_A2,
-        SPI_BUS_A3,
-        SPI_BUS_A4,
-        SPI_BUS_A5,
+        WR2,
+        BA1,
+        BA2,
+        BA3,
+        BE0,
+        BE1,
         SPI_BUS_A6,
         SPI_BUS_A7,
     Count,          // special, must be last
@@ -89,12 +89,12 @@ template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-        case i960Pinout::SPI_BUS_A0:
-        case i960Pinout::SPI_BUS_A1:
-        case i960Pinout::SPI_BUS_A2:
-        case i960Pinout::SPI_BUS_A3:
-        case i960Pinout::SPI_BUS_A4:
-        case i960Pinout::SPI_BUS_A5:
+        case i960Pinout::WR2:
+        case i960Pinout::BA1:
+        case i960Pinout::BA2:
+        case i960Pinout::BA3:
+        case i960Pinout::BE0:
+        case i960Pinout::BE1:
         case i960Pinout::SPI_BUS_A6:
         case i960Pinout::SPI_BUS_A7:
             return PORTA;
@@ -134,12 +134,12 @@ template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-        case i960Pinout::SPI_BUS_A0:
-        case i960Pinout::SPI_BUS_A1:
-        case i960Pinout::SPI_BUS_A2:
-        case i960Pinout::SPI_BUS_A3:
-        case i960Pinout::SPI_BUS_A4:
-        case i960Pinout::SPI_BUS_A5:
+        case i960Pinout::WR2:
+        case i960Pinout::BA1:
+        case i960Pinout::BA2:
+        case i960Pinout::BA3:
+        case i960Pinout::BE0:
+        case i960Pinout::BE1:
         case i960Pinout::SPI_BUS_A6:
         case i960Pinout::SPI_BUS_A7:
             return PINA;
@@ -178,12 +178,12 @@ template<i960Pinout pin>
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-        case i960Pinout::SPI_BUS_A0: return _BV(PA0) ;
-        case i960Pinout::SPI_BUS_A1: return _BV(PA1);
-        case i960Pinout::SPI_BUS_A2: return _BV(PA2);
-        case i960Pinout::SPI_BUS_A3: return _BV(PA3);
-        case i960Pinout::SPI_BUS_A4: return _BV(PA4);
-        case i960Pinout::SPI_BUS_A5: return _BV(PA5);
+        case i960Pinout::WR2: return _BV(PA0) ;
+        case i960Pinout::BA1: return _BV(PA1);
+        case i960Pinout::BA2: return _BV(PA2);
+        case i960Pinout::BA3: return _BV(PA3);
+        case i960Pinout::BE0: return _BV(PA4);
+        case i960Pinout::BE1: return _BV(PA5);
         case i960Pinout::SPI_BUS_A6: return _BV(PA6);
         case i960Pinout::SPI_BUS_A7: return _BV(PA7);
         case i960Pinout::SCL:        return _BV(PC0);

@@ -522,7 +522,14 @@ void setup() {
                   i960Pinout::AS_,
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
-                  i960Pinout::FAIL);
+                  i960Pinout::FAIL,
+                  i960Pinout::WR2,
+                  i960Pinout::BA1,
+                  i960Pinout::BA2,
+                  i960Pinout::BA3,
+                  i960Pinout::BE0,
+                  i960Pinout::BE1);
+
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         digitalWrite(i960Pinout::Led, LOW);
