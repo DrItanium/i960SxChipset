@@ -221,6 +221,10 @@ private:
         y ^= (y << 7);
         return y;
     }
+    uint8_t getCacheLineToEvict() noexcept {
+        auto counter = evictionCounter++;
+        return counter % NumberOfWays;
+    }
     /**
      * @brief Looks through the given lines and does a random replacement (like arm cortex R)
      * @param targetAddress
@@ -251,7 +255,7 @@ private:
                     return way1;
                 } else {
                     // we hit a cache miss so choose one of the two to jettison
-                    auto& targetWay = lines_[(targetSetIndex + (fastRandom(NumberOfWays)) % NumberOfWays)];
+                    auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
                     targetWay.reset(addr.getAlignedAddress(), thing_);
                     return targetWay;
                 }
@@ -272,7 +276,7 @@ private:
                 return *firstEmptyWay;
             } else {
                 // we hit a cache miss so choose one of the two to jettison
-                auto& targetWay = lines_[targetSetIndex + (fastRandom(NumberOfWays) % NumberOfWays)];
+                auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
                 targetWay.reset(addr.getAlignedAddress(), thing_);
                 return targetWay;
             }
@@ -363,6 +367,7 @@ private:
     MemoryThing& thing_;
     Line lines_[NumberOfCacheLines];
     bool enabled_ = true;
+    uint8_t evictionCounter = 0;
 };
 // Sanity checks to make sure that my math is right
 static_assert(DataCache<256,16,1>::Address_OffsetBitCount == 4);
