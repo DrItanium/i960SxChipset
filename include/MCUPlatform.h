@@ -188,6 +188,12 @@ static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16
 /**
  * @brief The backing design of the registers within the chipset that are 32-bits in width
  */
+union SplitWord16 {
+    explicit constexpr SplitWord16(uint16_t value = 0) noexcept : wholeValue_(value) { }
+    constexpr auto getWholeValue() const noexcept { return wholeValue_; }
+    uint16_t wholeValue_ = 0;
+    uint8_t bytes[2];
+};
 union SplitWord32 {
     uint32_t wholeValue_ = 0;
     int32_t signedWholeValue;
@@ -198,12 +204,6 @@ union SplitWord128 {
     uint16_t shorts[16/sizeof(uint16_t)];
     uint32_t words[16/sizeof(uint32_t)];
     uint64_t quads[16/sizeof(uint64_t)];
-};
-union SplitWord16 {
-    explicit constexpr SplitWord16(uint16_t value = 0) noexcept : wholeValue_(value) { }
-    constexpr auto getWholeValue() const noexcept { return wholeValue_; }
-    uint16_t wholeValue_ = 0;
-    uint8_t bytes[2];
 };
 static_assert(!TargetBoard::cpuIsARMArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");
 static_assert(TargetBoard::cpuIsAVRArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");

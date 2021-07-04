@@ -474,12 +474,9 @@ class CacheEntry {
 public:
     constexpr bool valid() const noexcept { return valid_; }
     constexpr bool isDirty() const noexcept { return dirty_; }
-private:
-public:
     void reset(Address newTag, MemoryThing& thing) noexcept {
         if (valid() && isDirty()) {
-            auto* backingThing = getThing(tag, LoadStoreStyle::Full16);
-            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+            getThing(tag, LoadStoreStyle::Full16)->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
         }
         dirty_ = false;
         valid_ = true;
@@ -488,12 +485,10 @@ public:
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
-            auto* backingThing = getThing(tag, LoadStoreStyle::Full16);
-            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+            getThing(tag, LoadStoreStyle::Full16)->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+            controlBits = 0;
+            tag = 0;
         }
-        dirty_ = false;
-        valid_ = false;
-        tag = 0;
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b111]; }
