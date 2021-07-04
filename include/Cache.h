@@ -52,112 +52,109 @@ constexpr auto numberOfAddressBitsForGivenByteSize(uint32_t numBytes) noexcept {
         default: return 0;
     }
 }
-template<uint32_t size = 16>
-struct CacheLine {
-public:
-    [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
-        return valid_ && ((address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize)));
-    }
-    [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
-        auto base = computeCacheByteOffset(targetAddress);
-        auto componentId = base >> 1;
-        auto offsetId = base & 1;
-        return components_[componentId].bytes[offsetId];
-    }
-    void setByte(uint32_t address, uint8_t value) noexcept {
-        dirty_ = true;
-        auto base = computeCacheByteOffset(address);
-        auto componentId = base >> 1;
-        auto offsetId = base & 1;
-        components_[componentId].bytes[offsetId] = value;
-    }
-    [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
-        return components_[computeCacheWordOffset(targetAddress)].wholeValue_;
-    }
-    void setWord(uint32_t targetAddress, uint16_t value) noexcept {
-        dirty_ = true;
-        components_[computeCacheWordOffset(targetAddress)].wholeValue_ = value;
-    }
-    static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
-        switch (lineSize) {
-            case 16:
-            case 32:
-            case 64:
-            case 128:
-            case 256:
-            case 512:
-            case 1024:
-                return true;
-            default:
-                return false;
-        }
-    }
-    static constexpr auto CacheLineSize = size;
-    static constexpr auto ComponentSize = CacheLineSize / sizeof(SplitWord16);
-    static constexpr auto CacheByteMask = CacheLineSize - 1;
-    static constexpr auto AlignedOffsetMask = ~CacheByteMask;
-    static constexpr auto CacheOffsetBitConsumption = numberOfAddressBitsForGivenByteSize(CacheLineSize);
-    static_assert(isLegalCacheLineSize(CacheLineSize), "CacheLineSize must be 16, 32, 64, 128, 256, or 512 bytes");
-    static_assert(CacheOffsetBitConsumption != 0, "Invalid number of bits consumed by this cache line!");
-    [[nodiscard]] static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
-        return targetAddress & CacheByteMask;
-    }
-    [[nodiscard]] static constexpr uint32_t computeCacheWordOffset(uint32_t targetAddress) noexcept {
-        return computeCacheByteOffset(targetAddress) >> 1;
-    }
-    [[nodiscard]] static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
-        return targetAddress & AlignedOffsetMask;
-    }
-    void reset(uint32_t address, MemoryThing& thing) noexcept {
-        byte* buf = reinterpret_cast<byte*>(components_);
-        if (valid_ && dirty_) {
-            thing.write(address_, buf, CacheLineSize);
-        }
-        dirty_ = false;
-        valid_ = true;
-        address_ = address;
-        thing.read(address_, buf, CacheLineSize);
-    }
-    void invalidate(MemoryThing& thing) noexcept {
-        if (valid_ && dirty_) {
-            thing.write(address_, reinterpret_cast<byte*>(components_), CacheLineSize);
-        }
-        dirty_ = false;
-        valid_ = false;
-        address_ = 0;
-    }
-    [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
-private:
-    /**
-     * @brief The base address of the cache line
-     */
-    uint32_t address_ = 0;
-    /**
-     * @brief The cache line contents itself
-     */
-    SplitWord16 components_[ComponentSize];
-    static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!");
-    union {
-        byte status_ = 0;
-        struct
-        {
-            bool dirty_: 1;
-            bool valid_: 1;
-        };
-    };
-};
-static_assert(CacheLine<16>::computeAlignedOffset(0xFFFF'FFFF) == 0xFFFF'FFF0);
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32, uint32_t wayCount = 1>
 class DataCache : public MemoryThing {
 public:
-    using ASingleCacheLine = CacheLine<cacheLineSize>;
+    struct Line {
+    public:
+        [[nodiscard]] constexpr bool respondsTo(uint32_t targetAddress) const noexcept {
+            return valid_ && ((address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize)));
+        }
+        [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
+            auto base = computeCacheByteOffset(targetAddress);
+            auto componentId = base >> 1;
+            auto offsetId = base & 1;
+            return components_[componentId].bytes[offsetId];
+        }
+        void setByte(uint32_t address, uint8_t value) noexcept {
+            dirty_ = true;
+            auto base = computeCacheByteOffset(address);
+            auto componentId = base >> 1;
+            auto offsetId = base & 1;
+            components_[componentId].bytes[offsetId] = value;
+        }
+        [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
+            return components_[computeCacheWordOffset(targetAddress)].wholeValue_;
+        }
+        void setWord(uint32_t targetAddress, uint16_t value) noexcept {
+            dirty_ = true;
+            components_[computeCacheWordOffset(targetAddress)].wholeValue_ = value;
+        }
+        static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
+            switch (lineSize) {
+                case 16:
+                case 32:
+                case 64:
+                case 128:
+                case 256:
+                case 512:
+                case 1024:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        static constexpr auto CacheLineSize = cacheLineSize;
+        static constexpr auto ComponentSize = CacheLineSize / sizeof(SplitWord16);
+        static constexpr auto CacheByteMask = CacheLineSize - 1;
+        static constexpr auto AlignedOffsetMask = ~CacheByteMask;
+        static constexpr auto CacheOffsetBitConsumption = numberOfAddressBitsForGivenByteSize(CacheLineSize);
+        static_assert(isLegalCacheLineSize(CacheLineSize), "CacheLineSize must be 16, 32, 64, 128, 256, or 512 bytes");
+        static_assert(CacheOffsetBitConsumption != 0, "Invalid number of bits consumed by this cache line!");
+        [[nodiscard]] static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
+            return targetAddress & CacheByteMask;
+        }
+        [[nodiscard]] static constexpr uint32_t computeCacheWordOffset(uint32_t targetAddress) noexcept {
+            return computeCacheByteOffset(targetAddress) >> 1;
+        }
+        [[nodiscard]] static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
+            return targetAddress & AlignedOffsetMask;
+        }
+        void reset(uint32_t address, MemoryThing& thing) noexcept {
+            byte* buf = reinterpret_cast<byte*>(components_);
+            if (valid_ && dirty_) {
+                thing.write(address_, buf, CacheLineSize);
+            }
+            dirty_ = false;
+            valid_ = true;
+            address_ = address;
+            thing.read(address_, buf, CacheLineSize);
+        }
+        void invalidate(MemoryThing& thing) noexcept {
+            if (valid_ && dirty_) {
+                thing.write(address_, reinterpret_cast<byte*>(components_), CacheLineSize);
+            }
+            dirty_ = false;
+            valid_ = false;
+            address_ = 0;
+        }
+        [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
+    private:
+        /**
+         * @brief The base address of the cache line
+         */
+        uint32_t address_ = 0;
+        /**
+         * @brief The cache line contents itself
+         */
+        SplitWord16 components_[ComponentSize];
+        static_assert(sizeof(components_) == CacheLineSize, "The backing store for the cache line is not the same size as the cache line size! Please adapt this code to work correctly for your target!");
+        union {
+            byte status_ = 0;
+            struct
+            {
+                bool dirty_: 1;
+                bool valid_: 1;
+            };
+        };
+    };
     static constexpr auto NumberOfWays = wayCount;
     static constexpr auto CacheLineSize = cacheLineSize;
     static constexpr auto NumberOfCacheLines = numLines;
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
     static constexpr auto NumberOfCacheSets = DataCacheSize / (CacheLineSize * NumberOfWays);
     static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
-    static constexpr auto Address_OffsetBitCount = ASingleCacheLine :: CacheOffsetBitConsumption;
+    static constexpr auto Address_OffsetBitCount = Line :: CacheOffsetBitConsumption;
     static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumberOfCacheSets);
     static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
     union CacheAddress {
@@ -168,7 +165,7 @@ public:
             uint32_t index : Address_SetIndexBitCount;
             uint32_t tag : Address_TagBitCount;
         };
-        [[nodiscard]] constexpr uint32_t getAlignedAddress() const noexcept { return ASingleCacheLine ::computeAlignedOffset( rawValue); }
+        [[nodiscard]] constexpr uint32_t getAlignedAddress() const noexcept { return Line ::computeAlignedOffset( rawValue); }
     };
     static_assert(sizeof(CacheAddress) == sizeof(uint32_t));
     static_assert(NumberOfWays > 0, "Must have a minimum of 1 way");
@@ -223,7 +220,7 @@ private:
      * @param targetAddress
      * @return The line that was updated
      */
-    ASingleCacheLine& getCacheLine(uint32_t targetAddress) noexcept {
+    Line& getCacheLine(uint32_t targetAddress) noexcept {
         // instead of using random directly, use an incrementing counter to choose a line to invalidate
         // thus at no point will we actually know what we've dropped.
         if constexpr (CacheAddress addr(targetAddress); IsDirectMappedCache) {
@@ -321,7 +318,7 @@ private:
     }
 private:
     MemoryThing& thing_;
-    ASingleCacheLine lines_[NumberOfCacheLines];
+    Line lines_[NumberOfCacheLines];
     bool enabled_ = true;
 };
 // Sanity checks to make sure that my math is right
