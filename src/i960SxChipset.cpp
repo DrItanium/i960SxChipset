@@ -483,7 +483,7 @@ struct CacheEntry {
     MemoryThing* backingThing = nullptr;
     constexpr bool valid() const noexcept { return backingThing; }
     constexpr bool isDirty() const noexcept { return dirty_; }
-    void reset(Address newTag, MemoryThing& thing) {
+    void reset(Address newTag, MemoryThing& thing) noexcept {
         if (valid() && isDirty()) {
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
         }
@@ -491,6 +491,14 @@ struct CacheEntry {
         tag = newTag;
         backingThing = &thing;
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof(data));
+    }
+    void invalidate() noexcept {
+        if (valid() && isDirty()) {
+            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+        }
+        dirty_ = false;
+        tag = 0;
+        backingThing = nullptr;
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return tag == addr; }
     [[nodiscard]] SplitWord16& get(byte offset) noexcept { return data[offset & 0b111]; }
@@ -513,6 +521,12 @@ struct CacheEntry {
     }
 };
 CacheEntry entries[2];
+void invalidateGlobalCache() noexcept {
+    // commit all entries back
+    for (auto& entry : entries) {
+        entries->invalidate();
+    }
+}
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
