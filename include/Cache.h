@@ -259,34 +259,23 @@ private:
             }
         } else if constexpr (NumberOfWays == 4) {
             auto targetSetIndex = addr.index * NumberOfWays;
-            // straight line the code despite it being a pain in the ass
-            if (auto& way0 = lines_[targetSetIndex]; way0.respondsTo(addr.tag)) {
-                return way0;
-            } else if (auto& way1 = lines_[targetSetIndex+1]; way1.respondsTo(addr.tag)) {
-                return way1;
-            } else if (auto& way2 = lines_[targetSetIndex+2]; way2.respondsTo(addr.tag)) {
-                return way2;
-            } else if (auto& way3 = lines_[targetSetIndex+3]; way3.respondsTo(addr.tag)) {
-                return way3;
-            } else {
-                if (!way0.isValid()) {
-                    way0.reset(addr.getAlignedAddress(), thing_) ;
-                    return way0;
-                } else if (!way1.isValid()) {
-                    way1.reset(addr.getAlignedAddress(), thing_);
-                    return way1;
-                } else if (!way2.isValid()) {
-                    way2.reset(addr.getAlignedAddress(), thing_);
-                    return way2;
-                } else if (!way3.isValid()) {
-                    way3.reset(addr.getAlignedAddress(), thing_);
-                    return way3;
-                } else {
-                    // we hit a cache miss so choose one of the two to jettison
-                    auto& targetWay = lines_[targetSetIndex + (fastRandom(NumberOfWays) % NumberOfWays)];
-                    targetWay.reset(addr.getAlignedAddress(), thing_);
-                    return targetWay;
+            auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
+            Line* firstEmptyWay = nullptr;
+            for (auto i = targetSetIndex; i < targetSetIndexEnd; ++i) {
+                if (auto& way = lines_[i]; way.respondsTo(addr.tag)) {
+                    return way;
+                } else if (!way.isValid() && !firstEmptyWay) {
+                    firstEmptyWay = &way;
                 }
+            }
+            if (firstEmptyWay) {
+                firstEmptyWay->reset(addr.getAlignedAddress(), thing_);
+                return *firstEmptyWay;
+            } else {
+                // we hit a cache miss so choose one of the two to jettison
+                auto& targetWay = lines_[targetSetIndex + (fastRandom(NumberOfWays) % NumberOfWays)];
+                targetWay.reset(addr.getAlignedAddress(), thing_);
+                return targetWay;
             }
         } else {
             signalHaltState(F("MULTI WAY CACHES ARE UNIMPLEMENTED!"));
