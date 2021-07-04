@@ -452,8 +452,8 @@ MemoryThing* things[] {
 
 
 
-bool asTriggered = false;
-bool denTriggered = false;
+volatile bool asTriggered = false;
+volatile bool denTriggered = false;
 void onASAsserted() {
     asTriggered = true;
 }
