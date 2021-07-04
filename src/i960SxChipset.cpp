@@ -504,6 +504,7 @@ struct CacheEntry {
     [[nodiscard]] SplitWord16& get(byte offset) noexcept { return data[offset & 0b111]; }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b111]; }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
+        dirty_ = true;
         switch (auto& target = get(offset);style) {
             case LoadStoreStyle::Full16:
                 target.wholeValue_ = value.wholeValue_;
@@ -677,8 +678,6 @@ void loop() {
             do {
                 processorInterface.updateDataCycle();
                 auto address = processorInterface.getAddress();
-                Serial.print(F("UNCACHED READ FROM 0x"));
-                Serial.println(address, HEX);
                 auto style = processorInterface.getStyle();
                 processorInterface.setDataBits(theThing->read(address, style));
                 DigitalPin<i960Pinout::Ready>::pulse();
@@ -690,8 +689,6 @@ void loop() {
             do {
                 processorInterface.updateDataCycle();
                 Address burstAddress = processorInterface.getAddress();
-                Serial.print(F("UNCACHED WRITE TO 0x"));
-                Serial.println(burstAddress, HEX);
                 LoadStoreStyle style = processorInterface.getStyle();
                 theThing->write(burstAddress, processorInterface.getDataBits(), style);
                 DigitalPin<i960Pinout::Ready>::pulse();
@@ -701,18 +698,18 @@ void loop() {
             } while (true);
         }
     } else {
+        // there is a bug somewhere in here
         auto address = processorInterface.getAlignedAddress();
-        auto tagIndex = address & 0b10000 ? 1 : 0;
-        auto& theEntry = entries[tagIndex];
+        //auto tagIndex = address & 0b10000 ? 1 : 0;
+        auto& theEntry = entries[0];
         if (!theEntry.matches(address)) {
             theEntry.reset(address, *theThing);
         }
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.updateDataCycle();
-                Serial.print(F("CACHED READ FROM 0x"));
-                Serial.println(processorInterface.getAddress(), HEX);
-                processorInterface.setDataBits(theEntry.get(processorInterface.getBurstAddressBits()).wholeValue_);
+                auto result = theEntry.get(processorInterface.getBurstAddressBits()).wholeValue_;
+                processorInterface.setDataBits(result);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (processorInterface.isBurstLast()) {
                     break;
@@ -722,8 +719,12 @@ void loop() {
             do {
                 processorInterface.updateDataCycle();
                 SplitWord16 theBits(processorInterface.getDataBits());
+#if 0
                 Serial.print(F("CACHED WRITE TO 0x"));
-                Serial.println(processorInterface.getAddress(), HEX);
+                Serial.print(processorInterface.getAddress(), HEX);
+                Serial.print(F(" THE VALUE 0x"));
+                Serial.println(theBits.wholeValue_, HEX);
+#endif
                 theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (processorInterface.isBurstLast()) {
