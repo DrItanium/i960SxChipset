@@ -55,94 +55,101 @@ constexpr auto numberOfAddressBitsForGivenByteSize(uint32_t numBytes) noexcept {
 template<uint32_t numLines = 16, uint32_t cacheLineSize = 32, uint32_t wayCount = 1>
 class DataCache : public MemoryThing {
 public:
+    static constexpr auto CacheLineSize = cacheLineSize;
+    static constexpr auto ComponentSize = CacheLineSize / sizeof(SplitWord16);
+    static constexpr auto CacheByteMask = CacheLineSize - 1;
+    static constexpr auto AlignedOffsetMask = ~CacheByteMask;
+    static constexpr auto CacheOffsetBitConsumption = numberOfAddressBitsForGivenByteSize(CacheLineSize);
+    static constexpr auto NumberOfWays = wayCount;
+    static constexpr auto NumberOfCacheLines = numLines;
+    static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
+    static constexpr auto NumberOfCacheSets = DataCacheSize / (CacheLineSize * NumberOfWays);
+    static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
+    static constexpr auto Address_OffsetBitCount = CacheOffsetBitConsumption;
+    static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumberOfCacheSets);
+    static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
+    static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
+        switch (lineSize) {
+            case 16:
+            case 32:
+            case 64:
+            case 128:
+            case 256:
+            case 512:
+            case 1024:
+                return true;
+            default:
+                return false;
+        }
+    }
+    static_assert(isLegalCacheLineSize(CacheLineSize), "CacheLineSize must be 16, 32, 64, 128, 256, or 512 bytes");
+    static_assert(CacheOffsetBitConsumption != 0, "Invalid number of bits consumed by this cache line!");
+    union CacheAddress {
+        constexpr explicit CacheAddress(uint32_t baseValue = 0) noexcept : rawValue(baseValue) { }
+        uint32_t rawValue = 0;
+        struct {
+            uint32_t offset : Address_OffsetBitCount;
+            uint32_t index : Address_SetIndexBitCount;
+            uint32_t tag : Address_TagBitCount;
+        };
+        [[nodiscard]] constexpr uint32_t getAlignedAddress() const noexcept { return Line ::computeAlignedOffset( rawValue); }
+        [[nodiscard]] constexpr auto getByteOffset() const noexcept { return offset & 1; }
+        [[nodiscard]] constexpr auto getComponentIndex() const noexcept { return offset >> 1; }
+    };
     struct Line {
     public:
         [[nodiscard]] constexpr bool respondsTo(uint32_t targetTag) const noexcept {
             // just do a comparison with this design
-            return valid_ && (targetTag == tag_);
+            return valid_ && (targetTag == addr.tag);
             //return valid_ && ((address_ <= targetAddress) && (targetAddress < (address_ + CacheLineSize)));
         }
-        [[nodiscard]] constexpr uint8_t getByte(uint32_t targetAddress) const noexcept {
-            auto base = computeCacheByteOffset(targetAddress);
-            auto componentId = base >> 1;
-            auto offsetId = base & 1;
-            return components_[componentId].bytes[offsetId];
+        [[nodiscard]] constexpr uint8_t getByte(uint32_t address) const noexcept { return getByte(CacheAddress{address}); }
+        [[nodiscard]] constexpr uint8_t getByte(CacheAddress targetAddress) const noexcept {
+            return components_[targetAddress.getComponentIndex()].bytes[targetAddress.getByteOffset()];
         }
-        void setByte(uint32_t address, uint8_t value) noexcept {
+        inline void setByte(uint32_t address, uint8_t value) noexcept  { setByte(CacheAddress{address}, value); }
+        void setByte(CacheAddress address, uint8_t value) noexcept {
             dirty_ = true;
-            auto base = computeCacheByteOffset(address);
-            auto componentId = base >> 1;
-            auto offsetId = base & 1;
-            components_[componentId].bytes[offsetId] = value;
+            components_[address.getComponentIndex()].bytes[address.getByteOffset()] = value;
         }
-        [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept {
-            return components_[computeCacheWordOffset(targetAddress)].wholeValue_;
+        [[nodiscard]] constexpr uint16_t getWord(uint32_t targetAddress) const noexcept { return getWord(CacheAddress{targetAddress}); }
+        [[nodiscard]] constexpr uint16_t getWord(CacheAddress targetAddress) const noexcept {
+            return components_[targetAddress.getComponentIndex()].wholeValue_;
         }
-        void setWord(uint32_t targetAddress, uint16_t value) noexcept {
+        inline void setWord(uint32_t targetAddress, uint16_t value) noexcept { setWord(CacheAddress{targetAddress}, value); }
+        void setWord(CacheAddress targetAddress, uint16_t value) noexcept {
             dirty_ = true;
-            components_[computeCacheWordOffset(targetAddress)].wholeValue_ = value;
-        }
-        static constexpr auto isLegalCacheLineSize(uint32_t lineSize) noexcept {
-            switch (lineSize) {
-                case 16:
-                case 32:
-                case 64:
-                case 128:
-                case 256:
-                case 512:
-                case 1024:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-        static constexpr auto CacheLineSize = cacheLineSize;
-        static constexpr auto ComponentSize = CacheLineSize / sizeof(SplitWord16);
-        static constexpr auto CacheByteMask = CacheLineSize - 1;
-        static constexpr auto AlignedOffsetMask = ~CacheByteMask;
-        static constexpr auto CacheOffsetBitConsumption = numberOfAddressBitsForGivenByteSize(CacheLineSize);
-        static_assert(isLegalCacheLineSize(CacheLineSize), "CacheLineSize must be 16, 32, 64, 128, 256, or 512 bytes");
-        static_assert(CacheOffsetBitConsumption != 0, "Invalid number of bits consumed by this cache line!");
-        [[nodiscard]] static constexpr uint32_t computeCacheByteOffset(uint32_t targetAddress) noexcept {
-            return targetAddress & CacheByteMask;
-        }
-        [[nodiscard]] static constexpr uint32_t computeCacheWordOffset(uint32_t targetAddress) noexcept {
-            return computeCacheByteOffset(targetAddress) >> 1;
+            components_[targetAddress.getComponentIndex()].wholeValue_ = value;
         }
         [[nodiscard]] static constexpr uint32_t computeAlignedOffset(uint32_t targetAddress) noexcept {
             return targetAddress & AlignedOffsetMask;
         }
-        void reset(uint32_t oldIndex, uint32_t address, MemoryThing& thing) noexcept {
+        void reset(uint32_t address, MemoryThing& thing) noexcept {
             byte* buf = reinterpret_cast<byte*>(components_);
             if (valid_ && dirty_) {
-                CacheAddress addr;
-                addr.index = oldIndex;
-                addr.tag = tag_;
                 thing.write(addr.getAlignedAddress(), buf, CacheLineSize);
             }
             dirty_ = false;
             valid_ = true;
-            CacheAddress newAddr(address);
-            tag_ = newAddr.tag;
-            thing.read(newAddr.getAlignedAddress(), buf, CacheLineSize);
+            addr.rawValue = address;
+            Serial.print(F("New Address: 0x"));
+            Serial.println(address, HEX);
+            thing.read(address, buf, CacheLineSize);
         }
-        void invalidate(uint32_t oldIndex, MemoryThing& thing) noexcept {
+        void invalidate(MemoryThing& thing) noexcept {
             if (valid_ && dirty_) {
-                CacheAddress addr;
-                addr.index = oldIndex;
-                addr.tag = tag_;
                 thing.write(addr.getAlignedAddress(), reinterpret_cast<byte*>(components_), CacheLineSize);
             }
             dirty_ = false;
             valid_ = false;
-            tag_ = 0;
+            addr.rawValue = 0;
         }
         [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
     private:
         /**
          * @brief The base address of the cache line
          */
-        uint32_t tag_ = 0;
+         CacheAddress addr;
         /**
          * @brief The cache line contents itself
          */
@@ -156,25 +163,6 @@ public:
                 bool valid_: 1;
             };
         };
-    };
-    static constexpr auto NumberOfWays = wayCount;
-    static constexpr auto CacheLineSize = cacheLineSize;
-    static constexpr auto NumberOfCacheLines = numLines;
-    static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
-    static constexpr auto NumberOfCacheSets = DataCacheSize / (CacheLineSize * NumberOfWays);
-    static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
-    static constexpr auto Address_OffsetBitCount = Line :: CacheOffsetBitConsumption;
-    static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumberOfCacheSets);
-    static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
-    union CacheAddress {
-        constexpr explicit CacheAddress(uint32_t baseValue = 0) noexcept : rawValue(baseValue) { }
-        uint32_t rawValue = 0;
-        struct {
-            uint32_t offset : Address_OffsetBitCount;
-            uint32_t index : Address_SetIndexBitCount;
-            uint32_t tag : Address_TagBitCount;
-        };
-        [[nodiscard]] constexpr uint32_t getAlignedAddress() const noexcept { return Line ::computeAlignedOffset( rawValue); }
     };
     static_assert(sizeof(CacheAddress) == sizeof(uint32_t));
     static_assert(NumberOfWays > 0, "Must have a minimum of 1 way");
@@ -239,30 +227,30 @@ private:
                 replacementLine.reset(addr.index, addr.getAlignedAddress(), thing_);
             }
             return replacementLine;
-        } else if (NumberOfWays == 2) {
+        } else if constexpr (NumberOfWays == 2) {
             auto targetSetIndex = addr.index * NumberOfWays;
+            Serial.print(F("TARGET SET INDEX: 0x"));
+            Serial.println(targetSetIndex, HEX);
             if (auto& way0 = lines_[targetSetIndex]; way0.respondsTo(addr.tag)) {
                 return way0;
             } else if (auto& way1 = lines_[targetSetIndex+1]; way1.respondsTo(addr.tag)) {
                 return way1;
             } else {
                 if (!way0.isValid()) {
-                    way0.reset(addr.index, addr.getAlignedAddress(), thing_) ;
+                    Serial.println(F("USING WAY0 FOR INITIAL CACHE"));
+                    way0.reset(addr.getAlignedAddress(), thing_) ;
                     return way0;
                 } else if (!way1.isValid()) {
-                    way1.reset(addr.index, addr.getAlignedAddress(), thing_);
+                    Serial.println(F("USING WAY1 FOR INITIAL CACHE"));
+                    way1.reset(addr.getAlignedAddress(), thing_);
                     return way1;
                 } else {
+                    Serial.println(F("CACHE MISS!"));
                     // we hit a cache miss so choose one of the two to jettison
-                    if (wayToDiscard & 1) {
-                        way0.reset(addr.index, addr.getAlignedAddress(), thing_);
-                        ++wayToDiscard;
-                        return way0;
-                    } else {
-                        way1.reset(addr.index, addr.getAlignedAddress(), thing_);
-                        ++wayToDiscard;
-                        return way1;
-                    }
+                    ++wayToDiscard;
+                    auto& targetWay = wayToDiscard & 1 ? way1 : way0;
+                    targetWay.reset(addr.getAlignedAddress(), thing_);
+                    return targetWay;
                 }
             }
             // lets brain out two way set associativity
@@ -348,8 +336,8 @@ public:
     }
 private:
     void invalidate() noexcept {
-        for (Address i = 0; i < NumberOfCacheLines; ++i) {
-            lines_[i].invalidate(i, thing_);
+        for (auto& line : lines_) {
+            line.invalidate(thing_);
         }
     }
 private:
