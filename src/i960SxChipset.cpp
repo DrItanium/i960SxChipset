@@ -475,8 +475,52 @@ void onDENAsserted() {
 // ----------------------------------------------------------------
 
 MemoryThing* theThing = nullptr;
-Address burstCacheTag = 0;
-SplitWord16 burstCache[8];
+
+struct CacheEntry {
+    Address tag;
+    bool dirty_ = false;
+    SplitWord16 data[8];
+    MemoryThing* backingThing = nullptr;
+    constexpr bool valid() const noexcept { return backingThing; }
+    constexpr bool isDirty() const noexcept { return dirty_; }
+    void reset(Address newTag, MemoryThing& thing) {
+        if (valid() && dirty_) {
+            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+        }
+        dirty_ = false;
+        tag = newTag;
+        backingThing = &thing;
+        thing.read(tag, reinterpret_cast<byte*>(data), sizeof(data));
+    }
+    void invalidate() {
+        if (valid() && dirty_) {
+            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+        }
+        dirty_ = false;
+        tag = 0;
+        backingThing = nullptr;
+    }
+    [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return tag == addr; }
+    [[nodiscard]] SplitWord16& get(byte offset) noexcept { return data[offset & 0b111]; }
+    [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b111]; }
+    void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
+        switch (auto& target = get(offset);style) {
+            case LoadStoreStyle::Full16:
+                target.wholeValue_ = value.wholeValue_;
+                break;
+            case LoadStoreStyle::Lower8:
+                target.bytes[0] = value.bytes[0];
+                break;
+            case LoadStoreStyle::Upper8:
+                target.bytes[1] = value.bytes[1];
+                break;
+            default:
+                signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
+                break;
+        }
+    }
+};
+CacheEntry entries[2];
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
@@ -485,8 +529,8 @@ void setupPeripherals() {
     dataRom.begin();
     ram.begin();
     // load the burstCache with the first 16 bytes in memory
-    burstCacheTag = 0;
-    rom.read(0, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+    entries[0].reset(0, rom);
+    entries[1].reset(0x10, rom);
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
@@ -629,13 +673,15 @@ void loop() {
             processorInterface.setDataBits(theThing->read(address, style));
             DigitalPin<i960Pinout::Ready>::pulse();
         } else {
-            if (burstCacheTag != processorInterface.getAlignedAddress()) {
-                burstCacheTag = processorInterface.getAlignedAddress();
-                theThing->read(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            auto address = processorInterface.getAlignedAddress();
+            auto tagIndex = address & 0b10000 ? 1 : 0;
+            auto& theEntry = entries[tagIndex];
+            if (!theEntry.matches(address)) {
+                theEntry.reset(address, *theThing);
             }
             do {
                 processorInterface.updateDataCycle();
-                processorInterface.setDataBits(burstCache[processorInterface.getBurstAddressBits()].wholeValue_);
+                processorInterface.setDataBits(theEntry.get(processorInterface.getBurstAddressBits()).wholeValue_);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (processorInterface.isBurstLast()) {
                     break;
@@ -651,13 +697,15 @@ void loop() {
             theThing->write(burstAddress, processorInterface.getDataBits(), style);
             DigitalPin<i960Pinout::Ready>::pulse();
         } else {
-            if (burstCacheTag != processorInterface.getAlignedAddress()) {
-                burstCacheTag = processorInterface.getAlignedAddress();
-                theThing->read(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            auto address = processorInterface.getAlignedAddress();
+            auto tagIndex = address & 0b10000 ? 1 : 0;
+            auto& theEntry = entries[tagIndex];
+            if (!theEntry.matches(address)) {
+                theEntry.reset(address, *theThing);
             }
             do {
                 processorInterface.updateDataCycle();
-                auto& targetCacheEntry = burstCache[processorInterface.getBurstAddressBits()];
+                auto& targetCacheEntry = theEntry.get(processorInterface.getBurstAddressBits());
                 LoadStoreStyle style = processorInterface.getStyle();
                 switch (SplitWord16 theBits(processorInterface.getDataBits()); style) {
                     case LoadStoreStyle::Full16:
@@ -678,7 +726,7 @@ void loop() {
                 }
             } while (true);
             // we need to commit the data back to the burst cache right now for safety, later on we can make this be more lazy
-            theThing->write(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            //theThing->write(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
         }
     }
 }
