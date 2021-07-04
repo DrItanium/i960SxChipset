@@ -158,6 +158,8 @@ public:
      * @brief Reactivate any sort of caching this memory thing has
      */
     virtual void enableCache() noexcept { }
+
+    virtual bool bypassesCache() const noexcept { return false; }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
 private:
     Address base_;
@@ -194,6 +196,7 @@ public:
     IOSpaceThing(Address base, Address end) : MemoryThing(base + SpaceBaseAddress, end + SpaceBaseAddress) { }
     explicit IOSpaceThing(Address base) : MemoryThing(base + SpaceBaseAddress) { }
     ~IOSpaceThing() override = default;
+    bool bypassesCache() const noexcept override { return true; }
 };
 /**
  * @brief Does a lookup in the global thing collection to try and find a thing that will respond to the given address

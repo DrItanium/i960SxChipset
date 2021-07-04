@@ -657,23 +657,25 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-        if (processorInterface.isBurstLast()) {
-            processorInterface.updateDataCycle();
-            auto address = processorInterface.getAddress();
-            auto style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(address, style));
-            DigitalPin<i960Pinout::Ready>::pulse();
-        } else {
-            auto address = processorInterface.getAlignedAddress();
-            auto tagIndex = address & 0b10000 ? 1 : 0;
-            auto& theEntry = entries[tagIndex];
-            if (!theEntry.matches(address)) {
-                theEntry.reset(address, *theThing);
-            }
+    if (theThing->bypassesCache()) {
+        // just don't use the cache and revert to the old school design
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.updateDataCycle();
-                processorInterface.setDataBits(theEntry.get(processorInterface.getBurstAddressBits()).wholeValue_);
+                auto address = processorInterface.getAddress();
+                auto style = processorInterface.getStyle();
+                processorInterface.setDataBits(theThing->read(address, style));
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (processorInterface.isBurstLast()) {
+                    break;
+                }
+            } while (true);
+        } else {
+            do {
+                processorInterface.updateDataCycle();
+                Address burstAddress = processorInterface.getAddress();
+                LoadStoreStyle style = processorInterface.getStyle();
+                theThing->write(burstAddress, processorInterface.getDataBits(), style);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (processorInterface.isBurstLast()) {
                     break;
@@ -681,44 +683,69 @@ void loop() {
             } while (true);
         }
     } else {
-        if (processorInterface.isBurstLast()) {
-            // single element transaction so nothing to cache here
-            processorInterface.updateDataCycle();
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
-            DigitalPin<i960Pinout::Ready>::pulse();
-        } else {
-            auto address = processorInterface.getAlignedAddress();
-            auto tagIndex = address & 0b10000 ? 1 : 0;
-            auto& theEntry = entries[tagIndex];
-            if (!theEntry.matches(address)) {
-                theEntry.reset(address, *theThing);
-            }
-            do {
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            if (processorInterface.isBurstLast()) {
                 processorInterface.updateDataCycle();
-                auto& targetCacheEntry = theEntry.get(processorInterface.getBurstAddressBits());
-                LoadStoreStyle style = processorInterface.getStyle();
-                switch (SplitWord16 theBits(processorInterface.getDataBits()); style) {
-                    case LoadStoreStyle::Full16:
-                        targetCacheEntry = theBits;
-                        break;
-                    case LoadStoreStyle::Upper8:
-                        targetCacheEntry.bytes[1] = theBits.bytes[1];
-                        break;
-                    case LoadStoreStyle::Lower8:
-                        targetCacheEntry.bytes[0] = theBits.bytes[0];
-                        break;
-                    default:
-                        signalHaltState(F("BAD LOAD STORE STYLE!"));
-                }
+                auto address = processorInterface.getAddress();
+                auto style = processorInterface.getStyle();
+                processorInterface.setDataBits(theThing->read(address, style));
                 DigitalPin<i960Pinout::Ready>::pulse();
-                if (processorInterface.isBurstLast()) {
-                    break;
+            } else {
+                auto address = processorInterface.getAlignedAddress();
+                auto tagIndex = address & 0b10000 ? 1 : 0;
+                auto& theEntry = entries[tagIndex];
+                if (!theEntry.matches(address)) {
+                    theEntry.reset(address, *theThing);
                 }
-            } while (true);
-            // we need to commit the data back to the burst cache right now for safety, later on we can make this be more lazy
-            //theThing->write(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+                do {
+                    processorInterface.updateDataCycle();
+                    processorInterface.setDataBits(theEntry.get(processorInterface.getBurstAddressBits()).wholeValue_);
+                    DigitalPin<i960Pinout::Ready>::pulse();
+                    if (processorInterface.isBurstLast()) {
+                        break;
+                    }
+                } while (true);
+            }
+        } else {
+            if (processorInterface.isBurstLast()) {
+                // single element transaction so nothing to cache here
+                processorInterface.updateDataCycle();
+                Address burstAddress = processorInterface.getAddress();
+                LoadStoreStyle style = processorInterface.getStyle();
+                theThing->write(burstAddress, processorInterface.getDataBits(), style);
+                DigitalPin<i960Pinout::Ready>::pulse();
+            } else {
+                auto address = processorInterface.getAlignedAddress();
+                auto tagIndex = address & 0b10000 ? 1 : 0;
+                auto& theEntry = entries[tagIndex];
+                if (!theEntry.matches(address)) {
+                    theEntry.reset(address, *theThing);
+                }
+                do {
+                    processorInterface.updateDataCycle();
+                    auto& targetCacheEntry = theEntry.get(processorInterface.getBurstAddressBits());
+                    LoadStoreStyle style = processorInterface.getStyle();
+                    switch (SplitWord16 theBits(processorInterface.getDataBits()); style) {
+                        case LoadStoreStyle::Full16:
+                            targetCacheEntry = theBits;
+                            break;
+                        case LoadStoreStyle::Upper8:
+                            targetCacheEntry.bytes[1] = theBits.bytes[1];
+                            break;
+                        case LoadStoreStyle::Lower8:
+                            targetCacheEntry.bytes[0] = theBits.bytes[0];
+                            break;
+                        default:
+                            signalHaltState(F("BAD LOAD STORE STYLE!"));
+                    }
+                    DigitalPin<i960Pinout::Ready>::pulse();
+                    if (processorInterface.isBurstLast()) {
+                        break;
+                    }
+                } while (true);
+                // we need to commit the data back to the burst cache right now for safety, later on we can make this be more lazy
+                //theThing->write(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            }
         }
     }
 }
