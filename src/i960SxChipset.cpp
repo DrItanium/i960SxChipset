@@ -470,11 +470,8 @@ void onDENAsserted() {
 
 MemoryThing* theThing = nullptr;
 
-struct CacheEntry {
-    Address tag = 0;
-    bool dirty_ = false;
-    SplitWord16 data[8];
-    MemoryThing* backingThing = nullptr;
+class CacheEntry {
+public:
     constexpr bool valid() const noexcept { return backingThing; }
     constexpr bool isDirty() const noexcept { return dirty_; }
     void reset(Address newTag, MemoryThing& thing) noexcept {
@@ -513,6 +510,11 @@ struct CacheEntry {
                 break;
         }
     }
+private:
+    Address tag = 0;
+    bool dirty_ = false;
+    SplitWord16 data[8];
+    MemoryThing* backingThing = nullptr;
 };
 constexpr auto NumberOfCacheLines = 256;
 constexpr auto CacheLineMask = NumberOfCacheLines - 1;
