@@ -65,6 +65,7 @@ public:
     static constexpr auto DataCacheSize = CacheLineSize * NumberOfCacheLines;
     static constexpr auto NumberOfCacheSets = DataCacheSize / (CacheLineSize * NumberOfWays);
     static constexpr auto IsDirectMappedCache = NumberOfWays == 1;
+    static constexpr auto IsSetAssociativeCache = NumberOfWays > 1;
     static constexpr auto Address_OffsetBitCount = CacheOffsetBitConsumption;
     static constexpr auto Address_SetIndexBitCount  = numberOfAddressBitsForGivenByteSize(NumberOfCacheSets);
     static constexpr auto Address_TagBitCount = (32 - (Address_OffsetBitCount + Address_SetIndexBitCount));
@@ -138,8 +139,7 @@ public:
             if (valid_ && dirty_) {
                 thing.write(addr.getAlignedAddress(), reinterpret_cast<byte*>(components_), CacheLineSize);
             }
-            dirty_ = false;
-            valid_ = false;
+            status_ = 0;
             addr.rawValue = 0;
         }
         [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
