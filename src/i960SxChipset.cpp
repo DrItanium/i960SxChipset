@@ -471,7 +471,6 @@ void onDENAsserted() {
 
 
 
-SplitWord16 burstCache[8] = { 0 };
 
 // ----------------------------------------------------------------
 // setup routines
@@ -588,6 +587,7 @@ void setup() {
 // Ti -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
+SplitWord16 burstCache[8];
 void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
@@ -621,27 +621,48 @@ void loop() {
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
         do {
             processorInterface.updateDataCycle();
-            auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
             DigitalPin<i960Pinout::Ready>::pulse();
-            if (blastAsserted) {
+            if (processorInterface.isBurstLast()) {
                 break;
             }
         } while (true);
     } else {
-        do {
+        if (processorInterface.isBurstLast()) {
+            // single element transaction so nothing to cache here
             processorInterface.updateDataCycle();
-            auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, processorInterface.getDataBits(), style);
             DigitalPin<i960Pinout::Ready>::pulse();
-            if (blastAsserted) {
-                break;
-            }
-        } while (true);
+        } else {
+            theThing->read(processorInterface.getAlignedAddress(), reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+            do {
+                processorInterface.updateDataCycle();
+                auto& targetCacheEntry = burstCache[processorInterface.getBurstAddressBits()];
+                LoadStoreStyle style = processorInterface.getStyle();
+                switch (SplitWord16 theBits(processorInterface.getDataBits()); style) {
+                    case LoadStoreStyle::Full16:
+                        targetCacheEntry = theBits;
+                        break;
+                    case LoadStoreStyle::Upper8:
+                        targetCacheEntry.bytes[1] = theBits.bytes[1];
+                        break;
+                    case LoadStoreStyle::Lower8:
+                        targetCacheEntry.bytes[0] = theBits.bytes[0];
+                        break;
+                    default:
+                        signalHaltState(F("BAD LOAD STORE STYLE!"));
+                }
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (processorInterface.isBurstLast()) {
+                    break;
+                }
+            } while (true);
+            theThing->write(processorInterface.getAlignedAddress(), reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
+        }
     }
 }
 

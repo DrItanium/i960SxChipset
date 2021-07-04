@@ -200,6 +200,7 @@ union SplitWord128 {
     uint64_t quads[16/sizeof(uint64_t)];
 };
 union SplitWord16 {
+    explicit constexpr SplitWord16(uint16_t value = 0) noexcept : wholeValue_(value) { }
     uint16_t wholeValue_ = 0;
     uint8_t bytes[2];
 };

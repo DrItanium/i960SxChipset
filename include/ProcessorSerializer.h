@@ -94,6 +94,8 @@ public:
     //[[nodiscard]] bool isWriteOperation() const noexcept;
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
+    [[nodiscard]] constexpr auto getAlignedAddress() const noexcept { return upperMaskedAddress_; }
+    [[nodiscard]] constexpr auto getBurstAddressBits() const noexcept { return burstAddressBits_; }
 public:
     void setPortZDirectionRegister(byte value) noexcept;
     byte getPortZDirectionRegister() noexcept;
@@ -117,6 +119,7 @@ private:
     bool lockValue_ = true;
     bool holdValue_ = false;
     bool blastAsserted_ = false;
+    byte burstAddressBits_ = 0;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes
