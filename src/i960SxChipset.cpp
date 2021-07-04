@@ -710,6 +710,8 @@ void loop() {
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.updateDataCycle();
+                Serial.print(F("CACHED READ FROM 0x"));
+                Serial.println(processorInterface.getAddress(), HEX);
                 processorInterface.setDataBits(theEntry.get(processorInterface.getBurstAddressBits()).wholeValue_);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (processorInterface.isBurstLast()) {
@@ -720,6 +722,8 @@ void loop() {
             do {
                 processorInterface.updateDataCycle();
                 SplitWord16 theBits(processorInterface.getDataBits());
+                Serial.print(F("CACHED WRITE TO 0x"));
+                Serial.println(processorInterface.getAddress(), HEX);
                 theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (processorInterface.isBurstLast()) {
