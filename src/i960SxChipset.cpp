@@ -502,12 +502,9 @@ struct CacheEntry {
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b111]; }
-private:
-    [[nodiscard]] SplitWord16& get(byte offset) noexcept { return data[offset & 0b111]; }
-public:
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         dirty_ = true;
-        switch (auto& target = get(offset);style) {
+        switch (auto& target = data[offset & 0b111];style) {
             case LoadStoreStyle::Full16:
                 target.wholeValue_ = value.wholeValue_;
                 break;
@@ -523,7 +520,12 @@ public:
         }
     }
 };
-CacheEntry entries[2];
+constexpr auto NumberOfCacheLines = 256;
+constexpr auto CacheLineMask = NumberOfCacheLines - 1;
+constexpr uint16_t computeTagIndex(Address address) noexcept {
+    return static_cast<uint16_t>(address >> 4) & CacheLineMask;
+}
+CacheEntry entries[NumberOfCacheLines];
 void invalidateGlobalCache() noexcept {
     // commit all entries back
     for (auto& entry : entries) {
@@ -702,15 +704,14 @@ void loop() {
     } else {
         // there is a bug somewhere in here
         auto address = processorInterface.getAlignedAddress();
-        //auto tagIndex = address & 0b10000 ? 1 : 0;
-        auto& theEntry = entries[0];
+        auto& theEntry = entries[computeTagIndex(address)];
         if (!theEntry.matches(address)) {
             theEntry.reset(address, *theThing);
         }
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.updateDataCycle();
-                auto result = theEntry.get(processorInterface.getBurstAddressBits()).wholeValue_;
+                auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
                 processorInterface.setDataBits(result);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (processorInterface.isBurstLast()) {
