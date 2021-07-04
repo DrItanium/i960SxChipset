@@ -471,7 +471,7 @@ void onDENAsserted() {
 MemoryThing* theThing = nullptr;
 
 struct CacheEntry {
-    Address tag;
+    Address tag = 0;
     bool dirty_ = false;
     SplitWord16 data[8];
     MemoryThing* backingThing = nullptr;
