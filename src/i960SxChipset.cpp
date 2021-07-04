@@ -618,56 +618,30 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+    if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        do {
             processorInterface.updateDataCycle();
+            auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             processorInterface.setDataBits(theThing->read(burstAddress, style));
             DigitalPin<i960Pinout::Ready>::pulse();
-        } else {
-            processorInterface.updateDataCycle();
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            DigitalPin<i960Pinout::Ready>::pulse();
-        }
+            if (blastAsserted) {
+                break;
+            }
+        } while (true);
     } else {
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        do {
             processorInterface.updateDataCycle();
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(burstAddress, style));
-            DigitalPin<i960Pinout::Ready>::pulse();
-            do {
-                processorInterface.updateDataCycle();
-                auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                Address burstAddress = processorInterface.getAddress();
-                LoadStoreStyle style = processorInterface.getStyle();
-                processorInterface.setDataBits(theThing->read(burstAddress, style));
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (blastAsserted) {
-                    break;
-                }
-            } while (true);
-        } else {
-            processorInterface.updateDataCycle();
+            auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             Address burstAddress = processorInterface.getAddress();
             LoadStoreStyle style = processorInterface.getStyle();
             theThing->write(burstAddress, processorInterface.getDataBits(), style);
             DigitalPin<i960Pinout::Ready>::pulse();
-            do {
-                processorInterface.updateDataCycle();
-                auto blastAsserted = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                Address burstAddress = processorInterface.getAddress();
-                LoadStoreStyle style = processorInterface.getStyle();
-                theThing->write(burstAddress, processorInterface.getDataBits(), style);
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (blastAsserted) {
-                    break;
-                }
-            } while (true);
-        }
+            if (blastAsserted) {
+                break;
+            }
+        } while (true);
     }
 }
 
