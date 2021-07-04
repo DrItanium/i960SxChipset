@@ -261,13 +261,12 @@ private:
             }
         } else {
             auto targetSetIndex = addr.index * NumberOfWays;
-            Line* setStart = &lines_[targetSetIndex];
-            Line* way = setStart;
+            auto targetSetIndexEnd = targetSetIndex + NumberOfWays;
             Line* anInvalidLine = nullptr;
-            for (auto i = 0; i < NumberOfWays; ++i, ++way) {
-                if (way->respondsTo(addr.tag)) {
-                    return *way;
-                } else if (!way->isValid) {
+            for (auto i = targetSetIndex; i < targetSetIndexEnd; ++i) {
+                if (auto& way = lines_[i]; way.respondsTo(addr.tag)) {
+                    return way;
+                } else if (!way.isValid && !anInvalidLine) {
                     anInvalidLine = way;
                 }
             }
@@ -277,7 +276,7 @@ private:
                 return *anInvalidLine;
             } else {
                 // we hit a cache miss so choose one of the two to jettison
-                auto& targetWay = setStart[getCacheLineToEvict()];
+                auto& targetWay = lines_[targetSetIndex + getCacheLineToEvict()];
                 targetWay.reset(addr.getAlignedAddress(), thing_);
                 return targetWay;
             }
