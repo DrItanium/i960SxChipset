@@ -234,7 +234,18 @@ void ProcessorInterface::newDataCycle() noexcept {
     address_ = lower16Addr | upper16Addr;
 }
 void ProcessorInterface::updateDataCycle() noexcept {
-    auto bits = read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
-    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
-    address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
+    union {
+        byte rawValue;
+        struct
+        {
+            byte burstAddressBits : 3;
+            LoadStoreStyle byteEnableBits : 2;
+        };
+    } bits;
+    bits.rawValue = PINA; // read from porta instead
+    lss_ = bits.byteEnableBits;
+    address_ = upperMaskedAddress_ | bits.burstAddressBits;
+    //auto bits = read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
+    //lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
+    //address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
 }
