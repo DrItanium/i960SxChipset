@@ -584,9 +584,9 @@ void purgeSRAMCache() noexcept {
                 static_cast<byte>(i >> 16),
                 static_cast<byte>(i >> 8),
                 static_cast<byte>(i),
-                1, 2, 3, 4, 5, 6, 7, 8,
-                9, 10, 11, 12, 13, 14, 15, 16,
                 17, 18, 19, 20, 21, 22, 23, 24,
+                9, 10, 11, 12, 13, 14, 15, 16,
+                1, 2, 3, 4, 5, 6, 7, 8,
         };
         byte pageReadInstruction[28] {
                 0x02,
@@ -598,9 +598,9 @@ void purgeSRAMCache() noexcept {
                 0, 0, 0, 0, 0, 0, 0, 0,
         };
         constexpr byte resultantPagePurge[24] {
-                1, 2, 3, 4, 5, 6, 7, 8,
-                9, 10, 11, 12, 13, 14, 15, 16,
                 17, 18, 19, 20, 21, 22, 23, 24,
+                9, 10, 11, 12, 13, 14, 15, 16,
+                1, 2, 3, 4, 5, 6, 7, 8,
         };
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(pagePurgeInstruction, 28);
@@ -693,13 +693,15 @@ void setup() {
 
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
+        SPI.begin();
+        purgeSRAMCache();
+        signalHaltState(F("HALTING HERE!"));
         theThing = &rom;
         fs.begin();
         chipsetFunctions.begin();
         Serial.println(F("i960Sx chipset bringup"));
-        SPI.begin();
         // purge the cache pages
-        purgeSRAMCache();
+
         processorInterface.begin();
         setupPeripherals();
         delay(1000);
