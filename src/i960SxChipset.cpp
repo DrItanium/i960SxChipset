@@ -172,10 +172,10 @@ public:
         FillRoundRect,
     };
 public:
-    explicit TFTShieldThing(Address base) : IOSpaceThing(base, base + 0x100),
-                                            display_(static_cast<int>(i960Pinout::DISPLAY_EN),
-                                                     static_cast<int>(i960Pinout::DC),
-                                                     -1) { }
+    explicit TFTShieldThing(Address base) : IOSpaceThing(base, base + 0x100) { }
+                                            //display_(static_cast<int>(i960Pinout::DISPLAY_EN),
+                                            //         static_cast<int>(i960Pinout::DC),
+                                            //         -1) { }
     ~TFTShieldThing() override = default;
     /**
      * @brief Invoke on doorbell write
@@ -183,6 +183,7 @@ public:
      * @return the value to return to the i960 if it makes sense (otherwise it will be zero)
      */
     uint16_t invoke(uint16_t /* unused */) {
+#if 0
         // perhaps we'll do nothing with the value but hold onto it for now
         switch (command_) {
             case Opcodes::SetRotation:
@@ -257,6 +258,7 @@ public:
             default:
                 return 0;
         }
+#endif
         return 0;
     }
 public:
@@ -295,11 +297,16 @@ public:
     void setG(int16_t value) noexcept { g_ = value; }
     void setB(int16_t value) noexcept { b_ = value; }
     void flush() {
-        display_.flush();
+        //display_.flush();
     }
-    void print(char c) { display_.print(c); }
+    void print(char c) {
+        //display_.print(c);
+    }
     [[nodiscard]] bool available() noexcept { return true; }
-    [[nodiscard]] bool availableForWriting() noexcept { return display_.availableForWrite(); }
+    [[nodiscard]] bool availableForWriting() noexcept {
+        //return display_.availableForWrite();
+        return false;
+    }
     uint16_t read16(Address address) noexcept override {
         switch (address) {
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
@@ -358,29 +365,39 @@ public:
                 break;
             X(Backlight) :
                 backlightStatus_ = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
-                ss.setBacklight(backlightStatus_);
+                //ss.setBacklight(backlightStatus_);
                 break;
             X(BacklightFrequency) :
                 backlightFrequency_ = value;
-                ss.setBacklightFreq(backlightFrequency_);
+                //ss.setBacklightFreq(backlightFrequency_);
                 break;
             X(ButtonsQuery):
-                buttonsCache_ = ss.readButtons();
+                buttonsCache_ = 0;
+                        //ss.readButtons();
                 break;
 #undef X
             default: break;
         }
     }
-    inline void fillScreen(uint16_t value) noexcept { display_.fillScreen(value); }
-    inline void setCursor(int16_t x, int16_t y) noexcept { display_.setCursor(x, y); }
-    inline void setTextColor(uint16_t value) noexcept { display_.setTextColor(value); }
-    inline void setTextSize(uint16_t size) noexcept { display_.setTextSize(size); }
+    inline void fillScreen(uint16_t value) noexcept {
+        //display_.fillScreen(value);
+    }
+    inline void setCursor(int16_t x, int16_t y) noexcept {
+        //display_.setCursor(x, y);
+    }
+    inline void setTextColor(uint16_t value) noexcept {
+        //display_.setTextColor(value);
+    }
+    inline void setTextSize(uint16_t size) noexcept {
+        //display_.setTextSize(size);
+    }
     template<typename T, typename ... Args>
     inline void println(T msg, Args&& ... args) noexcept {
-        display_.println(msg, args...);
+        //display_.println(msg, args...);
     }
     void
     begin() noexcept override {
+#if 0
         Serial.println(F("Setting up the seesaw"));
         if (!ss.begin()) {
             signalHaltState(F("NO SEESAW"));
@@ -398,13 +415,14 @@ public:
         display_.setTextColor(ST77XX_WHITE);
         display_.setTextSize(3);
         display_.println(F("i960Sx!"));
+#endif
     }
     void
     clearScreen() {
-        display_.fillScreen(ST7735_BLACK);
+        //display_.fillScreen(ST7735_BLACK);
     }
 private:
-    Adafruit_ST7735 display_;
+    //Adafruit_ST7735 display_;
     Opcodes command_ = Opcodes::None;
     int16_t x_ = 0;
     int16_t y_ = 0;
@@ -427,7 +445,7 @@ private:
     uint16_t backlightStatus_ = TFTSHIELD_BACKLIGHT_ON;
     uint16_t backlightFrequency_ = 0;
     uint32_t buttonsCache_ = 0;
-    Adafruit_TFTShield18 ss;
+    //Adafruit_TFTShield18 ss;
 
 };
 
@@ -532,13 +550,44 @@ void invalidateGlobalCache() noexcept {
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
-    displayCommandSet.begin();
-    displayReady = true;
+    //displayCommandSet.begin();
+    //displayReady = true;
     rom.begin();
     dataRom.begin();
     ram.begin();
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
+}
+void setSRAMId(uint32_t address) {
+    byte id = (address >> 17) & 0b111;
+    digitalWrite<i960Pinout::CACHE_A0>(id & 1);
+    digitalWrite<i960Pinout::CACHE_A1>(id & 0b10 ? HIGH : LOW);
+    digitalWrite<i960Pinout::CACHE_A2>(id & 0b100 ? HIGH : LOW);
+}
+/**
+ * @brief Just in case, purge the sram of data
+ */
+void purgeSRAMCache() noexcept {
+    // 23lc1024s are in sequential by default :)
+    Serial.println(F("PURGING SRAM CACHE!"));
+    constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+    for (uint32_t i = 0; i < max; i+= 32) {
+        setSRAMId(i);
+        byte pagePurgeInstruction[36] {
+                0x03,
+                static_cast<byte>(i >> 16),
+                static_cast<byte>(i >> 8),
+                static_cast<byte>(i),
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+        };
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        SPI.transfer(pagePurgeInstruction, 36);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+    }
+    Serial.println(F("DONE PURGING SRAM CACHE!"));
 }
 // the setup routine runs once when you press reset:
 void setup() {
@@ -597,6 +646,8 @@ void setup() {
         chipsetFunctions.begin();
         Serial.println(F("i960Sx chipset bringup"));
         SPI.begin();
+        // purge the cache pages
+        purgeSRAMCache();
         processorInterface.begin();
         setupPeripherals();
         delay(1000);
