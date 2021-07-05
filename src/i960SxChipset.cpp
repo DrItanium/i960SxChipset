@@ -558,8 +558,11 @@ void setupPeripherals() {
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
-void setSRAMId(uint32_t address) {
-    byte id = (address >> 17) & 0b111;
+constexpr byte getChipId(uint32_t address) noexcept {
+    return (address >> 17) & 0b111;
+}
+void setSRAMId(uint32_t address) noexcept {
+    auto id = getChipId(address);
     digitalWrite<i960Pinout::CACHE_A0>(id & 1);
     digitalWrite<i960Pinout::CACHE_A1>(id & 0b10 ? HIGH : LOW);
     digitalWrite<i960Pinout::CACHE_A2>(id & 0b100 ? HIGH : LOW);
@@ -569,8 +572,55 @@ void setSRAMId(uint32_t address) {
  */
 void purgeSRAMCache() noexcept {
     // 23lc1024s are in sequential by default :)
-    Serial.println(F("PURGING SRAM CACHE!"));
+    Serial.println(F("PERFORMING SRAM CHECK!"));
     constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+    byte previousChipFailure = 0xFF;
+    for (uint32_t i = 0; i < max; i+= 32) {
+        setSRAMId(i);
+        byte pagePurgeInstruction[36] {
+                0x03,
+                static_cast<byte>(i >> 16),
+                static_cast<byte>(i >> 8),
+                static_cast<byte>(i),
+                1, 2, 3, 4, 5, 6, 7, 8,
+                9, 10, 11, 12, 13, 14, 15, 16,
+                17, 18, 19, 20, 21, 22, 23, 24,
+                25, 26, 27, 28, 29, 30, 31, 32,
+        };
+        byte pageReadInstruction[36] {
+                0x02,
+                static_cast<byte>(i >> 16),
+                static_cast<byte>(i >> 8),
+                static_cast<byte>(i),
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+        };
+        constexpr byte resultantPagePurge[32] {
+                1, 2, 3, 4, 5, 6, 7, 8,
+                9, 10, 11, 12, 13, 14, 15, 16,
+                17, 18, 19, 20, 21, 22, 23, 24,
+                25, 26, 27, 28, 29, 30, 31, 32,
+        };
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        SPI.transfer(pagePurgeInstruction, 36);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        SPI.transfer(pageReadInstruction, 36);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        for (int x = 0, y = 4; x < 32; ++x, ++y) {
+            if (resultantPagePurge[x] != pageReadInstruction[y]) {
+                if (previousChipFailure != getChipId(i)) {
+                    previousChipFailure = getChipId(i);
+                    Serial.print(F("COMMIT FAILURE ON SRAM ID: "));
+                    Serial.println(previousChipFailure);
+                }
+            }
+        }
+    }
+    Serial.println(F("SRAM CHECK COMPLETE!"));
+    Serial.println(F("PURGING SRAM CACHE!"));
     for (uint32_t i = 0; i < max; i+= 32) {
         setSRAMId(i);
         byte pagePurgeInstruction[36] {
@@ -588,6 +638,7 @@ void purgeSRAMCache() noexcept {
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
     }
     Serial.println(F("DONE PURGING SRAM CACHE!"));
+
 }
 // the setup routine runs once when you press reset:
 void setup() {
