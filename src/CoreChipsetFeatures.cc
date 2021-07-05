@@ -52,8 +52,6 @@ CoreChipsetFeatures::CoreChipsetFeatures(Address offsetFromIOBase) : IOSpaceThin
 uint8_t
 CoreChipsetFeatures::read8(Address address) noexcept {
     switch (static_cast<Registers>(address)) {
-        case Registers::Led:
-            return readLed();
         case Registers::DisplayMemoryReadsAndWrites:
             return displayMemoryReadsAndWrites();
         case Registers::DisplayCacheLineUpdates:
@@ -136,9 +134,6 @@ CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
 void
 CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
     switch (static_cast<Registers>(address)) {
-        case Registers::Led:
-            writeLed(value);
-            break;
         case Registers::DisplayMemoryReadsAndWrites:
             setDisplayMemoryReadsAndWrites(value != 0);
             break;
