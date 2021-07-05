@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 
 
-bool displayReady = false;
+//bool displayReady = false;
 /**
  * @brief Describes a single cache line which associates an address with 16 bytes of storage
  */
@@ -794,12 +794,14 @@ void loop() {
 [[noreturn]]
 void
 signalHaltState(const __FlashStringHelper* haltMsg) {
+#if 0
     if (displayReady) {
         displayCommandSet.clearScreen();
         displayCommandSet.setCursor(0, 0);
         displayCommandSet.setTextSize(2);
         displayCommandSet.println(haltMsg);
     }
+#endif
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
