@@ -489,18 +489,109 @@ void onDENAsserted() {
 
 MemoryThing* theThing = nullptr;
 
+constexpr byte getChipId(uint32_t address) noexcept {
+    return (address >> 17) & 0b111;
+}
+void setSRAMId(uint32_t address) noexcept {
+    auto id = getChipId(address);
+    digitalWrite<i960Pinout::CACHE_A0>(id & 1 ? HIGH : LOW);
+    digitalWrite<i960Pinout::CACHE_A1>(id & 0b10 ? HIGH : LOW);
+    digitalWrite<i960Pinout::CACHE_A2>(id & 0b100 ? HIGH : LOW);
+}
+constexpr uint8_t computeTagIndex(Address address) noexcept {
+    return static_cast<uint8_t>(address >> 4);
+}
+constexpr Address computeL2TagIndex(Address address) noexcept {
+    // we don't care about the upper most bit because the SRAM cache isn't large enough
+    return (address & 0xFFFF'FFF0) << 1;
+}
+union SRAMCacheEntry {
+    explicit constexpr SRAMCacheEntry(Address value = 0) noexcept : raw(value) { }
+    Address raw = 0;
+    struct {
+        byte offset : 4;
+        union {
+            uint16_t index : 15;
+            struct {
+                byte l1Index : 8;
+                byte l2ExtraIndex : 7;
+            };
+        };
+        uint16_t tag : 13;
+    };
+};
+
 class CacheEntry {
 public:
+    CacheEntry() { };
+    /**
+     * @brief Construct a cache entry from the SRAM cache
+     * @param tag The address to use to pull from the SRAM cache
+     */
+    explicit CacheEntry(Address tag) noexcept {
+        subsumeFromSRAM(tag);
+    }
+    void subsumeFromSRAM(Address tag) noexcept {
+        setSRAMId(tag);
+        auto actualSRAMIndex = computeL2TagIndex(tag);
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        SPI.transfer(0x03);
+        SPI.transfer(actualSRAMIndex >> 16);
+        SPI.transfer(actualSRAMIndex >> 8);
+        SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
+        SPI.transfer(backingStorage, 32);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        // and we are done!
+    }
     constexpr bool valid() const noexcept { return valid_; }
     constexpr bool isDirty() const noexcept { return dirty_; }
-    void reset(Address newTag, MemoryThing& thing) noexcept {
+    void commitToThing() noexcept {
         if (valid() && isDirty()) {
             getThing(tag, LoadStoreStyle::Full16)->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
         }
+    }
+    void pullFromNewThing(Address newTag, MemoryThing& newThing) noexcept {
+        // this method doesn't care what came before!
         dirty_ = false;
         valid_ = true;
         tag = newTag;
-        thing.read(tag, reinterpret_cast<byte*>(data), sizeof(data));
+        newThing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+    }
+    void commitToSRAM() noexcept {
+        setSRAMId(tag);
+        auto actualSRAMIndex = computeL2TagIndex(tag);
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        SPI.transfer(0x02);
+        SPI.transfer(actualSRAMIndex >> 16);
+        SPI.transfer(actualSRAMIndex >> 8);
+        SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
+        SPI.transfer(backingStorage, 32); // this will garbage out things by design
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+    }
+    void reset(Address newTag, MemoryThing& thing) noexcept {
+        // pull the two tag entries from sram before we do anything else!
+        // if these two entries are the same tag map then we want to keep things clean.
+        // optimizations will happen later
+        CacheEntry newTagInSram(newTag);
+        CacheEntry oldTagInSram(tag);
+        // take the old tag and commit that back to the sdcard if dirty so try it
+        oldTagInSram.commitToThing();
+        commitToSRAM(); // commit the current entry to SRAM
+        if (!newTagInSram.matches(newTag)) {
+            // we did not get a match so we need to go to main memory after committing the current one
+            // in the off chance that newTag == oldTag blah blah blah
+            newTagInSram.commitToThing();
+            pullFromNewThing(newTag, thing); // we have already had our stuff garbaged out
+        } else {
+            // it was a match so we just need to subsume the bytes, for now just do a transfer byte by byte
+            auto oldAddress = newTagInSram.tag;
+            for (int i = 0; i < 32; ++i) {
+                backingStorage[i] = newTagInSram.backingStorage[i];
+                newTagInSram.backingStorage[i] = 0;
+            }
+            newTagInSram.tag = oldAddress;
+            newTagInSram.commitToSRAM(); // commit it back to sram as invalidated
+        }
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
@@ -529,20 +620,25 @@ public:
         }
     }
 private:
-    SplitWord16 data[8];
-    Address tag = 0;
     union {
-        byte controlBits = 0;
+        // align to 32-bytes to make sure that it perfectly aligns to pages in the secondary level cache
+        byte backingStorage[32] = { 0 };
         struct {
-            bool valid_ : 1;
-            bool dirty_ : 1;
+            union {
+                byte controlBits;
+                struct {
+                    bool valid_ : 1;
+                    bool dirty_ : 1;
+                };
+            };
+            SplitWord16 data[8];
+            Address tag;
         };
     };
 };
-constexpr uint8_t computeTagIndex(Address address) noexcept {
-    return static_cast<uint8_t>(address >> 4);
-}
+static_assert(sizeof(CacheEntry) == 32);
 CacheEntry entries[256];
+// we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
     // commit all entries back
     for (auto& entry : entries) {
@@ -558,15 +654,6 @@ void setupPeripherals() {
     ram.begin();
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
-}
-constexpr byte getChipId(uint32_t address) noexcept {
-    return (address >> 17) & 0b111;
-}
-void setSRAMId(uint32_t address) noexcept {
-    auto id = getChipId(address);
-    digitalWrite<i960Pinout::CACHE_A0>(id & 1 ? HIGH : LOW);
-    digitalWrite<i960Pinout::CACHE_A1>(id & 0b10 ? HIGH : LOW);
-    digitalWrite<i960Pinout::CACHE_A2>(id & 0b100 ? HIGH : LOW);
 }
 /**
  * @brief Just in case, purge the sram of data
