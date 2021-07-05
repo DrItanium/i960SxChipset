@@ -569,28 +569,32 @@ public:
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
     }
     void reset(Address newTag, MemoryThing& thing) noexcept {
-        // pull the two tag entries from sram before we do anything else!
-        // if these two entries are the same tag map then we want to keep things clean.
-        // optimizations will happen later
-        CacheEntry newTagInSram(newTag);
-        CacheEntry oldTagInSram(tag);
-        // take the old tag and commit that back to the sdcard if dirty so try it
-        oldTagInSram.commitToThing();
-        commitToSRAM(); // commit the current entry to SRAM
-        if (!newTagInSram.matches(newTag)) {
-            // we did not get a match so we need to go to main memory after committing the current one
-            // in the off chance that newTag == oldTag blah blah blah
-            newTagInSram.commitToThing();
-            pullFromNewThing(newTag, thing); // we have already had our stuff garbaged out
-        } else {
-            // it was a match so we just need to subsume the bytes, for now just do a transfer byte by byte
-            auto oldAddress = newTagInSram.tag;
-            for (int i = 0; i < 32; ++i) {
-                backingStorage[i] = newTagInSram.backingStorage[i];
-                newTagInSram.backingStorage[i] = 0;
+        if (valid()) {
+            // pull the two tag entries from sram before we do anything else!
+            // if these two entries are the same tag map then we want to keep things clean.
+            // optimizations will happen later
+            CacheEntry newTagInSram(newTag);
+            CacheEntry oldTagInSram(tag);
+            // take the old tag and commit that back to the sdcard if dirty so try it
+            oldTagInSram.commitToThing();
+            commitToSRAM(); // commit the current entry to SRAM
+            if (!newTagInSram.matches(newTag)) {
+                // we did not get a match so we need to go to main memory after committing the current one
+                // in the off chance that newTag == oldTag blah blah blah
+                newTagInSram.commitToThing();
+                pullFromNewThing(newTag, thing); // we have already had our stuff garbaged out
+            } else {
+                // it was a match so we just need to subsume the bytes, for now just do a transfer byte by byte
+                auto oldAddress = newTagInSram.tag;
+                for (int i = 0; i < 32; ++i) {
+                    backingStorage[i] = newTagInSram.backingStorage[i];
+                    newTagInSram.backingStorage[i] = 0;
+                }
+                newTagInSram.tag = oldAddress;
+                newTagInSram.commitToSRAM(); // commit it back to sram as invalidated
             }
-            newTagInSram.tag = oldAddress;
-            newTagInSram.commitToSRAM(); // commit it back to sram as invalidated
+        } else {
+            pullFromNewThing(newTag, thing);
         }
     }
     void invalidate() noexcept {
