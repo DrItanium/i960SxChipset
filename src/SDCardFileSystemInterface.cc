@@ -428,9 +428,12 @@ SDCardFilesystemInterface::fileFlush() noexcept {
 }
 void
 SDCardFilesystemInterface::begin() noexcept {
-    if (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-        signalHaltState(F("SD CARD INIT FAILED"));
+    while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+        //Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
+        delay(1);
+        //delay(1000);
     }
+    Serial.println(F("SD CARD UP!"));
 }
 uint8_t
 SDCardFilesystemInterface::read8(Address address) noexcept {

@@ -31,9 +31,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Board Platform: MightyCore
 #include <SPI.h>
 #include <SdFat.h>
-
-#include <Adafruit_TFTShield18.h>
-#include <Adafruit_ST7735.h>
+#include <Wire.h>
+//#include <Adafruit_TFTShield18.h>
+//#include <Adafruit_ST7735.h>
 #include "Pinout.h"
 
 #include "ProcessorSerializer.h"
@@ -364,7 +364,8 @@ public:
                 resultLower_ = invoke(value);
                 break;
             X(Backlight) :
-                backlightStatus_ = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
+                backlightStatus_ = value != 0 ? 1 : 0;
+                //backlightStatus_ = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
                 //ss.setBacklight(backlightStatus_);
                 break;
             X(BacklightFrequency) :
@@ -442,7 +443,7 @@ private:
     int16_t b_ = 0;
     uint16_t resultLower_ = 0;
     uint16_t resultUpper_ = 0;
-    uint16_t backlightStatus_ = TFTSHIELD_BACKLIGHT_ON;
+    uint16_t backlightStatus_ = 0;
     uint16_t backlightFrequency_ = 0;
     uint32_t buttonsCache_ = 0;
     //Adafruit_TFTShield18 ss;
@@ -619,7 +620,7 @@ void purgeSRAMCache() noexcept {
     Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
     Serial.println(F("PURGING SRAM CACHE!"));
     for (uint32_t i = 0; i < max; i+= 32) {
-        //setSRAMId(i);
+        setSRAMId(i);
         byte pagePurgeInstruction[36] {
                 0x03,
                 static_cast<byte>(i >> 16),
@@ -690,7 +691,6 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         SPI.begin();
         purgeSRAMCache();
-        signalHaltState(F("HALTING HERE!"));
         theThing = &rom;
         fs.begin();
         chipsetFunctions.begin();
