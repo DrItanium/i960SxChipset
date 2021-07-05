@@ -429,9 +429,8 @@ SDCardFilesystemInterface::fileFlush() noexcept {
 void
 SDCardFilesystemInterface::begin() noexcept {
     while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-        //Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
-        delay(1);
-        //delay(1000);
+        Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
+        delay(1000);
     }
     Serial.println(F("SD CARD UP!"));
 }
