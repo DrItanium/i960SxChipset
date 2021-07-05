@@ -577,7 +577,9 @@ void purgeSRAMCache() noexcept {
     byte previousChipFailure = 0xFF;
     for (uint32_t i = 0; i < max; i+= 32) {
         setSRAMId(i);
-        byte pagePurgeInstruction[36] {
+        Serial.print(F("WRITING TO 0x"));
+        Serial.println(i, HEX);
+        byte pagePurgeInstruction[28] {
                 0x03,
                 static_cast<byte>(i >> 16),
                 static_cast<byte>(i >> 8),
@@ -585,9 +587,8 @@ void purgeSRAMCache() noexcept {
                 1, 2, 3, 4, 5, 6, 7, 8,
                 9, 10, 11, 12, 13, 14, 15, 16,
                 17, 18, 19, 20, 21, 22, 23, 24,
-                25, 26, 27, 28, 29, 30, 31, 32,
         };
-        byte pageReadInstruction[36] {
+        byte pageReadInstruction[28] {
                 0x02,
                 static_cast<byte>(i >> 16),
                 static_cast<byte>(i >> 8),
@@ -595,27 +596,27 @@ void purgeSRAMCache() noexcept {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
         };
-        constexpr byte resultantPagePurge[32] {
+        constexpr byte resultantPagePurge[24] {
                 1, 2, 3, 4, 5, 6, 7, 8,
                 9, 10, 11, 12, 13, 14, 15, 16,
                 17, 18, 19, 20, 21, 22, 23, 24,
-                25, 26, 27, 28, 29, 30, 31, 32,
         };
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
-        SPI.transfer(pagePurgeInstruction, 36);
+        SPI.transfer(pagePurgeInstruction, 28);
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
-        SPI.transfer(pageReadInstruction, 36);
+        SPI.transfer(pageReadInstruction, 28);
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
-        for (int x = 0, y = 4; x < 32; ++x, ++y) {
+        for (int x = 0, y = 4; x < 24; ++x, ++y) {
             if (resultantPagePurge[x] != pageReadInstruction[y]) {
-                if (previousChipFailure != getChipId(i)) {
-                    previousChipFailure = getChipId(i);
-                    Serial.print(F("COMMIT FAILURE ON SRAM ID: "));
-                    Serial.println(previousChipFailure);
-                }
+                Serial.print(F("COMMIT FAILURE ON SRAM ID: "));
+                Serial.println(getChipId(i));
+                Serial.print(F("GOT 0x"));
+                Serial.print(pageReadInstruction[y], HEX);
+                Serial.print(F(" BUT WANTED 0x"));
+                Serial.println(resultantPagePurge[x], HEX);
+                delay(1000);
             }
         }
     }
