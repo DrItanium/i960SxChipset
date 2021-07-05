@@ -592,20 +592,20 @@ void purgeSRAMCache() noexcept {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
         };
-        digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(0x02);
         SPI.transfer(i >> 16);
         SPI.transfer(i >> 8);
         SPI.transfer(i);
         SPI.transfer(pagePurgeInstruction, 32);
-        digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-        digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(0x03);
         SPI.transfer(i >> 16);
         SPI.transfer(i >> 8);
         SPI.transfer(i);
         SPI.transfer(pageReadInstruction, 32);
-        digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
         int index = 1;
         for (auto a : pageReadInstruction) {
             if (a != index) {
@@ -622,6 +622,16 @@ void purgeSRAMCache() noexcept {
     for (uint32_t i = 0; i < max; i+= 32) {
         setSRAMId(i);
         byte pagePurgeInstruction[36] {
+                0x02,
+                static_cast<byte>(i >> 16),
+                static_cast<byte>(i >> 8),
+                static_cast<byte>(i),
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+        };
+        byte pageReadInstruction[36]{
                 0x03,
                 static_cast<byte>(i >> 16),
                 static_cast<byte>(i >> 8),
@@ -634,6 +644,14 @@ void purgeSRAMCache() noexcept {
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(pagePurgeInstruction, 36);
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        SPI.transfer(pageReadInstruction, 36);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        for (int x = 4; x < 36; ++x) {
+            if (pageReadInstruction[x] != 0) {
+                Serial.print(F("CHECK FAILURE!!!"));
+            }
+        }
     }
     Serial.println(F("DONE PURGING SRAM CACHE!"));
 }
