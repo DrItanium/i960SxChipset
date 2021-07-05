@@ -43,10 +43,10 @@ enum class i960Pinout : decltype(A0) {
         // this is described in digial pin order!
         // leave this one alone
         // PORT B
-        Led = 0,      // output
+        CACHE_A0 = 0,      // output
         CLOCK_OUT, // output, unusable
         AS_,     // input, AVR Int2
-        PWM4, // unused
+        CACHE_A1, // output
         GPIOSelect,        // output
         MOSI,          // reserved
         MISO,          // reserved
@@ -55,7 +55,7 @@ enum class i960Pinout : decltype(A0) {
         RX0,          // reserved
         TX0,          // reserved
         DEN_,      // AVR Interrupt INT0
-        AVR_INT1,        // AVR Interrupt INT1
+        CACHE_A2,        // Output, AVR Interrupt INT1
         SPI_BUS_EN, // output
         DC,     // output
         DISPLAY_EN, // output
@@ -84,7 +84,7 @@ enum class i960Pinout : decltype(A0) {
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
 static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
-static_assert(isValidPin<i960Pinout::Led>, "The Led pin should be a valid pin!");
+static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
@@ -107,10 +107,10 @@ template<i960Pinout pin>
         case i960Pinout::BLAST_:     // input
         case i960Pinout::FAIL:         // input
             return PORTC;
-        case i960Pinout::Led:      // output
+        case i960Pinout::CACHE_A0:      // output
         case i960Pinout::CLOCK_OUT: // output: unusable
         case i960Pinout::AS_:     // input: AVR Int2
-        case i960Pinout::PWM4: // unused
+        case i960Pinout::CACHE_A1: // unused
         case i960Pinout::GPIOSelect:        // output
         case i960Pinout::MOSI:          // reserved
         case i960Pinout::MISO:          // reserved
@@ -119,7 +119,7 @@ template<i960Pinout pin>
         case i960Pinout::RX0:          // reserved
         case i960Pinout::TX0:          // reserved
         case i960Pinout::DEN_:      // AVR Interrupt INT0
-        case i960Pinout::AVR_INT1:        // AVR Interrupt INT1
+        case i960Pinout::CACHE_A2:        // AVR Interrupt INT1
         case i960Pinout::SPI_BUS_EN: // output
         case i960Pinout::DC:     // output
         case i960Pinout::DISPLAY_EN: // output
@@ -152,10 +152,10 @@ template<i960Pinout pin>
         case i960Pinout::BLAST_:     // input
         case i960Pinout::FAIL:         // input
             return PINC;
-        case i960Pinout::Led:      // output
+        case i960Pinout::CACHE_A0:      // output
         case i960Pinout::CLOCK_OUT: // output: unusable
         case i960Pinout::AS_:     // input: AVR Int2
-        case i960Pinout::PWM4: // unused
+        case i960Pinout::CACHE_A1: // unused
         case i960Pinout::GPIOSelect:        // output
         case i960Pinout::MOSI:          // reserved
         case i960Pinout::MISO:          // reserved
@@ -164,7 +164,7 @@ template<i960Pinout pin>
         case i960Pinout::RX0:          // reserved
         case i960Pinout::TX0:          // reserved
         case i960Pinout::DEN_:      // AVR Interrupt INT0
-        case i960Pinout::AVR_INT1:        // AVR Interrupt INT1
+        case i960Pinout::CACHE_A2:        // AVR Interrupt INT1
         case i960Pinout::SPI_BUS_EN: // output
         case i960Pinout::DC:     // output
         case i960Pinout::DISPLAY_EN: // output
@@ -195,10 +195,10 @@ template<i960Pinout pin>
         case i960Pinout::BLAST_:     return _BV(PC6);
         case i960Pinout::FAIL:       return _BV(PC7);
 
-        case i960Pinout::Led:      return _BV(PB0);
+        case i960Pinout::CACHE_A0:      return _BV(PB0);
         case i960Pinout::CLOCK_OUT:  return _BV(PB1);
         case i960Pinout::AS_:     return _BV(PB2);
-        case i960Pinout::PWM4:    return _BV(PB3);
+        case i960Pinout::CACHE_A1:    return _BV(PB3);
         case i960Pinout::GPIOSelect:        return _BV(PB4);
         case i960Pinout::MOSI:         return _BV(PB5) ;
         case i960Pinout::MISO:         return _BV(PB6) ;
@@ -207,7 +207,7 @@ template<i960Pinout pin>
         case i960Pinout::RX0:          return _BV(PD0);
         case i960Pinout::TX0:          return _BV(PD1);
         case i960Pinout::DEN_:          return _BV(PD2);
-        case i960Pinout::AVR_INT1:        return _BV(PD3);
+        case i960Pinout::CACHE_A2:        return _BV(PD3);
         case i960Pinout::SPI_BUS_EN: return _BV(PD4);
         case i960Pinout::DC:     return _BV(PD5);
         case i960Pinout::DISPLAY_EN: return _BV(PD6);

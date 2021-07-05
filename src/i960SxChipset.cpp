@@ -557,7 +557,9 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
-              i960Pinout::Led,
+              i960Pinout::CACHE_A0,
+              i960Pinout::CACHE_A1,
+              i960Pinout::CACHE_A2,
               i960Pinout::Int0_);
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
@@ -569,6 +571,10 @@ void setup() {
                           i960Pinout::Ready,
                           i960Pinout::GPIOSelect,
                           i960Pinout::Int0_);
+        digitalWriteBlock(LOW,
+                          i960Pinout::CACHE_A0,
+                          i960Pinout::CACHE_A1,
+                          i960Pinout::CACHE_A2);
         setupPins(INPUT,
                   i960Pinout::BLAST_,
                   i960Pinout::AS_,
@@ -586,7 +592,6 @@ void setup() {
 
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-        digitalWrite(i960Pinout::Led, LOW);
         theThing = &rom;
         fs.begin();
         chipsetFunctions.begin();

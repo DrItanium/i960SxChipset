@@ -29,11 +29,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 void
 CoreChipsetFeatures::writeLed(uint8_t value) noexcept {
-    digitalWrite(i960Pinout::Led, value > 0 ? HIGH : LOW);
+    digitalWrite(i960Pinout::CACHE_A0, value > 0 ? HIGH : LOW);
 }
 uint8_t
 CoreChipsetFeatures::readLed() noexcept {
-    return static_cast<uint8_t>(digitalRead(i960Pinout::Led));
+    return static_cast<uint8_t>(digitalRead(i960Pinout::CACHE_A0));
 }
 void
 CoreChipsetFeatures::setDisplayMemoryReadsAndWrites(bool value) noexcept {
