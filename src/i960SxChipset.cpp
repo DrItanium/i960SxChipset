@@ -545,18 +545,6 @@ public:
     }
     constexpr bool valid() const noexcept { return valid_; }
     constexpr bool isDirty() const noexcept { return dirty_; }
-    void commitToThing() noexcept {
-        if (valid() && isDirty()) {
-            getThing(tag, LoadStoreStyle::Full16)->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
-        }
-    }
-    void pullFromNewThing(Address newTag, MemoryThing& newThing) noexcept {
-        // this method doesn't care what came before!
-        dirty_ = false;
-        valid_ = true;
-        tag = newTag;
-        newThing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-    }
     void commitToSRAM() noexcept {
         setSRAMId(tag);
         auto actualSRAMIndex = computeL2TagIndex(tag);
@@ -569,6 +557,7 @@ public:
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
     }
     void reset(Address newTag, MemoryThing& thing) noexcept {
+#if 0
         if (valid()) {
             // pull the two tag entries from sram before we do anything else!
             // if these two entries are the same tag map then we want to keep things clean.
@@ -596,6 +585,18 @@ public:
         } else {
             pullFromNewThing(newTag, thing);
         }
+#endif
+        if (valid() && isDirty()) {
+            // this is an inclusive sram cache, thus the entries are copied but at this point in time what we need to do is commit the
+            // entry to the cache
+            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+        }
+        // this method doesn't care what came before!
+        dirty_ = false;
+        valid_ = true;
+        tag = newTag;
+        backingThing = &thing;
+        thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
@@ -637,6 +638,7 @@ private:
             };
             SplitWord16 data[8];
             Address tag;
+            MemoryThing* backingThing;
         };
     };
 };
@@ -855,6 +857,14 @@ void setup() {
 // Ti -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
+auto& getLine() noexcept {
+    auto address = processorInterface.getAlignedAddress();
+    auto& theEntry = entries[computeTagIndex(address)];
+    if (!theEntry.matches(address)) {
+        theEntry.reset(address, *theThing);
+    }
+    return theEntry;
+}
 void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
@@ -912,12 +922,7 @@ void loop() {
         }
     } else {
         // there is a bug somewhere in here
-        auto address = processorInterface.getAlignedAddress();
-        auto& theEntry = entries[computeTagIndex(address)];
-        if (!theEntry.matches(address)) {
-            theEntry.reset(address, *theThing);
-        }
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.updateDataCycle();
                 auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
