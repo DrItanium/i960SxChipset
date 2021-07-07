@@ -519,16 +519,18 @@ public:
         }
         subsumeFromSRAM(tag);
     }
-    void subsumeFromSRAM(Address tag) noexcept {
+    void subsumeFromSRAM(Address newTag) noexcept {
         if (CacheEntryDebugging) {
             Serial.println(F("subsumeFromSRAM {"));
         }
-        setSRAMId(tag);
-        Address actualSRAMIndex = computeL2TagIndex(tag);
+        setSRAMId(newTag);
+        Address actualSRAMIndex = computeL2TagIndex(newTag);
         if (CacheEntryDebugging) {
-            Serial.print(F("BEFORE LOAD: ACTUAL SRAM INDEX 0x"));
+            Serial.print(F("BEFORE LOAD: NEW TAG SRAM INDEX 0x"));
             Serial.print(actualSRAMIndex, HEX);
             Serial.print(F(" FROM 0x"));
+            Serial.println(newTag, HEX);
+            Serial.print(F("OLD TAG: 0x"));
             Serial.println(tag, HEX);
         }
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
@@ -539,10 +541,14 @@ public:
         SPI.transfer(backingStorage, 32);
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
         if (CacheEntryDebugging) {
-            Serial.print(F("AFTER LOAD: ACTUAL SRAM INDEX 0x"));
-            Serial.print(actualSRAMIndex, HEX);
-            Serial.print(F(" FROM 0x"));
+            Serial.print(F("AFTER LOAD: TAG 0x"));
             Serial.println(tag, HEX);
+            Serial.print(F("IS VALID? "));
+            if (valid()) {
+                Serial.println(F("YES!"));
+            } else {
+                Serial.println(F("NO!"));
+            }
         }
         if (CacheEntryDebugging) {
             Serial.println(F("}"));
@@ -582,7 +588,7 @@ public:
         Serial.print(F("Pulling from new tag 0x"));
         Serial.println(newTag, HEX);
         subsumeFromSRAM(newTag);
-        if (!matches(newTag)) {
+        if (valid() && !matches(newTag)) {
             invalidate();
         }
         dirty_ = false;
