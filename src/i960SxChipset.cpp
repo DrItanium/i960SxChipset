@@ -507,11 +507,12 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
 }
 constexpr bool EnableDebuggingCompileTime = false;
 bool CacheEntryDebugging = false;
+SPISettings sramCacheSpeed(8'000'000, MSBFIRST, SPI_MODE0);
 class CacheEntry {
 public:
-    CacheEntry() { };
-    constexpr bool valid() const noexcept { return valid_; }
-    constexpr bool isDirty() const noexcept { return dirty_; }
+    CacheEntry() noexcept { };
+    [[nodiscard]] constexpr bool valid() const noexcept { return valid_; }
+    [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_; }
     static void invalidateAllEntries() noexcept {
         // we need to walk through all of the sram cache entries, committing all entries back to the backing store
         constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
@@ -531,11 +532,11 @@ private:
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.println(F("NEW CACHE ENTRY!"));
         }
-        subsumeFromSRAM(tag);
+        absorbEntryFromSRAMCache(tag);
     }
-    void subsumeFromSRAM(Address newTag) noexcept {
+    void absorbEntryFromSRAMCache(Address newTag) noexcept {
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.println(F("subsumeFromSRAM {"));
+            Serial.println(F("absorbEntryFromSRAMCache {"));
         }
         setSRAMId(newTag);
         Address actualSRAMIndex = computeL2TagIndex(newTag);
@@ -547,7 +548,7 @@ private:
             Serial.print(F("OLD TAG: 0x"));
             Serial.println(tag, HEX);
         }
-        SPI.beginTransaction({8'000'000, MSBFIRST, SPI_MODE0});
+        SPI.beginTransaction(sramCacheSpeed);
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(0x03);
         SPI.transfer(actualSRAMIndex >> 16);
@@ -584,7 +585,7 @@ private:
             Serial.print(F(" FROM 0x"));
             Serial.println(tag, HEX);
         }
-        SPI.beginTransaction({8'000'000, MSBFIRST, SPI_MODE0});
+        SPI.beginTransaction(sramCacheSpeed);
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(0x02);
         SPI.transfer(actualSRAMIndex >> 16);
@@ -630,7 +631,7 @@ public:
             Serial.println(newTag, HEX);
         }
         // pull the new tag's address out of sram and do some work with it
-        subsumeFromSRAM(newTag);
+        absorbEntryFromSRAMCache(newTag);
         if (matches(newTag)) {
             // we got a match to just return
             return;
@@ -652,10 +653,11 @@ public:
                 Serial.println(F("INVALIDATING CACHE!"));
             }
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
-            controlBits = 0;
+            dirty_ = false;
+            valid_ = false;
             tag = 0;
             backingThing = nullptr;
-            unused = 0; // make sure that this is correctly purged
+            //unused = 0; // make sure that this is correctly purged
         }
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
@@ -682,17 +684,12 @@ private:
         // align to 32-bytes to make sure that it perfectly aligns to pages in the secondary level cache
         byte backingStorage[32] = { 0 };
         struct {
-            union {
-                uint16_t controlBits; // 2 byte
-                struct {
-                    bool valid_ : 1;
-                    bool dirty_ : 1;
-                };
-            };
+            bool valid_;
+            bool dirty_;
             SplitWord16 data[8]; // 16 bytes
             Address tag; // 4 bytes
             MemoryThing* backingThing; // 2 bytes
-            uint64_t unused; // 8 bytes
+            //uint64_t unused; // 8 bytes
         };
     };
 };
