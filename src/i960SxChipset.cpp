@@ -558,6 +558,9 @@ public:
     constexpr bool valid() const noexcept { return valid_; }
     constexpr bool isDirty() const noexcept { return dirty_; }
     void commitToSRAM() noexcept {
+        if (CacheEntryDebugging) {
+            Serial.println(F("commitToSRAM {"));
+        }
         setSRAMId(tag);
         Address actualSRAMIndex = computeL2TagIndex(tag);
         if (CacheEntryDebugging) {
@@ -573,32 +576,57 @@ public:
         SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        if (CacheEntryDebugging) {
+            Serial.print(F("AFTER COMMIT: TAG 0x"));
+            Serial.println(tag, HEX);
+        }
+        if (CacheEntryDebugging) {
+            Serial.println(F("}"));
+        }
     }
     void reset(Address newTag, MemoryThing& thing) noexcept {
         Serial.println(F("RESET {"));
-        // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
-        Serial.print(F("COMMITTING TO OLD TAG 0x"));
-        Serial.println(tag, HEX);
+        Serial.println(F("DUMPING OLD TAG OUT OF RAM BACK TO MEMORY"));
+        // pull the old tag out of sram and commit it
+        CacheEntry currentSramBacking(tag);
+        // commit it back to memory by invalidating it
+        currentSramBacking.invalidate();
+        Serial.print(F("COMMITTING OLD TAG AT 0x"));
+        Serial.print(tag, HEX);
+        Serial.println(F(" TO SRAM"));
         if (valid()) {
             Serial.println(F("\tNOTE: TAG IS VALID!"));
         } else {
             Serial.println(F("\tNOTE: TAG IS INVALID!"));
         }
+        // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
         commitToSRAM();
         Serial.print(F("Pulling from new tag 0x"));
         Serial.println(newTag, HEX);
+        // pull the new tag's address out of sram and do some work with it
+        CacheEntry newEntry(newTag);
         subsumeFromSRAM(newTag);
-        if (valid()) {
-            if (!matches(newTag)) {
+        if (newEntry.valid()) {
+            if (!newEntry.matches(newTag)) {
                 // no match so pull the data in from main memory
-                invalidate();
+                newEntry.invalidate();
                 dirty_ = false;
                 valid_ = true;
                 tag = newTag;
                 backingThing = &thing;
                 thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-                // commit our changes to the sram cache to be on the safe side
+            } else {
+                // for now copy it over
+                *this = newEntry;
             }
+        } else {
+            // okay the tag is just invalid
+            dirty_ = false;
+            valid_ = true;
+            tag = newTag;
+            backingThing = &thing;
+            // pull from main memory
+            thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
         }
         Serial.println(F("}"));
     }
@@ -607,12 +635,8 @@ public:
             Serial.println(F("INVALIDATING CACHE!"));
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
             controlBits = 0;
-            backingThing = nullptr;
-            // zero out memory for security purposes
-            for (auto& a : data) { a.wholeValue_ = 0; }
-            commitToSRAM(); // push this modified entry back to make sure that we don't get bogus data
-            // now clear the tag out!
             tag = 0;
+            backingThing = nullptr;
         }
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
