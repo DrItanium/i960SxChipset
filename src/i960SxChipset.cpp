@@ -582,7 +582,6 @@ public:
         Serial.println(F("}"));
     }
     void invalidate() noexcept {
-        Serial.println(F("INVALIDATE {"));
         if (valid() && isDirty()) {
             Serial.println(F("INVALIDATING CACHE!"));
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
@@ -594,7 +593,6 @@ public:
             // now clear the tag out!
             tag = 0;
         }
-        Serial.println(F("}"));
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b111]; }
@@ -858,13 +856,11 @@ void setup() {
 
 // NOTE: Tw may turn out to be synthetic
 auto& getLine() noexcept {
-    Serial.println(F("getLine() {"));
     auto address = processorInterface.getAlignedAddress();
     auto& theEntry = entries[computeTagIndex(address)];
     if (!theEntry.matches(address)) {
         theEntry.reset(address, *theThing);
     }
-    Serial.println(F("}"));
     return theEntry;
 }
 void loop() {
@@ -897,8 +893,6 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    Serial.print(F("DATA REQUEST 0x"));
-    Serial.println(processorInterface.getAlignedAddress(), HEX);
     if (theThing->bypassesCache()) {
         // just don't use the cache and revert to the old school design
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
