@@ -524,6 +524,9 @@ union SRAMCacheEntry {
 class CacheEntry {
 public:
     CacheEntry() { };
+    constexpr bool valid() const noexcept { return valid_; }
+    constexpr bool isDirty() const noexcept { return dirty_; }
+#if 0
     /**
      * @brief Construct a cache entry from the SRAM cache
      * @param tag The address to use to pull from the SRAM cache
@@ -543,8 +546,6 @@ public:
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
         // and we are done!
     }
-    constexpr bool valid() const noexcept { return valid_; }
-    constexpr bool isDirty() const noexcept { return dirty_; }
     void commitToSRAM() noexcept {
         setSRAMId(tag);
         auto actualSRAMIndex = computeL2TagIndex(tag);
@@ -556,7 +557,9 @@ public:
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
     }
+#endif
     void reset(Address newTag, MemoryThing& thing) noexcept {
+#if 0
         // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
         Serial.print(F("COMMITTING TO OLD TAG 0x"));
         Serial.println(tag, HEX);
@@ -579,18 +582,19 @@ public:
         }
         // commit our changes to the sram cache to be on the safe side
         Serial.print(F("DONE!"));
+#endif
+        invalidate();
+        dirty_ = false;
+        valid_ = true;
+        tag = newTag;
+        backingThing = &thing;
+        thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
             controlBits = 0;
-            backingThing = nullptr;
-            // zero out memory for security purposes
-            for (auto& a : data) { a.wholeValue_ = 0; }
-            commitToSRAM(); // push this modified entry back to make sure that we don't get bogus data
-            // now clear the tag out!
             tag = 0;
-
         }
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
@@ -639,6 +643,7 @@ void invalidateGlobalCache() noexcept {
     for (auto& entry : entries) {
         entry.invalidate();
     }
+#if 0
     // we need to walk through all of the sram cache entries, committing all entries back to the backing store
     constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
     for (uint32_t i = 0; i < max; i += 32) {
@@ -646,6 +651,7 @@ void invalidateGlobalCache() noexcept {
         CacheEntry target(i); // load from the cache and purge the hell out of it
         target.invalidate(); // try and invalidate it as well
     }
+#endif
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
@@ -797,7 +803,9 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         SPI.begin();
+#if 0
         purgeSRAMCache();
+#endif
         theThing = &rom;
         fs.begin();
         chipsetFunctions.begin();
