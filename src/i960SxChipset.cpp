@@ -506,10 +506,23 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
     return (address & 0xFFFF'FFF0) << 1;
 }
 constexpr bool EnableDebuggingCompileTime = false;
-volatile bool CacheEntryDebugging = false;
+bool CacheEntryDebugging = false;
 class CacheEntry {
 public:
     CacheEntry() { };
+    constexpr bool valid() const noexcept { return valid_; }
+    constexpr bool isDirty() const noexcept { return dirty_; }
+    static void invalidateAllEntries() noexcept {
+        // we need to walk through all of the sram cache entries, committing all entries back to the backing store
+        constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+        CacheEntryDebugging = false;
+        for (uint32_t i = 0; i < max; i += 32) {
+            CacheEntry target(i); // load from the cache and purge the hell out of it
+            target.invalidate(); // try and invalidate it as well
+        }
+        CacheEntryDebugging = true;
+    }
+private:
     /**
      * @brief Construct a cache entry from the SRAM cache
      * @param tag The address to use to pull from the SRAM cache
@@ -558,8 +571,7 @@ public:
         }
         // and we are done!
     }
-    constexpr bool valid() const noexcept { return valid_; }
-    constexpr bool isDirty() const noexcept { return dirty_; }
+private:
     void commitToSRAM() noexcept {
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.println(F("commitToSRAM {"));
@@ -589,6 +601,7 @@ public:
             Serial.println(F("}"));
         }
     }
+public:
     void reset(Address newTag, MemoryThing& thing) noexcept {
         if constexpr (EnableDebuggingCompileTime) {
             Serial.println(F("RESET {"));
@@ -610,6 +623,7 @@ public:
             }
         }
         // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
+        // at no point can the cache ever be manipulated outside of this method
         commitToSRAM();
         if constexpr (EnableDebuggingCompileTime) {
             Serial.print(F("Pulling from new tag 0x"));
@@ -641,6 +655,7 @@ public:
             controlBits = 0;
             tag = 0;
             backingThing = nullptr;
+            unused = 0; // make sure that this is correctly purged
         }
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
@@ -668,15 +683,16 @@ private:
         byte backingStorage[32] = { 0 };
         struct {
             union {
-                byte controlBits;
+                uint16_t controlBits; // 2 byte
                 struct {
                     bool valid_ : 1;
                     bool dirty_ : 1;
                 };
             };
-            SplitWord16 data[8];
-            Address tag;
-            MemoryThing* backingThing;
+            SplitWord16 data[8]; // 16 bytes
+            Address tag; // 4 bytes
+            MemoryThing* backingThing; // 2 bytes
+            uint64_t unused; // 8 bytes
         };
     };
 };
@@ -689,14 +705,7 @@ void invalidateGlobalCache() noexcept {
     for (auto& entry : entries) {
         entry.invalidate();
     }
-    // we need to walk through all of the sram cache entries, committing all entries back to the backing store
-    constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
-    CacheEntryDebugging = false;
-    for (uint32_t i = 0; i < max; i += 32) {
-        CacheEntry target(i); // load from the cache and purge the hell out of it
-        target.invalidate(); // try and invalidate it as well
-    }
-    CacheEntryDebugging = true;
+    CacheEntry::invalidateAllEntries();
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
