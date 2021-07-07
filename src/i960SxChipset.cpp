@@ -876,7 +876,7 @@ void loop() {
     }
     // both as and den must be triggered before we can actually
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-    Serial.println(F("WAITING FOR AS AND DEN!"));
+    //Serial.println(F("WAITING FOR AS AND DEN!"));
     while (!asTriggered && !denTriggered);
     denTriggered = false;
     asTriggered = false;
@@ -900,8 +900,8 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    Serial.print(F("DATA REQUEST 0x"));
-    Serial.println(processorInterface.getAlignedAddress(), HEX);
+    //Serial.print(F("DATA REQUEST 0x"));
+    //Serial.println(processorInterface.getAlignedAddress(), HEX);
     if (theThing->bypassesCache()) {
         // just don't use the cache and revert to the old school design
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
