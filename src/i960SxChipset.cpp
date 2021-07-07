@@ -556,27 +556,29 @@ public:
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
     }
-    void commitBackToThing() noexcept {
-
-    }
     void reset(Address newTag, MemoryThing& thing) noexcept {
         // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
+        Serial.print(F("COMMITTING TO OLD TAG 0x"));
+        Serial.println(tag, HEX);
         commitToSRAM();
+        Serial.print(F("Pulling from new tag 0x"));
+        Serial.println(newTag, HEX);
         subsumeFromSRAM(newTag) ;
         if (!matches(newTag)) {
-            commitBackToThing();
-            // we did not get a valid match so commit this back to the target memory thing if it is dirty and valid
-            if (valid() && isDirty()) {
-                // this is an inclusive sram cache, thus the entries are copied but at this point in time what we need to do is commit the
-                // entry to the cache
-                backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
-            }
+            Serial.println(F("INVALIDATING CACHE!"));
+            invalidate();
         }
         dirty_ = false;
         valid_ = true;
         tag = newTag;
         backingThing = &thing;
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+        for (auto a : data) {
+            Serial.print(F("\ta = 0x"));
+            Serial.println(a.wholeValue_, HEX);
+        }
+        // commit our changes to the sram cache to be on the safe side
+        Serial.print(F("DONE!"));
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
@@ -584,9 +586,7 @@ public:
             controlBits = 0;
             backingThing = nullptr;
             // zero out memory for security purposes
-            for (int i = 0; i < 8; ++i) {
-                data[i].wholeValue_ = 0;
-            }
+            for (auto& a : data) { a.wholeValue_ = 0; }
             commitToSRAM(); // push this modified entry back to make sure that we don't get bogus data
             // now clear the tag out!
             tag = 0;
@@ -868,6 +868,7 @@ void loop() {
     }
     // both as and den must be triggered before we can actually
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
+    Serial.println(F("WAITING FOR AS AND DEN!"));
     while (!asTriggered && !denTriggered);
     denTriggered = false;
     asTriggered = false;
@@ -891,6 +892,8 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
+    Serial.print(F("DATA REQUEST 0x"));
+    Serial.println(processorInterface.getAlignedAddress(), HEX);
     if (theThing->bypassesCache()) {
         // just don't use the cache and revert to the old school design
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {

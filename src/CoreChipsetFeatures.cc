@@ -197,7 +197,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
         auto slop = copyEngineLength_.wholeValue_ % CopyEngineCacheSize;
         Address srcAddrPtr = copyEngineSourceAddress_.wholeValue_;
         Address destAddrPtr = copyEngineDestinationAddress_.wholeValue_;
-        if constexpr (false) {
+        if constexpr (true) {
             Serial.print(F("COPYING FROM 0x"));
             Serial.print(srcAddrPtr, HEX);
             Serial.print(F(" TO 0x"));
@@ -211,7 +211,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
             Serial.println(F("]"));
         }
         for (uint32_t i = 0; i < fullCopies; ++i, srcAddrPtr += CopyEngineCacheSize, destAddrPtr += CopyEngineCacheSize) {
-            if constexpr (false) {
+            if constexpr (true) {
                 Serial.print(F("COPYING FROM 0x"));
                 Serial.print(srcAddrPtr, HEX);
                 Serial.print(F(" TO 0x"));
@@ -221,7 +221,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
             dest->write(destAddrPtr, copyEngineBuffer_, CopyEngineCacheSize);
         }
         if (slop > 0) {
-            if constexpr (false) {
+            if constexpr (true) {
                 Serial.print(F("COPYING FROM 0x"));
                 Serial.print(srcAddrPtr, HEX);
                 Serial.print(F(" TO 0x"));
@@ -230,6 +230,7 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
             src->read(srcAddrPtr, copyEngineBuffer_, slop);
             dest->write(destAddrPtr, copyEngineBuffer_, slop);
         }
+        Serial.println(F("DONE!"));
         return 0;
     } else {
         return -1;
