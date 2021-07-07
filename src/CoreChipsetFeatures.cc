@@ -230,7 +230,9 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
             src->read(srcAddrPtr, copyEngineBuffer_, slop);
             dest->write(destAddrPtr, copyEngineBuffer_, slop);
         }
-        Serial.println(F("DONE!"));
+        if constexpr (false) {
+            Serial.println(F("DONE!"));
+        }
         return 0;
     } else {
         return -1;

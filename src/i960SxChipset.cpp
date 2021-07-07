@@ -617,25 +617,17 @@ public:
         }
         // pull the new tag's address out of sram and do some work with it
         subsumeFromSRAM(newTag);
-        if (valid()) {
-            if (!matches(newTag)) {
-                // no match so pull the data in from main memory
-                invalidate();
-                dirty_ = false;
-                valid_ = true;
-                tag = newTag;
-                backingThing = &thing;
-                thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-            }
-        } else {
-            // okay the tag is just invalid
-            dirty_ = false;
-            valid_ = true;
-            tag = newTag;
-            backingThing = &thing;
-            // pull from main memory
-            thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+        if (matches(newTag)) {
+            // we got a match to just return
+            return;
         }
+        // no match so pull the data in from main memory
+        invalidate();
+        dirty_ = false;
+        valid_ = true;
+        tag = newTag;
+        backingThing = &thing;
+        thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
         if constexpr (EnableDebuggingCompileTime) {
             Serial.println(F("}"));
         }
