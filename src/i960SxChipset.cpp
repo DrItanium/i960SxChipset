@@ -556,11 +556,15 @@ public:
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
     }
+    void commitBackToThing() noexcept {
+
+    }
     void reset(Address newTag, MemoryThing& thing) noexcept {
         // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
         commitToSRAM();
         subsumeFromSRAM(newTag) ;
         if (!matches(newTag)) {
+            commitBackToThing();
             // we did not get a valid match so commit this back to the target memory thing if it is dirty and valid
             if (valid() && isDirty()) {
                 // this is an inclusive sram cache, thus the entries are copied but at this point in time what we need to do is commit the
@@ -578,7 +582,15 @@ public:
         if (valid() && isDirty()) {
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
             controlBits = 0;
+            backingThing = nullptr;
+            // zero out memory for security purposes
+            for (int i = 0; i < 8; ++i) {
+                data[i].wholeValue_ = 0;
+            }
+            commitToSRAM(); // push this modified entry back to make sure that we don't get bogus data
+            // now clear the tag out!
             tag = 0;
+
         }
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
@@ -623,8 +635,16 @@ CacheEntry entries[256];
 // we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
     // commit all entries back
+    // walk through the SRAMCache and commit any entries which are empty
     for (auto& entry : entries) {
         entry.invalidate();
+    }
+    // we need to walk through all of the sram cache entries, committing all entries back to the backing store
+    constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+    for (uint32_t i = 0; i < max; i += 32) {
+
+        CacheEntry target(i); // load from the cache and purge the hell out of it
+        target.invalidate(); // try and invalidate it as well
     }
 }
 void setupPeripherals() {
