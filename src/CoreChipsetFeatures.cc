@@ -161,8 +161,9 @@ uint16_t
 CoreChipsetFeatures::invokePatternEngine() noexcept {
     if (auto* thing = getThing(patternAddress_.wholeValue_, LoadStoreStyle::Lower8); thing) {
         // disable caches to speed up invocation at this point
-        TemporarilyDisableThingCache cacheOff(thing);
-        invalidateGlobalCache();
+        // DO NOT DISABLE THE CACHE RIGHT NOW!
+        //TemporarilyDisableThingCache cacheOff(thing);
+        //invalidateGlobalCache();
         // turn off the cache right now since it will just interfere with write speed
         for (auto& entry : patternCache_) {
             entry = pattern_;
@@ -190,8 +191,8 @@ CoreChipsetFeatures::invokeCopyEngine() noexcept {
              dest = getThing(destAddress, LoadStoreStyle::Lower8);
             src && dest) {
         // shut the cache off for dest
-        TemporarilyDisableThingCache cacheOff(dest);
-        invalidateGlobalCache();
+        //TemporarilyDisableThingCache cacheOff(dest);
+        //invalidateGlobalCache();
         // we will be triggering a cache flush
         auto fullCopies = copyEngineLength_.wholeValue_ / CopyEngineCacheSize;
         auto slop = copyEngineLength_.wholeValue_ % CopyEngineCacheSize;

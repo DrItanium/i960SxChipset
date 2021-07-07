@@ -557,41 +557,17 @@ public:
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
     }
     void reset(Address newTag, MemoryThing& thing) noexcept {
-#if 0
-        if (valid()) {
-            // pull the two tag entries from sram before we do anything else!
-            // if these two entries are the same tag map then we want to keep things clean.
-            // optimizations will happen later
-            CacheEntry newTagInSram(newTag);
-            CacheEntry oldTagInSram(tag);
-            // take the old tag and commit that back to the sdcard if dirty so try it
-            oldTagInSram.commitToThing();
-            commitToSRAM(); // commit the current entry to SRAM
-            if (!newTagInSram.matches(newTag)) {
-                // we did not get a match so we need to go to main memory after committing the current one
-                // in the off chance that newTag == oldTag blah blah blah
-                newTagInSram.commitToThing();
-                pullFromNewThing(newTag, thing); // we have already had our stuff garbaged out
-            } else {
-                // it was a match so we just need to subsume the bytes, for now just do a transfer byte by byte
-                auto oldAddress = newTagInSram.tag;
-                for (int i = 0; i < 32; ++i) {
-                    backingStorage[i] = newTagInSram.backingStorage[i];
-                    newTagInSram.backingStorage[i] = 0;
-                }
-                newTagInSram.tag = oldAddress;
-                newTagInSram.commitToSRAM(); // commit it back to sram as invalidated
+        // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
+        commitToSRAM();
+        subsumeFromSRAM(newTag) ;
+        if (!matches(newTag)) {
+            // we did not get a valid match so commit this back to the target memory thing if it is dirty and valid
+            if (valid() && isDirty()) {
+                // this is an inclusive sram cache, thus the entries are copied but at this point in time what we need to do is commit the
+                // entry to the cache
+                backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
             }
-        } else {
-            pullFromNewThing(newTag, thing);
         }
-#endif
-        if (valid() && isDirty()) {
-            // this is an inclusive sram cache, thus the entries are copied but at this point in time what we need to do is commit the
-            // entry to the cache
-            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
-        }
-        // this method doesn't care what came before!
         dirty_ = false;
         valid_ = true;
         tag = newTag;
@@ -600,7 +576,7 @@ public:
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
-            getThing(tag, LoadStoreStyle::Full16)->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
             controlBits = 0;
             tag = 0;
         }
