@@ -505,38 +505,36 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
     // we don't care about the upper most bit because the SRAM cache isn't large enough
     return (address & 0xFFFF'FFF0) << 1;
 }
-union SRAMCacheEntry {
-    explicit constexpr SRAMCacheEntry(Address value = 0) noexcept : raw(value) { }
-    Address raw = 0;
-    struct {
-        byte offset : 4;
-        union {
-            uint16_t index : 15;
-            struct {
-                byte l1Index : 8;
-                byte l2ExtraIndex : 7;
-            };
-        };
-        uint16_t tag : 13;
-    };
-};
-
+constexpr bool EnableDebuggingCompileTime = false;
+volatile bool CacheEntryDebugging = false;
 class CacheEntry {
 public:
     CacheEntry() { };
-    constexpr bool valid() const noexcept { return valid_; }
-    constexpr bool isDirty() const noexcept { return dirty_; }
-#if 0
     /**
      * @brief Construct a cache entry from the SRAM cache
      * @param tag The address to use to pull from the SRAM cache
      */
     explicit CacheEntry(Address tag) noexcept {
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.println(F("NEW CACHE ENTRY!"));
+        }
         subsumeFromSRAM(tag);
     }
-    void subsumeFromSRAM(Address tag) noexcept {
-        setSRAMId(tag);
-        auto actualSRAMIndex = computeL2TagIndex(tag);
+    void subsumeFromSRAM(Address newTag) noexcept {
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.println(F("subsumeFromSRAM {"));
+        }
+        setSRAMId(newTag);
+        Address actualSRAMIndex = computeL2TagIndex(newTag);
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.print(F("BEFORE LOAD: NEW TAG SRAM INDEX 0x"));
+            Serial.print(actualSRAMIndex, HEX);
+            Serial.print(F(" FROM 0x"));
+            Serial.println(newTag, HEX);
+            Serial.print(F("OLD TAG: 0x"));
+            Serial.println(tag, HEX);
+        }
+        SPI.beginTransaction({8'000'000, MSBFIRST, SPI_MODE0});
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(0x03);
         SPI.transfer(actualSRAMIndex >> 16);
@@ -544,11 +542,37 @@ public:
         SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32);
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        SPI.endTransaction();
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.print(F("AFTER LOAD: TAG 0x"));
+            Serial.println(tag, HEX);
+            Serial.print(F("IS VALID? "));
+            if (valid()) {
+                Serial.println(F("YES!"));
+            } else {
+                Serial.println(F("NO!"));
+            }
+        }
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.println(F("}"));
+        }
         // and we are done!
     }
+    constexpr bool valid() const noexcept { return valid_; }
+    constexpr bool isDirty() const noexcept { return dirty_; }
     void commitToSRAM() noexcept {
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.println(F("commitToSRAM {"));
+        }
         setSRAMId(tag);
-        auto actualSRAMIndex = computeL2TagIndex(tag);
+        Address actualSRAMIndex = computeL2TagIndex(tag);
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.print(F("COMMIT: ACTUAL SRAM INDEX 0x"));
+            Serial.print(actualSRAMIndex, HEX);
+            Serial.print(F(" FROM 0x"));
+            Serial.println(tag, HEX);
+        }
+        SPI.beginTransaction({8'000'000, MSBFIRST, SPI_MODE0});
         digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(0x02);
         SPI.transfer(actualSRAMIndex >> 16);
@@ -556,45 +580,78 @@ public:
         SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        SPI.endTransaction();
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.print(F("AFTER COMMIT: TAG 0x"));
+            Serial.println(tag, HEX);
+        }
+        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
+            Serial.println(F("}"));
+        }
     }
-#endif
     void reset(Address newTag, MemoryThing& thing) noexcept {
-#if 0
+        if constexpr (EnableDebuggingCompileTime) {
+            Serial.println(F("RESET {"));
+            Serial.println(F("DUMPING OLD TAG OUT OF RAM BACK TO MEMORY"));
+        }
+        // pull the old tag out of sram and commit it
+        CacheEntry currentSramBacking(tag);
+        // commit it back to memory by invalidating it
+        currentSramBacking.invalidate();
+        if constexpr (EnableDebuggingCompileTime) {
+            Serial.print(F("COMMITTING OLD TAG AT 0x"));
+            Serial.print(tag, HEX);
+            Serial.println(F(" TO SRAM"));
+            if (valid()) {
+                Serial.println(F("\tNOTE: TAG IS VALID!"));
+            } else {
+                Serial.println(F("\tNOTE: TAG IS INVALID!"));
+            }
+        }
         // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
-        Serial.print(F("COMMITTING TO OLD TAG 0x"));
-        Serial.println(tag, HEX);
         commitToSRAM();
-        Serial.print(F("Pulling from new tag 0x"));
-        Serial.println(newTag, HEX);
-        subsumeFromSRAM(newTag) ;
-        if (!matches(newTag)) {
-            Serial.println(F("INVALIDATING CACHE!"));
-            invalidate();
+        if constexpr (EnableDebuggingCompileTime) {
+            Serial.print(F("Pulling from new tag 0x"));
+            Serial.println(newTag, HEX);
         }
-        dirty_ = false;
-        valid_ = true;
-        tag = newTag;
-        backingThing = &thing;
-        thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-        for (auto a : data) {
-            Serial.print(F("\ta = 0x"));
-            Serial.println(a.wholeValue_, HEX);
+        // pull the new tag's address out of sram and do some work with it
+        CacheEntry newEntry(newTag);
+        subsumeFromSRAM(newTag);
+        if (newEntry.valid()) {
+            if (!newEntry.matches(newTag)) {
+                // no match so pull the data in from main memory
+                newEntry.invalidate();
+                dirty_ = false;
+                valid_ = true;
+                tag = newTag;
+                backingThing = &thing;
+                thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+            } else {
+                // for now copy it over
+                *this = newEntry;
+            }
+        } else {
+            // okay the tag is just invalid
+            dirty_ = false;
+            valid_ = true;
+            tag = newTag;
+            backingThing = &thing;
+            // pull from main memory
+            thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
         }
-        // commit our changes to the sram cache to be on the safe side
-        Serial.print(F("DONE!"));
-#endif
-        invalidate();
-        dirty_ = false;
-        valid_ = true;
-        tag = newTag;
-        backingThing = &thing;
-        thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+        if constexpr (EnableDebuggingCompileTime) {
+            Serial.println(F("}"));
+        }
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
+            if constexpr (EnableDebuggingCompileTime) {
+                Serial.println(F("INVALIDATING CACHE!"));
+            }
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
             controlBits = 0;
             tag = 0;
+            backingThing = nullptr;
         }
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
@@ -643,15 +700,14 @@ void invalidateGlobalCache() noexcept {
     for (auto& entry : entries) {
         entry.invalidate();
     }
-#if 0
     // we need to walk through all of the sram cache entries, committing all entries back to the backing store
     constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+    CacheEntryDebugging = false;
     for (uint32_t i = 0; i < max; i += 32) {
-
         CacheEntry target(i); // load from the cache and purge the hell out of it
         target.invalidate(); // try and invalidate it as well
     }
-#endif
+    CacheEntryDebugging = true;
 }
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
@@ -803,9 +859,7 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         SPI.begin();
-#if 0
         purgeSRAMCache();
-#endif
         theThing = &rom;
         fs.begin();
         chipsetFunctions.begin();
@@ -862,10 +916,23 @@ void setup() {
 
 // NOTE: Tw may turn out to be synthetic
 auto& getLine() noexcept {
+    if constexpr (EnableDebuggingCompileTime) {
+        Serial.println(F("getLine() {"));
+    }
     auto address = processorInterface.getAlignedAddress();
+    auto tagIndex = computeTagIndex(address);
+    if constexpr (EnableDebuggingCompileTime) {
+        Serial.print(F("ADDRESS: 0x"));
+        Serial.println(address, HEX);
+        Serial.print(F("TAG INDEX: 0x"));
+        Serial.println(tagIndex, HEX);
+    }
     auto& theEntry = entries[computeTagIndex(address)];
     if (!theEntry.matches(address)) {
         theEntry.reset(address, *theThing);
+    }
+    if constexpr (EnableDebuggingCompileTime) {
+        Serial.println(F("}"));
     }
     return theEntry;
 }
@@ -876,7 +943,6 @@ void loop() {
     }
     // both as and den must be triggered before we can actually
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-    //Serial.println(F("WAITING FOR AS AND DEN!"));
     while (!asTriggered && !denTriggered);
     denTriggered = false;
     asTriggered = false;
@@ -900,8 +966,6 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    //Serial.print(F("DATA REQUEST 0x"));
-    //Serial.println(processorInterface.getAlignedAddress(), HEX);
     if (theThing->bypassesCache()) {
         // just don't use the cache and revert to the old school design
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
