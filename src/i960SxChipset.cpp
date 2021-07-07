@@ -520,10 +520,13 @@ public:
         subsumeFromSRAM(tag);
     }
     void subsumeFromSRAM(Address tag) noexcept {
+        if (CacheEntryDebugging) {
+            Serial.println(F("subsumeFromSRAM {"));
+        }
         setSRAMId(tag);
         Address actualSRAMIndex = computeL2TagIndex(tag);
         if (CacheEntryDebugging) {
-            Serial.print(F("LOAD: ACTUAL SRAM INDEX 0x"));
+            Serial.print(F("BEFORE LOAD: ACTUAL SRAM INDEX 0x"));
             Serial.print(actualSRAMIndex, HEX);
             Serial.print(F(" FROM 0x"));
             Serial.println(tag, HEX);
@@ -535,6 +538,15 @@ public:
         SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32);
         digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        if (CacheEntryDebugging) {
+            Serial.print(F("AFTER LOAD: ACTUAL SRAM INDEX 0x"));
+            Serial.print(actualSRAMIndex, HEX);
+            Serial.print(F(" FROM 0x"));
+            Serial.println(tag, HEX);
+        }
+        if (CacheEntryDebugging) {
+            Serial.println(F("}"));
+        }
         // and we are done!
     }
     constexpr bool valid() const noexcept { return valid_; }
@@ -569,7 +581,7 @@ public:
         commitToSRAM();
         Serial.print(F("Pulling from new tag 0x"));
         Serial.println(newTag, HEX);
-        subsumeFromSRAM(newTag) ;
+        subsumeFromSRAM(newTag);
         if (!matches(newTag)) {
             invalidate();
         }
@@ -856,11 +868,18 @@ void setup() {
 
 // NOTE: Tw may turn out to be synthetic
 auto& getLine() noexcept {
+    Serial.println(F("getLine() {"));
     auto address = processorInterface.getAlignedAddress();
+    auto tagIndex = computeTagIndex(address);
+    Serial.print(F("ADDRESS: 0x"));
+    Serial.println(address, HEX);
+    Serial.print(F("TAG INDEX: 0x"));
+    Serial.println(tagIndex, HEX);
     auto& theEntry = entries[computeTagIndex(address)];
     if (!theEntry.matches(address)) {
         theEntry.reset(address, *theThing);
     }
+    Serial.println(F("}"));
     return theEntry;
 }
 void loop() {
