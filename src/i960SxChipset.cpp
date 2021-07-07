@@ -588,15 +588,18 @@ public:
         Serial.print(F("Pulling from new tag 0x"));
         Serial.println(newTag, HEX);
         subsumeFromSRAM(newTag);
-        if (valid() && !matches(newTag)) {
-            invalidate();
+        if (valid()) {
+            if (!matches(newTag)) {
+                // no match so pull the data in from main memory
+                invalidate();
+                dirty_ = false;
+                valid_ = true;
+                tag = newTag;
+                backingThing = &thing;
+                thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+                // commit our changes to the sram cache to be on the safe side
+            }
         }
-        dirty_ = false;
-        valid_ = true;
-        tag = newTag;
-        backingThing = &thing;
-        thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-        // commit our changes to the sram cache to be on the safe side
         Serial.println(F("}"));
     }
     void invalidate() noexcept {
