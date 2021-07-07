@@ -697,6 +697,7 @@ static_assert(sizeof(CacheEntry) == 32);
 CacheEntry entries[256];
 // we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
+    Serial.println(F("Invalidating Onboard Cache"));
     // commit all entries back
     // walk through the SRAMCache and commit any entries which are empty
     for (auto& entry : entries) {
@@ -714,6 +715,88 @@ void setupPeripherals() {
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
+
+void setupPSRAMCache() noexcept {
+    // transmit reset enable
+    digitalWrite<i960Pinout::DISPLAY_EN, LOW>();
+    SPI.transfer(0x66);
+    digitalWrite<i960Pinout::DISPLAY_EN, HIGH>();
+
+    // transmit reset
+    digitalWrite<i960Pinout::DISPLAY_EN, LOW>();
+    SPI.transfer(0x99);
+    digitalWrite<i960Pinout::DISPLAY_EN, HIGH>();
+
+    constexpr uint32_t max = 8_MB;
+    Serial.println(F("CHECKING PSRAM IS PROPERLY WRITABLE"));
+    auto doSPI = [](byte* ptr, size_t length) {
+        digitalWrite<i960Pinout::DISPLAY_EN, LOW>();
+        SPI.transfer(ptr, length);
+        digitalWrite<i960Pinout::DISPLAY_EN, HIGH>();
+        // make extra sure that the psram has enough time to do its refresh in between operations
+        asm("nop");
+        asm("nop");
+        asm("nop");
+        asm("nop");
+    };
+    for (uint32_t addr = 0; addr < max; addr +=32) {
+        byte theInstruction[36]{
+            0x02,
+            static_cast<byte>(addr >> 16),
+            static_cast<byte>(addr >> 8),
+            static_cast<byte>(addr),
+                1, 2, 3, 4, 5, 6, 7, 8,
+                9, 10, 11, 12, 13, 14, 15, 16,
+                17, 18, 19, 20, 21, 22, 23, 24,
+                25, 26, 27, 28, 29, 30, 31, 32,
+        };
+        doSPI(theInstruction, 36);
+        theInstruction[0]  = 0x03;
+        theInstruction[1] =  static_cast<byte>(addr >> 16);
+        theInstruction[2] =  static_cast<byte>(addr >> 8);
+        theInstruction[3] = static_cast<byte>(addr);
+        // rest of the values do not matter!
+        doSPI(theInstruction, 36);
+        byte* ptr = theInstruction + 4;
+        for (int i = 0, j = 1; i < 32; ++i, ++j) {
+            if (ptr[i] != j) {
+                Serial.print(F("MISMATCH 0x"));
+                Serial.print(j, HEX);
+                Serial.print(F(" => 0x"));
+                Serial.println(ptr[i], HEX);
+            }
+        }
+    }
+    Serial.println(F("NOW CLEARING PSRAM!"));
+    for (uint32_t addr = 0; addr < max; addr +=32) {
+        byte theInstruction[36]{
+                0x02,
+                static_cast<byte>(addr >> 16),
+                static_cast<byte>(addr >> 8),
+                static_cast<byte>(addr),
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+        };
+        doSPI(theInstruction, 36);
+        theInstruction[0]  = 0x03;
+        theInstruction[1] =  static_cast<byte>(addr >> 16);
+        theInstruction[2] =  static_cast<byte>(addr >> 8);
+        theInstruction[3] = static_cast<byte>(addr);
+        // rest of the values do not matter!
+        doSPI(theInstruction, 36);
+        byte* ptr = theInstruction + 4;
+        for (int i = 0; i < 32; ++i) {
+            if (ptr[i] != 0) {
+                Serial.print(F("MISMATCH GOT 0x"));
+                Serial.print(ptr[i], HEX);
+                Serial.println(F(" EXPECTED 0x0"));
+            }
+        }
+    }
+    Serial.println(F("DONE!"));
+}
 /**
  * @brief Just in case, purge the sram of data
  */
@@ -722,7 +805,7 @@ void purgeSRAMCache() noexcept {
     digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
     SPI.transfer(0xFF);
     digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-    constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+    constexpr uint32_t max = 8 * 128_KB;
     Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
     for (uint32_t i = 0; i < max; i += 32) {
         setSRAMId(i);
@@ -855,6 +938,7 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         SPI.begin();
         purgeSRAMCache();
+        setupPSRAMCache();
         theThing = &rom;
         fs.begin();
         chipsetFunctions.begin();
