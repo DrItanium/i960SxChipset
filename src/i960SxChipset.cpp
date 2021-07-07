@@ -594,10 +594,11 @@ public:
             Serial.println(F("RESET {"));
             Serial.println(F("DUMPING OLD TAG OUT OF RAM BACK TO MEMORY"));
         }
+
         // pull the old tag out of sram and commit it
-        CacheEntry currentSramBacking(tag);
+        //CacheEntry currentSramBacking(tag);
         // commit it back to memory by invalidating it
-        currentSramBacking.invalidate();
+        //currentSramBacking.invalidate();
         if constexpr (EnableDebuggingCompileTime) {
             Serial.print(F("COMMITTING OLD TAG AT 0x"));
             Serial.print(tag, HEX);
@@ -615,20 +616,16 @@ public:
             Serial.println(newTag, HEX);
         }
         // pull the new tag's address out of sram and do some work with it
-        CacheEntry newEntry(newTag);
         subsumeFromSRAM(newTag);
-        if (newEntry.valid()) {
-            if (!newEntry.matches(newTag)) {
+        if (valid()) {
+            if (!matches(newTag)) {
                 // no match so pull the data in from main memory
-                newEntry.invalidate();
+                invalidate();
                 dirty_ = false;
                 valid_ = true;
                 tag = newTag;
                 backingThing = &thing;
                 thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-            } else {
-                // for now copy it over
-                *this = newEntry;
             }
         } else {
             // okay the tag is just invalid
