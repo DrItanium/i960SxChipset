@@ -514,8 +514,8 @@ public:
     [[nodiscard]] constexpr bool valid() const noexcept { return valid_; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_; }
     static void invalidateAllEntries() noexcept {
-        // we need to walk through all of the sram cache entries, committing all entries back to the backing store
-        constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+        // we need to walk through all of the psram cache entries, committing all entries back to the backing store
+        constexpr uint32_t max = 8_MB; // PSRAM
         CacheEntryDebugging = false;
         for (uint32_t i = 0; i < max; i += 32) {
             CacheEntry target(i); // load from the cache and purge the hell out of it
@@ -718,22 +718,22 @@ void setupPeripherals() {
 
 void setupPSRAMCache() noexcept {
     // transmit reset enable
-    digitalWrite<i960Pinout::DISPLAY_EN, LOW>();
+    SPI.beginTransaction({8'000'000, MSBFIRST, SPI_MODE0});
+    digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
     SPI.transfer(0x66);
-    digitalWrite<i960Pinout::DISPLAY_EN, HIGH>();
+    digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
 
     // transmit reset
-    digitalWrite<i960Pinout::DISPLAY_EN, LOW>();
+    digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
     SPI.transfer(0x99);
-    digitalWrite<i960Pinout::DISPLAY_EN, HIGH>();
+    digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
 
     constexpr uint32_t max = 8_MB;
     Serial.println(F("CHECKING PSRAM IS PROPERLY WRITABLE"));
-    SPI.beginTransaction({1'000'000, MSBFIRST, SPI_MODE0});
     auto doSPI = [](byte* ptr, size_t length) {
-        digitalWrite(i960Pinout::DISPLAY_EN, LOW);
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
         SPI.transfer(ptr, length);
-        digitalWrite(i960Pinout::DISPLAY_EN, HIGH);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
         // make extra sure that the psram has enough time to do its refresh in between operations
         asm("nop");
         asm("nop");
@@ -768,15 +768,14 @@ void setupPSRAMCache() noexcept {
         };
         // rest of the values do not matter!
         doSPI(theInstruction2, 36);
-        byte* ptr = theInstruction2 + 4;
-        for (int i = 0, j = 1; i < 32; ++i, ++j) {
-            if (ptr[i] != j) {
+        for (int i = 4, j = 1; i < 36; ++i, ++j) {
+            if (theInstruction2[i] != j) {
                 Serial.print(F("@ 0x"));
                 Serial.print(addr, HEX);
-                Serial.print(F(": MISMATCH 0x"));
+                Serial.print(F(": MISMATCH WANTED 0x"));
                 Serial.print(j, HEX);
-                Serial.print(F(" => 0x"));
-                Serial.println(ptr[i], HEX);
+                Serial.print(F(" GOT 0x"));
+                Serial.println(theInstruction2[i], HEX);
             }
         }
     }
@@ -951,9 +950,10 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         SPI.begin();
-        purgeSRAMCache();
+        //purgeSRAMCache();
         delayMicroseconds(200); // make sure that 200 microseconds have actually passed since boot up, otherwise the psram will be in a strange state
         setupPSRAMCache();
+        //signalHaltState(F("HALTING HERE FOR TEST PURPOSES"));
         theThing = &rom;
         fs.begin();
         chipsetFunctions.begin();
