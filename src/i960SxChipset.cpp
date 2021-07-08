@@ -309,8 +309,8 @@ public:
         return false;
     }
 #endif
-    uint16_t read16(Address address) noexcept override {
 #if 0
+    uint16_t read16(Address address) noexcept override {
         switch (address) {
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
                 X(Available) : return available();
@@ -340,12 +340,10 @@ public:
 #undef X
             default: return 0;
         }
-#else
-        return 0;
-#endif
     }
-    void write16(Address address, uint16_t value) noexcept override {
+#endif
 #if 0
+    void write16(Address address, uint16_t value) noexcept override {
         switch (address) {
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
             X(Command) :
@@ -386,8 +384,8 @@ public:
 #undef X
             default: break;
         }
-#endif
     }
+#endif
 #if 0
     inline void fillScreen(uint16_t value) noexcept {
         //display_.fillScreen(value);
@@ -521,7 +519,9 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
 }
 constexpr bool EnableDebuggingCompileTime = false;
 bool CacheEntryDebugging = false;
+#ifdef ALLOW_SRAM_CACHE
 SPISettings sramCacheSpeed(8'000'000, MSBFIRST, SPI_MODE0);
+#endif
 class CacheEntry {
 public:
     CacheEntry() noexcept { };
