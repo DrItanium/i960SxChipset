@@ -177,13 +177,13 @@ public:
                                             //         static_cast<int>(i960Pinout::DC),
                                             //         -1) { }
     ~TFTShieldThing() override = default;
+#if 0
     /**
      * @brief Invoke on doorbell write
      * @param value the value written to the doorbell
      * @return the value to return to the i960 if it makes sense (otherwise it will be zero)
      */
     uint16_t invoke(uint16_t /* unused */) {
-#if 0
         // perhaps we'll do nothing with the value but hold onto it for now
         switch (command_) {
             case Opcodes::SetRotation:
@@ -258,10 +258,11 @@ public:
             default:
                 return 0;
         }
-#endif
         return 0;
     }
+#endif
 public:
+#if 0
     [[nodiscard]] constexpr auto getCommand() const noexcept { return command_; }
     [[nodiscard]] constexpr auto getX() const noexcept { return x_; }
     [[nodiscard]] constexpr auto getY() const noexcept { return y_; }
@@ -307,7 +308,9 @@ public:
         //return display_.availableForWrite();
         return false;
     }
+#endif
     uint16_t read16(Address address) noexcept override {
+#if 0
         switch (address) {
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
                 X(Available) : return available();
@@ -337,8 +340,12 @@ public:
 #undef X
             default: return 0;
         }
+#else
+        return 0;
+#endif
     }
     void write16(Address address, uint16_t value) noexcept override {
+#if 0
         switch (address) {
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
             X(Command) :
@@ -379,7 +386,9 @@ public:
 #undef X
             default: break;
         }
+#endif
     }
+#if 0
     inline void fillScreen(uint16_t value) noexcept {
         //display_.fillScreen(value);
     }
@@ -396,6 +405,7 @@ public:
     inline void println(T msg, Args&& ... args) noexcept {
         //display_.println(msg, args...);
     }
+#endif
     void
     begin() noexcept override {
 #if 0
@@ -418,12 +428,14 @@ public:
         display_.println(F("i960Sx!"));
 #endif
     }
+#if 0
     void
     clearScreen() {
         //display_.fillScreen(ST7735_BLACK);
     }
+#endif
 private:
-    //Adafruit_ST7735 display_;
+#if 0
     Opcodes command_ = Opcodes::None;
     int16_t x_ = 0;
     int16_t y_ = 0;
@@ -447,6 +459,8 @@ private:
     uint16_t backlightFrequency_ = 0;
     uint32_t buttonsCache_ = 0;
     //Adafruit_TFTShield18 ss;
+    //Adafruit_ST7735 display_;
+#endif
 
 };
 
