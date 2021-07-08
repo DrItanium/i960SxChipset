@@ -514,6 +514,7 @@ public:
     [[nodiscard]] constexpr bool valid() const noexcept { return valid_; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_; }
     static void invalidateAllEntries() noexcept {
+#ifdef ALLOW_SRAM_CACHE
         // we need to walk through all of the sram cache entries, committing all entries back to the backing store
         constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
         CacheEntryDebugging = false;
@@ -522,8 +523,10 @@ public:
             target.invalidate(); // try and invalidate it as well
         }
         CacheEntryDebugging = true;
+#endif
     }
 private:
+#ifdef ALLOW_SRAM_CACHE
     /**
      * @brief Construct a cache entry from the SRAM cache
      * @param tag The address to use to pull from the SRAM cache
@@ -602,8 +605,10 @@ private:
             Serial.println(F("}"));
         }
     }
+#endif
 public:
     void reset(Address newTag, MemoryThing& thing) noexcept {
+#ifdef ALLOW_SRAM_CACHE
         if constexpr (EnableDebuggingCompileTime) {
             Serial.println(F("RESET {"));
             Serial.println(F("DUMPING OLD TAG OUT OF RAM BACK TO MEMORY"));
@@ -636,6 +641,7 @@ public:
             // we got a match to just return
             return;
         }
+#else
         // no match so pull the data in from main memory
         invalidate();
         dirty_ = false;
@@ -643,9 +649,12 @@ public:
         tag = newTag;
         backingThing = &thing;
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+#if 0
         if constexpr (EnableDebuggingCompileTime) {
             Serial.println(F("}"));
         }
+#endif
+#endif
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
@@ -714,6 +723,7 @@ void setupPeripherals() {
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
+#ifdef ALLOW_SRAM_CACHE
 /**
  * @brief Just in case, purge the sram of data
  */
@@ -801,6 +811,7 @@ void purgeSRAMCache() noexcept {
     }
     Serial.println(F("DONE PURGING SRAM CACHE!"));
 }
+#endif
 // the setup routine runs once when you press reset:
 void setup() {
 
@@ -854,7 +865,9 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         SPI.begin();
+#ifdef ALLOW_SRAM_CACHE
         purgeSRAMCache();
+#endif
         theThing = &rom;
         fs.begin();
         chipsetFunctions.begin();
