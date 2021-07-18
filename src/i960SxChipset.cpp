@@ -113,8 +113,10 @@ public:
                 static_cast<byte>(address),
         };
         SPI.beginTransaction(psramSettings);
+        digitalWrite<enablePin, LOW>();
         SPI.transfer(commandStream, 4);
         SPI.transfer(buf, capacity); // this will destroy what was originally in memory there which is fine
+        digitalWrite<enablePin, HIGH>();
         SPI.endTransaction();
         return capacity;
     }
@@ -126,8 +128,10 @@ public:
                 static_cast<byte>(address),
         };
         SPI.beginTransaction(psramSettings);
+        digitalWrite<enablePin, LOW>();
         SPI.transfer(commandStream, 4);
         SPI.transfer(buf, capacity); // this will destroy what was originally in memory there which is fine
+        digitalWrite<enablePin, HIGH>();
         SPI.endTransaction();
         return capacity;
     }
@@ -153,12 +157,13 @@ public:
     void begin() noexcept override {
         delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
         SPI.beginTransaction(psramSettings);
-        digitalWrite(enablePin, LOW);
+        digitalWrite<enablePin, LOW>();
         SPI.transfer(0x66);
-        digitalWrite(enablePin, HIGH);
-        digitalWrite(enablePin, LOW);
+        digitalWrite<enablePin, HIGH>();
+        asm("nop");
+        digitalWrite<enablePin, LOW>();
         SPI.transfer(0x99);
-        digitalWrite(enablePin, HIGH);
+        digitalWrite<enablePin, HIGH>();
         SPI.endTransaction();
         Serial.println(F("CLEARING PSRAM!"));
         for (uint32_t addr = 0; addr < Size; addr +=32) {
@@ -206,9 +211,9 @@ public:
 private:
     void doSPI(byte* command, size_t length) {
         SPI.beginTransaction(psramSettings);
-        digitalWrite(enablePin, LOW);
+        digitalWrite<enablePin, LOW>();
         SPI.transfer(command, length);
-        digitalWrite(enablePin, HIGH);
+        digitalWrite<enablePin, HIGH>();
         SPI.endTransaction();
         // make extra sure that the psram has enough time to do its refresh in between operations
         asm("nop"); // 100 ns
