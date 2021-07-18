@@ -106,83 +106,70 @@ public:
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // do not copy the buf but just use it as a transfer medium instead
+        SPI.beginTransaction(psramSettings);
         auto times = capacity / 32;
         auto slop = capacity % 32;
         auto* theBuf = buf;
         for (size_t i = 0; i < times; ++i, theBuf += 32) {
-            byte commandStream[36] {
+            byte header[4]{
                     0x02,
                     static_cast<byte>(address >> 16),
                     static_cast<byte>(address >> 8),
                     static_cast<byte>(address),
-                    theBuf[0], theBuf[1], theBuf[2], theBuf[3], theBuf[4], theBuf[5], theBuf[6], theBuf[7],
-                    theBuf[8], theBuf[9], theBuf[10], theBuf[11], theBuf[12], theBuf[13], theBuf[14], theBuf[15],
-                    theBuf[16], theBuf[17], theBuf[18], theBuf[19], theBuf[20], theBuf[21], theBuf[22], theBuf[23],
-                    theBuf[24], theBuf[25], theBuf[26], theBuf[27], theBuf[28], theBuf[29], theBuf[30], theBuf[31],
             };
-            doSPI(commandStream, 36);
+            digitalWrite<enablePin, LOW>();
+            SPI.transfer(header, 4);
+            SPI.transfer(theBuf, 32);
+            digitalWrite<enablePin, HIGH>();
         }
         // there should be some slop left over
         if (slop > 0) {
-            byte commandStream[36] {
+            byte header[36]{
                     0x02,
                     static_cast<byte>(address >> 16),
                     static_cast<byte>(address >> 8),
                     static_cast<byte>(address),
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
             };
-            // now overwrite the slop entries
-            for (size_t i = 0; i < slop; ++i) {
-                commandStream[i + 4] = theBuf[i];
-            }
-            // then send the buffer over but only transfer slop + 4
-            doSPI(commandStream, slop + 4);
+
+            digitalWrite<enablePin, LOW>();
+            SPI.transfer(header, 4);
+            SPI.transfer(theBuf, slop);
+            digitalWrite<enablePin, HIGH>();
         }
+        SPI.endTransaction();
         return capacity;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
+        SPI.beginTransaction(psramSettings);
         auto times = capacity / 32;
         auto slop = capacity % 32;
         auto* theBuf = buf;
         for (size_t i = 0; i < times; ++i, theBuf += 32) {
-            byte commandStream[36] {
+            byte header[4]{
                     0x03,
                     static_cast<byte>(address >> 16),
                     static_cast<byte>(address >> 8),
                     static_cast<byte>(address),
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
-                    0,0,0,0,0,0,0,0,
             };
-            doSPI(commandStream, 36);
-            for (int j = 0; j < 32; ++j) {
-                // transfer after done!
-                theBuf[j] = commandStream[j + 4];
-            }
+            digitalWrite<enablePin, LOW>();
+            SPI.transfer(header, 4);
+            SPI.transfer(theBuf, 32);
+            digitalWrite<enablePin, HIGH>();
         }
         // there should be some slop left over
         if (slop > 0) {
-            byte commandStream[36] {
+            byte header[4]{
                     0x03,
                     static_cast<byte>(address >> 16),
                     static_cast<byte>(address >> 8),
                     static_cast<byte>(address),
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
             };
-            // now overwrite the slop entries
-            // then send the buffer over but only transfer slop + 4
-            doSPI(commandStream, slop + 4);
-            for (size_t i = 0; i < slop; ++i) {
-                theBuf[i] = commandStream[i + 4];
-            }
+            digitalWrite<enablePin, LOW>();
+            SPI.transfer(header, 4);
+            SPI.transfer(theBuf, 32);
+            digitalWrite<enablePin, HIGH>();
         }
+        SPI.endTransaction();
         return capacity;
     }
     uint16_t read16(Address address) noexcept override {
