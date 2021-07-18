@@ -1170,6 +1170,17 @@ void loop() {
 
         }
         Serial.println(processorInterface.getAddress(), HEX);
+        Serial.println(F("QUERYING THE DATA CYCLE AGAIN TO MAKE SURE"));
+        processorInterface.newDataCycle();
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            Serial.print(F("REQUEST: READ FROM 0x"));
+        } else {
+            Serial.print(F("REQUEST: WRITE OF 0x"));
+            // expensive but something has gone horribly wrong anyway so whatever!
+            Serial.print(processorInterface.getDataBits(), HEX);
+            Serial.print(F(" TO 0x"));
+        }
+        Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
     if (theThing->bypassesCache()) {
