@@ -737,6 +737,218 @@ void setupPeripherals() {
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
+
+SPISettings psramSettings(8'000'000, MSBFIRST, SPI_MODE0);
+/**
+ * @brief Represents access to a single PSRAM chip
+ */
+class PSRAMChip : public MemoryThing {
+public:
+    static constexpr uint32_t Size = 8_MB;
+    static constexpr uint32_t Mask = Size - 1;
+    explicit PSRAMChip(Address start, i960Pinout enablePin) : MemoryThing(start, start + Size), enable_(enablePin) { }
+    ~PSRAMChip() override = default;
+    uint8_t read8(Address address) noexcept override {
+        return readOneByte(address);
+    }
+    size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
+        // do not copy the buf but just use it as a transfer medium instead
+        byte commandStream[4] {
+            0x02,
+            static_cast<byte>(address >> 16),
+            static_cast<byte>(address >> 8),
+            static_cast<byte>(address),
+        };
+        SPI.beginTransaction(psramSettings);
+        SPI.transfer(commandStream, 4);
+        SPI.transfer(buf, capacity); // this will destroy what was originally in memory there which is fine
+        SPI.endTransaction();
+        return capacity;
+    }
+    size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
+        byte commandStream[4] {
+                0x03,
+                static_cast<byte>(address >> 16),
+                static_cast<byte>(address >> 8),
+                static_cast<byte>(address),
+        };
+        SPI.beginTransaction(psramSettings);
+        SPI.transfer(commandStream, 4);
+        SPI.transfer(buf, capacity); // this will destroy what was originally in memory there which is fine
+        SPI.endTransaction();
+        return capacity;
+    }
+    uint16_t read16(Address address) noexcept override {
+        return readTwoBytes(address);
+    }
+    void write8(Address address, uint8_t value) noexcept override {
+        writeOneByte(address, value);
+    }
+    void write16(Address address, uint16_t value) noexcept override {
+        writeTwoBytes(address, value);
+    }
+    void begin() noexcept override {
+        SPI.beginTransaction(psramSettings);
+        digitalWrite(enable_, LOW);
+        SPI.transfer(0x66);
+        digitalWrite(enable_, HIGH);
+        digitalWrite(enable_, LOW);
+        SPI.transfer(0x99);
+        digitalWrite(enable_, HIGH);
+        SPI.endTransaction();
+    }
+private:
+    void doSPI(byte* command, size_t length) {
+        SPI.beginTransaction(psramSettings);
+        digitalWrite(enable_, LOW);
+        SPI.transfer(command, length);
+        digitalWrite(enable_, HIGH);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        SPI.endTransaction();
+        // make extra sure that the psram has enough time to do its refresh in between operations
+    }
+    uint16_t readTwoBytes(Address addr) noexcept {
+        byte theInstruction[6]{
+                0x03,
+                static_cast<byte>(addr >> 16),
+                static_cast<byte>(addr >> 8),
+                static_cast<byte>(addr),
+                0, 0
+        };
+        doSPI(theInstruction, 6);
+        auto lower = static_cast<uint16_t>(theInstruction[4]);
+        auto upper = static_cast<uint16_t>(theInstruction[5]) << 8;
+        return lower | upper;
+    }
+    uint8_t readOneByte(Address addr) noexcept {
+        byte theInstruction[5]{
+                0x03,
+                static_cast<byte>(addr >> 16),
+                static_cast<byte>(addr >> 8),
+                static_cast<byte>(addr),
+                0
+        };
+        doSPI(theInstruction, 5);
+        return theInstruction[4];
+    }
+    void writeTwoBytes(Address addr, uint16_t value) noexcept {
+        byte theInstruction[6] {
+            0x02,
+            static_cast<byte>(addr >> 16),
+            static_cast<byte>(addr >> 8),
+            static_cast<byte>(addr),
+            static_cast<byte>(value),
+            static_cast<byte>(value >> 8)
+        };
+        doSPI(theInstruction, 6);
+    }
+    void writeOneByte(Address addr, uint8_t value) noexcept {
+        byte theInstruction[5] {
+                0x02,
+                static_cast<byte>(addr >> 16),
+                static_cast<byte>(addr >> 8),
+                static_cast<byte>(addr),
+                static_cast<byte>(value),
+        };
+        doSPI(theInstruction, 5);
+    }
+private:
+    i960Pinout enable_;
+};
+void setupPSRAMCache() noexcept {
+    // transmit reset enable
+    SPI.beginTransaction({8'000'000, MSBFIRST, SPI_MODE0});
+    digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+    SPI.transfer(0x66);
+    digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+    digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+    SPI.transfer(0x99);
+    digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+
+    // transmit reset
+
+    constexpr uint32_t max = 8_MB;
+    Serial.println(F("CHECKING PSRAM IS PROPERLY WRITABLE"));
+    auto doSPI = [](byte* ptr, size_t length) {
+        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        SPI.transfer(ptr, length);
+        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        // make extra sure that the psram has enough time to do its refresh in between operations
+        asm("nop");
+        asm("nop");
+        asm("nop");
+        asm("nop");
+        asm("nop");
+        asm("nop");
+        asm("nop");
+        asm("nop");
+    };
+    for (uint32_t addr = 0; addr < max; addr +=32) {
+        byte theInstruction[36]{
+                0x02,
+                static_cast<byte>(addr >> 16),
+                static_cast<byte>(addr >> 8),
+                static_cast<byte>(addr),
+                1, 2, 3, 4, 5, 6, 7, 8,
+                9, 10, 11, 12, 13, 14, 15, 16,
+                17, 18, 19, 20, 21, 22, 23, 24,
+                25, 26, 27, 28, 29, 30, 31, 32,
+        };
+        doSPI(theInstruction, 36);
+        byte theInstruction2[36]{
+                0x03,
+                static_cast<byte>(addr >> 16),
+                static_cast<byte>(addr >> 8),
+                static_cast<byte>(addr),
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+        };
+        // rest of the values do not matter!
+        doSPI(theInstruction2, 36);
+        for (int i = 4, j = 1; i < 36; ++i, ++j) {
+            if (theInstruction2[i] != j) {
+                Serial.print(F("@ 0x"));
+                Serial.print(addr, HEX);
+                Serial.print(F(": MISMATCH WANTED 0x"));
+                Serial.print(j, HEX);
+                Serial.print(F(" GOT 0x"));
+                Serial.println(theInstruction2[i], HEX);
+            }
+        }
+    }
+    Serial.println(F("NOW CLEARING PSRAM!"));
+    for (uint32_t addr = 0; addr < max; addr +=32) {
+        byte theInstruction[36]{
+                0x02,
+                static_cast<byte>(addr >> 16),
+                static_cast<byte>(addr >> 8),
+                static_cast<byte>(addr),
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+        };
+        doSPI(theInstruction, 36);
+        theInstruction[0]  = 0x03;
+        theInstruction[1] =  static_cast<byte>(addr >> 16);
+        theInstruction[2] =  static_cast<byte>(addr >> 8);
+        theInstruction[3] = static_cast<byte>(addr);
+        // rest of the values do not matter!
+        doSPI(theInstruction, 36);
+        byte* ptr = theInstruction + 4;
+        for (int i = 0; i < 32; ++i) {
+            if (ptr[i] != 0) {
+                Serial.print(F("MISMATCH GOT 0x"));
+                Serial.print(ptr[i], HEX);
+                Serial.println(F(" EXPECTED 0x0"));
+            }
+        }
+    }
+    SPI.endTransaction();
+    Serial.println(F("DONE!"));
+}
 #ifdef ALLOW_SRAM_CACHE
 /**
  * @brief Just in case, purge the sram of data
