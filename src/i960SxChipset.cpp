@@ -185,11 +185,23 @@ public:
                     Serial.print(F("MISMATCH GOT 0x"));
                     Serial.print(ptr[i], HEX);
                     Serial.println(F(" EXPECTED 0x0"));
+                    available_ = false;
+                    break;
                 }
+            }
+            if (!available_) {
+                break;
             }
         }
         SPI.endTransaction();
-        Serial.println(F("DONE STARTING UP PSRAM!"));
+        if (available_) {
+            Serial.println(F("DONE STARTING UP PSRAM!"));
+        } else {
+            Serial.println(F("PSRAM ERROR ON STARTUP, DISABLING!"));
+        }
+    }
+    [[nodiscard]] bool respondsTo(Address address) const noexcept override {
+        return available_ && MemoryThing::respondsTo(address);
     }
 private:
     void doSPI(byte* command, size_t length) {
@@ -249,6 +261,8 @@ private:
         };
         doSPI(theInstruction, 5);
     }
+private:
+    bool available_ = true;
 };
 class RAMFile : public MemoryMappedFile {
     //<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>
@@ -627,7 +641,8 @@ DisplayThing displayCommandSet(0x200);
 using OnboardPSRAM = PSRAMChip<i960Pinout::SPI_BUS_EN>;
 constexpr Address RAMStart = 0x8000'0000;
 OnboardPSRAM psram(RAMStart);
-RAMFile ram(RAMStart + OnboardPSRAM::Size); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+// this file overlays with the normal psram chip so any memory not accounted for goes to sdcard
+RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
 ROMDataSection dataRom;
 //ROMThing rom(textSection);
@@ -638,9 +653,9 @@ SDCardFilesystemInterface fs(0x300);
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
-        &psram,
-        &rom,
+        &psram, // must come before ram
         &ram,
+        &rom,
         &dataRom,
         &chipsetFunctions,
         &displayCommandSet,
