@@ -669,7 +669,7 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
     // we don't care about the upper most bit because the SRAM cache isn't large enough
     return (address & 0xFFFF'FFF0) << 1;
 }
-constexpr bool EnableDebuggingCompileTime = true;
+constexpr bool EnableDebuggingCompileTime = false;
 bool CacheEntryDebugging = false;
 #ifdef ALLOW_SRAM_CACHE
 SPISettings sramCacheSpeed(8'000'000, MSBFIRST, SPI_MODE0);
