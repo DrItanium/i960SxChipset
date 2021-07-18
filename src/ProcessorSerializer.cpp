@@ -68,13 +68,13 @@ namespace
     constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
-    constexpr byte IODirBaseAddress = 0x00;
-    constexpr byte GPIOBaseAddress = 0x12;
-    constexpr byte IOConAddress = 0x0A;
+    SPISettings ioexpander(8_MHz, MSBFIRST, SPI_MODE0);
     inline void doSPI(uint8_t* buffer, size_t count) {
+        SPI.beginTransaction(ioexpander);
         DigitalPin<i960Pinout::GPIOSelect>::togglePin();
         SPI.transfer(buffer, count);
         DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+        SPI.endTransaction();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {

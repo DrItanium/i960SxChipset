@@ -669,7 +669,7 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
     // we don't care about the upper most bit because the SRAM cache isn't large enough
     return (address & 0xFFFF'FFF0) << 1;
 }
-constexpr bool EnableDebuggingCompileTime = false;
+constexpr bool EnableDebuggingCompileTime = true;
 bool CacheEntryDebugging = false;
 #ifdef ALLOW_SRAM_CACHE
 SPISettings sramCacheSpeed(8'000'000, MSBFIRST, SPI_MODE0);
@@ -1096,8 +1096,8 @@ auto& getLine() noexcept {
         Serial.println(F("getLine() {"));
     }
     auto address = processorInterface.getAlignedAddress();
-    auto tagIndex = computeTagIndex(address);
     if constexpr (EnableDebuggingCompileTime) {
+        auto tagIndex = computeTagIndex(address);
         Serial.print(F("ADDRESS: 0x"));
         Serial.println(address, HEX);
         Serial.print(F("TAG INDEX: 0x"));
