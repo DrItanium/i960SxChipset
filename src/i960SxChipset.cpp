@@ -146,44 +146,7 @@ public:
         SPI.transfer(0x99);
         digitalWrite(enable_, HIGH);
         SPI.endTransaction();
-
-        Serial.println(F("CHECKING PSRAM IS PROPERLY WRITABLE"));
-        for (uint32_t addr = 0; addr < Size; addr +=32) {
-            byte theInstruction[36]{
-                    0x02,
-                    static_cast<byte>(addr >> 16),
-                    static_cast<byte>(addr >> 8),
-                    static_cast<byte>(addr),
-                    1, 2, 3, 4, 5, 6, 7, 8,
-                    9, 10, 11, 12, 13, 14, 15, 16,
-                    17, 18, 19, 20, 21, 22, 23, 24,
-                    25, 26, 27, 28, 29, 30, 31, 32,
-            };
-            doSPI(theInstruction, 36);
-            byte theInstruction2[36]{
-                    0x03,
-                    static_cast<byte>(addr >> 16),
-                    static_cast<byte>(addr >> 8),
-                    static_cast<byte>(addr),
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-            };
-            // rest of the values do not matter!
-            doSPI(theInstruction2, 36);
-            for (int i = 4, j = 1; i < 36; ++i, ++j) {
-                if (theInstruction2[i] != j) {
-                    Serial.print(F("PSRAM @ 0x"));
-                    Serial.print(addr, HEX);
-                    Serial.print(F(": MISMATCH WANTED 0x"));
-                    Serial.print(j, HEX);
-                    Serial.print(F(" GOT 0x"));
-                    Serial.println(theInstruction2[i], HEX);
-                }
-            }
-        }
-        Serial.println(F("NOW CLEARING PSRAM!"));
+        Serial.println(F("CLEARING PSRAM!"));
         for (uint32_t addr = 0; addr < Size; addr +=32) {
             byte theInstruction[36]{
                     0x02,
