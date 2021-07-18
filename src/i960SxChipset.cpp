@@ -88,7 +88,7 @@ public:
     ROMDataSection() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
     ~ROMDataSection() override = default;
 };
-SPISettings psramSettings(8'000'000, MSBFIRST, SPI_MODE0);
+SPISettings psramSettings(5_MHz, MSBFIRST, SPI_MODE0);
 /**
  * @brief Represents access to a single PSRAM chip
  */
@@ -99,6 +99,8 @@ public:
     explicit PSRAMChip(Address start, i960Pinout enablePin) : MemoryThing(start, start + Size), enable_(enablePin) { }
     ~PSRAMChip() override = default;
     uint8_t read8(Address address) noexcept override {
+        Serial.print(F("PSRAM: READ8 FROM 0x"));
+        Serial.println(address, HEX);
         return readOneByte(address);
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
@@ -129,12 +131,22 @@ public:
         return capacity;
     }
     uint16_t read16(Address address) noexcept override {
+        Serial.print(F("PSRAM: READ16 FROM 0x"));
+        Serial.println(address, HEX);
         return readTwoBytes(address);
     }
     void write8(Address address, uint8_t value) noexcept override {
+        Serial.print(F("PSRAM: WRITE8 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" to 0x"));
+        Serial.println(address, HEX);
         writeOneByte(address, value);
     }
     void write16(Address address, uint16_t value) noexcept override {
+        Serial.print(F("PSRAM: WRITE16 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" to 0x"));
+        Serial.println(address, HEX);
         writeTwoBytes(address, value);
     }
     void begin() noexcept override {

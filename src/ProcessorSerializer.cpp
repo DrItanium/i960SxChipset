@@ -230,6 +230,10 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 void ProcessorInterface::newDataCycle() noexcept {
     auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
+    Serial.print(F("LOWER: 0x"));
+    Serial.println(lower16Addr, HEX);
+    Serial.print(F("UPPER: 0x"));
+    Serial.println(upper16Addr, HEX);
     address_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = 0xFFFF'FFF0 & address_;
     blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
