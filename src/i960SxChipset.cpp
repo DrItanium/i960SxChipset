@@ -92,11 +92,12 @@ SPISettings psramSettings(5_MHz, MSBFIRST, SPI_MODE0);
 /**
  * @brief Represents access to a single PSRAM chip
  */
+ template<i960Pinout enablePin>
 class PSRAMChip : public MemoryThing {
 public:
     static constexpr uint32_t Size = 8_MB;
     static constexpr uint32_t Mask = Size - 1;
-    explicit PSRAMChip(Address start, i960Pinout enablePin) : MemoryThing(start, start + Size), enable_(enablePin) { }
+    explicit PSRAMChip(Address start) : MemoryThing(start, start + Size) { }
     ~PSRAMChip() override = default;
     uint8_t read8(Address address) noexcept override {
         Serial.print(F("PSRAM: READ8 FROM 0x"));
@@ -150,13 +151,14 @@ public:
         writeTwoBytes(address, value);
     }
     void begin() noexcept override {
+        delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
         SPI.beginTransaction(psramSettings);
-        digitalWrite(enable_, LOW);
+        digitalWrite(enablePin, LOW);
         SPI.transfer(0x66);
-        digitalWrite(enable_, HIGH);
-        digitalWrite(enable_, LOW);
+        digitalWrite(enablePin, HIGH);
+        digitalWrite(enablePin, LOW);
         SPI.transfer(0x99);
-        digitalWrite(enable_, HIGH);
+        digitalWrite(enablePin, HIGH);
         SPI.endTransaction();
         Serial.println(F("CLEARING PSRAM!"));
         for (uint32_t addr = 0; addr < Size; addr +=32) {
@@ -192,12 +194,15 @@ public:
 private:
     void doSPI(byte* command, size_t length) {
         SPI.beginTransaction(psramSettings);
-        digitalWrite(enable_, LOW);
+        digitalWrite(enablePin, LOW);
         SPI.transfer(command, length);
-        digitalWrite(enable_, HIGH);
-        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        digitalWrite(enablePin, HIGH);
         SPI.endTransaction();
         // make extra sure that the psram has enough time to do its refresh in between operations
+        asm("nop"); // 100 ns
+        asm("nop"); // 100 ns
+        asm("nop"); // 100 ns
+        asm("nop"); // 100 ns
     }
     uint16_t readTwoBytes(Address addr) noexcept {
         byte theInstruction[6]{
@@ -244,18 +249,14 @@ private:
         };
         doSPI(theInstruction, 5);
     }
-private:
-    i960Pinout enable_;
 };
 class RAMFile : public MemoryMappedFile {
     //<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>
 public:
     static constexpr Address MaxRamSize = 32 * 0x0100'0000; // 32 Memory Spaces or 512 Megabytes
     static constexpr auto RamMask = MaxRamSize - 1;
-    static constexpr Address RamStartingAddress = 0x8000'0000 + PSRAMChip::Size; // start this at 512 megabytes
-    static constexpr auto RamEndingAddress = RamStartingAddress + MaxRamSize;
     using Parent = MemoryMappedFile;
-    RAMFile() noexcept : Parent(RamStartingAddress, RamEndingAddress, MaxRamSize, "ram.bin", FILE_WRITE) { }
+    explicit RAMFile(Address baseAddress) noexcept : Parent(baseAddress, baseAddress + MaxRamSize, MaxRamSize, "ram.bin", FILE_WRITE) { }
     ~RAMFile() override = default;
     [[nodiscard]] Address
     makeAddressRelative(Address input) const noexcept override {
@@ -623,10 +624,12 @@ private:
 
 using DisplayThing = TFTShieldThing;
 DisplayThing displayCommandSet(0x200);
-RAMFile ram; // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+using OnboardPSRAM = PSRAMChip<i960Pinout::SPI_BUS_EN>;
+constexpr Address RAMStart = 0x8000'0000;
+OnboardPSRAM psram(RAMStart);
+RAMFile ram(RAMStart + OnboardPSRAM::Size); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
 ROMDataSection dataRom;
-PSRAMChip psram(0x8000'0000, i960Pinout::SPI_BUS_EN);
 //ROMThing rom(textSection);
 //RAMThing ram(ramSection);
 
