@@ -85,6 +85,7 @@ template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
 static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
 static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
+#ifdef __AVR__
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
@@ -216,25 +217,36 @@ template<i960Pinout pin>
             return 0xFF;
     }
 }
+#endif
 
 template<i960Pinout pin>
 inline void pulse() noexcept {
-    // save registers and do the pulse
-    uint8_t theSREG = SREG;
-    cli();
-    auto& thePort = getAssociatedOutputPort<pin>();
-    thePort ^= getPinMask<pin>();
-    thePort ^= getPinMask<pin>();
-    SREG = theSREG;
+#ifdef __AVR__
+        // save registers and do the pulse
+        uint8_t theSREG = SREG;
+        cli();
+        auto &thePort = getAssociatedOutputPort<pin>();
+        thePort ^= getPinMask<pin>();
+        thePort ^= getPinMask<pin>();
+        SREG = theSREG;
+#else
+#warning "PULSE DOES NOTHING!"
+#endif
+
 }
 template<i960Pinout pin>
 inline void toggle() noexcept {
+#ifdef __AVR__
     auto& thePort = getAssociatedInputPort<pin>();
     thePort |= getPinMask<pin>();
+#else
+#warning "TOGGLE DOES NOTHING!"
+#endif
 }
 
 template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() {
+#ifdef __AVR__
     uint8_t theSREG = SREG;
     cli();
     auto& thePort = getAssociatedOutputPort<pin>();
@@ -244,9 +256,14 @@ inline void digitalWrite() {
         thePort |= getPinMask<pin>();
     }
     SREG = theSREG;
+#else
+#warning "digitalWrite<pin,value>() routed to normal arduino function!"
+    digitalWrite(static_cast<int>(pin), value);
+#endif
 }
 template<i960Pinout pin>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
+#ifdef __AVR__
     uint8_t theSREG = SREG;
     cli();
     auto& thePort = getAssociatedOutputPort<pin>();
@@ -256,6 +273,11 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
         thePort |= getPinMask<pin>();
     }
     SREG = theSREG;
+#else
+#warning "digitalWrite<pin>(value) routed to normal arduino function!"
+    digitalWrite(static_cast<int>(pin), value);
+#endif
+
 }
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
@@ -267,7 +289,12 @@ inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
 }
 template<i960Pinout pin>
 inline auto digitalRead() noexcept {
+#ifdef __AVR__
     return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
+#else
+#warning "digitalRead<pin>() routed to normal arduino function!"
+    return digitalRead(static_cast<int>(pin));
+#endif
 }
 inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));

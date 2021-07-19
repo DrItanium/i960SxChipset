@@ -55,6 +55,7 @@ static_assert(20_MHz == 20'000'000);
 #endif
 enum class TargetMCU {
     ATmega1284p,
+    GrandCentralM4,
     Unknown,
 };
 class MCUConfiguration final {
@@ -108,6 +109,16 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         false,
         true
 };
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = {
+        256_KB,
+        1024, 16,
+        1024, 16,
+        256,
+        120_MHz,
+        true,
+        true
+};
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
     return true;
@@ -152,6 +163,7 @@ public:
 #endif
     }
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
+    [[nodiscard]] static constexpr auto onGrandCentralM4() noexcept { return getMCUTarget() == TargetMCU::GrandCentralM4; }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
 /**
  * @brief Is there an onboard sdcard slot?
@@ -205,7 +217,5 @@ union SplitWord128 {
     uint32_t words[16/sizeof(uint32_t)];
     uint64_t quads[16/sizeof(uint64_t)];
 };
-static_assert(!TargetBoard::cpuIsARMArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");
-static_assert(TargetBoard::cpuIsAVRArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");
 void invalidateGlobalCache() noexcept;
 #endif //I960SXCHIPSET_MCUPLATFORM_H

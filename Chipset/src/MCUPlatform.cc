@@ -28,15 +28,26 @@ namespace {
     template<typename T>
     constexpr bool compileTimeSanityCheck() noexcept {
 #define ERR_STATE(msg) static_assert(false_v< T > , "Sanity check failed: " msg ); return false
-
-        if constexpr(!TargetBoard::usesDisplayShield()) {
-            ERR_STATE("Expected 1284p to use the tft shield");
-        }
-        if constexpr(TargetBoard::hasBuiltinSDCard()) {
-            ERR_STATE("The 1284p does not have a builtin SD Card slot");
-        }
-        if constexpr (TargetBoard::getCPUFrequency() != 20_MHz) {
-            ERR_STATE("Expecting the 1248p to run at 20MHz");
+        if constexpr (TargetBoard::onAtmega1284p()) {
+            if constexpr(!TargetBoard::usesDisplayShield()) {
+                ERR_STATE("Expected 1284p to use the tft shield");
+            }
+            if constexpr(TargetBoard::hasBuiltinSDCard()) {
+                ERR_STATE("The 1284p does not have a builtin SD Card slot");
+            }
+            if constexpr (TargetBoard::getCPUFrequency() != 20_MHz) {
+                ERR_STATE("Expecting the 1248p to run at 20MHz");
+            }
+        } else if constexpr (TargetBoard::onGrandCentralM4()) {
+            if constexpr(!TargetBoard::usesDisplayShield()) {
+                ERR_STATE("Expected the grand central m4 to use the tft shield");
+            }
+            if constexpr(!TargetBoard::hasBuiltinSDCard()) {
+                ERR_STATE("The grand central m4 has a builtin sd card socket");
+            }
+            if constexpr (TargetBoard::getCPUFrequency() != 120_MHz) {
+                ERR_STATE("Expecting the grand central m4 to run at 120MHz");
+            }
         }
 #undef ERR_STATE
     return true;
