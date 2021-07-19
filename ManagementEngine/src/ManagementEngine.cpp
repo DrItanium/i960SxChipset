@@ -223,8 +223,9 @@ inline void pulse() noexcept {
     uint8_t theSREG = SREG;
     cli();
     auto& thePort = getAssociatedOutputPort<pin>();
-    thePort ^= getPinMask<pin>();
-    thePort ^= getPinMask<pin>();
+    auto theMask = getPinMask<pin>();
+    thePort ^= theMask;
+    thePort ^= theMask;
     SREG = theSREG;
 }
 
