@@ -30,7 +30,50 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// - C++17
 /// Board Platform: MightyCore
 #include <Arduino.h>
-#include "MCUPlatform.h"
+
+enum class TargetMCU {
+    ATmega1284p,
+    ATmega164p,
+    ATmega644p,
+    Unknown,
+};
+
+class TargetBoard {
+public:
+    [[nodiscard]] static constexpr auto cpuIsAVRArchitecture() noexcept {
+#if defined(__AVR) || defined(__AVR__)
+        return true;
+#else
+        return false;
+#endif
+    }
+    [[nodiscard]] static constexpr auto getCPUFrequency() noexcept { return F_CPU; }
+    [[nodiscard]] static constexpr auto getMCUTarget() noexcept {
+#ifdef ARDUINO_AVR_ATmega1284
+        return TargetMCU::ATmega1284p;
+#elif defined(ARDUINO_AVR_ATmega644)
+        return TargetMCU::ATmega644p;
+#elif defined(ARDUINO_AVR_ATmega164)
+        return TargetMCU::ATmega164p;
+#else
+        return TargetMCU::Unknown;
+#endif
+    }
+    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
+    [[nodiscard]] static constexpr auto onAtmega644p() noexcept { return getMCUTarget() == TargetMCU::ATmega644p; }
+    [[nodiscard]] static constexpr auto onAtmega164p() noexcept { return getMCUTarget() == TargetMCU::ATmega164p; }
+    [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
+public:
+    TargetBoard() = delete;
+    ~TargetBoard() = delete;
+    TargetBoard(const TargetBoard&) = delete;
+    TargetBoard(TargetBoard&&) = delete;
+    TargetBoard& operator=(const TargetBoard&) = delete;
+    TargetBoard& operator=(TargetBoard&&) = delete;
+};
+
+static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been defined, please define to continue");
+static_assert(TargetBoard::cpuIsAVRArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");
 /// @todo fix this pinout for different targets
 enum class i960Pinout : decltype(A0) {
     // this is described in digial pin order!
