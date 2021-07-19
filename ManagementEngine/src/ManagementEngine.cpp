@@ -23,7 +23,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/// i960Sx chipset mcu, based on atmega1284p with fuses set for:
+/// i960Sx chipset management engine, based on atmega164p with fuses set for:
 /// - 20Mhz crystal
 /// - D1 acts as CLKO
 /// Language options:
