@@ -32,7 +32,7 @@ using Address = uint32_t;
  * @brief Sx Load/Store styles that the processor will request
  */
 enum class LoadStoreStyle : uint8_t {
-    // based off of BE0,BE1 pins
+    // based off of Analog4,Analog5 pins
     Full16 = 0b00,
     Upper8 = 0b01,
     Lower8 = 0b10,
@@ -43,87 +43,87 @@ enum class i960Pinout : decltype(A0) {
         // this is described in digial pin order!
         // leave this one alone
         // PORT B
-        CACHE_A0 = 0,      // output
+        Led = 0,      // output
         CLOCK_OUT, // output, unusable
         AS_,     // input, AVR Int2
-        CACHE_A1, // output
-        GPIOSelect,        // output
-        MOSI,          // reserved
-        MISO,          // reserved
-        SCK,          // reserved
+        Digital_PB3, // output
+        Digital_PB4,        // output
+        Digital_PB5,          // reserved
+        Digital_PB6,          // reserved
+        Digital_PB7,          // reserved
 // PORT D
         RX0,          // reserved
         TX0,          // reserved
         DEN_,      // AVR Interrupt INT0
-        CACHE_A2,        // Output, AVR Interrupt INT1
-        SPI_BUS_EN, // output
-        DC,     // output
-        DISPLAY_EN, // output
-        SD_EN,      // output
+        CYCLE_READY_,        // Output, AVR Interrupt INT1
+        Digital_PD4, // output
+        Digital_PD5,     // output
+        Digital_PD6, // output
+        Digital_PD7,      // output
 // PORT C
-        SCL,          // reserved
-        SDA,          // reserved
+        Digital_PC0,          // reserved
+        Digital_PC1,          // reserved
         Ready,      // output
         Int0_,          // output
-        W_R_,          // input
+        Digital_PC4,          // input
         Reset960,          // output
-        BLAST_,     // input
+        Digital_PC6,     // input
         FAIL,         // input
 // PORT A, used to select the spi bus address (not directly used)
-        WR2,
-        BA1,
-        BA2,
-        BA3,
-        BE0,
-        BE1,
-        BLAST2,
-        SPI_BUS_A7,
+        Analog0,
+        Analog1,
+        Analog2,
+        Analog3,
+        Analog4,
+        Analog5,
+        Analog6,
+        Analog7,
     Count,          // special, must be last
 
 };
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
 static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
-static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
+static_assert(isValidPin<i960Pinout::Led>, "The Led pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-        case i960Pinout::WR2:
-        case i960Pinout::BA1:
-        case i960Pinout::BA2:
-        case i960Pinout::BA3:
-        case i960Pinout::BE0:
-        case i960Pinout::BE1:
-        case i960Pinout::BLAST2:
-        case i960Pinout::SPI_BUS_A7:
+        case i960Pinout::Analog0:
+        case i960Pinout::Analog1:
+        case i960Pinout::Analog2:
+        case i960Pinout::Analog3:
+        case i960Pinout::Analog4:
+        case i960Pinout::Analog5:
+        case i960Pinout::Analog6:
+        case i960Pinout::Analog7:
             return PORTA;
-        case i960Pinout::SCL:          // reserved
-        case i960Pinout::SDA:          // reserved
+        case i960Pinout::Digital_PC0:          // reserved
+        case i960Pinout::Digital_PC1:          // reserved
         case i960Pinout::Ready:      // output
         case i960Pinout::Int0_:          // output
-        case i960Pinout::W_R_:          // input
+        case i960Pinout::Digital_PC4:          // input
         case i960Pinout::Reset960:          // output
-        case i960Pinout::BLAST_:     // input
+        case i960Pinout::Digital_PC6:     // input
         case i960Pinout::FAIL:         // input
             return PORTC;
-        case i960Pinout::CACHE_A0:      // output
+        case i960Pinout::Led:      // output
         case i960Pinout::CLOCK_OUT: // output: unusable
         case i960Pinout::AS_:     // input: AVR Int2
-        case i960Pinout::CACHE_A1: // unused
-        case i960Pinout::GPIOSelect:        // output
-        case i960Pinout::MOSI:          // reserved
-        case i960Pinout::MISO:          // reserved
-        case i960Pinout::SCK:          // reserved
+        case i960Pinout::Digital_PB3: // unused
+        case i960Pinout::Digital_PB4:        // output
+        case i960Pinout::Digital_PB5:          // reserved
+        case i960Pinout::Digital_PB6:          // reserved
+        case i960Pinout::Digital_PB7:          // reserved
             return PORTB;
         case i960Pinout::RX0:          // reserved
         case i960Pinout::TX0:          // reserved
         case i960Pinout::DEN_:      // AVR Interrupt INT0
-        case i960Pinout::CACHE_A2:        // AVR Interrupt INT1
-        case i960Pinout::SPI_BUS_EN: // output
-        case i960Pinout::DC:     // output
-        case i960Pinout::DISPLAY_EN: // output
-        case i960Pinout::SD_EN:      // output
+        case i960Pinout::CYCLE_READY_:        // AVR Interrupt INT1
+        case i960Pinout::Digital_PD4: // output
+        case i960Pinout::Digital_PD5:     // output
+        case i960Pinout::Digital_PD6: // output
+        case i960Pinout::Digital_PD7:      // output
             return PORTD;
         default:
             return PORTA;
@@ -134,41 +134,41 @@ template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-        case i960Pinout::WR2:
-        case i960Pinout::BA1:
-        case i960Pinout::BA2:
-        case i960Pinout::BA3:
-        case i960Pinout::BE0:
-        case i960Pinout::BE1:
-        case i960Pinout::BLAST2:
-        case i960Pinout::SPI_BUS_A7:
+        case i960Pinout::Analog0:
+        case i960Pinout::Analog1:
+        case i960Pinout::Analog2:
+        case i960Pinout::Analog3:
+        case i960Pinout::Analog4:
+        case i960Pinout::Analog5:
+        case i960Pinout::Analog6:
+        case i960Pinout::Analog7:
             return PINA;
-        case i960Pinout::SCL:          // reserved
-        case i960Pinout::SDA:          // reserved
+        case i960Pinout::Digital_PC0:          // reserved
+        case i960Pinout::Digital_PC1:          // reserved
         case i960Pinout::Ready:      // output
         case i960Pinout::Int0_:          // output
-        case i960Pinout::W_R_:          // input
+        case i960Pinout::Digital_PC4:          // input
         case i960Pinout::Reset960:          // output
-        case i960Pinout::BLAST_:     // input
+        case i960Pinout::Digital_PC6:     // input
         case i960Pinout::FAIL:         // input
             return PINC;
-        case i960Pinout::CACHE_A0:      // output
+        case i960Pinout::Led:      // output
         case i960Pinout::CLOCK_OUT: // output: unusable
         case i960Pinout::AS_:     // input: AVR Int2
-        case i960Pinout::CACHE_A1: // unused
-        case i960Pinout::GPIOSelect:        // output
-        case i960Pinout::MOSI:          // reserved
-        case i960Pinout::MISO:          // reserved
-        case i960Pinout::SCK:          // reserved
+        case i960Pinout::Digital_PB3: // unused
+        case i960Pinout::Digital_PB4:        // output
+        case i960Pinout::Digital_PB5:          // reserved
+        case i960Pinout::Digital_PB6:          // reserved
+        case i960Pinout::Digital_PB7:          // reserved
             return PINB;
         case i960Pinout::RX0:          // reserved
         case i960Pinout::TX0:          // reserved
         case i960Pinout::DEN_:      // AVR Interrupt INT0
-        case i960Pinout::CACHE_A2:        // AVR Interrupt INT1
-        case i960Pinout::SPI_BUS_EN: // output
-        case i960Pinout::DC:     // output
-        case i960Pinout::DISPLAY_EN: // output
-        case i960Pinout::SD_EN:      // output
+        case i960Pinout::CYCLE_READY_:        // AVR Interrupt INT1
+        case i960Pinout::Digital_PD4: // output
+        case i960Pinout::Digital_PD5:     // output
+        case i960Pinout::Digital_PD6: // output
+        case i960Pinout::Digital_PD7:      // output
             return PIND;
         default:
             return PORTA;
@@ -178,40 +178,40 @@ template<i960Pinout pin>
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-        case i960Pinout::WR2: return _BV(PA0) ;
-        case i960Pinout::BA1: return _BV(PA1);
-        case i960Pinout::BA2: return _BV(PA2);
-        case i960Pinout::BA3: return _BV(PA3);
-        case i960Pinout::BE0: return _BV(PA4);
-        case i960Pinout::BE1: return _BV(PA5);
-        case i960Pinout::BLAST2: return _BV(PA6);
-        case i960Pinout::SPI_BUS_A7: return _BV(PA7);
-        case i960Pinout::SCL:        return _BV(PC0);
-        case i960Pinout::SDA:        return _BV(PC1);
+        case i960Pinout::Analog0: return _BV(PA0) ;
+        case i960Pinout::Analog1: return _BV(PA1);
+        case i960Pinout::Analog2: return _BV(PA2);
+        case i960Pinout::Analog3: return _BV(PA3);
+        case i960Pinout::Analog4: return _BV(PA4);
+        case i960Pinout::Analog5: return _BV(PA5);
+        case i960Pinout::Analog6: return _BV(PA6);
+        case i960Pinout::Analog7: return _BV(PA7);
+        case i960Pinout::Digital_PC0:        return _BV(PC0);
+        case i960Pinout::Digital_PC1:        return _BV(PC1);
         case i960Pinout::Ready:      return _BV(PC2);
         case i960Pinout::Int0_:      return _BV(PC3);
-        case i960Pinout::W_R_:       return _BV(PC4);
+        case i960Pinout::Digital_PC4:       return _BV(PC4);
         case i960Pinout::Reset960:   return _BV(PC5);
-        case i960Pinout::BLAST_:     return _BV(PC6);
+        case i960Pinout::Digital_PC6:     return _BV(PC6);
         case i960Pinout::FAIL:       return _BV(PC7);
 
-        case i960Pinout::CACHE_A0:      return _BV(PB0);
+        case i960Pinout::Led:      return _BV(PB0);
         case i960Pinout::CLOCK_OUT:  return _BV(PB1);
         case i960Pinout::AS_:     return _BV(PB2);
-        case i960Pinout::CACHE_A1:    return _BV(PB3);
-        case i960Pinout::GPIOSelect:        return _BV(PB4);
-        case i960Pinout::MOSI:         return _BV(PB5) ;
-        case i960Pinout::MISO:         return _BV(PB6) ;
-        case i960Pinout::SCK:          return _BV(PB7);
+        case i960Pinout::Digital_PB3:    return _BV(PB3);
+        case i960Pinout::Digital_PB4:        return _BV(PB4);
+        case i960Pinout::Digital_PB5:         return _BV(PB5) ;
+        case i960Pinout::Digital_PB6:         return _BV(PB6) ;
+        case i960Pinout::Digital_PB7:          return _BV(PB7);
 
         case i960Pinout::RX0:          return _BV(PD0);
         case i960Pinout::TX0:          return _BV(PD1);
         case i960Pinout::DEN_:          return _BV(PD2);
-        case i960Pinout::CACHE_A2:        return _BV(PD3);
-        case i960Pinout::SPI_BUS_EN: return _BV(PD4);
-        case i960Pinout::DC:     return _BV(PD5);
-        case i960Pinout::DISPLAY_EN: return _BV(PD6);
-        case i960Pinout::SD_EN:     return _BV(PD7);
+        case i960Pinout::CYCLE_READY_:        return _BV(PD3);
+        case i960Pinout::Digital_PD4: return _BV(PD4);
+        case i960Pinout::Digital_PD5:     return _BV(PD5);
+        case i960Pinout::Digital_PD6: return _BV(PD6);
+        case i960Pinout::Digital_PD7:     return _BV(PD7);
         default:
             return 0xFF;
     }
@@ -334,17 +334,17 @@ struct DigitalPin {
         inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
     }
 
-DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
+DefOutputPin(i960Pinout::Digital_PB4, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
-DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
-DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
+DefOutputPin(i960Pinout::Digital_PD4, LOW, HIGH);
+DefOutputPin(i960Pinout::Digital_PD6, LOW, HIGH);
+DefOutputPin(i960Pinout::Digital_PD7, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
-DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
-DefInputPin(i960Pinout::W_R_, LOW, HIGH);
+DefInputPin(i960Pinout::Digital_PC6, LOW, HIGH);
+DefInputPin(i960Pinout::Digital_PC4, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 

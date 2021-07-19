@@ -29,7 +29,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Language options:
 /// - C++17
 /// Board Platform: MightyCore
-#include <Arduino.h>
 #include "Pinout.h"
 
 volatile bool asTriggered = false;
@@ -57,61 +56,34 @@ void onSPRAsserted() {
 
 // the setup routine runs once when you press reset:
 void setup() {
-
-    Serial.begin(115200);
-    while(!Serial) {
-        delay(10);
-    }
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     setupPins(OUTPUT,
-              i960Pinout::SPI_BUS_EN,
-              i960Pinout::DISPLAY_EN,
-              i960Pinout::SD_EN,
               i960Pinout::Reset960,
               i960Pinout::Ready,
-              i960Pinout::GPIOSelect,
-              i960Pinout::CACHE_A0,
-              i960Pinout::CACHE_A1,
-              i960Pinout::CACHE_A2,
+              i960Pinout::Led,
               i960Pinout::Int0_);
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
         digitalWriteBlock(HIGH,
-                          i960Pinout::SPI_BUS_EN,
-                          i960Pinout::SD_EN,
-                          i960Pinout::DISPLAY_EN,
                           i960Pinout::Ready,
-                          i960Pinout::GPIOSelect,
                           i960Pinout::Int0_);
-        digitalWriteBlock(LOW,
-                          i960Pinout::CACHE_A0,
-                          i960Pinout::CACHE_A1,
-                          i960Pinout::CACHE_A2);
+        digitalWrite(i960Pinout::Led, LOW);
         setupPins(INPUT,
-                  i960Pinout::BLAST_,
+                  i960Pinout::CYCLE_READY_,
                   i960Pinout::AS_,
-                  i960Pinout::W_R_,
                   i960Pinout::DEN_,
-                  i960Pinout::FAIL,
-                  i960Pinout::WR2,
-                  i960Pinout::BA1,
-                  i960Pinout::BA2,
-                  i960Pinout::BA3,
-                  i960Pinout::BE0,
-                  i960Pinout::BE1,
-                  i960Pinout::BLAST2,
-                  i960Pinout::SPI_BUS_A7);
+                  i960Pinout::FAIL);
 
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-        Serial.println(F("i960Sx chipset bringup"));
+        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::CYCLE_READY_)), onSPRAsserted, FALLING);
+        //Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
         delay(1000);
-        Serial.println(F("i960Sx chipset brought up fully!"));
-
+        //Serial.println(F("i960Sx chipset brought up fully!"));
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state
@@ -156,18 +128,13 @@ void setup() {
 // Ti -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
-[[noreturn]]
-void
-signalHaltState(const __FlashStringHelper* haltMsg) {
-    Serial.println(haltMsg);
-    while(true) {
-        delay(1000);
-    }
-}
 void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-        signalHaltState(F("CHECKSUM FAILURE!"));
+        /// @todo trigger a control line to signify a system failure
+        while(true) {
+            delay(1000);
+        }
     }
     // both as and den must be triggered before we can actually
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
@@ -176,7 +143,9 @@ void loop() {
     asTriggered = false;
     while (!signalProcessorReady);
     signalProcessorReady = false;
-
+    DigitalPin<i960Pinout::Ready>::pulse();
+    asm("nop"); // delay a couple of times to make sure
+    asm("nop"); // delay a couple of times to make sure
 }
 
 
