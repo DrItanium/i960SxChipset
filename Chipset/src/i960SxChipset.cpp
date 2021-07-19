@@ -725,6 +725,7 @@ void onDENAsserted() {
 
 MemoryThing* theThing = nullptr;
 
+#if 0
 constexpr byte getChipId(uint32_t address) noexcept {
     return (address >> 17) & 0b111;
 }
@@ -734,8 +735,18 @@ void setSRAMId(uint32_t address) noexcept {
     digitalWrite<i960Pinout::CACHE_A1>(id & 0b10 ? HIGH : LOW);
     digitalWrite<i960Pinout::CACHE_A2>(id & 0b100 ? HIGH : LOW);
 }
-constexpr uint8_t computeTagIndex(Address address) noexcept {
-    return static_cast<uint8_t>(address >> 4);
+#endif
+#ifdef __AVR__
+using CacheTagSize = uint8_t;
+#else
+using CacheTagSize = uint32_t;
+#endif
+constexpr CacheTagSize computeTagIndex(Address address) noexcept {
+#ifdef __AVR__
+    return static_cast<CacheTagSize>(address >> 4);
+#else
+    return (TargetBoard::getCacheLineMask() & address) >> 4;
+#endif
 }
 constexpr Address computeL2TagIndex(Address address) noexcept {
     // we don't care about the upper most bit because the SRAM cache isn't large enough
@@ -941,7 +952,7 @@ private:
     };
 };
 static_assert(sizeof(CacheEntry) == 32);
-CacheEntry entries[256];
+CacheEntry entries[TargetBoard::numberOfCacheLines()];
 // we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
     // commit all entries back
