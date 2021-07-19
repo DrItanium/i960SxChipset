@@ -232,8 +232,7 @@ template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() {
     uint8_t theSREG = SREG;
     cli();
-    auto& thePort = getAssociatedOutputPort<pin>();
-    if constexpr (value == LOW) {
+    if constexpr (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
     } else {
         thePort |= getPinMask<pin>();
@@ -244,8 +243,7 @@ template<i960Pinout pin>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
     uint8_t theSREG = SREG;
     cli();
-    auto& thePort = getAssociatedOutputPort<pin>();
-    if (value == LOW) {
+    if (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
     } else {
         thePort |= getPinMask<pin>();
@@ -369,7 +367,7 @@ void setup() {
     PORTC = 0b1111'1110; // PB0 is RESET960. Pull the i960 into reset state
     // now configure the rest of the pins
     pinMode(i960Pinout::Led, OUTPUT);
-    digitalWrite(i960Pinout::Led, LOW);
+    digitalWrite<i960Pinout::Led, LOW>();
     // all of these pins need to be pulled high
     setupPins(INPUT,
               i960Pinout::CYCLE_READY_,
@@ -384,7 +382,7 @@ void setup() {
     // then wait for a little bit to make sure that we have actually
     delay(1000);
     // pull the i960 out of reset
-    digitalWrite(i960Pinout::Reset960, HIGH);
+    digitalWrite<i960Pinout::Reset960, HIGH>();
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted());
