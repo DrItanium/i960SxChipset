@@ -90,5 +90,10 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
     digitalWrite(static_cast<int>(pin), value);
 
 }
+template<i960Pinout pin>
+inline auto digitalRead() noexcept {
+#warning "digitalRead<pin>() routed to normal arduino function!"
+    return digitalRead(static_cast<int>(pin));
+}
 #endif
 #endif //CHIPSET_PINOUT_GRANDCENTRALM4_H

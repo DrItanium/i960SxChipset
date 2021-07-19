@@ -43,6 +43,7 @@ template<i960Pinout pin> inline void pulse() noexcept;
 template<i960Pinout pin> inline void toggle() noexcept;
 template<i960Pinout pin, decltype(HIGH) value> inline void digitalWrite() noexcept;
 template<i960Pinout pin> inline void digitalWrite(decltype(HIGH) value) noexcept;
+template<i960Pinout pin> inline auto digitalRead() noexcept;
 
 #include "Pinout_1284p.h"
 #include "Pinout_GrandCentralM4.h"
@@ -55,18 +56,8 @@ static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an in
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);
 }
-
 inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
     pinMode(static_cast<int>(ip), value);
-}
-template<i960Pinout pin>
-inline auto digitalRead() noexcept {
-#ifdef __AVR__
-    return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
-#else
-#warning "digitalRead<pin>() routed to normal arduino function!"
-    return digitalRead(static_cast<int>(pin));
-#endif
 }
 inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));

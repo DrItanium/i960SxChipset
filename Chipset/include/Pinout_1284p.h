@@ -240,5 +240,9 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
     }
     SREG = theSREG;
 }
+template<i960Pinout pin>
+inline auto digitalRead() noexcept {
+    return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
+}
 #endif
 #endif //CHIPSET_PINOUT_1284P_H
