@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CHIPSET_PINOUT_GRANDCENTRALM4_H
 #include <Arduino.h>
 #ifdef ARDUINO_GRAND_CENTRAL_M4
-enum class i960Pinout : decltype(A0) {
+enum class i960Pinout {
     /// @todo fix this
     // PORT B
     CACHE_A0 = 0,      // output
@@ -70,5 +70,25 @@ enum class i960Pinout : decltype(A0) {
     SPI_BUS_A7,
     Count, // must be last
 };
+template<i960Pinout pin>
+inline void pulse() noexcept {
+    /// @todo implement this
+#warning "PULSE DOES NOTHING!"
+}
+template<i960Pinout pin>
+inline void toggle() noexcept {
+#warning "TOGGLE DOES NOTHING!"
+}
+template<i960Pinout pin, decltype(HIGH) value>
+inline void digitalWrite() {
+#warning "digitalWrite<pin,value>() routed to normal arduino function!"
+    digitalWrite(static_cast<int>(pin), value);
+}
+template<i960Pinout pin>
+inline void digitalWrite(decltype(HIGH) value) noexcept {
+#warning "digitalWrite<pin>(value) routed to normal arduino function!"
+    digitalWrite(static_cast<int>(pin), value);
+
+}
 #endif
 #endif //CHIPSET_PINOUT_GRANDCENTRALM4_H

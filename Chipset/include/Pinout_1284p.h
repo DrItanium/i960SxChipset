@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #ifdef ARDUINO_AVR_ATmega1284
 /// @todo fix this pinout for different targets
-enum class i960Pinout : decltype(A0) {
+enum class i960Pinout {
     // this is described in digial pin order!
     // leave this one alone
     // PORT B
@@ -69,5 +69,176 @@ enum class i960Pinout : decltype(A0) {
     SPI_BUS_A7,
     Count,          // special, must be last
 };
+static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
+template<i960Pinout pin>
+[[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
+    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+    switch (pin) {
+        case i960Pinout::WR2:
+        case i960Pinout::BA1:
+        case i960Pinout::BA2:
+        case i960Pinout::BA3:
+        case i960Pinout::BE0:
+        case i960Pinout::BE1:
+        case i960Pinout::BLAST2:
+        case i960Pinout::SPI_BUS_A7:
+            return PORTA;
+        case i960Pinout::SCL:          // reserved
+        case i960Pinout::SDA:          // reserved
+        case i960Pinout::Ready:      // output
+        case i960Pinout::Int0_:          // output
+        case i960Pinout::W_R_:          // input
+        case i960Pinout::Reset960:          // output
+        case i960Pinout::BLAST_:     // input
+        case i960Pinout::FAIL:         // input
+            return PORTC;
+        case i960Pinout::CACHE_A0:      // output
+        case i960Pinout::CLOCK_OUT: // output: unusable
+        case i960Pinout::AS_:     // input: AVR Int2
+        case i960Pinout::CACHE_A1: // unused
+        case i960Pinout::GPIOSelect:        // output
+        case i960Pinout::MOSI:          // reserved
+        case i960Pinout::MISO:          // reserved
+        case i960Pinout::SCK:          // reserved
+            return PORTB;
+        case i960Pinout::RX0:          // reserved
+        case i960Pinout::TX0:          // reserved
+        case i960Pinout::DEN_:      // AVR Interrupt INT0
+        case i960Pinout::CACHE_A2:        // AVR Interrupt INT1
+        case i960Pinout::SPI_BUS_EN: // output
+        case i960Pinout::DC:     // output
+        case i960Pinout::DISPLAY_EN: // output
+        case i960Pinout::SD_EN:      // output
+            return PORTD;
+        default:
+            return PORTA;
+    }
+}
+
+template<i960Pinout pin>
+[[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
+    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+    switch (pin) {
+        case i960Pinout::WR2:
+        case i960Pinout::BA1:
+        case i960Pinout::BA2:
+        case i960Pinout::BA3:
+        case i960Pinout::BE0:
+        case i960Pinout::BE1:
+        case i960Pinout::BLAST2:
+        case i960Pinout::SPI_BUS_A7:
+            return PINA;
+        case i960Pinout::SCL:          // reserved
+        case i960Pinout::SDA:          // reserved
+        case i960Pinout::Ready:      // output
+        case i960Pinout::Int0_:          // output
+        case i960Pinout::W_R_:          // input
+        case i960Pinout::Reset960:          // output
+        case i960Pinout::BLAST_:     // input
+        case i960Pinout::FAIL:         // input
+            return PINC;
+        case i960Pinout::CACHE_A0:      // output
+        case i960Pinout::CLOCK_OUT: // output: unusable
+        case i960Pinout::AS_:     // input: AVR Int2
+        case i960Pinout::CACHE_A1: // unused
+        case i960Pinout::GPIOSelect:        // output
+        case i960Pinout::MOSI:          // reserved
+        case i960Pinout::MISO:          // reserved
+        case i960Pinout::SCK:          // reserved
+            return PINB;
+        case i960Pinout::RX0:          // reserved
+        case i960Pinout::TX0:          // reserved
+        case i960Pinout::DEN_:      // AVR Interrupt INT0
+        case i960Pinout::CACHE_A2:        // AVR Interrupt INT1
+        case i960Pinout::SPI_BUS_EN: // output
+        case i960Pinout::DC:     // output
+        case i960Pinout::DISPLAY_EN: // output
+        case i960Pinout::SD_EN:      // output
+            return PIND;
+        default:
+            return PORTA;
+    }
+}
+template<i960Pinout pin>
+[[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
+    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+    switch (pin) {
+        case i960Pinout::WR2: return _BV(PA0) ;
+        case i960Pinout::BA1: return _BV(PA1);
+        case i960Pinout::BA2: return _BV(PA2);
+        case i960Pinout::BA3: return _BV(PA3);
+        case i960Pinout::BE0: return _BV(PA4);
+        case i960Pinout::BE1: return _BV(PA5);
+        case i960Pinout::BLAST2: return _BV(PA6);
+        case i960Pinout::SPI_BUS_A7: return _BV(PA7);
+        case i960Pinout::SCL:        return _BV(PC0);
+        case i960Pinout::SDA:        return _BV(PC1);
+        case i960Pinout::Ready:      return _BV(PC2);
+        case i960Pinout::Int0_:      return _BV(PC3);
+        case i960Pinout::W_R_:       return _BV(PC4);
+        case i960Pinout::Reset960:   return _BV(PC5);
+        case i960Pinout::BLAST_:     return _BV(PC6);
+        case i960Pinout::FAIL:       return _BV(PC7);
+
+        case i960Pinout::CACHE_A0:      return _BV(PB0);
+        case i960Pinout::CLOCK_OUT:  return _BV(PB1);
+        case i960Pinout::AS_:     return _BV(PB2);
+        case i960Pinout::CACHE_A1:    return _BV(PB3);
+        case i960Pinout::GPIOSelect:        return _BV(PB4);
+        case i960Pinout::MOSI:         return _BV(PB5) ;
+        case i960Pinout::MISO:         return _BV(PB6) ;
+        case i960Pinout::SCK:          return _BV(PB7);
+
+        case i960Pinout::RX0:          return _BV(PD0);
+        case i960Pinout::TX0:          return _BV(PD1);
+        case i960Pinout::DEN_:          return _BV(PD2);
+        case i960Pinout::CACHE_A2:        return _BV(PD3);
+        case i960Pinout::SPI_BUS_EN: return _BV(PD4);
+        case i960Pinout::DC:     return _BV(PD5);
+        case i960Pinout::DISPLAY_EN: return _BV(PD6);
+        case i960Pinout::SD_EN:     return _BV(PD7);
+        default:
+            return 0xFF;
+    }
+}
+template<i960Pinout pin>
+inline void pulse() noexcept {
+        // save registers and do the pulse
+        uint8_t theSREG = SREG;
+        cli();
+        auto &thePort = getAssociatedOutputPort<pin>();
+        thePort ^= getPinMask<pin>();
+        thePort ^= getPinMask<pin>();
+        SREG = theSREG;
+}
+template<i960Pinout pin>
+inline void toggle() noexcept {
+    auto& thePort = getAssociatedInputPort<pin>();
+    thePort |= getPinMask<pin>();
+}
+template<i960Pinout pin, decltype(HIGH) value>
+inline void digitalWrite() {
+    uint8_t theSREG = SREG;
+    cli();
+    auto& thePort = getAssociatedOutputPort<pin>();
+    if constexpr (value == LOW) {
+        thePort &= ~getPinMask<pin>();
+    } else {
+        thePort |= getPinMask<pin>();
+    }
+    SREG = theSREG;
+}
+template<i960Pinout pin>
+inline void digitalWrite(decltype(HIGH) value) noexcept {
+    uint8_t theSREG = SREG;
+    cli();
+    auto& thePort = getAssociatedOutputPort<pin>();
+    if (value == LOW) {
+        thePort &= ~getPinMask<pin>();
+    } else {
+        thePort |= getPinMask<pin>();
+    }
+    SREG = theSREG;
+}
 #endif
 #endif //CHIPSET_PINOUT_1284P_H
