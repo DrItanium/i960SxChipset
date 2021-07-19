@@ -38,53 +38,14 @@ enum class LoadStoreStyle : uint8_t {
     Lower8 = 0b10,
     None = 0b11,
 };
-/// @todo fix this pinout for different targets
-enum class i960Pinout : decltype(A0) {
-        // this is described in digial pin order!
-        // leave this one alone
-        // PORT B
-        CACHE_A0 = 0,      // output
-        CLOCK_OUT, // output, unusable
-        AS_,     // input, AVR Int2
-        CACHE_A1, // output
-        GPIOSelect,        // output
-        MOSI,          // reserved
-        MISO,          // reserved
-        SCK,          // reserved
-// PORT D
-        RX0,          // reserved
-        TX0,          // reserved
-        DEN_,      // AVR Interrupt INT0
-        CACHE_A2,        // Output, AVR Interrupt INT1
-        SPI_BUS_EN, // output
-        DC,     // output
-        DISPLAY_EN, // output
-        SD_EN,      // output
-// PORT C
-        SCL,          // reserved
-        SDA,          // reserved
-        Ready,      // output
-        Int0_,          // output
-        W_R_,          // input
-        Reset960,          // output
-        BLAST_,     // input
-        FAIL,         // input
-// PORT A, used to select the spi bus address (not directly used)
-        WR2,
-        BA1,
-        BA2,
-        BA3,
-        BE0,
-        BE1,
-        BLAST2,
-        SPI_BUS_A7,
-    Count,          // special, must be last
-
-};
+#include "Pinout_1284p.h"
+#include "Pinout_GrandCentralM4.h"
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
 static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
+#ifdef __AVR__
 static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
+#endif
 #ifdef __AVR__
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {

@@ -748,10 +748,12 @@ constexpr CacheTagSize computeTagIndex(Address address) noexcept {
     return (TargetBoard::getCacheLineMask() & address) >> 4;
 #endif
 }
+#ifdef ALLOW_SRAM_CACHE
 constexpr Address computeL2TagIndex(Address address) noexcept {
     // we don't care about the upper most bit because the SRAM cache isn't large enough
     return (address & 0xFFFF'FFF0) << 1;
 }
+#endif
 constexpr bool EnableDebuggingCompileTime = false;
 bool CacheEntryDebugging = false;
 #ifdef ALLOW_SRAM_CACHE
