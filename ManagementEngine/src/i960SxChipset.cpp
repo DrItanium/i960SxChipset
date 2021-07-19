@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Language options:
 /// - C++17
 /// Board Platform: MightyCore
+#include <Arduino.h>
 #include "Pinout.h"
 
 volatile bool asTriggered = false;
@@ -108,7 +109,6 @@ void setup() {
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
-        processorInterface.begin();
         delay(1000);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
