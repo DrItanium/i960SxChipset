@@ -69,18 +69,19 @@ enum class i960Pinout : decltype(A0) {
     Led = Digital_PB0,
     CLKO = Digital_PB1,
     AS_ = Digital_PB2,
-    SUCCESSFUL_BOOT_ = Digital_PB3,
-    NEW_REQUEST_ = Digital_PB4,
-    Ready = Digital_PB5,
-    Int0_ = Digital_PB6,
-    SYSTEM_FAIL_ = Digital_PB7,
+    BLAST_ = Digital_PB3, // input
+    FAIL = Digital_PB4, // input
     RX0 = Digital_PD0,
     TX0 = Digital_PD1,
     DEN_ = Digital_PD2,      // AVR Interrupt INT0
     CYCLE_READY_ = Digital_PD3,        // Output, AVR Interrupt INT1
-    Reset960 = Digital_PD4, // output
-    BLAST_ = Digital_PD5,
-    FAIL = Digital_PD6,
+    // PORT C contains all of the outputs we need so I can directly manipulate the port on startup
+    Reset960 = Digital_PC0, // output
+    SYSTEM_FAIL_ = Digital_PC1,
+    NEW_REQUEST_ = Digital_PC2,
+    SUCCESSFUL_BOOT_ = Digital_PC3, // output
+    Int0_ = Digital_PC4, // output
+    Ready = Digital_PC5, // output
 };
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
@@ -330,6 +331,7 @@ DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::SYSTEM_FAIL_, LOW, HIGH);
 DefOutputPin(i960Pinout::SUCCESSFUL_BOOT_, LOW, HIGH);
 DefOutputPin(i960Pinout::NEW_REQUEST_, LOW, HIGH);
+
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
@@ -337,7 +339,6 @@ DefInputPin(i960Pinout::CYCLE_READY_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
-
 template<typename ... Pins>
 inline void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
     (pinMode(pins, direction), ...);
@@ -347,14 +348,6 @@ template<typename ... Pins>
 inline void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
     (digitalWrite(pins, value), ...);
 }
-
-template<i960Pinout pinId>
-class PinAsserter {
-public:
-    static_assert(DigitalPin<pinId>::isOutputPin());
-    PinAsserter() { DigitalPin<pinId>::assertPin(); }
-    ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
-};
 
 volatile bool asTriggered = false;
 volatile bool denTriggered = false;
@@ -369,55 +362,32 @@ void onSPRAsserted() {
     signalProcessorReady = true;
 }
 
-
-
-
-// ----------------------------------------------------------------
-// setup routines
-// ----------------------------------------------------------------
-
-
-// we have a second level cache of 1 megabyte in sram over spi
-
 // the setup routine runs once when you press reset:
 void setup() {
-    // before we do anything else, configure as many pins as possible and then
-    // pull the i960 into a reset state, it will remain this for the entire
-    // duration of the setup function
-    setupPins(OUTPUT,
-              i960Pinout::Reset960,
-              i960Pinout::Ready,
-              i960Pinout::Led,
-              i960Pinout::Int0_,
-              i960Pinout::SYSTEM_FAIL_,
-              i960Pinout::SUCCESSFUL_BOOT_);
-    {
-        PinAsserter<i960Pinout::Reset960> holdi960InReset;
-        // all of these pins need to be pulled high
-        digitalWriteBlock(HIGH,
-                          i960Pinout::Ready,
-                          i960Pinout::Int0_,
-                          i960Pinout::SYSTEM_FAIL_,
-                          i960Pinout::SUCCESSFUL_BOOT_);
-        digitalWrite(i960Pinout::Led, LOW);
-        setupPins(INPUT,
-                  i960Pinout::CYCLE_READY_,
-                  i960Pinout::AS_,
-                  i960Pinout::DEN_,
-                  i960Pinout::FAIL);
-
-        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::CYCLE_READY_)), onSPRAsserted, FALLING);
-        //Serial.println(F("i960Sx chipset bringup"));
-        // purge the cache pages
-        delay(1000);
-        //Serial.println(F("i960Sx chipset brought up fully!"));
-    }
+    // setup the output port c as fast as possible
+    DDRC = 0xFF; // all pins are outputs
+    PORTC = 0b1111'1110; // PB0 is RESET960. Pull the i960 into reset state
+    // now configure the rest of the pins
+    pinMode(i960Pinout::Led, OUTPUT);
+    digitalWrite(i960Pinout::Led, LOW);
+    // all of these pins need to be pulled high
+    setupPins(INPUT,
+              i960Pinout::CYCLE_READY_,
+              i960Pinout::AS_,
+              i960Pinout::DEN_,
+              i960Pinout::FAIL,
+              i960Pinout::BLAST_);
+    // configure all of the interrupts to operate on falling edges
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::CYCLE_READY_)), onSPRAsserted, FALLING);
+    // then wait for a little bit to make sure that we have actually
+    delay(1000);
+    // pull the i960 out of reset
+    digitalWrite(i960Pinout::Reset960, HIGH);
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted());
-
     // now wait until we leave self test state
     while (DigitalPin<i960Pinout::FAIL>::isAsserted());
     // at this point we are in idle so we are safe to loaf around a bit
@@ -467,11 +437,13 @@ void loop() {
             delay(1000);
         }
     }
-    // both as and den must be triggered before we can actually
-    // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
+    // both as and den must be triggered before we can actually execute.
+    // the i960 manual states we can do things in between but the time for this is so small
+    // I think it is smarter to just wait. I can easily add a read address lines signal if needed
     while (!asTriggered && !denTriggered);
     denTriggered = false;
     asTriggered = false;
+    // now we model the basic design of the memory transaction process
     do {
         DigitalPin<i960Pinout::NEW_REQUEST_>::pulse();
         auto isBlastLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
