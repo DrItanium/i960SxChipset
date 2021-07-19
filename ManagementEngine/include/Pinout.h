@@ -40,44 +40,44 @@ enum class LoadStoreStyle : uint8_t {
 };
 /// @todo fix this pinout for different targets
 enum class i960Pinout : decltype(A0) {
-        // this is described in digial pin order!
-        // leave this one alone
-        // PORT B
-        Led = 0,      // output
-        CLOCK_OUT, // output, unusable
-        AS_,     // input, AVR Int2
-        Digital_PB3, // output
-        Digital_PB4,        // output
-        Digital_PB5,          // reserved
-        Digital_PB6,          // reserved
-        Digital_PB7,          // reserved
+    // this is described in digial pin order!
+    // leave this one alone
+    // PORT B
+    Led = 0,      // output
+    CLOCK_OUT, // output, unusable
+    AS_,     // input, AVR Int2
+    Digital_PB3, // output
+    Digital_PB4,        // output
+    Digital_PB5,          // reserved
+    Digital_PB6,          // reserved
+    Digital_PB7,          // reserved
 // PORT D
-        RX0,          // reserved
-        TX0,          // reserved
-        DEN_,      // AVR Interrupt INT0
-        CYCLE_READY_,        // Output, AVR Interrupt INT1
-        Digital_PD4, // output
-        Digital_PD5,     // output
-        Digital_PD6, // output
-        Digital_PD7,      // output
+    RX0,          // reserved
+    TX0,          // reserved
+    DEN_,      // AVR Interrupt INT0
+    CYCLE_READY_,        // Output, AVR Interrupt INT1
+    Digital_PD4, // output
+    Digital_PD5,     // output
+    Digital_PD6, // output
+    Digital_PD7,      // output
 // PORT C
-        Digital_PC0,          // reserved
-        Digital_PC1,          // reserved
-        Ready,      // output
-        Int0_,          // output
-        Digital_PC4,          // input
-        Reset960,          // output
-        Digital_PC6,     // input
-        FAIL,         // input
+    SUCCESSFUL_BOOT_,     // input
+    NEW_REQUEST_,          // reserved
+    Ready,      // output
+    Int0_,          // output
+    SYSTEM_FAIL_,          // output
+    Reset960,          // output
+    BLAST_,          // reserved
+    FAIL,         // input
 // PORT A, used to select the spi bus address (not directly used)
-        Analog0,
-        Analog1,
-        Analog2,
-        Analog3,
-        Analog4,
-        Analog5,
-        Analog6,
-        Analog7,
+    Analog0,
+    Analog1,
+    Analog2,
+    Analog3,
+    Analog4,
+    Analog5,
+    Analog6,
+    Analog7,
     Count,          // special, must be last
 
 };
@@ -98,13 +98,13 @@ template<i960Pinout pin>
         case i960Pinout::Analog6:
         case i960Pinout::Analog7:
             return PORTA;
-        case i960Pinout::Digital_PC0:          // reserved
-        case i960Pinout::Digital_PC1:          // reserved
+        case i960Pinout::BLAST_:          // reserved
+        case i960Pinout::NEW_REQUEST_:          // reserved
         case i960Pinout::Ready:      // output
         case i960Pinout::Int0_:          // output
-        case i960Pinout::Digital_PC4:          // input
+        case i960Pinout::SYSTEM_FAIL_:          // input
         case i960Pinout::Reset960:          // output
-        case i960Pinout::Digital_PC6:     // input
+        case i960Pinout::SUCCESSFUL_BOOT_:     // input
         case i960Pinout::FAIL:         // input
             return PORTC;
         case i960Pinout::Led:      // output
@@ -143,13 +143,13 @@ template<i960Pinout pin>
         case i960Pinout::Analog6:
         case i960Pinout::Analog7:
             return PINA;
-        case i960Pinout::Digital_PC0:          // reserved
-        case i960Pinout::Digital_PC1:          // reserved
+        case i960Pinout::BLAST_:          // reserved
+        case i960Pinout::NEW_REQUEST_:          // reserved
         case i960Pinout::Ready:      // output
         case i960Pinout::Int0_:          // output
-        case i960Pinout::Digital_PC4:          // input
+        case i960Pinout::SYSTEM_FAIL_:          // input
         case i960Pinout::Reset960:          // output
-        case i960Pinout::Digital_PC6:     // input
+        case i960Pinout::SUCCESSFUL_BOOT_:     // input
         case i960Pinout::FAIL:         // input
             return PINC;
         case i960Pinout::Led:      // output
@@ -186,13 +186,13 @@ template<i960Pinout pin>
         case i960Pinout::Analog5: return _BV(PA5);
         case i960Pinout::Analog6: return _BV(PA6);
         case i960Pinout::Analog7: return _BV(PA7);
-        case i960Pinout::Digital_PC0:        return _BV(PC0);
-        case i960Pinout::Digital_PC1:        return _BV(PC1);
+        case i960Pinout::BLAST_:        return _BV(PC0);
+        case i960Pinout::NEW_REQUEST_:        return _BV(PC1);
         case i960Pinout::Ready:      return _BV(PC2);
         case i960Pinout::Int0_:      return _BV(PC3);
-        case i960Pinout::Digital_PC4:       return _BV(PC4);
+        case i960Pinout::SYSTEM_FAIL_:       return _BV(PC4);
         case i960Pinout::Reset960:   return _BV(PC5);
-        case i960Pinout::Digital_PC6:     return _BV(PC6);
+        case i960Pinout::SUCCESSFUL_BOOT_:     return _BV(PC6);
         case i960Pinout::FAIL:       return _BV(PC7);
 
         case i960Pinout::Led:      return _BV(PB0);
@@ -226,11 +226,6 @@ inline void pulse() noexcept {
     thePort ^= getPinMask<pin>();
     thePort ^= getPinMask<pin>();
     SREG = theSREG;
-}
-template<i960Pinout pin>
-inline void toggle() noexcept {
-    auto& thePort = getAssociatedInputPort<pin>();
-    thePort |= getPinMask<pin>();
 }
 
 template<i960Pinout pin, decltype(HIGH) value>
@@ -309,9 +304,6 @@ struct DigitalPin {
         inline static void pulse() noexcept {   \
             ::pulse<pin>();                                     \
         }                                       \
-        inline static void togglePin() noexcept { \
-            ::toggle<pin>(); \
-        } \
     }
 #define DefInputPin(pin, asserted, deasserted) \
     template<> \
@@ -334,17 +326,16 @@ struct DigitalPin {
         inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
     }
 
-DefOutputPin(i960Pinout::Digital_PB4, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-DefOutputPin(i960Pinout::Digital_PD4, LOW, HIGH);
-DefOutputPin(i960Pinout::Digital_PD6, LOW, HIGH);
-DefOutputPin(i960Pinout::Digital_PD7, LOW, HIGH);
+DefOutputPin(i960Pinout::SYSTEM_FAIL_, LOW, HIGH);
+DefOutputPin(i960Pinout::SUCCESSFUL_BOOT_, LOW, HIGH);
+DefOutputPin(i960Pinout::NEW_REQUEST_, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
-DefInputPin(i960Pinout::Digital_PC6, LOW, HIGH);
-DefInputPin(i960Pinout::Digital_PC4, LOW, HIGH);
+DefInputPin(i960Pinout::CYCLE_READY_, LOW, HIGH);
+DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 

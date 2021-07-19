@@ -63,13 +63,17 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::Ready,
               i960Pinout::Led,
-              i960Pinout::Int0_);
+              i960Pinout::Int0_,
+              i960Pinout::SYSTEM_FAIL_,
+              i960Pinout::SUCCESSFUL_BOOT_);
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
         digitalWriteBlock(HIGH,
                           i960Pinout::Ready,
-                          i960Pinout::Int0_);
+                          i960Pinout::Int0_,
+                          i960Pinout::SYSTEM_FAIL_,
+                          i960Pinout::SUCCESSFUL_BOOT_);
         digitalWrite(i960Pinout::Led, LOW);
         setupPins(INPUT,
                   i960Pinout::CYCLE_READY_,
@@ -132,6 +136,7 @@ void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         /// @todo trigger a control line to signify a system failure
+        DigitalPin<i960Pinout::SYSTEM_FAIL_>::assertPin();
         while(true) {
             delay(1000);
         }
@@ -141,11 +146,18 @@ void loop() {
     while (!asTriggered && !denTriggered);
     denTriggered = false;
     asTriggered = false;
-    while (!signalProcessorReady);
-    signalProcessorReady = false;
-    DigitalPin<i960Pinout::Ready>::pulse();
-    asm("nop"); // delay a couple of times to make sure
-    asm("nop"); // delay a couple of times to make sure
+    do {
+        DigitalPin<i960Pinout::NEW_REQUEST_>::pulse();
+        auto isBlastLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        while (!signalProcessorReady);
+        DigitalPin<i960Pinout::Ready>::pulse();
+        signalProcessorReady = false;
+        if (isBlastLast) {
+            break;
+        }
+        asm("nop"); // delay a couple of times to make sure
+        asm("nop"); // delay a couple of times to make sure
+    } while (true);
 }
 
 
