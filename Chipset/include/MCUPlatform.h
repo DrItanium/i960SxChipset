@@ -84,6 +84,15 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         true
 };
 template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::Mega2560> = {
+        8_KB,
+        128,
+        32,
+        8_MHz,
+        false,
+        true
+};
+template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = {
         256_KB,
         1024,
@@ -113,6 +122,8 @@ public:
     [[nodiscard]] static constexpr auto getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
         return TargetMCU::ATmega1284p;
+#elif defined(ARDUINO_AVR_ATmega2560)
+        return TargetMCU::Mega2560;
 #elif defined(ARDUINO_GRAND_CENTRAL_M4)
         return TargetMCU::GrandCentralM4;
 #elif defined(ADAFRUIT_FEATHER_M0_ADALOGGER)
