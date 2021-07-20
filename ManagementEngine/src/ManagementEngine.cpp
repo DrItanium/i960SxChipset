@@ -66,11 +66,10 @@ enum class i960Pinout : decltype(A0) {
     Digital_PA6,
     Digital_PA7,
     Count,
-    Led = Digital_PB0,
+    FAIL = Digital_PB0, // input
     CLKO = Digital_PB1,
     AS_ = Digital_PB2,
     BLAST_ = Digital_PB3, // input
-    FAIL = Digital_PB4, // input
     RX0 = Digital_PD0,
     TX0 = Digital_PD1,
     DEN_ = Digital_PD2,      // AVR Interrupt INT0
@@ -86,7 +85,6 @@ enum class i960Pinout : decltype(A0) {
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
 static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
-static_assert(isValidPin<i960Pinout::Led>, "The Led pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
@@ -365,10 +363,12 @@ void onSPRAsserted() {
 void setup() {
     // setup the output port c as fast as possible
     DDRC = 0xFF; // all pins are outputs
-    PORTC = 0b1111'1110; // PB0 is RESET960. Pull the i960 into reset state
+    PORTC = 0b1111'1111; // PB0 is RESET960. Pull the i960 into reset state
+    digitalWrite<i960Pinout::Reset960, LOW>();
     // now configure the rest of the pins
-    pinMode(i960Pinout::Led, OUTPUT);
-    digitalWrite<i960Pinout::Led, LOW>();
+    Serial.begin(115200);
+    while (!Serial);
+    Serial.println(F("BRINGING UP i960 MANAGEMENT ENGINE!"));
     // all of these pins need to be pulled high
     setupPins(INPUT,
               i960Pinout::CYCLE_READY_,
@@ -383,12 +383,15 @@ void setup() {
     // then wait for a little bit to make sure that we have actually
     delay(1000);
     // pull the i960 out of reset
-    digitalWrite<i960Pinout::Reset960, HIGH>();
+    Serial.println(F("BRINGING i960 OUT OF RESET!"));
+    digitalWrite(i960Pinout::Reset960, HIGH);
+    //digitalWrite<i960Pinout::Reset960, HIGH>();
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted());
     // now wait until we leave self test state
     while (DigitalPin<i960Pinout::FAIL>::isAsserted());
+    Serial.println(F("SUCCESSFUL BOOT!"));
     // at this point we are in idle so we are safe to loaf around a bit
     DigitalPin<i960Pinout::SUCCESSFUL_BOOT_>::assertPin();
 }
@@ -444,12 +447,16 @@ void loop() {
     asTriggered = false;
     // now we model the basic design of the memory transaction process
     do {
+        Serial.println(F("NEW REQUEST!"));
         DigitalPin<i960Pinout::NEW_REQUEST_>::pulse();
         auto isBlastLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        Serial.println(F("WAITING ON CHIPSET ITSELF"));
         while (!signalProcessorReady);
         DigitalPin<i960Pinout::Ready>::pulse();
         signalProcessorReady = false;
         if (isBlastLast) {
+            Serial.println(F("TRANSACTION COMPLETE!"));
+
             break;
         }
     } while (true);
