@@ -16,3 +16,13 @@ add_custom_target(
     COMMAND platformio -c clion run -e 1284p_fuses_bootloader -t bootloader
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+add_custom_target(
+    644p_FlashBootloader ALL
+    COMMAND platformio -c clion run -e 644p_fuses_bootloader -t bootloader
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+add_custom_target(
+    164p_FlashBootloader ALL
+    COMMAND platformio -c clion run -e 164p_fuses_bootloader -t bootloader
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
