@@ -32,42 +32,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef ARDUINO_GRAND_CENTRAL_M4
 enum class i960Pinout {
     /// @todo fix this
-    // PORT B
-    CACHE_A0 = 0,      // output
-    CLOCK_OUT, // output, unusable
     AS_,     // input, AVR Int2
-    CACHE_A1, // output
-    GPIOSelect,        // output
-    MOSI,          // reserved
-    MISO,          // reserved
-    SCK,          // reserved
-// PORT D
-    RX0,          // reserved
-    TX0,          // reserved
     DEN_,      // AVR Interrupt INT0
-    CACHE_A2,        // Output, AVR Interrupt INT1
-    SPI_BUS_EN, // output
-    DC,     // output
-    DISPLAY_EN, // output
-    SD_EN,      // output
-// PORT C
-    SCL,          // reserved
-    SDA,          // reserved
-    Ready,      // output
     Int0_,          // output
-    W_R_,          // input
+    SPI_BUS_EN, // output
     Reset960,          // output
     BLAST_,     // input
+    Ready,      // output
+    GPIOSelect = ::SS,        // output
+    MOSI = ::MOSI,          // reserved
+    MISO = ::MOSI,          // reserved
+    SCK = ::SCK,          // reserved
+    AIRLIFT_SD_CS = A5,
+    AIRLIFT_RESET = 5,
+    AIRLIFT_BUSY = A4,
+    AIRLIFT_CS = A3,
+    BLUEFRUIT_RESET = A2,
+    BLUEFRUIT_IRQ = A1,
+    BLUEFRUIT_CS = A0,
+    SD_EN = SDCARD_SS_PIN,
+    DISPLAY_SD_EN = 4,
+    DISPLAY_DC = 8,
+    DISPLAY_EN = 10,
+
+// PORT C
+    SCL = ::SCL,          // reserved
+    SDA = ::SDA,          // reserved
+    W_R_,          // input
     FAIL,         // input
-// PORT A, used to select the spi bus address (not directly used)
-    WR2,
     BA1,
     BA2,
     BA3,
     BE0,
     BE1,
-    BLAST2,
-    SPI_BUS_A7,
     Count, // must be last
 };
 template<i960Pinout pin>
@@ -80,7 +77,7 @@ inline void toggle() noexcept {
 #warning "TOGGLE DOES NOTHING!"
 }
 template<i960Pinout pin, decltype(HIGH) value>
-inline void digitalWrite() {
+inline void digitalWrite() noexcept {
 #warning "digitalWrite<pin,value>() routed to normal arduino function!"
     digitalWrite(static_cast<int>(pin), value);
 }

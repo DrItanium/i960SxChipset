@@ -217,7 +217,7 @@ inline void toggle() noexcept {
     thePort |= getPinMask<pin>();
 }
 template<i960Pinout pin, decltype(HIGH) value>
-inline void digitalWrite() {
+inline void digitalWrite() noexcept {
     uint8_t theSREG = SREG;
     cli();
     auto& thePort = getAssociatedOutputPort<pin>();
