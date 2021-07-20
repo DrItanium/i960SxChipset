@@ -362,9 +362,19 @@ void onSPRAsserted() {
 // the setup routine runs once when you press reset:
 void setup() {
     // setup the output port c as fast as possible
-    DDRC = 0xFF; // all pins are outputs
-    PORTC = 0b1111'1111; // PB0 is RESET960. Pull the i960 into reset state
+    pinMode(i960Pinout::Reset960, OUTPUT);
     digitalWrite<i960Pinout::Reset960, LOW>();
+    pinMode(i960Pinout::Ready, OUTPUT);
+    digitalWrite<i960Pinout::Ready, HIGH>();
+    pinMode(i960Pinout::SYSTEM_FAIL_, OUTPUT);
+    digitalWrite<i960Pinout::SYSTEM_FAIL_, HIGH>();
+    pinMode(i960Pinout::NEW_REQUEST_, OUTPUT);
+    digitalWrite<i960Pinout::NEW_REQUEST_, HIGH>();
+    pinMode(i960Pinout::SUCCESSFUL_BOOT_, OUTPUT);
+    digitalWrite<i960Pinout::SUCCESSFUL_BOOT_, HIGH>();
+    pinMode(i960Pinout::Int0_, OUTPUT);
+    digitalWrite<i960Pinout::Int0_, HIGH>();
+
     // now configure the rest of the pins
     Serial.begin(115200);
     while (!Serial);
@@ -434,6 +444,7 @@ void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         /// @todo trigger a control line to signify a system failure
+        Serial.println(F("CHECKSUM FAILURE!"));
         DigitalPin<i960Pinout::SYSTEM_FAIL_>::assertPin();
         while(true) {
             delay(1000);
