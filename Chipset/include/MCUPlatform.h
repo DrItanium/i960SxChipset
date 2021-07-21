@@ -86,8 +86,8 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
 template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::Mega2560> = {
         8_KB,
-        128,
-        32,
+        64,
+        8,
         8_MHz,
         false,
         true
