@@ -122,7 +122,7 @@ public:
     [[nodiscard]] static constexpr auto getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
         return TargetMCU::ATmega1284p;
-#elif defined(ARDUINO_AVR_ATmega2560)
+#elif defined(ARDUINO_AVR_MEGA2560)
         return TargetMCU::Mega2560;
 #elif defined(ARDUINO_GRAND_CENTRAL_M4)
         return TargetMCU::GrandCentralM4;
@@ -136,6 +136,7 @@ public:
     return TargetMCU::Unknown;
 #endif
     }
+    [[nodiscard]] static constexpr auto onMega2560() noexcept { return getMCUTarget() == TargetMCU::Mega2560; }
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
     [[nodiscard]] static constexpr auto onGrandCentralM4() noexcept { return getMCUTarget() == TargetMCU::GrandCentralM4; }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
@@ -165,7 +166,7 @@ public:
 };
 
 static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been defined, please define to continue");
-static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16kb of sram is not allowed!");
+static_assert(TargetBoard::getSRAMAmountInBytes() >= 8_KB, "ERROR: Less than 16kb of sram is not allowed!");
 
 /**
  * @brief The backing design of the registers within the chipset that are 32-bits in width

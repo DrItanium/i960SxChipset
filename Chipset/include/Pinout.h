@@ -47,6 +47,7 @@ template<i960Pinout pin> inline auto digitalRead() noexcept;
 
 #include "Pinout_1284p.h"
 #include "Pinout_GrandCentralM4.h"
+#include "Pinout_Mega2560.h"
 #if 0
 static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
 #endif

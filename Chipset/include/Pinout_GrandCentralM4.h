@@ -28,8 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef CHIPSET_PINOUT_GRANDCENTRALM4_H
 #define CHIPSET_PINOUT_GRANDCENTRALM4_H
-#include <Arduino.h>
 #ifdef ARDUINO_GRAND_CENTRAL_M4
+#include <Arduino.h>
 enum class i960Pinout {
     /// @todo fix this
     AS_,     // input, AVR Int2
