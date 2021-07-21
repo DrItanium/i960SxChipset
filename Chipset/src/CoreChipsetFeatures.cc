@@ -29,13 +29,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 void
 CoreChipsetFeatures::writeLed(uint8_t value) noexcept {
-#ifdef __AVR__
+#ifdef ARDUINO_AVR_ATmega1284
     digitalWrite(i960Pinout::CACHE_A0, value > 0 ? HIGH : LOW);
 #endif
 }
 uint8_t
 CoreChipsetFeatures::readLed() noexcept {
-#ifdef __AVR__
+#ifdef ARDUINO_AVR_ATmega1284
     return static_cast<uint8_t>(digitalRead(i960Pinout::CACHE_A0));
 #else
     return 0;

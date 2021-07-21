@@ -680,9 +680,9 @@ private:
 
 using DisplayThing = TFTShieldThing;
 DisplayThing displayCommandSet(0x200);
-using OnboardPSRAM = PSRAMChip<i960Pinout::SPI_BUS_EN>;
+//using OnboardPSRAM = PSRAMChip<i960Pinout::SPI_BUS_EN>;
 constexpr Address RAMStart = 0x8000'0000;
-OnboardPSRAM psram(RAMStart);
+//OnboardPSRAM psram(RAMStart);
 // this file overlays with the normal psram chip so any memory not accounted for goes to sdcard
 RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
@@ -695,7 +695,7 @@ SDCardFilesystemInterface fs(0x300);
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
-        &psram, // must come before ram
+        //&psram, // must come before ram
         &ram,
         &rom,
         &dataRom,
@@ -707,13 +707,9 @@ MemoryThing* things[] {
 
 
 
-volatile bool asTriggered = false;
-volatile bool denTriggered = false;
-void onASAsserted() {
-    asTriggered = true;
-}
-void onDENAsserted() {
-    denTriggered = true;
+volatile bool haveNewRequest = false;
+void onNewRequest() {
+    haveNewRequest = true;
 }
 
 
@@ -968,7 +964,7 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     //displayCommandSet.begin();
     //displayReady = true;
-    psram.begin();
+    //psram.begin();
     rom.begin();
     dataRom.begin();
     ram.begin();
@@ -1076,77 +1072,43 @@ void setup() {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     setupPins(OUTPUT,
-              i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
               i960Pinout::SD_EN,
-              i960Pinout::Reset960,
               i960Pinout::Ready,
-              i960Pinout::GPIOSelect,
-#ifdef ARDUINO_AVR_ATmega1284
-              i960Pinout::CACHE_A0,
-              i960Pinout::CACHE_A1,
-              i960Pinout::CACHE_A2,
-#endif
-              i960Pinout::Int0_);
-    {
-        PinAsserter<i960Pinout::Reset960> holdi960InReset;
+              i960Pinout::GPIOSelect);
         // all of these pins need to be pulled high
         digitalWriteBlock(HIGH,
-                          i960Pinout::SPI_BUS_EN,
                           i960Pinout::SD_EN,
                           i960Pinout::DISPLAY_EN,
                           i960Pinout::Ready,
-                          i960Pinout::GPIOSelect,
-                          i960Pinout::Int0_);
-#ifdef ARDUINO_AVR_ATmega1284
-        digitalWriteBlock(LOW,
-                          i960Pinout::CACHE_A0,
-                          i960Pinout::CACHE_A1,
-                          i960Pinout::CACHE_A2);
-#endif
+                          i960Pinout::GPIOSelect);
         setupPins(INPUT,
-                  i960Pinout::BLAST_,
-                  i960Pinout::AS_,
                   i960Pinout::W_R_,
-                  i960Pinout::DEN_,
-                  i960Pinout::FAIL,
                   i960Pinout::BA1,
                   i960Pinout::BA2,
                   i960Pinout::BA3,
                   i960Pinout::BE0,
-                  i960Pinout::BE1);
-#ifdef ARDUINO_AVR_ATmega1284
-        setupPins(INPUT,
-                  i960Pinout::WR2,
-                  i960Pinout::BLAST2,
-                  i960Pinout::SPI_BUS_A7);
-#endif
-
-        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
-        SPI.begin();
+                  i960Pinout::BE1,
+                  i960Pinout::BOOT_NORMAL_,
+                  i960Pinout::SYSTEM_FAIL_,
+                  i960Pinout::NEW_REQUEST_);
+    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::NEW_REQUEST_)), onNewRequest, FALLING);
+    //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
+        //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
+    SPI.begin();
 #ifdef ALLOW_SRAM_CACHE
-        purgeSRAMCache();
+    purgeSRAMCache();
 #endif
-        theThing = &rom;
-        fs.begin();
-        chipsetFunctions.begin();
-        Serial.println(F("i960Sx chipset bringup"));
-        // purge the cache pages
+    theThing = &rom;
+    fs.begin();
+    chipsetFunctions.begin();
+    Serial.println(F("i960Sx chipset bringup"));
+    // purge the cache pages
 
-        processorInterface.begin();
-        setupPeripherals();
-        delay(1000);
-        Serial.println(F("i960Sx chipset brought up fully!"));
-
-    }
-    // at this point we have started execution of the i960
-    // wait until we enter self test state
-    while (DigitalPin<i960Pinout::FAIL>::isDeasserted());
-
-    // now wait until we leave self test state
-    while (DigitalPin<i960Pinout::FAIL>::isAsserted());
-    // at this point we are in idle so we are safe to loaf around a bit
+    processorInterface.begin();
+    setupPeripherals();
+    while (DigitalPin<i960Pinout::BOOT_NORMAL_>::isDeasserted());
+    // at this point we are ready to service requests from the management engine
 }
 // ----------------------------------------------------------------
 // state machine
@@ -1206,14 +1168,13 @@ auto& getLine() noexcept {
 }
 void loop() {
     //fsm.run_machine();
-    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-        signalHaltState(F("CHECKSUM FAILURE!"));
+    if (DigitalPin<i960Pinout::SYSTEM_FAIL_>::isAsserted()) {
+        signalHaltState(F("SYSTEM FAILURE!"));
     }
     // both as and den must be triggered before we can actually
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-    while (!asTriggered && !denTriggered);
-    denTriggered = false;
-    asTriggered = false;
+    while (!haveNewRequest);
+    haveNewRequest = false;
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();

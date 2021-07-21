@@ -33,9 +33,34 @@ enum class i960Pinout {
     BE1 = 44, // input, PL5
     BOOT_NORMAL_ = 43, // input, PL6
     SYSTEM_FAIL_ = 42, // input, PL7
-    CYCLE_READY_ = 41, // output
+    Ready = 41, // output
     Count,          // special, must be last
 };
+template<i960Pinout pin>
+inline void pulse() noexcept {
+    /// @todo implement this in terms of port manipulations
+#warning "PULSE DOES NOTHING!"
+}
+template<i960Pinout pin>
+inline void toggle() noexcept {
+#warning "TOGGLE DOES NOTHING!"
+}
+template<i960Pinout pin, decltype(HIGH) value>
+inline void digitalWrite() noexcept {
+#warning "digitalWrite<pin,value>() routed to normal arduino function!"
+    digitalWrite(static_cast<int>(pin), value);
+}
+template<i960Pinout pin>
+inline void digitalWrite(decltype(HIGH) value) noexcept {
+#warning "digitalWrite<pin>(value) routed to normal arduino function!"
+    digitalWrite(static_cast<int>(pin), value);
+
+}
+template<i960Pinout pin>
+inline auto digitalRead() noexcept {
+#warning "digitalRead<pin>() routed to normal arduino function!"
+    return digitalRead(static_cast<int>(pin));
+}
 #endif // end ARDUINO_AVR_MEGA2560
 
 #endif //CHIPSET_PINOUT_MEGA2560_H

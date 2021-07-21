@@ -44,6 +44,19 @@ template<i960Pinout pin> inline void toggle() noexcept;
 template<i960Pinout pin, decltype(HIGH) value> inline void digitalWrite() noexcept;
 template<i960Pinout pin> inline void digitalWrite(decltype(HIGH) value) noexcept;
 template<i960Pinout pin> inline auto digitalRead() noexcept;
+template<i960Pinout pin>
+struct DigitalPin {
+    DigitalPin() = delete;
+    ~DigitalPin() = delete;
+    DigitalPin(const DigitalPin&) = delete;
+    DigitalPin(DigitalPin&&) = delete;
+    DigitalPin& operator=(const DigitalPin&) = delete;
+    DigitalPin& operator=(DigitalPin&&) = delete;
+    static constexpr bool isInputPin() noexcept { return false; }
+    static constexpr bool isOutputPin() noexcept { return false; }
+    static constexpr bool getDirection() noexcept { return false; }
+    static constexpr auto getPin() noexcept { return pin; }
+};
 
 #include "Pinout_1284p.h"
 #include "Pinout_GrandCentralM4.h"
@@ -64,19 +77,6 @@ inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));
 }
 
-template<i960Pinout pin>
-struct DigitalPin {
-    DigitalPin() = delete;
-    ~DigitalPin() = delete;
-    DigitalPin(const DigitalPin&) = delete;
-    DigitalPin(DigitalPin&&) = delete;
-    DigitalPin& operator=(const DigitalPin&) = delete;
-    DigitalPin& operator=(DigitalPin&&) = delete;
-    static constexpr bool isInputPin() noexcept { return false; }
-    static constexpr bool isOutputPin() noexcept { return false; }
-    static constexpr bool getDirection() noexcept { return false; }
-    static constexpr auto getPin() noexcept { return pin; }
-};
 
 #define DefOutputPin(pin, asserted, deasserted) \
     template<> \
@@ -126,16 +126,16 @@ struct DigitalPin {
     }
 
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
-DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
+//DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
+//DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
-DefInputPin(i960Pinout::FAIL, HIGH, LOW);
-DefInputPin(i960Pinout::DEN_, LOW, HIGH);
-DefInputPin(i960Pinout::AS_, LOW, HIGH);
-DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
+DefInputPin(i960Pinout::SYSTEM_FAIL_, LOW, HIGH);
+DefInputPin(i960Pinout::NEW_REQUEST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
+DefInputPin(i960Pinout::BE0, LOW, HIGH);
+DefInputPin(i960Pinout::BOOT_NORMAL_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 
