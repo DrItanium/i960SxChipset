@@ -95,8 +95,8 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::Mega2560> = {
 template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = {
         256_KB,
-        2048,
-        256,
+        1024,
+        32,
         10_MHz,
         true,
         true
