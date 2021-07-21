@@ -73,7 +73,7 @@ enum class i960Pinout : decltype(A0) {
     RX0 = Digital_PD0,
     TX0 = Digital_PD1,
     DEN_ = Digital_PD2,      // AVR Interrupt INT0
-    CYCLE_READY_ = Digital_PD3,        // Output, AVR Interrupt INT1
+    CYCLE_READY_ = Digital_PD3,        // AVR Interrupt INT1
     // PORT C contains all of the outputs we need so I can directly manipulate the port on startup
     Reset960 = Digital_PC0, // output
     SYSTEM_FAIL_ = Digital_PC1,
