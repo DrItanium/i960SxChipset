@@ -69,10 +69,7 @@ enum class i960Pinout : decltype(A0) {
     CLKO = Digital_PB1, // output
     CYCLE_READY_ = Digital_PB2, // interrupt
     Int0_ = Digital_PB3, // output
-    Int1 = Digital_PB4, // output
-    Int2 = Digital_PB5, // output
-    Int3_ = Digital_PB6, // output
-    Reset960 = Digital_PB7, // output
+    Reset960 = Digital_PB4, // output
     RX0 = Digital_PD0,
     TX0 = Digital_PD1,
     DEN_ = Digital_PD2,      // AVR Interrupt INT0
