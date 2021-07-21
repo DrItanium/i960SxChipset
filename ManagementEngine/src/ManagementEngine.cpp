@@ -66,21 +66,24 @@ enum class i960Pinout : decltype(A0) {
     Digital_PA6,
     Digital_PA7,
     Count,
-    FAIL = Digital_PB0, // input
-    CLKO = Digital_PB1,
-    AS_ = Digital_PB2,
-    BLAST_ = Digital_PB3, // input
+    CLKO = Digital_PB1, // output
+    CYCLE_READY_ = Digital_PB2, // interrupt
+    Int0_ = Digital_PB3, // output
+    Int1 = Digital_PB4, // output
+    Int2 = Digital_PB5, // output
+    Int3_ = Digital_PB6, // output
+    Reset960 = Digital_PB7, // output
     RX0 = Digital_PD0,
     TX0 = Digital_PD1,
     DEN_ = Digital_PD2,      // AVR Interrupt INT0
-    CYCLE_READY_ = Digital_PD3,        // AVR Interrupt INT1
+    AS_ = Digital_PD3,        // AVR Interrupt INT1
+    FAIL = Digital_PD4, // input
+    BLAST_ = Digital_PD5, // input
+    Ready = Digital_PD6, // output
     // PORT C contains all of the outputs we need so I can directly manipulate the port on startup
-    Reset960 = Digital_PC0, // output
-    SYSTEM_FAIL_ = Digital_PC1,
-    NEW_REQUEST_ = Digital_PC2,
-    SUCCESSFUL_BOOT_ = Digital_PC3, // output
-    Int0_ = Digital_PC4, // output
-    Ready = Digital_PC5, // output
+    SYSTEM_FAIL_ = Digital_PC0,
+    NEW_REQUEST_ = Digital_PC1,
+    SUCCESSFUL_BOOT_ = Digital_PC2, // output
 };
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
@@ -328,6 +331,10 @@ DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::SYSTEM_FAIL_, LOW, HIGH);
 DefOutputPin(i960Pinout::SUCCESSFUL_BOOT_, LOW, HIGH);
 DefOutputPin(i960Pinout::NEW_REQUEST_, LOW, HIGH);
+DefOutputPin(i960Pinout::Int0_, LOW, HIGH);
+DefOutputPin(i960Pinout::Int1, HIGH, LOW);
+DefOutputPin(i960Pinout::Int2, HIGH, LOW);
+DefOutputPin(i960Pinout::Int3_, LOW, HIGH);
 
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
