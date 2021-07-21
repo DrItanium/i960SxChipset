@@ -1082,9 +1082,11 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
+#ifdef ARDUINO_AVR_ATmega1284
               i960Pinout::CACHE_A0,
               i960Pinout::CACHE_A1,
               i960Pinout::CACHE_A2,
+#endif
               i960Pinout::Int0_);
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
@@ -1096,24 +1098,29 @@ void setup() {
                           i960Pinout::Ready,
                           i960Pinout::GPIOSelect,
                           i960Pinout::Int0_);
+#ifdef ARDUINO_AVR_ATmega1284
         digitalWriteBlock(LOW,
                           i960Pinout::CACHE_A0,
                           i960Pinout::CACHE_A1,
                           i960Pinout::CACHE_A2);
+#endif
         setupPins(INPUT,
                   i960Pinout::BLAST_,
                   i960Pinout::AS_,
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
                   i960Pinout::FAIL,
-                  i960Pinout::WR2,
                   i960Pinout::BA1,
                   i960Pinout::BA2,
                   i960Pinout::BA3,
                   i960Pinout::BE0,
-                  i960Pinout::BE1,
+                  i960Pinout::BE1);
+#ifdef ARDUINO_AVR_ATmega1284
+        setupPins(INPUT,
+                  i960Pinout::WR2,
                   i960Pinout::BLAST2,
                   i960Pinout::SPI_BUS_A7);
+#endif
 
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);

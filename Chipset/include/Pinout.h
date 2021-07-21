@@ -47,9 +47,9 @@ template<i960Pinout pin> inline auto digitalRead() noexcept;
 
 #include "Pinout_1284p.h"
 #include "Pinout_GrandCentralM4.h"
-template<i960Pinout pin>
-constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
+#if 0
 static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
+#endif
 
 
 

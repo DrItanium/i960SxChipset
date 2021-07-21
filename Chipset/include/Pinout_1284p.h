@@ -69,10 +69,11 @@ enum class i960Pinout {
     SPI_BUS_A7,
     Count,          // special, must be last
 };
-static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
+#if 0
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+#endif
     switch (pin) {
         case i960Pinout::WR2:
         case i960Pinout::BA1:
@@ -117,7 +118,9 @@ template<i960Pinout pin>
 
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
+#if 0
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+#endif
     switch (pin) {
         case i960Pinout::WR2:
         case i960Pinout::BA1:
@@ -161,7 +164,9 @@ template<i960Pinout pin>
 }
 template<i960Pinout pin>
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
+#if 0
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+#endif
     switch (pin) {
         case i960Pinout::WR2: return _BV(PA0) ;
         case i960Pinout::BA1: return _BV(PA1);
