@@ -126,15 +126,17 @@ inline auto digitalRead(i960Pinout ip) {
     }
 
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
-//DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-//DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
 DefInputPin(i960Pinout::SYSTEM_FAIL_, LOW, HIGH);
 DefInputPin(i960Pinout::NEW_REQUEST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
 DefInputPin(i960Pinout::BE0, LOW, HIGH);
+DefInputPin(i960Pinout::BE1, LOW, HIGH);
+DefInputPin(i960Pinout::BA1, LOW, HIGH);
+DefInputPin(i960Pinout::BA2, LOW, HIGH);
+DefInputPin(i960Pinout::BA3, LOW, HIGH);
 DefInputPin(i960Pinout::BOOT_NORMAL_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
