@@ -41,10 +41,6 @@ inline void pulse() noexcept {
     /// @todo implement this in terms of port manipulations
 #warning "PULSE DOES NOTHING!"
 }
-template<i960Pinout pin>
-inline void toggle() noexcept {
-#warning "TOGGLE DOES NOTHING!"
-}
 template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() noexcept {
 #warning "digitalWrite<pin,value>() routed to normal arduino function!"

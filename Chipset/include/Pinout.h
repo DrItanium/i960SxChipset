@@ -40,7 +40,6 @@ enum class LoadStoreStyle : uint8_t {
 };
 enum class i960Pinout;
 template<i960Pinout pin> inline void pulse() noexcept;
-template<i960Pinout pin> inline void toggle() noexcept;
 template<i960Pinout pin, decltype(HIGH) value> inline void digitalWrite() noexcept;
 template<i960Pinout pin> inline void digitalWrite(decltype(HIGH) value) noexcept;
 template<i960Pinout pin> inline auto digitalRead() noexcept;
@@ -100,9 +99,6 @@ inline auto digitalRead(i960Pinout ip) {
         inline static void pulse() noexcept {   \
             ::pulse<pin>();                                     \
         }                                       \
-        inline static void togglePin() noexcept { \
-            ::toggle<pin>(); \
-        } \
     }
 #define DefInputPin(pin, asserted, deasserted) \
     template<> \

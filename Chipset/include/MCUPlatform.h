@@ -136,10 +136,12 @@ public:
     return TargetMCU::Unknown;
 #endif
     }
-    [[nodiscard]] static constexpr auto onMega2560() noexcept { return getMCUTarget() == TargetMCU::Mega2560; }
-    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
-    [[nodiscard]] static constexpr auto onGrandCentralM4() noexcept { return getMCUTarget() == TargetMCU::GrandCentralM4; }
-    [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
+    template<TargetMCU expectedMCU>
+    [[nodiscard]] static constexpr bool onTargetMCU() noexcept { return getMCUTarget() == expectedMCU; }
+    [[nodiscard]] static constexpr auto onMega2560() noexcept { return onTargetMCU<TargetMCU::Mega2560>(); }
+    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return onTargetMCU<TargetMCU::ATmega1284p>(); }
+    [[nodiscard]] static constexpr auto onGrandCentralM4() noexcept { return onTargetMCU<TargetMCU::GrandCentralM4>(); }
+    [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return onTargetMCU<TargetMCU::Unknown>(); }
 /**
  * @brief Is there an onboard sdcard slot?
  * @return True if defined via the command line

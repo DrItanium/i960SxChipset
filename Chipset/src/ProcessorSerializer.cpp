@@ -71,9 +71,9 @@ namespace
     SPISettings ioexpander(8_MHz, MSBFIRST, SPI_MODE0);
     inline void doSPI(uint8_t* buffer, size_t count) {
         SPI.beginTransaction(ioexpander);
-        DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
         SPI.transfer(buffer, count);
-        DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
         SPI.endTransaction();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {

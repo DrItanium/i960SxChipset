@@ -231,11 +231,6 @@ inline void pulse() noexcept {
         thePort ^= getPinMask<pin>();
         SREG = theSREG;
 }
-template<i960Pinout pin>
-inline void toggle() noexcept {
-    auto& thePort = getAssociatedInputPort<pin>();
-    thePort |= getPinMask<pin>();
-}
 template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() noexcept {
     uint8_t theSREG = SREG;
