@@ -31,7 +31,7 @@ enum class i960Pinout {
     BA3 = 46, // input, PL3
     BE0 = 45, // input, PL4
     BE1 = 44, // input, PL5
-    BOOT_NORMAL_ = 43, // input, PL6
+    //BOOT_NORMAL_ = 43, // input, PL6
     SYSTEM_FAIL_ = 42, // input, PL7
     Ready = 41, // output
     Count,          // special, must be last

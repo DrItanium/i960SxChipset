@@ -75,7 +75,7 @@ enum class i960Pinout {
     RX0 = PORT_D0,          // reserved
     TX0 = PORT_D1,          // reserved
     NEW_REQUEST_ = PORT_D2,      // AVR Interrupt INT0
-    BOOT_NORMAL_ = PORT_D3,     // AVR Interrupt INT1
+    //BOOT_NORMAL_ = PORT_D3,     // AVR Interrupt INT1
     SYSTEM_FAIL_ = PORT_D4,
 // PORT C
     SCL = PORT_C0,          // reserved

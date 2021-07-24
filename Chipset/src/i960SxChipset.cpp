@@ -1063,7 +1063,7 @@ void purgeSRAMCache() noexcept {
 #endif
 // the setup routine runs once when you press reset:
 void setup() {
-
+    // this will be held in reset until the i960 management engine has had enough time to respond
     Serial.begin(115200);
     while(!Serial) {
         delay(10);
@@ -1089,12 +1089,9 @@ void setup() {
                   i960Pinout::BA3,
                   i960Pinout::BE0,
                   i960Pinout::BE1,
-                  i960Pinout::BOOT_NORMAL_,
                   i960Pinout::SYSTEM_FAIL_,
                   i960Pinout::NEW_REQUEST_);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::NEW_REQUEST_)), onNewRequest, FALLING);
-    //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-        //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     SPI.begin();
 #ifdef ALLOW_SRAM_CACHE
     purgeSRAMCache();
@@ -1102,12 +1099,11 @@ void setup() {
     theThing = &rom;
     fs.begin();
     chipsetFunctions.begin();
-    Serial.println(F("i960Sx chipset bringup"));
     // purge the cache pages
 
     processorInterface.begin();
     setupPeripherals();
-    while (DigitalPin<i960Pinout::BOOT_NORMAL_>::isDeasserted());
+    Serial.println(F("i960Sx chipset bringup"));
     // at this point we are ready to service requests from the management engine
 }
 // ----------------------------------------------------------------

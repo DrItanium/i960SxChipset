@@ -133,7 +133,7 @@ DefInputPin(i960Pinout::BE1, LOW, HIGH);
 DefInputPin(i960Pinout::BA1, LOW, HIGH);
 DefInputPin(i960Pinout::BA2, LOW, HIGH);
 DefInputPin(i960Pinout::BA3, LOW, HIGH);
-DefInputPin(i960Pinout::BOOT_NORMAL_, LOW, HIGH);
+//DefInputPin(i960Pinout::BOOT_NORMAL_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 
