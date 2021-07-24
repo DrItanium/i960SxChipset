@@ -371,7 +371,12 @@ void onSPRAsserted() {
 
 // the setup routine runs once when you press reset:
 void setup() {
-    // first thing to do is to pull the i960 into reset
+    // first thing to do is to pull the i960 and chipset into reset
+    pinMode(i960Pinout::Reset960, OUTPUT);
+    pinMode(i960Pinout::RESET_CHIPSET_, OUTPUT);
+    digitalWrite<i960Pinout::Reset960, LOW>();
+    digitalWrite<i960Pinout::RESET_CHIPSET_, LOW>();
+
     pinMode(i960Pinout::Int960_0, OUTPUT);
     pinMode(i960Pinout::Ready, OUTPUT);
     pinMode(i960Pinout::SYSTEM_FAIL_, OUTPUT);
@@ -382,8 +387,6 @@ void setup() {
     pinMode(i960Pinout::LOCK_, OUTPUT);
     pinMode(i960Pinout::HOLD, OUTPUT);
     pinMode(i960Pinout::HLDA, INPUT);
-    pinMode(i960Pinout::Reset960, OUTPUT);
-    pinMode(i960Pinout::RESET_CHIPSET_, OUTPUT);
     /// @todo add support for bypassing self test through a jumper connected to the management engine
     // set this to low on boot up to disable the self test
     // then tell the chipset to stay in reset as well
@@ -392,8 +395,6 @@ void setup() {
     digitalWrite<i960Pinout::Int960_1, LOW>();
     digitalWrite<i960Pinout::Int960_2, LOW>();
     digitalWrite<i960Pinout::Int960_3, HIGH>();
-    digitalWrite<i960Pinout::RESET_CHIPSET_, LOW>();
-    digitalWrite<i960Pinout::Reset960, LOW>();
     digitalWrite<i960Pinout::Ready, HIGH>();
     digitalWrite<i960Pinout::SYSTEM_FAIL_, HIGH>();
     digitalWrite<i960Pinout::NEW_REQUEST_, HIGH>();
@@ -425,10 +426,6 @@ void setup() {
     digitalWrite(i960Pinout::Reset960, HIGH);
     // at this point we have started execution of the i960
     // wait until we enter self test state
-    while (DigitalPin<i960Pinout::FAIL>::isDeasserted());
-    Serial.println(F("donuts"));
-    // now wait until we leave self test state
-    while (DigitalPin<i960Pinout::FAIL>::isAsserted());
     Serial.println(F("SUCCESSFUL BOOT!"));
     // at this point we are in idle so we are safe to loaf around a bit
 }
