@@ -486,7 +486,7 @@ void loop() {
         DigitalPin<i960Pinout::NEW_REQUEST_>::pulse();
         auto isBlastLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         Serial.println(F("WAITING ON CHIPSET ITSELF"));
-        //while (!signalProcessorReady);
+        while (!signalProcessorReady);
         DigitalPin<i960Pinout::Ready>::pulse();
         signalProcessorReady = false;
         if (isBlastLast) {
