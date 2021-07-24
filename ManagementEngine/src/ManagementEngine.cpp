@@ -66,6 +66,7 @@ enum class i960Pinout : decltype(A0) {
     Digital_PA6,
     Digital_PA7,
     Count,
+
     Ready = Digital_PB0,
     CLKO = Digital_PB1, // output
     AS_ = Digital_PB2, // interrupt
