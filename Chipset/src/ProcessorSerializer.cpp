@@ -232,7 +232,6 @@ void ProcessorInterface::newDataCycle() noexcept {
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
     address_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = 0xFFFF'FFF0 & address_;
-    //blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
@@ -241,7 +240,6 @@ void ProcessorInterface::updateDataCycle() noexcept {
     burstAddressBits_ = byteEnableBits >> 1;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
     address_ = upperMaskedAddress_ | byteEnableBits;
-    blastAsserted_ = (bits & 0b0100'0000) == 0;
 #else
 #warning "USING IO EXPANDER TO READ CONTROL BITS!!!"
     // leave this around for targets with fewer pins
