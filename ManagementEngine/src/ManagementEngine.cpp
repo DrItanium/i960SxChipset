@@ -80,7 +80,7 @@ enum class i960Pinout : decltype(A0) {
     CYCLE_READY_ = Digital_PD3,        // AVR Interrupt INT1
     SYSTEM_FAIL_ = Digital_PD4,
     NEW_REQUEST_ = Digital_PD5,
-    SUCCESSFUL_BOOT_ = Digital_PD6, // output
+    RESET_CHIPSET_ = Digital_PD6, // output
 };
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
@@ -326,7 +326,7 @@ struct DigitalPin {
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::SYSTEM_FAIL_, LOW, HIGH);
-DefOutputPin(i960Pinout::SUCCESSFUL_BOOT_, LOW, HIGH);
+DefOutputPin(i960Pinout::RESET_CHIPSET_, LOW, HIGH);
 DefOutputPin(i960Pinout::NEW_REQUEST_, LOW, HIGH);
 DefOutputPin(i960Pinout::Int0_, LOW, HIGH);
 
@@ -362,17 +362,17 @@ void onSPRAsserted() {
 
 // the setup routine runs once when you press reset:
 void setup() {
-    // setup the output port c as fast as possible
+    pinMode(i960Pinout::RESET_CHIPSET_, OUTPUT);
+    digitalWrite<i960Pinout::RESET_CHIPSET_, LOW>();
     pinMode(i960Pinout::Reset960, OUTPUT);
     digitalWrite<i960Pinout::Reset960, LOW>();
+    // setup the output port c as fast as possible
     pinMode(i960Pinout::Ready, OUTPUT);
     digitalWrite<i960Pinout::Ready, HIGH>();
     pinMode(i960Pinout::SYSTEM_FAIL_, OUTPUT);
     digitalWrite<i960Pinout::SYSTEM_FAIL_, HIGH>();
     pinMode(i960Pinout::NEW_REQUEST_, OUTPUT);
     digitalWrite<i960Pinout::NEW_REQUEST_, HIGH>();
-    pinMode(i960Pinout::SUCCESSFUL_BOOT_, OUTPUT);
-    digitalWrite<i960Pinout::SUCCESSFUL_BOOT_, HIGH>();
     pinMode(i960Pinout::Int0_, OUTPUT);
     digitalWrite<i960Pinout::Int0_, HIGH>();
 
@@ -394,9 +394,9 @@ void setup() {
     // then wait for a little bit to make sure that we have actually
     delay(1000);
     // pull the i960 out of reset
-    Serial.println(F("BRINGING i960 OUT OF RESET!"));
+    Serial.println(F("BRINGING i960 AND CHIPSET OUT OF RESET!"));
     digitalWrite(i960Pinout::Reset960, HIGH);
-    //digitalWrite<i960Pinout::Reset960, HIGH>();
+    digitalWrite<i960Pinout::RESET_CHIPSET_, HIGH>();
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted());
@@ -404,7 +404,6 @@ void setup() {
     while (DigitalPin<i960Pinout::FAIL>::isAsserted());
     Serial.println(F("SUCCESSFUL BOOT!"));
     // at this point we are in idle so we are safe to loaf around a bit
-    DigitalPin<i960Pinout::SUCCESSFUL_BOOT_>::assertPin();
 }
 // ----------------------------------------------------------------
 // state machine
