@@ -422,8 +422,20 @@ void setup() {
     // wait until the chipset responds back saying it is ready via a falling edge signal,
     // then pull the i960 out of reset
     digitalWrite(i960Pinout::Reset960, HIGH);
-    while (DigitalPin<i960Pinout::FAIL>::isDeasserted());
-    while (DigitalPin<i960Pinout::FAIL>::isAsserted());
+    // doing a system test!
+    // we have to do a wait!
+    while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
+        // if ~AS or ~DEN get triggered then it means that the system test was disabled so just skip ahead
+        if (asTriggered || denTriggered) {
+            break;
+        }
+    }
+    while (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+        // if ~AS or ~DEN get triggered then it means that the system test was disabled so just skip ahead
+        if (asTriggered || denTriggered) {
+            break;
+        }
+    }
     // at this point we have started execution of the i960
     // wait until we enter self test state
     Serial.println(F("SUCCESSFUL BOOT!"));
