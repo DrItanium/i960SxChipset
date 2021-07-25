@@ -1164,14 +1164,13 @@ auto& getLine() noexcept {
     return theEntry;
 }
 void loop() {
-    Serial.println(F("LOOP!"));
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::SYSTEM_FAIL_>::isAsserted()) {
         signalHaltState(F("SYSTEM FAILURE!"));
     }
     // both as and den must be triggered before we can actually
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-    Serial.println(F("WAITING FOR NEW REQUEST!"));
+    //Serial.println(F("WAITING FOR NEW REQUEST!"));
     while (!haveNewRequest);
     haveNewRequest = false;
     // keep processing data requests until we
@@ -1214,9 +1213,15 @@ void loop() {
     Serial.print(F("ADDRESS: 0x"));
     Serial.println(address, HEX);
     if (isReadOperation) {
-        processorInterface.setDataBits(theThing->read(address, style));
+        auto value = theThing->read(address, style);
+        Serial.print(F("\tREAD 0x"));
+        Serial.println(value, HEX);
+        processorInterface.setDataBits(value);
     } else {
-        theThing->write(address, processorInterface.getDataBits(), style);
+        auto value = processorInterface.getDataBits();
+        Serial.print(F("\tWRITE 0x"));
+        Serial.println(value, HEX);
+        theThing->write(address, value, style);
     }
     DigitalPin<i960Pinout::Ready>::pulse();
     //} else {
