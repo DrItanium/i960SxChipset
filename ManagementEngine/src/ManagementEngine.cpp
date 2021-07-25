@@ -70,8 +70,8 @@ enum class i960Pinout : decltype(A0) {
     Ready = Digital_PB0,
     CLKO = Digital_PB1, // output
     AS_ = Digital_PB2, // interrupt
-    FAIL = Digital_PB3, // output
-    BLAST_ = Digital_PB4, // input
+    BLAST_ = Digital_PB3, // input
+    FAIL = Digital_PB4, // output
     Reset960 = Digital_PB5, // Output
     SYSTEM_FAIL_ = Digital_PB6,
     RESET_CHIPSET_ = Digital_PB7, // output
@@ -80,13 +80,14 @@ enum class i960Pinout : decltype(A0) {
     DEN_ = Digital_PD2,      // AVR Interrupt INT0
     CYCLE_READY_ = Digital_PD3,        // AVR Interrupt INT1
     NEW_REQUEST_ = Digital_PD4,
-    LOCK_ = Digital_PC0,
-    HOLD = Digital_PC1,
-    HLDA = Digital_PC2,
-    Int960_0 = Digital_PC3,
-    Int960_1 = Digital_PC4,
-    Int960_2 = Digital_PC5,
-    Int960_3 = Digital_PC6,
+    LOCK_ = Digital_PD5,
+    HOLD = Digital_PD6,
+    HLDA = Digital_PD7,
+    Int960_0 = Digital_PC0,
+    Int960_1 = Digital_PC1,
+    Int960_2 = Digital_PC2,
+    Int960_3 = Digital_PC3,
+    NEW_ADDRESS_ = Digital_PC4, // if low, tell the chipset to query a new full address
 };
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
@@ -385,6 +386,7 @@ void setup() {
     pinMode(i960Pinout::LOCK_, OUTPUT);
     pinMode(i960Pinout::HOLD, OUTPUT);
     pinMode(i960Pinout::HLDA, INPUT);
+    pinMode(i960Pinout::NEW_ADDRESS_, OUTPUT);
     /// @todo add support for bypassing self test through a jumper connected to the management engine
     // set this to low on boot up to disable the self test
     // then tell the chipset to stay in reset as well
@@ -398,6 +400,8 @@ void setup() {
     digitalWrite<i960Pinout::NEW_REQUEST_, HIGH>();
     digitalWrite<i960Pinout::LOCK_, HIGH>();
     digitalWrite<i960Pinout::HOLD, LOW>(); // don't enable HOLD mode
+    // since we are entering into a new transaction always pull new address low to signify the need
+    digitalWrite<i960Pinout::NEW_ADDRESS_, LOW>();
     // now configure the rest of the pins
     Serial.begin(115200);
     while (!Serial);
@@ -421,6 +425,10 @@ void setup() {
     digitalWrite(i960Pinout::RESET_CHIPSET_, HIGH);
     // wait until the chipset responds back saying it is ready via a falling edge signal,
     // then pull the i960 out of reset
+    Serial.println(F("WAITING FOR THE CHIPSET TO SIGNAL IT IS READY!"));
+    while (!signalProcessorReady);
+    signalProcessorReady = false;
+    // at this point it is safe to pull the i960 out of reset
     digitalWrite(i960Pinout::Reset960, HIGH);
     // doing a system test!
     // we have to do a wait!
@@ -505,5 +513,11 @@ void loop() {
             Serial.println(F("TRANSACTION COMPLETE!"));
             break;
         }
+        // at this point, all requests are going to be burst transactions if we got here.
+        // it is wasteful to keep resetting the pin in between transactions but who cares, it isn't that expensive
+        digitalWrite<i960Pinout::NEW_ADDRESS_, HIGH>();
     } while (true);
+    // done with this burst transaction (or non burst transaction) so prep for the next request
+    digitalWrite<i960Pinout::NEW_ADDRESS_, LOW>();
+
 }
