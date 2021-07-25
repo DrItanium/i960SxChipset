@@ -1104,6 +1104,7 @@ void setup() {
     processorInterface.begin();
     setupPeripherals();
     Serial.println(F("i960Sx chipset bringup"));
+    DigitalPin<i960Pinout::Ready>::pulse();
     // at this point we are ready to service requests from the management engine
 }
 // ----------------------------------------------------------------
