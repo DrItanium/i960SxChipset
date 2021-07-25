@@ -1164,12 +1164,14 @@ auto& getLine() noexcept {
     return theEntry;
 }
 void loop() {
+    Serial.println(F("LOOP!"));
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::SYSTEM_FAIL_>::isAsserted()) {
         signalHaltState(F("SYSTEM FAILURE!"));
     }
     // both as and den must be triggered before we can actually
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
+    Serial.println(F("WAITING FOR NEW REQUEST!"));
     while (!haveNewRequest);
     haveNewRequest = false;
     // keep processing data requests until we
@@ -1205,27 +1207,27 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    if (theThing->bypassesCache()) {
+    //if (theThing->bypassesCache()) {
         // just don't use the cache and revert to the old school design
-        if (isReadOperation) {
-            auto address = processorInterface.getAddress();
-            auto style = processorInterface.getStyle();
-            processorInterface.setDataBits(theThing->read(address, style));
-        } else {
-            Address burstAddress = processorInterface.getAddress();
-            LoadStoreStyle style = processorInterface.getStyle();
-            theThing->write(burstAddress, processorInterface.getDataBits(), style);
-        }
+    auto address = processorInterface.getAddress();
+    auto style = processorInterface.getStyle();
+    Serial.print(F("ADDRESS: 0x"));
+    Serial.println(address, HEX);
+    if (isReadOperation) {
+        processorInterface.setDataBits(theThing->read(address, style));
     } else {
-        if (auto& theEntry = getLine(); isReadOperation) {
-            auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
-            processorInterface.setDataBits(result);
-        } else {
-            SplitWord16 theBits(processorInterface.getDataBits());
-            theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
-        }
+        theThing->write(address, processorInterface.getDataBits(), style);
     }
     DigitalPin<i960Pinout::Ready>::pulse();
+    //} else {
+    //    if (auto& theEntry = getLine(); isReadOperation) {
+    //        auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
+    //        processorInterface.setDataBits(result);
+    //    } else {
+    //        SplitWord16 theBits(processorInterface.getDataBits());
+    //        theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
+    //    }
+    //}
     // we are done so denote that and then just wait until we get the next request
 }
 

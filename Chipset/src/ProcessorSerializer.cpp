@@ -232,10 +232,10 @@ void ProcessorInterface::newDataCycle() noexcept {
     auto byteEnableBits = static_cast<byte>(bits & 0b1110);
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
     burstAddressBits_ = static_cast<byte>(bits & 0b111);
-    //if ((bits & 0b0100'0000) == 0) {
+    if ((bits & 0b0100'0000) == 0) {
         auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
         auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
         upperMaskedAddress_ = 0xFFFF'FFF0 & (lower16Addr | upper16Addr);
-    //}
+    }
     address_ = upperMaskedAddress_ | byteEnableBits;
 }
