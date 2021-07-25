@@ -367,7 +367,10 @@ void onSPRAsserted() {
     signalProcessorReady = true;
 }
 
-
+inline void waitForCycleReady() noexcept {
+    while (!signalProcessorReady);
+    signalProcessorReady = false;
+}
 // the setup routine runs once when you press reset:
 void setup() {
     // first thing to do is to pull the i960 and chipset into reset
@@ -426,8 +429,9 @@ void setup() {
     // wait until the chipset responds back saying it is ready via a falling edge signal,
     // then pull the i960 out of reset
     Serial.println(F("WAITING FOR THE CHIPSET TO SIGNAL IT IS READY!"));
-    while (!signalProcessorReady);
-    signalProcessorReady = false;
+    waitForCycleReady();
+    // we want it to be pulsed twice, first after boot and a second time afterwards consciously!
+    waitForCycleReady();
     // at this point it is safe to pull the i960 out of reset
     digitalWrite(i960Pinout::Reset960, HIGH);
     // doing a system test!
@@ -506,9 +510,8 @@ void loop() {
         DigitalPin<i960Pinout::NEW_REQUEST_>::pulse();
         auto isBlastLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         Serial.println(F("WAITING ON CHIPSET ITSELF"));
-        while (!signalProcessorReady);
+        waitForCycleReady();
         DigitalPin<i960Pinout::Ready>::pulse();
-        signalProcessorReady = false;
         if (isBlastLast) {
             Serial.println(F("TRANSACTION COMPLETE!"));
             break;
