@@ -94,7 +94,6 @@ public:
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
     [[nodiscard]] constexpr auto getAlignedAddress() const noexcept { return upperMaskedAddress_; }
-    [[nodiscard]] constexpr auto getBurstAddressBits() const noexcept { return burstAddressBits_; }
 public:
     void setPortZDirectionRegister(byte value) noexcept;
     byte getPortZDirectionRegister() noexcept;
@@ -104,9 +103,8 @@ public:
     byte getPortZPullupResistorRegister() noexcept;
     byte readPortZGPIORegister() noexcept;
     void writePortZGPIORegister(byte value) noexcept;
-
+    [[nodiscard]] constexpr auto getBurstAddressBits() const noexcept { return burstAddressBits_; }
     void newDataCycle() noexcept;
-    void updateDataCycle() noexcept;
 private:
     void updateOutputLatch() noexcept;
 private:

@@ -228,25 +228,14 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 }
 
 void ProcessorInterface::newDataCycle() noexcept {
-    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
-    auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
-    address_ = lower16Addr | upper16Addr;
-    upperMaskedAddress_ = 0xFFFF'FFF0 & address_;
-}
-void ProcessorInterface::updateDataCycle() noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
     auto bits = PINA;
     auto byteEnableBits = static_cast<byte>(bits & 0b1110);
-    burstAddressBits_ = byteEnableBits >> 1;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
-    address_ = upperMaskedAddress_ | byteEnableBits;
-#else
-#warning "USING IO EXPANDER TO READ CONTROL BITS!!!"
-    // leave this around for targets with fewer pins
-    auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
-    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
-    address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
     burstAddressBits_ = static_cast<byte>(bits & 0b111);
-    //blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-#endif
+    //if ((bits & 0b0100'0000) == 0) {
+        auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
+        auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
+        upperMaskedAddress_ = 0xFFFF'FFF0 & (lower16Addr | upper16Addr);
+    //}
+    address_ = upperMaskedAddress_ | byteEnableBits;
 }

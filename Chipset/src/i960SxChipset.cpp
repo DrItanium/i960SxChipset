@@ -1174,7 +1174,7 @@ void loop() {
     haveNewRequest = false;
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    processorInterface.newDataCycle();
+    processorInterface.newDataCycle(); // always call newDataCycle
     if (!theThing->respondsTo(processorInterface.getAddress(), LoadStoreStyle::Full16)) {
         theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
     }
@@ -1205,7 +1205,6 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    processorInterface.updateDataCycle();
     if (theThing->bypassesCache()) {
         // just don't use the cache and revert to the old school design
         if (isReadOperation) {
