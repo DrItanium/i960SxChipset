@@ -1206,28 +1206,28 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    //if (theThing->bypassesCache()) {
+    if (theThing->bypassesCache()) {
         // just don't use the cache and revert to the old school design
-    auto address = processorInterface.getAddress();
-    auto style = processorInterface.getStyle();
-    if (isReadOperation) {
-        auto value = theThing->read(address, style);
-        processorInterface.setDataBits(value);
+        auto address = processorInterface.getAddress();
+        auto style = processorInterface.getStyle();
+        if (isReadOperation) {
+            auto value = theThing->read(address, style);
+            processorInterface.setDataBits(value);
+        } else {
+            auto value = processorInterface.getDataBits();
+            theThing->write(address, value, style);
+        }
     } else {
-        auto value = processorInterface.getDataBits();
-        theThing->write(address, value, style);
+        if (auto& theEntry = getLine(); isReadOperation) {
+            auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
+            processorInterface.setDataBits(result);
+        } else {
+            SplitWord16 theBits(processorInterface.getDataBits());
+            theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
+        }
     }
-    DigitalPin<i960Pinout::Ready>::pulse();
-    //} else {
-    //    if (auto& theEntry = getLine(); isReadOperation) {
-    //        auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
-    //        processorInterface.setDataBits(result);
-    //    } else {
-    //        SplitWord16 theBits(processorInterface.getDataBits());
-    //        theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
-    //    }
-    //}
     // we are done so denote that and then just wait until we get the next request
+    DigitalPin<i960Pinout::Ready>::pulse();
 }
 
 [[noreturn]]
