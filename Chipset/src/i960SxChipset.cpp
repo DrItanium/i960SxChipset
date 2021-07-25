@@ -1090,7 +1090,8 @@ void setup() {
                   i960Pinout::BE0,
                   i960Pinout::BE1,
                   i960Pinout::SYSTEM_FAIL_,
-                  i960Pinout::NEW_REQUEST_);
+                  i960Pinout::NEW_REQUEST_,
+                  i960Pinout::NEW_ADDRESS_);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::NEW_REQUEST_)), onNewRequest, FALLING);
     SPI.begin();
 #ifdef ALLOW_SRAM_CACHE

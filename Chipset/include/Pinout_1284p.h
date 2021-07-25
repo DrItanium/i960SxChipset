@@ -83,6 +83,7 @@ enum class i960Pinout {
     DISPLAY_EN = PORT_C2,
     DC = PORT_C3,
     SD_EN = PORT_C4,
+    PSRAM_EN = PORT_C5,
 // PORT A, used to select the spi bus address (not directly used)
     W_R_ = PORT_A0,
     BA1 = PORT_A1,
@@ -90,6 +91,7 @@ enum class i960Pinout {
     BA3 = PORT_A3,
     BE0 = PORT_A4,
     BE1 = PORT_A5,
+    NEW_ADDRESS_ = PORT_A6,
 };
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
