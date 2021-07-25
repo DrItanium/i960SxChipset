@@ -104,6 +104,7 @@ public:
     byte readPortZGPIORegister() noexcept;
     void writePortZGPIORegister(byte value) noexcept;
     [[nodiscard]] constexpr auto getBurstAddressBits() const noexcept { return burstAddressBits_; }
+    [[nodiscard]] constexpr auto reusePreviousAddress() const noexcept { return reusePreviousAddress_; }
     void newDataCycle() noexcept;
 private:
     void updateOutputLatch() noexcept;
@@ -116,6 +117,7 @@ private:
     bool lockValue_ = true;
     bool holdValue_ = false;
     byte burstAddressBits_ = 0;
+    bool reusePreviousAddress_ = false;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes
