@@ -406,9 +406,11 @@ void setup() {
     // since we are entering into a new transaction always pull new address low to signify the need
     digitalWrite<i960Pinout::NEW_ADDRESS_, LOW>();
     // now configure the rest of the pins
+#if 0
     Serial.begin(115200);
     while (!Serial);
     Serial.println(F("BRINGING UP i960 MANAGEMENT ENGINE!"));
+#endif
     // all of these pins need to be pulled high
     setupPins(INPUT,
               i960Pinout::CYCLE_READY_,
@@ -423,12 +425,12 @@ void setup() {
     // then wait for a little bit to make sure that we have actually
     delay(1000);
     // pull the i960 out of reset
-    Serial.println(F("BRINGING i960 AND CHIPSET OUT OF RESET!"));
+    //Serial.println(F("BRINGING i960 AND CHIPSET OUT OF RESET!"));
     // we need to tell the i960 to do a system test on boot. The chipset cannot be reponsible for this!
     digitalWrite(i960Pinout::RESET_CHIPSET_, HIGH);
     // wait until the chipset responds back saying it is ready via a falling edge signal,
     // then pull the i960 out of reset
-    Serial.println(F("WAITING FOR THE CHIPSET TO SIGNAL IT IS READY!"));
+    //Serial.println(F("WAITING FOR THE CHIPSET TO SIGNAL IT IS READY!"));
     waitForCycleReady();
     // we want it to be pulsed twice, first after boot and a second time afterwards consciously!
     waitForCycleReady();
@@ -450,7 +452,7 @@ void setup() {
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state
-    Serial.println(F("SUCCESSFUL BOOT!"));
+    //Serial.println(F("SUCCESSFUL BOOT!"));
     // at this point we are in idle so we are safe to loaf around a bit
 }
 // ----------------------------------------------------------------
@@ -492,7 +494,7 @@ void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         /// @todo trigger a control line to signify a system failure
-        Serial.println(F("CHECKSUM FAILURE!"));
+        //Serial.println(F("CHECKSUM FAILURE!"));
         DigitalPin<i960Pinout::SYSTEM_FAIL_>::assertPin();
         while(true) {
             delay(1000);
@@ -506,14 +508,14 @@ void loop() {
     asTriggered = false;
     // now we model the basic design of the memory transaction process
     do {
-        Serial.println(F("NEW REQUEST!"));
+        //Serial.println(F("NEW REQUEST!"));
         DigitalPin<i960Pinout::NEW_REQUEST_>::pulse();
         auto isBlastLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-        Serial.println(F("WAITING ON CHIPSET ITSELF"));
+        //Serial.println(F("WAITING ON CHIPSET ITSELF"));
         waitForCycleReady();
         DigitalPin<i960Pinout::Ready>::pulse();
         if (isBlastLast) {
-            Serial.println(F("TRANSACTION COMPLETE!"));
+            //Serial.println(F("TRANSACTION COMPLETE!"));
             break;
         }
         // at this point, all requests are going to be burst transactions if we got here.
