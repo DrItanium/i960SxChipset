@@ -1210,8 +1210,8 @@ void loop() {
         // just don't use the cache and revert to the old school design
     auto address = processorInterface.getAddress();
     auto style = processorInterface.getStyle();
-    Serial.print(F(" ADDRESS: 0x"));
-    Serial.print(address, HEX);
+    //Serial.print(F(" ADDRESS: 0x"));
+    //Serial.print(address, HEX);
     if (isReadOperation) {
         auto value = theThing->read(address, style);
         Serial.print(F(" READ 0x"));

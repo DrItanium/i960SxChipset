@@ -103,7 +103,7 @@ public:
     byte getPortZPullupResistorRegister() noexcept;
     byte readPortZGPIORegister() noexcept;
     void writePortZGPIORegister(byte value) noexcept;
-    //[[nodiscard]] constexpr auto getBurstAddressBits() const noexcept { return burstAddressBits_; }
+    [[nodiscard]] constexpr auto getBurstAddressBits() const noexcept { return burstAddressBits_; }
     void newDataCycle() noexcept;
 private:
     void updateOutputLatch() noexcept;
@@ -115,7 +115,7 @@ private:
     bool initialized_ = false;
     bool lockValue_ = true;
     bool holdValue_ = false;
-    //byte burstAddressBits_ = 0;
+    byte burstAddressBits_ = 0;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

@@ -231,9 +231,7 @@ void ProcessorInterface::newDataCycle() noexcept {
     auto bits = PINA;
     auto byteEnableBits = static_cast<byte>(bits & 0b1110);
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
-    //burstAddressBits_ = static_cast<byte>(bits & 0b1110) >> 1;
-    Serial.print(F("newDataCycle(): 0b"));
-    Serial.print(bits, BIN);
+    burstAddressBits_ = static_cast<byte>(bits & 0b1110) >> 1;
     if ((bits & 0b0100'0000) == 0) {
         auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
         auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
