@@ -344,17 +344,19 @@ DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 
-//volatile bool asTriggered = false;
-volatile bool denTriggered = false;
-volatile bool signalProcessorReady = false;
 #if 0
+volatile bool asTriggered = false;
 void onASAsserted() {
     asTriggered = true;
 }
 #endif
+#if 0
+volatile bool denTriggered = false;
 void onDENAsserted() {
     denTriggered = true;
 }
+#endif
+volatile bool signalProcessorReady = false;
 void onSPRAsserted() {
     signalProcessorReady = true;
 }
@@ -411,7 +413,7 @@ void setup() {
     pinMode(i960Pinout::BLAST_, INPUT);
     // configure all of the interrupts to operate on falling edges
     //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
+    //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::CYCLE_READY_)), onSPRAsserted, FALLING);
     // then wait for a little bit to make sure that we have actually
     delay(1000);
@@ -426,13 +428,21 @@ void setup() {
     // we have to do a wait!
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
         // if ~AS or ~DEN get triggered then it means that the system test was disabled so just skip ahead
-        if (denTriggered) {
+#if 0
+            if (denTriggered) {
+#else
+        if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
+#endif
             break;
         }
     }
     while (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         // if ~AS or ~DEN get triggered then it means that the system test was disabled so just skip ahead
-        if (denTriggered) {
+#if 0
+            if (denTriggered) {
+#else
+            if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
+#endif
             break;
         }
     }
@@ -489,8 +499,13 @@ void loop() {
     // both as and den must be triggered before we can actually execute.
     // the i960 manual states we can do things in between but the time for this is so small
     // I think it is smarter to just wait. I can easily add a read address lines signal if needed
+    // just keep watching the den pin
+#if 0
     while (!denTriggered);
     denTriggered = false;
+#else
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+#endif
     // now we model the basic design of the memory transaction process
     do {
         //Serial.println(F("NEW REQUEST!"));
