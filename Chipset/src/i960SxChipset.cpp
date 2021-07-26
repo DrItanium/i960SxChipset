@@ -1106,7 +1106,7 @@ void setup() {
 
     processorInterface.begin();
     setupPeripherals();
-    digitalWrite<i960Pinout::ME_RESET, LOW>();
+    digitalWrite<i960Pinout::ME_RESET, HIGH>();
     Serial.println(F("i960Sx chipset bringup"));
     // at this point we are ready to service requests from the management engine
 }
