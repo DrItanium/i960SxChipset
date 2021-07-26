@@ -69,7 +69,7 @@ enum class i960Pinout : decltype(A0) {
 
     Ready = Digital_PB0,
     CLKO = Digital_PB1, // output
-    AS_ = Digital_PB2, // interrupt
+    //AS_ = Digital_PB2, // interrupt
     BLAST_ = Digital_PB3, // input
     FAIL = Digital_PB4, // output
     Reset960 = Digital_PB5, // Output
@@ -338,7 +338,7 @@ DefOutputPin(i960Pinout::Int960_0, LOW, HIGH);
 
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
-DefInputPin(i960Pinout::AS_, LOW, HIGH);
+//DefInputPin(i960Pinout::AS_, LOW, HIGH);
 DefInputPin(i960Pinout::CYCLE_READY_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 #undef DefInputPin
@@ -353,12 +353,14 @@ inline void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
     (digitalWrite(pins, value), ...);
 }
 
-volatile bool asTriggered = false;
+//volatile bool asTriggered = false;
 volatile bool denTriggered = false;
 volatile bool signalProcessorReady = false;
+#if 0
 void onASAsserted() {
     asTriggered = true;
 }
+#endif
 void onDENAsserted() {
     denTriggered = true;
 }
@@ -413,12 +415,12 @@ void setup() {
     // all of these pins need to be pulled high
     setupPins(INPUT,
               i960Pinout::CYCLE_READY_,
-              i960Pinout::AS_,
+              //i960Pinout::AS_,
               i960Pinout::DEN_,
               i960Pinout::FAIL,
               i960Pinout::BLAST_);
     // configure all of the interrupts to operate on falling edges
-    attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
+    //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::CYCLE_READY_)), onSPRAsserted, FALLING);
     // then wait for a little bit to make sure that we have actually
@@ -434,13 +436,13 @@ void setup() {
     // we have to do a wait!
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
         // if ~AS or ~DEN get triggered then it means that the system test was disabled so just skip ahead
-        if (asTriggered || denTriggered) {
+        if (denTriggered) {
             break;
         }
     }
     while (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         // if ~AS or ~DEN get triggered then it means that the system test was disabled so just skip ahead
-        if (asTriggered || denTriggered) {
+        if (denTriggered) {
             break;
         }
     }
@@ -497,9 +499,8 @@ void loop() {
     // both as and den must be triggered before we can actually execute.
     // the i960 manual states we can do things in between but the time for this is so small
     // I think it is smarter to just wait. I can easily add a read address lines signal if needed
-    while (!asTriggered && !denTriggered);
+    while (!denTriggered);
     denTriggered = false;
-    asTriggered = false;
     // now we model the basic design of the memory transaction process
     do {
         //Serial.println(F("NEW REQUEST!"));
