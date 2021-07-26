@@ -74,12 +74,12 @@ enum class i960Pinout : decltype(A0) {
     FAIL = Digital_PB4, // output
     Reset960 = Digital_PB5, // Output
     SYSTEM_FAIL_ = Digital_PB6,
-    RESET_CHIPSET_ = Digital_PB7, // output
+    NEW_REQUEST_ = Digital_PB7,
     RX0 = Digital_PD0,
     TX0 = Digital_PD1,
     DEN_ = Digital_PD2,      // AVR Interrupt INT0
     CYCLE_READY_ = Digital_PD3,        // AVR Interrupt INT1
-    NEW_REQUEST_ = Digital_PD4,
+    NEW_ADDRESS_ = Digital_PD4, // if low, tell the chipset to query a new full address
     LOCK_ = Digital_PD5,
     HOLD = Digital_PD6,
     HLDA = Digital_PD7,
@@ -87,7 +87,6 @@ enum class i960Pinout : decltype(A0) {
     Int960_1 = Digital_PC1,
     Int960_2 = Digital_PC2,
     Int960_3 = Digital_PC3,
-    NEW_ADDRESS_ = Digital_PC4, // if low, tell the chipset to query a new full address
 };
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
@@ -333,7 +332,6 @@ struct DigitalPin {
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::SYSTEM_FAIL_, LOW, HIGH);
-DefOutputPin(i960Pinout::RESET_CHIPSET_, LOW, HIGH);
 DefOutputPin(i960Pinout::NEW_REQUEST_, LOW, HIGH);
 DefOutputPin(i960Pinout::Int960_0, LOW, HIGH);
 
@@ -375,9 +373,7 @@ inline void waitForCycleReady() noexcept {
 void setup() {
     // first thing to do is to pull the i960 and chipset into reset
     pinMode(i960Pinout::Reset960, OUTPUT);
-    pinMode(i960Pinout::RESET_CHIPSET_, OUTPUT);
     digitalWrite<i960Pinout::Reset960, LOW>();
-    digitalWrite<i960Pinout::RESET_CHIPSET_, LOW>();
 
     pinMode(i960Pinout::Int960_0, OUTPUT);
     pinMode(i960Pinout::Ready, OUTPUT);
@@ -425,16 +421,7 @@ void setup() {
     // then wait for a little bit to make sure that we have actually
     delay(1000);
     // pull the i960 out of reset
-    //Serial.println(F("BRINGING i960 AND CHIPSET OUT OF RESET!"));
-    // we need to tell the i960 to do a system test on boot. The chipset cannot be reponsible for this!
-    digitalWrite(i960Pinout::RESET_CHIPSET_, HIGH);
-    // wait until the chipset responds back saying it is ready via a falling edge signal,
-    // then pull the i960 out of reset
-    //Serial.println(F("WAITING FOR THE CHIPSET TO SIGNAL IT IS READY!"));
-    waitForCycleReady();
-    // we want it to be pulsed twice, first after boot and a second time afterwards consciously!
-    waitForCycleReady();
-    // at this point it is safe to pull the i960 out of reset
+    //Serial.println(F("BRINGING i960 OUT OF RESET!"));
     digitalWrite(i960Pinout::Reset960, HIGH);
     // doing a system test!
     // we have to do a wait!
@@ -524,5 +511,4 @@ void loop() {
     } while (true);
     // done with this burst transaction (or non burst transaction) so prep for the next request
     digitalWrite<i960Pinout::NEW_ADDRESS_, LOW>();
-
 }
