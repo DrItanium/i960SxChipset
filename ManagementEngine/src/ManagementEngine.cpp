@@ -343,15 +343,6 @@ DefInputPin(i960Pinout::CYCLE_READY_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
-template<typename ... Pins>
-inline void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
-    (pinMode(pins, direction), ...);
-}
-
-template<typename ... Pins>
-inline void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
-    (digitalWrite(pins, value), ...);
-}
 
 //volatile bool asTriggered = false;
 volatile bool denTriggered = false;
@@ -413,12 +404,11 @@ void setup() {
     Serial.println(F("BRINGING UP i960 MANAGEMENT ENGINE!"));
 #endif
     // all of these pins need to be pulled high
-    setupPins(INPUT,
-              i960Pinout::CYCLE_READY_,
-              //i960Pinout::AS_,
-              i960Pinout::DEN_,
-              i960Pinout::FAIL,
-              i960Pinout::BLAST_);
+    pinMode(i960Pinout::CYCLE_READY_, INPUT);
+    //pinMode(i960Pinout::AS_, INPUT);
+    pinMode(i960Pinout::DEN_, INPUT);
+    pinMode(i960Pinout::FAIL, INPUT);
+    pinMode(i960Pinout::BLAST_, INPUT);
     // configure all of the interrupts to operate on falling edges
     //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
