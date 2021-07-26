@@ -87,6 +87,7 @@ enum class i960Pinout : decltype(A0) {
     Int960_1 = Digital_PC1,
     Int960_2 = Digital_PC2,
     Int960_3 = Digital_PC3,
+    RESET_CHIPSET = Digital_PC4,
 };
 template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
@@ -373,6 +374,8 @@ inline void waitForCycleReady() noexcept {
 void setup() {
     // first thing to do is to pull the i960 and chipset into reset
     pinMode(i960Pinout::Reset960, OUTPUT);
+    pinMode(i960Pinout::RESET_CHIPSET, OUTPUT);
+    digitalWrite<i960Pinout::RESET_CHIPSET, LOW>();
     digitalWrite<i960Pinout::Reset960, LOW>();
 
     pinMode(i960Pinout::Int960_0, OUTPUT);
@@ -422,7 +425,11 @@ void setup() {
     delay(1000);
     // pull the i960 out of reset
     //Serial.println(F("BRINGING i960 OUT OF RESET!"));
-    digitalWrite(i960Pinout::Reset960, HIGH);
+    digitalWrite<i960Pinout::RESET_CHIPSET, HIGH>();
+    // we will cause two interrupts to happen so capture them both
+    waitForCycleReady();
+    waitForCycleReady();
+    digitalWrite<i960Pinout::Reset960, HIGH>();
     // doing a system test!
     // we have to do a wait!
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
