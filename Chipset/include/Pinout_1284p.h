@@ -66,9 +66,9 @@ enum class i960Pinout {
     // leave this one alone
     // PORT B
     Led = PORT_B0,  //
-    Ready = PORT_B1,  // output
+    ME_RESET = PORT_B1,
     // PORT_B2 is AVR INT2
-    SD_EN = PORT_B3,
+    Ready = PORT_B3,  // output
     GPIOSelect = PORT_B4,        // output
     MOSI = PORT_B5,          // reserved
     MISO = PORT_B6,          // reserved
@@ -77,13 +77,12 @@ enum class i960Pinout {
     RX0 = PORT_D0,          // reserved
     TX0 = PORT_D1,          // reserved
     NEW_REQUEST_ = PORT_D2, // input falling edge interrupt (AVR INT0)
-
+    SD_EN = PORT_D4,
+    DISPLAY_EN = PORT_D5,
+    DC = PORT_D6,
 // PORT C
     SCL = PORT_C0,          // reserved
     SDA = PORT_C1,          // reserved
-    DISPLAY_EN = PORT_C2,
-    DC = PORT_C3,
-    SD_EN = PORT_C4,
 // PORT A, used to select the spi bus address (not directly used)
     W_R_ = PORT_A0,
     BA1 = PORT_A1,

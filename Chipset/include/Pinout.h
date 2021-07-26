@@ -125,6 +125,8 @@ DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
+DefOutputPin(i960Pinout::DC, LOW, HIGH);
+DefOutputPin(i960Pinout::ME_RESET, LOW, HIGH);
 DefInputPin(i960Pinout::SYSTEM_FAIL_, LOW, HIGH);
 DefInputPin(i960Pinout::NEW_REQUEST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
