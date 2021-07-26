@@ -65,8 +65,10 @@ enum class i960Pinout {
     // this is described in digial pin order!
     // leave this one alone
     // PORT B
-    Led = PORT_B0,
-    Ready = PORT_B3,
+    Led = PORT_B0,  //
+    Ready = PORT_B1,  // output
+    // PORT_B2 is AVR INT2
+    SD_EN = PORT_B3,
     GPIOSelect = PORT_B4,        // output
     MOSI = PORT_B5,          // reserved
     MISO = PORT_B6,          // reserved
@@ -74,9 +76,8 @@ enum class i960Pinout {
 // PORT D
     RX0 = PORT_D0,          // reserved
     TX0 = PORT_D1,          // reserved
-    NEW_REQUEST_ = PORT_D2,      // AVR Interrupt INT0
-    //BOOT_NORMAL_ = PORT_D3,     // AVR Interrupt INT1
-    SYSTEM_FAIL_ = PORT_D4,
+    NEW_REQUEST_ = PORT_D2, // input falling edge interrupt (AVR INT0)
+
 // PORT C
     SCL = PORT_C0,          // reserved
     SDA = PORT_C1,          // reserved
@@ -91,6 +92,7 @@ enum class i960Pinout {
     BE0 = PORT_A4,
     BE1 = PORT_A5,
     NEW_ADDRESS_ = PORT_A6,
+    SYSTEM_FAIL_ = PORT_A7, // input
 };
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
