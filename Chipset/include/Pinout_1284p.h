@@ -66,7 +66,7 @@ enum class i960Pinout {
     // leave this one alone
     // PORT B
     Led = PORT_B0,  //
-    ME_RESET = PORT_B1,
+    //ME_RESET = PORT_B1,
     // PORT_B2 is AVR INT2
     Ready = PORT_B3,  // output
     GPIOSelect = PORT_B4,        // output

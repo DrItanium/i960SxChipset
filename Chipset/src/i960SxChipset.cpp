@@ -1063,8 +1063,6 @@ void purgeSRAMCache() noexcept {
 #endif
 // the setup routine runs once when you press reset:
 void setup() {
-    pinMode(i960Pinout::ME_RESET, OUTPUT);
-    digitalWrite<i960Pinout::ME_RESET, LOW>();
     // this will be held in reset until the i960 management engine has had enough time to respond
     Serial.begin(115200);
     while(!Serial) {
@@ -1106,8 +1104,8 @@ void setup() {
 
     processorInterface.begin();
     setupPeripherals();
-    digitalWrite<i960Pinout::ME_RESET, HIGH>();
     Serial.println(F("i960Sx chipset bringup"));
+    DigitalPin<i960Pinout::Ready>::pulse(); // signal we are ready
     // at this point we are ready to service requests from the management engine
 }
 // ----------------------------------------------------------------
