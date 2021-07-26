@@ -83,7 +83,6 @@ enum class i960Pinout {
     DISPLAY_EN = PORT_C2,
     DC = PORT_C3,
     SD_EN = PORT_C4,
-    PSRAM_EN = PORT_C5,
 // PORT A, used to select the spi bus address (not directly used)
     W_R_ = PORT_A0,
     BA1 = PORT_A1,
