@@ -268,6 +268,7 @@ template<i960Pinout pin>
 inline auto digitalRead() noexcept {
     return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
 }
+
 inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));
 }
@@ -496,14 +497,25 @@ void loop() {
             delay(1000);
         }
     }
+#if 0
     // both as and den must be triggered before we can actually execute.
     // the i960 manual states we can do things in between but the time for this is so small
     // I think it is smarter to just wait. I can easily add a read address lines signal if needed
     // just keep watching the den pin
-#if 0
     while (!denTriggered);
     denTriggered = false;
 #else
+    // no need to actually bind DEN to an interrupt as it is brought low for the entire duration of a transaction
+    // Using the interrupts introduce a minimum of 4 i960Sx bus cycles worth of latency (according to the avr manuals, it is:
+    // - 4 AVR cycles to enter the interrupt
+    // - x AVR cycles to actually carry out the interrupt routine
+    // - 4 AVR cycles to exit the interrupt
+    // At the minimum we have 'x + 8' AVR cycles worth of latency for each interrupt. This translates to (x+8)/2 i960Sx cycles.
+    // This comes from the fact that the 164 runs at 20Mhz and the i960Sx runs at 10MHz. So Every 100ns equates to a single i960Sx cycle or
+    // two AVR cycles. My thought is that it is two cycles for the operation inside the interrupt so it would be 5 i960Sx cycles.
+    // Since I was originally waiting on both AS and DEN, I would hit around 10 i960Sx cycles worth of latency at the minimum.
+
+    // by eliminating this latency, the code will be that much faster.
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
 #endif
     // now we model the basic design of the memory transaction process
