@@ -224,6 +224,7 @@ template<i960Pinout pin>
 
 template<i960Pinout pin>
 inline void pulse() noexcept {
+    static_assert(getPinMask<pin>() != 0xFF, "INVALID PIN PROVIDED TO PULSE!");
     // save registers and do the pulse
     uint8_t theSREG = SREG;
     cli();
@@ -236,6 +237,7 @@ inline void pulse() noexcept {
 
 template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() {
+    static_assert(getPinMask<pin>() != 0xFF, "INVALID PIN PROVIDED TO digitalWrite<i960Pinout, decltype(HIGH)>!");
     uint8_t theSREG = SREG;
     cli();
     if constexpr (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
@@ -247,6 +249,7 @@ inline void digitalWrite() {
 }
 template<i960Pinout pin>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
+    static_assert(getPinMask<pin>() != 0xFF, "INVALID PIN PROVIDED TO digitalWrite<i960Pinout>!");
     uint8_t theSREG = SREG;
     cli();
     if (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
@@ -256,7 +259,6 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
     }
     SREG = theSREG;
 }
-
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);
 }
@@ -339,24 +341,11 @@ DefOutputPin(i960Pinout::Int960_0, LOW, HIGH);
 
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
-//DefInputPin(i960Pinout::AS_, LOW, HIGH);
 DefInputPin(i960Pinout::CYCLE_READY_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 
-#if 0
-volatile bool asTriggered = false;
-void onASAsserted() {
-    asTriggered = true;
-}
-#endif
-#if 0
-volatile bool denTriggered = false;
-void onDENAsserted() {
-    denTriggered = true;
-}
-#endif
 volatile bool signalProcessorReady = false;
 void onSPRAsserted() {
     signalProcessorReady = true;
@@ -366,6 +355,7 @@ inline void waitForCycleReady() noexcept {
     while (!signalProcessorReady);
     signalProcessorReady = false;
 }
+constexpr bool enableSerialConsole = false;
 // the setup routine runs once when you press reset:
 void setup() {
     // first thing to do is to pull the i960 and chipset into reset
@@ -373,7 +363,9 @@ void setup() {
     pinMode(i960Pinout::RESET_CHIPSET, OUTPUT);
     digitalWrite<i960Pinout::RESET_CHIPSET, LOW>();
     digitalWrite<i960Pinout::Reset960, LOW>();
+    /// @todo hand unwind pulling pins low, so disable interrupts for both pin operations with one call
 
+    // output pins
     pinMode(i960Pinout::Int960_0, OUTPUT);
     pinMode(i960Pinout::Ready, OUTPUT);
     pinMode(i960Pinout::SYSTEM_FAIL_, OUTPUT);
@@ -383,8 +375,13 @@ void setup() {
     pinMode(i960Pinout::Int960_3, OUTPUT);
     pinMode(i960Pinout::LOCK_, OUTPUT);
     pinMode(i960Pinout::HOLD, OUTPUT);
-    pinMode(i960Pinout::HLDA, INPUT);
     pinMode(i960Pinout::NEW_ADDRESS_, OUTPUT);
+    // input pins
+    pinMode(i960Pinout::HLDA, INPUT);
+    pinMode(i960Pinout::CYCLE_READY_, INPUT);
+    pinMode(i960Pinout::DEN_, INPUT);
+    pinMode(i960Pinout::FAIL, INPUT);
+    pinMode(i960Pinout::BLAST_, INPUT);
     /// @todo add support for bypassing self test through a jumper connected to the management engine
     // set this to low on boot up to disable the self test
     // then tell the chipset to stay in reset as well
@@ -401,25 +398,20 @@ void setup() {
     // since we are entering into a new transaction always pull new address low to signify the need
     digitalWrite<i960Pinout::NEW_ADDRESS_, LOW>();
     // now configure the rest of the pins
-#if 0
-    Serial.begin(115200);
-    while (!Serial);
-    Serial.println(F("BRINGING UP i960 MANAGEMENT ENGINE!"));
-#endif
+    if constexpr (enableSerialConsole) {
+        Serial.begin(115200);
+        while (!Serial);
+        Serial.println(F("BRINGING UP i960 MANAGEMENT ENGINE!"));
+    }
     // all of these pins need to be pulled high
-    pinMode(i960Pinout::CYCLE_READY_, INPUT);
-    //pinMode(i960Pinout::AS_, INPUT);
-    pinMode(i960Pinout::DEN_, INPUT);
-    pinMode(i960Pinout::FAIL, INPUT);
-    pinMode(i960Pinout::BLAST_, INPUT);
     // configure all of the interrupts to operate on falling edges
-    //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-    //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
     attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::CYCLE_READY_)), onSPRAsserted, FALLING);
     // then wait for a little bit to make sure that we have actually
     delay(1000);
     // pull the i960 out of reset
-    //Serial.println(F("BRINGING i960 OUT OF RESET!"));
+    if constexpr (enableSerialConsole) {
+        Serial.println(F("BRINGING i960 OUT OF RESET!"));
+    }
     digitalWrite<i960Pinout::RESET_CHIPSET, HIGH>();
     // we will cause two interrupts to happen so capture them both
     waitForCycleReady();
@@ -429,27 +421,21 @@ void setup() {
     // we have to do a wait!
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
         // if ~AS or ~DEN get triggered then it means that the system test was disabled so just skip ahead
-#if 0
-            if (denTriggered) {
-#else
         if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
-#endif
             break;
         }
     }
     while (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         // if ~AS or ~DEN get triggered then it means that the system test was disabled so just skip ahead
-#if 0
-            if (denTriggered) {
-#else
-            if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
-#endif
+        if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
             break;
         }
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state
-    //Serial.println(F("SUCCESSFUL BOOT!"));
+    if constexpr (enableSerialConsole) {
+        Serial.println(F("SUCCESSFUL BOOT!"));
+    }
     // at this point we are in idle so we are safe to loaf around a bit
 }
 // ----------------------------------------------------------------
@@ -491,20 +477,14 @@ void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         /// @todo trigger a control line to signify a system failure
-        //Serial.println(F("CHECKSUM FAILURE!"));
+        if constexpr (enableSerialConsole) {
+            Serial.println(F("CHECKSUM FAILURE!"));
+        }
         DigitalPin<i960Pinout::SYSTEM_FAIL_>::assertPin();
         while(true) {
             delay(1000);
         }
     }
-#if 0
-    // both as and den must be triggered before we can actually execute.
-    // the i960 manual states we can do things in between but the time for this is so small
-    // I think it is smarter to just wait. I can easily add a read address lines signal if needed
-    // just keep watching the den pin
-    while (!denTriggered);
-    denTriggered = false;
-#else
     // no need to actually bind DEN to an interrupt as it is brought low for the entire duration of a transaction
     // Using the interrupts introduce a minimum of 4 i960Sx bus cycles worth of latency (according to the avr manuals, it is:
     // - 4 AVR cycles to enter the interrupt
@@ -517,17 +497,22 @@ void loop() {
 
     // by eliminating this latency, the code will be that much faster.
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-#endif
     // now we model the basic design of the memory transaction process
     do {
-        //Serial.println(F("NEW REQUEST!"));
+        if constexpr (enableSerialConsole) {
+            Serial.println(F("NEW REQUEST!"));
+        }
         DigitalPin<i960Pinout::NEW_REQUEST_>::pulse();
         auto isBlastLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-        //Serial.println(F("WAITING ON CHIPSET ITSELF"));
+        if constexpr (enableSerialConsole) {
+            Serial.println(F("WAITING ON CHIPSET ITSELF"));
+        }
         waitForCycleReady();
         DigitalPin<i960Pinout::Ready>::pulse();
         if (isBlastLast) {
-            //Serial.println(F("TRANSACTION COMPLETE!"));
+            if constexpr (enableSerialConsole) {
+                Serial.println(F("TRANSACTION COMPLETE!"));
+            }
             break;
         }
         // at this point, all requests are going to be burst transactions if we got here.
