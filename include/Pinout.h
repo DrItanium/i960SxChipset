@@ -43,33 +43,31 @@ enum class i960Pinout : decltype(A0) {
         // this is described in digial pin order!
         // leave this one alone
         // PORT B
-        CACHE_A0 = 0,      // output
-        CLOCK_OUT, // output, unusable
-        AS_,     // input, AVR Int2
-        CACHE_A1, // output
-        GPIOSelect,        // output
-        MOSI,          // reserved
-        MISO,          // reserved
-        SCK,          // reserved
+        MOSI = ::MOSI,
+        MISO = ::MISO,
+        SCK = ::SCK,
 // PORT D
-        RX0,          // reserved
-        TX0,          // reserved
-        DEN_,      // AVR Interrupt INT0
-        CACHE_A2,        // Output, AVR Interrupt INT1
-        SPI_BUS_EN, // output
-        DC,     // output
-        DISPLAY_EN, // output
-        SD_EN,      // output
+        DC = 8,     // output
+        DISPLAY_EN = 10, // output
+        SD_EN = SDCARD_SS_PIN,
+        SD_MOSI = SDCARD_MOSI_PIN,
+        SD_MISO = SDCARD_MISO_PIN,
+        SD_SCK = SDCARD_SCK_PIN,
 // PORT C
-        SCL,          // reserved
-        SDA,          // reserved
-        Ready,      // output
-        Int0_,          // output
-        W_R_,          // input
-        Reset960,          // output
-        BLAST_,     // input
-        FAIL,         // input
+        SCL = ::SCL,          // reserved
+        SDA = ::SDA,          // reserved
+        FAIL = 28,         // input
+    BLAST_ = 29,     // input
+    Reset960 = 30,          // output
+    W_R_ = 31,          // input
+    Int0_ = 32,          // output
+    Ready = 33,      // output
+    DEN_ = 34,      // AVR Interrupt INT0
+    AS_ = 35,     // input, AVR Int2
+    CLOCK_OUT = 36,
+    GPIOSelect = 53,
 // PORT A, used to select the spi bus address (not directly used)
+#if 0
         WR2,
         BA1,
         BA2,
@@ -78,6 +76,7 @@ enum class i960Pinout : decltype(A0) {
         BE1,
         BLAST2,
         SPI_BUS_A7,
+#endif
     Count,          // special, must be last
 
 };
