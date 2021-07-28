@@ -957,7 +957,7 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     //displayCommandSet.begin();
     //displayReady = true;
-    psram.begin();
+    //psram.begin();
     rom.begin();
     dataRom.begin();
     ram.begin();
@@ -1065,44 +1065,40 @@ void setup() {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     setupPins(OUTPUT,
-              i960Pinout::SPI_BUS_EN,
+              //i960Pinout::SPI_BUS_EN,
               i960Pinout::DISPLAY_EN,
               i960Pinout::SD_EN,
               i960Pinout::Reset960,
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
-              i960Pinout::CACHE_A0,
-              i960Pinout::CACHE_A1,
-              i960Pinout::CACHE_A2,
+              i960Pinout::Led,
               i960Pinout::Int0_);
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
         digitalWriteBlock(HIGH,
-                          i960Pinout::SPI_BUS_EN,
+                          //i960Pinout::SPI_BUS_EN,
                           i960Pinout::SD_EN,
                           i960Pinout::DISPLAY_EN,
                           i960Pinout::Ready,
                           i960Pinout::GPIOSelect,
                           i960Pinout::Int0_);
         digitalWriteBlock(LOW,
-                          i960Pinout::CACHE_A0,
-                          i960Pinout::CACHE_A1,
-                          i960Pinout::CACHE_A2);
+                          i960Pinout::Led);
         setupPins(INPUT,
                   i960Pinout::BLAST_,
                   i960Pinout::AS_,
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
-                  i960Pinout::FAIL,
-                  i960Pinout::WR2,
-                  i960Pinout::BA1,
-                  i960Pinout::BA2,
-                  i960Pinout::BA3,
-                  i960Pinout::BE0,
-                  i960Pinout::BE1,
-                  i960Pinout::BLAST2,
-                  i960Pinout::SPI_BUS_A7);
+                  i960Pinout::FAIL);
+                  //i960Pinout::WR2,
+                  //i960Pinout::BA1,
+                  //i960Pinout::BA2,
+                  //i960Pinout::BA3,
+                  //i960Pinout::BE0,
+                  //i960Pinout::BE1,
+                  //i960Pinout::BLAST2,
+                  //i960Pinout::SPI_BUS_A7);
 
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
         attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
