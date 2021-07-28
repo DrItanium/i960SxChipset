@@ -680,9 +680,9 @@ private:
 
 using DisplayThing = TFTShieldThing;
 DisplayThing displayCommandSet(0x200);
-using OnboardPSRAM = PSRAMChip<i960Pinout::SPI_BUS_EN>;
+//using OnboardPSRAM = PSRAMChip<i960Pinout::SPI_BUS_EN>;
 constexpr Address RAMStart = 0x8000'0000;
-OnboardPSRAM psram(RAMStart);
+//OnboardPSRAM psram(RAMStart);
 // this file overlays with the normal psram chip so any memory not accounted for goes to sdcard
 RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
@@ -695,7 +695,7 @@ SDCardFilesystemInterface fs(0x300);
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
-        &psram, // must come before ram
+        //&psram, // must come before ram
         &ram,
         &rom,
         &dataRom,
@@ -728,12 +728,14 @@ MemoryThing* theThing = nullptr;
 constexpr byte getChipId(uint32_t address) noexcept {
     return (address >> 17) & 0b111;
 }
+#if 0
 void setSRAMId(uint32_t address) noexcept {
     auto id = getChipId(address);
     digitalWrite<i960Pinout::CACHE_A0>(id & 1 ? HIGH : LOW);
     digitalWrite<i960Pinout::CACHE_A1>(id & 0b10 ? HIGH : LOW);
     digitalWrite<i960Pinout::CACHE_A2>(id & 0b100 ? HIGH : LOW);
 }
+#endif
 constexpr uint8_t computeTagIndex(Address address) noexcept {
     return static_cast<uint8_t>(address >> 4);
 }

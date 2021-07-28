@@ -66,6 +66,7 @@ enum class i960Pinout : decltype(A0) {
     AS_ = 35,     // input, AVR Int2
     CLOCK_OUT = 36,
     GPIOSelect = 53,
+    Led = LED_BUILTIN,
 // PORT A, used to select the spi bus address (not directly used)
 #if 0
         WR2,
@@ -84,6 +85,10 @@ template<i960Pinout pin>
 constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
 static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
 
+template<i960Pinout pin, decltype(HIGH) value>
+inline void digitalWrite() {
+    digitalWrite(static_cast<int>(pin), value);
+}
 template<i960Pinout pin>
 inline void pulse() noexcept {
     digitalWrite<pin, HIGH>();
@@ -92,10 +97,6 @@ inline void pulse() noexcept {
     // save registers and do the pulse
 }
 
-template<i960Pinout pin, decltype(HIGH) value>
-inline void digitalWrite() {
-    digitalWrite(static_cast<int>(pin), value);
-}
 template<i960Pinout pin>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
     digitalWrite(static_cast<int>(pin), value);

@@ -71,9 +71,9 @@ namespace
     SPISettings ioexpander(8_MHz, MSBFIRST, SPI_MODE0);
     inline void doSPI(uint8_t* buffer, size_t count) {
         SPI.beginTransaction(ioexpander);
-        DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
         SPI.transfer(buffer, count);
-        DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
         SPI.endTransaction();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
@@ -235,19 +235,19 @@ void ProcessorInterface::newDataCycle() noexcept {
     blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
-#ifdef USE_IO_EXPANDER_FOR_CONTROL_BITS
-    // leave this around for targets with fewer pins
-    auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
-    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
-    address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
-    burstAddressBits_ = static_cast<byte>(bits & 0b111);
-    blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-#else
+#ifdef ARDUINO_AVR_ATmega1284
     auto bits = PINA;
     auto byteEnableBits = static_cast<byte>(bits & 0b1110);
     burstAddressBits_ = byteEnableBits >> 1;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
     address_ = upperMaskedAddress_ | byteEnableBits;
     blastAsserted_ = (bits & 0b0100'0000) == 0;
+#else
+    // leave this around for targets with fewer pins
+    auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
+    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
+    address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
+    burstAddressBits_ = static_cast<byte>(bits & 0b111);
+    blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 #endif
 }

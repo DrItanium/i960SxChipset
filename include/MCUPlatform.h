@@ -55,6 +55,7 @@ static_assert(20_MHz == 20'000'000);
 #endif
 enum class TargetMCU {
     ATmega1284p,
+    GrandCentralM4,
     Unknown,
 };
 class MCUConfiguration final {
@@ -106,6 +107,16 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         32,
         10_MHz,
         false,
+        true
+};
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = {
+        256_KB,
+        256, 16,
+        256, 16,
+        32,
+        10_MHz,
+        true,
         true
 };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
@@ -205,7 +216,5 @@ union SplitWord128 {
     uint32_t words[16/sizeof(uint32_t)];
     uint64_t quads[16/sizeof(uint64_t)];
 };
-static_assert(!TargetBoard::cpuIsARMArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");
-static_assert(TargetBoard::cpuIsAVRArchitecture(), "ONLY AVR BASED MCUS ARE SUPPORTED!");
 void invalidateGlobalCache() noexcept;
 #endif //I960SXCHIPSET_MCUPLATFORM_H
