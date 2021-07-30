@@ -108,6 +108,7 @@ public:
 
     void newDataCycle() noexcept;
     void updateDataCycle() noexcept;
+    [[nodiscard]] constexpr auto getOpcode() const noexcept { return opcode_; }
 private:
     void updateOutputLatch() noexcept;
 private:

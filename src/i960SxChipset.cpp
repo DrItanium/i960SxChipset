@@ -1201,15 +1201,8 @@ uncachedWrite() {
 void
 cachedWrite(CacheEntry& theEntry) {
     do {
-
         processorInterface.updateDataCycle();
         SplitWord16 theBits(processorInterface.getDataBits());
-#if 0
-        Serial.print(F("CACHED WRITE TO 0x"));
-                Serial.print(processorInterface.getAddress(), HEX);
-                Serial.print(F(" THE VALUE 0x"));
-                Serial.println(theBits.wholeValue_, HEX);
-#endif
         theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
         DigitalPin<i960Pinout::Ready>::pulse();
         if (processorInterface.isBurstLast()) {
