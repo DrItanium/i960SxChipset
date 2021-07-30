@@ -1184,6 +1184,80 @@ auto& getLine() noexcept {
     }
     return theEntry;
 }
+
+void
+uncachedWrite() {
+    do {
+        processorInterface.updateDataCycle();
+        Address burstAddress = processorInterface.getAddress();
+        LoadStoreStyle style = processorInterface.getStyle();
+        theThing->write(burstAddress, processorInterface.getDataBits(), style);
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (processorInterface.isBurstLast()) {
+            break;
+        }
+    }  while (true);
+}
+void
+cachedWrite(CacheEntry& theEntry) {
+    do {
+
+        processorInterface.updateDataCycle();
+        SplitWord16 theBits(processorInterface.getDataBits());
+#if 0
+        Serial.print(F("CACHED WRITE TO 0x"));
+                Serial.print(processorInterface.getAddress(), HEX);
+                Serial.print(F(" THE VALUE 0x"));
+                Serial.println(theBits.wholeValue_, HEX);
+#endif
+        theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (processorInterface.isBurstLast()) {
+            break;
+        }
+    }  while (true);
+}
+void
+uncachedRead() {
+    do {
+        processorInterface.updateDataCycle();
+        auto address = processorInterface.getAddress();
+        auto style = processorInterface.getStyle();
+        processorInterface.setDataBits(theThing->read(address, style));
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (processorInterface.isBurstLast()) {
+            break;
+        }
+    }  while (true);
+}
+void
+cachedRead(CacheEntry& theEntry) {
+    do {
+        processorInterface.updateDataCycle();
+        auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
+        processorInterface.setDataBits(result);
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (processorInterface.isBurstLast()) {
+            break;
+        }
+    }  while (true);
+}
+void
+writeOperation() {
+    if (theThing->bypassesCache()) {
+        uncachedWrite();
+    } else {
+        cachedWrite(getLine());
+    }
+}
+void
+readOperation() {
+    if (theThing->bypassesCache()) {
+        uncachedRead();
+    } else {
+        cachedRead(getLine());
+    }
+}
 void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
@@ -1228,62 +1302,10 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    if (theThing->bypassesCache()) {
-        // just don't use the cache and revert to the old school design
-        if (isReadOperation) {
-            do {
-                processorInterface.updateDataCycle();
-                auto address = processorInterface.getAddress();
-                auto style = processorInterface.getStyle();
-                processorInterface.setDataBits(theThing->read(address, style));
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (processorInterface.isBurstLast()) {
-                    break;
-                }
-            } while (true);
-        } else {
-            do {
-                processorInterface.updateDataCycle();
-                Address burstAddress = processorInterface.getAddress();
-                LoadStoreStyle style = processorInterface.getStyle();
-                theThing->write(burstAddress, processorInterface.getDataBits(), style);
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (processorInterface.isBurstLast()) {
-                    break;
-                }
-            } while (true);
-        }
+    if (isReadOperation) {
+        readOperation();
     } else {
-        // there is a bug somewhere in here
-        if (auto& theEntry = getLine(); isReadOperation) {
-            do {
-                processorInterface.updateDataCycle();
-                auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
-                processorInterface.setDataBits(result);
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (processorInterface.isBurstLast()) {
-                    break;
-                }
-            } while (true);
-        } else {
-            do {
-                processorInterface.updateDataCycle();
-                SplitWord16 theBits(processorInterface.getDataBits());
-#if 0
-                Serial.print(F("CACHED WRITE TO 0x"));
-                Serial.print(processorInterface.getAddress(), HEX);
-                Serial.print(F(" THE VALUE 0x"));
-                Serial.println(theBits.wholeValue_, HEX);
-#endif
-                theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (processorInterface.isBurstLast()) {
-                    break;
-                }
-            } while (true);
-            // we need to commit the data back to the burst cache right now for safety, later on we can make this be more lazy
-            //theThing->write(burstCacheTag, reinterpret_cast<byte*>(burstCache), sizeof(burstCache));
-        }
+        writeOperation();
     }
 }
 
