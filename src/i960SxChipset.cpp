@@ -1211,21 +1211,7 @@ cachedWrite(CacheEntry& theEntry) {
     }  while (true);
 }
 void
-nonBurstUncachedRead() {
-    processorInterface.updateDataCycle();
-    auto address = processorInterface.getAddress();
-    auto style = processorInterface.getStyle();
-    processorInterface.setDataBits(theThing->read(address, style));
-    DigitalPin<i960Pinout::Ready>::pulse();
-}
-void
-burstUncachedRead() {
-    // unroll one iteration because we will always run at least twice if it is a burst operation
-    processorInterface.updateDataCycle();
-    auto address = processorInterface.getAddress();
-    auto style = processorInterface.getStyle();
-    processorInterface.setDataBits(theThing->read(address, style));
-    DigitalPin<i960Pinout::Ready>::pulse();
+uncachedRead() {
     do {
         processorInterface.updateDataCycle();
         auto address = processorInterface.getAddress();
@@ -1235,31 +1221,10 @@ burstUncachedRead() {
         if (processorInterface.isBurstLast()) {
             return;
         }
-    }  while (true);
+    } while (true);
 }
 void
-uncachedRead() {
-    if (processorInterface.isBurstLast()) {
-        nonBurstUncachedRead();
-    } else {
-        burstUncachedRead();
-    }
-}
-void
-nonBurstCachedRead(CacheEntry& theEntry) {
-    processorInterface.updateDataCycle();
-    auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
-    processorInterface.setDataBits(result);
-    DigitalPin<i960Pinout::Ready>::pulse();
-}
-
-void
-burstCachedRead(CacheEntry& theEntry) {
-    // we know that the first run through will never be the last so unroll one iteration
-    processorInterface.updateDataCycle();
-    auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
-    processorInterface.setDataBits(result);
-    DigitalPin<i960Pinout::Ready>::pulse();
+cachedRead(CacheEntry& theEntry) {
     do {
         processorInterface.updateDataCycle();
         auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
@@ -1268,15 +1233,7 @@ burstCachedRead(CacheEntry& theEntry) {
         if (processorInterface.isBurstLast()) {
             return;
         }
-    }  while (true);
-}
-void
-cachedRead(CacheEntry& theEntry) {
-    if (processorInterface.isBurstLast()) {
-        nonBurstCachedRead(theEntry);
-    } else {
-        burstCachedRead(theEntry);
-    }
+    } while (true);
 }
 void
 writeOperation() {
