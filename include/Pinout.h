@@ -38,6 +38,71 @@ enum class LoadStoreStyle : uint8_t {
     Lower8 = 0b10,
     None = 0b11,
 };
+/**
+ * @brief Describes the directly pulled bits from PORTA that describe a unique transaction that the chipset will carry out
+ */
+enum class TransactionDescription : uint8_t {
+    Last16BitValue = 0b0000'0000,
+    LastUpper8BitValue = 0b0001'0000,
+    LastLower8BitValue = 0b0010'0000,
+    ChecksumFailure = 0b0011'0000,
+    Burst16BitValue = 0b0100'0000,
+    BurstUpper8BitValue = 0b0101'0000,
+    BurstLower8BitValue = 0b0110'0000,
+    Error = 0b0111'0000,
+};
+constexpr auto isBurstTransaction(TransactionDescription desc) noexcept {
+    switch (desc) {
+        case TransactionDescription::Burst16BitValue:
+        case TransactionDescription::BurstUpper8BitValue:
+        case TransactionDescription::BurstLower8BitValue:
+            return true;
+        default:
+            return false;
+    }
+}
+/**
+ * @brief Returns true if the given transaction description is the last of a burst transaction or a non-burst transaction
+ * @param desc The transaction description
+ * @return True if the given description is the last of a burst transaction or a non-burst transaction
+ */
+constexpr auto isLastTransaction(TransactionDescription desc) noexcept {
+    switch (desc) {
+        case TransactionDescription::Last16BitValue:
+        case TransactionDescription::LastUpper8BitValue:
+        case TransactionDescription::LastLower8BitValue:
+            return true;
+        default:
+            return false;
+    }
+}
+constexpr auto is16BitOperation(TransactionDescription desc) noexcept {
+    switch (desc) {
+        case TransactionDescription::Burst16BitValue:
+        case TransactionDescription::Last16BitValue:
+            return true;
+        default:
+            return false;
+    }
+}
+constexpr auto is8BitLowerOperation(TransactionDescription desc) noexcept {
+    switch (desc) {
+        case TransactionDescription::BurstLower8BitValue:
+        case TransactionDescription::LastLower8BitValue:
+            return true;
+        default:
+            return false;
+    }
+}
+constexpr auto is8BitUpperOperation(TransactionDescription desc) noexcept {
+    switch (desc) {
+        case TransactionDescription::BurstUpper8BitValue:
+        case TransactionDescription::LastUpper8BitValue:
+            return true;
+        default:
+            return false;
+    }
+}
 /// @todo fix this pinout for different targets
 enum class i960Pinout : decltype(A0) {
         // this is described in digial pin order!
