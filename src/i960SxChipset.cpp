@@ -707,18 +707,6 @@ MemoryThing* things[] {
 
 
 
-volatile bool asTriggered = false;
-volatile bool denTriggered = false;
-void onASAsserted() {
-    asTriggered = true;
-}
-void onDENAsserted() {
-    denTriggered = true;
-}
-
-
-
-
 // ----------------------------------------------------------------
 // setup routines
 // ----------------------------------------------------------------
@@ -1102,8 +1090,6 @@ void setup() {
                   i960Pinout::BLAST2,
                   i960Pinout::SPI_BUS_A7);
 
-        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), onASAsserted, FALLING);
-        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), onDENAsserted, FALLING);
         SPI.begin();
 #ifdef ALLOW_SRAM_CACHE
         purgeSRAMCache();
@@ -1256,11 +1242,8 @@ void loop() {
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
-    // both as and den must be triggered before we can actually
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-    while (!asTriggered && !denTriggered);
-    denTriggered = false;
-    asTriggered = false;
+    while (!DigitalPin<i960Pinout::DEN_>::isAsserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
