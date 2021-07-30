@@ -1197,6 +1197,9 @@ void loop() {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
+    // W\~R is latched on chip for the entire duration of the transaction,
+    // there is no reason to not cache it here
+    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (!theThing->respondsTo(processorInterface.getAddress(), LoadStoreStyle::Full16)) {
         theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
     }
@@ -1227,7 +1230,7 @@ void loop() {
     }
     if (theThing->bypassesCache()) {
         // just don't use the cache and revert to the old school design
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (isReadOperation) {
             do {
                 processorInterface.updateDataCycle();
                 auto address = processorInterface.getAddress();
@@ -1252,7 +1255,7 @@ void loop() {
         }
     } else {
         // there is a bug somewhere in here
-        if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (auto& theEntry = getLine(); isReadOperation) {
             do {
                 processorInterface.updateDataCycle();
                 auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
