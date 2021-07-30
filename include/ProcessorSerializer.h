@@ -90,7 +90,7 @@ public:
     [[nodiscard]] uint16_t getDataBits() noexcept;
     [[nodiscard]] constexpr auto isBurstLast() const noexcept { return blastAsserted_; }
     void setDataBits(uint16_t value) noexcept;
-    [[nodiscard]] constexpr auto getStyle() const noexcept { return lss_; }
+    [[nodiscard]] constexpr auto getStyle() const noexcept { return static_cast<LoadStoreStyle>(lss_); }
     //[[nodiscard]] bool isWriteOperation() const noexcept;
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
@@ -120,6 +120,7 @@ private:
     bool holdValue_ = false;
     bool blastAsserted_ = false;
     byte burstAddressBits_ = 0;
+    TransactionDescription opcode_ = TransactionDescription::None;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

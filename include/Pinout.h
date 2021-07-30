@@ -42,6 +42,7 @@ enum class LoadStoreStyle : uint8_t {
  * @brief Describes the directly pulled bits from PORTA that describe a unique transaction that the chipset will carry out
  */
 enum class TransactionDescription : uint8_t {
+    None = 0,
     Last16BitValue = 0b0000'0000,
     LastUpper8BitValue = 0b0001'0000,
     LastLower8BitValue = 0b0010'0000,
@@ -51,6 +52,21 @@ enum class TransactionDescription : uint8_t {
     BurstLower8BitValue = 0b0110'0000,
     Error = 0b0111'0000,
 };
+constexpr auto toLoadStoreStyle(TransactionDescription desc) noexcept {
+    switch (desc) {
+        case TransactionDescription::Burst16BitValue:
+        case TransactionDescription::Last16BitValue:
+            return LoadStoreStyle::Full16;
+        case TransactionDescription::BurstUpper8BitValue:
+        case TransactionDescription::LastUpper8BitValue:
+            return LoadStoreStyle::Upper8;
+        case TransactionDescription::BurstLower8BitValue:
+        case TransactionDescription::LastLower8BitValue:
+            return LoadStoreStyle::Lower8;
+        default:
+            return LoadStoreStyle::None;
+    }
+}
 constexpr auto isBurstTransaction(TransactionDescription desc) noexcept {
     switch (desc) {
         case TransactionDescription::Burst16BitValue:
