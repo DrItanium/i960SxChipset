@@ -1243,7 +1243,7 @@ void loop() {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-    while (!DigitalPin<i960Pinout::DEN_>::isAsserted());
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
@@ -1263,17 +1263,6 @@ void loop() {
             Serial.print(processorInterface.getDataBits(), HEX);
             Serial.print(F(" TO 0x"));
 
-        }
-        Serial.println(processorInterface.getAddress(), HEX);
-        Serial.println(F("QUERYING THE DATA CYCLE AGAIN TO MAKE SURE"));
-        processorInterface.newDataCycle();
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            Serial.print(F("REQUEST: READ FROM 0x"));
-        } else {
-            Serial.print(F("REQUEST: WRITE OF 0x"));
-            // expensive but something has gone horribly wrong anyway so whatever!
-            Serial.print(processorInterface.getDataBits(), HEX);
-            Serial.print(F(" TO 0x"));
         }
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
