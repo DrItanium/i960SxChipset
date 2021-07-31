@@ -639,7 +639,7 @@ public:
             // we got a match to just return
             return;
         }
-#else
+#endif
         // no match so pull the data in from main memory
         invalidate();
         dirty_ = false;
@@ -647,11 +647,10 @@ public:
         tag = newTag;
         backingThing = &thing;
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-#if 0
+#ifdef ALLOW_SRAM_CACHE
         if constexpr (EnableDebuggingCompileTime) {
             Serial.println(F("}"));
         }
-#endif
 #endif
     }
     void invalidate() noexcept {
