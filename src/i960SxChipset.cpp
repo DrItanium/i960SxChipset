@@ -492,10 +492,6 @@ MemoryThing* things[] {
 // ----------------------------------------------------------------
 
 MemoryThing* theThing = nullptr;
-
-constexpr byte getChipId(uint32_t address) noexcept {
-    return (address >> 17) & 0b111;
-}
 // we only have a single 128kb cache chip
 constexpr uint8_t computeTagIndex(Address address) noexcept {
     return static_cast<uint8_t>(address >> 4);
@@ -551,12 +547,14 @@ private:
             Serial.print(F("OLD TAG: 0x"));
             Serial.println(tag, HEX);
         }
+        SplitWord32 translation;
+        translation.wholeValue_ = actualSRAMIndex;
         SPI.beginTransaction(sramCacheSpeed);
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x03);
-        SPI.transfer(actualSRAMIndex >> 16);
-        SPI.transfer(actualSRAMIndex >> 8);
-        SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
+        SPI.transfer(translation.bytes[2]);
+        SPI.transfer(translation.bytes[1]);
+        SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32);
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         SPI.endTransaction();
@@ -587,12 +585,14 @@ private:
             Serial.print(F(" FROM 0x"));
             Serial.println(tag, HEX);
         }
+        SplitWord32 translation;
+        translation.wholeValue_ = actualSRAMIndex;
         SPI.beginTransaction(sramCacheSpeed);
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x02);
-        SPI.transfer(actualSRAMIndex >> 16);
-        SPI.transfer(actualSRAMIndex >> 8);
-        SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
+        SPI.transfer(translation.bytes[2]);
+        SPI.transfer(translation.bytes[1]);
+        SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         SPI.endTransaction();
