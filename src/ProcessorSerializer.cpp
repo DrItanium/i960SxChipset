@@ -230,7 +230,8 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 void ProcessorInterface::newDataCycle() noexcept {
     address_.lowerHalf_ = readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines);
     address_.upperHalf_ = readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines);
-    upperMaskedAddress_.wholeValue_ = 0xFFFF'FFF0 & address_.wholeValue_;
+    upperMaskedAddress_ = address_;
+    upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
 }
 void ProcessorInterface::updateDataCycle() noexcept {
 #ifdef USE_IO_EXPANDER_FOR_CONTROL_BITS
