@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
-//#define ALLOW_SRAM_CACHE
+#define ALLOW_SRAM_CACHE
 //#define DEN_CONNECTED_TO_INTERRUPT
 
 //bool displayReady = false;
