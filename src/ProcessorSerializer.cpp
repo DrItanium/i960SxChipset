@@ -68,7 +68,7 @@ namespace
     constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
-    SPISettings ioexpander(8_MHz, MSBFIRST, SPI_MODE0);
+    SPISettings ioexpander(10_MHz, MSBFIRST, SPI_MODE0);
     inline void doSPI(uint8_t* buffer, size_t count) {
         SPI.beginTransaction(ioexpander);
         DigitalPin<i960Pinout::GPIOSelect>::togglePin();
@@ -247,7 +247,7 @@ void ProcessorInterface::updateDataCycle() noexcept {
     auto bits = PINA;
     auto byteEnableBits = static_cast<byte>(bits & 0b1110);
     burstAddressBits_ = byteEnableBits >> 1;
-    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
+    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
     address_ = upperMaskedAddress_ | byteEnableBits;
 #ifdef QUERY_BLAST
     blastAsserted_ = (bits & 0b0100'0000) == 0;

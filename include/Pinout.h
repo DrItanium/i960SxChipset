@@ -33,10 +33,18 @@ using Address = uint32_t;
  */
 enum class LoadStoreStyle : uint8_t {
     // based off of BE0,BE1 pins
+#if 0
     Full16 = 0b00,
     Upper8 = 0b01,
     Lower8 = 0b10,
     None = 0b11,
+#else
+// no need to shift
+    Full16 = 0b0000'0000,
+    Upper8 = 0b0001'0000,
+    Lower8 = 0b0010'0000,
+    None = 0b0011'0000,
+#endif
 };
 /**
  * @brief Describes the directly pulled bits from PORTA that describe a unique transaction that the chipset will carry out
