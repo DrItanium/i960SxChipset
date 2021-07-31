@@ -735,11 +735,13 @@ void purgeSRAMCache() noexcept {
     constexpr uint32_t max = 128_KB; // only one SRAM chip on board
     Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
     for (uint32_t i = 0; i < max; i += 32) {
+        SplitWord32 translation;
+        translation.wholeValue_ = i;
         byte pagePurgeInstruction[36]{
                 0x02,
-                static_cast<byte>(i >> 16),
-                static_cast<byte>(i >> 8),
-                static_cast<byte>(i),
+                translation.bytes[2],
+                translation.bytes[1],
+                translation.bytes[0],
                 1, 2, 3, 4, 5, 6, 7, 8,
                 9, 10, 11, 12, 13, 14, 15, 16,
                 17, 18, 19, 20, 21, 22, 23, 24,
@@ -747,9 +749,9 @@ void purgeSRAMCache() noexcept {
         };
         byte pageReadInstruction[36]{
                 0x03,
-                static_cast<byte>(i >> 16),
-                static_cast<byte>(i >> 8),
-                static_cast<byte>(i),
+                translation.bytes[2],
+                translation.bytes[1],
+                translation.bytes[0],
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
@@ -775,11 +777,13 @@ void purgeSRAMCache() noexcept {
     Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
     Serial.println(F("PURGING SRAM CACHE!"));
     for (uint32_t i = 0; i < max; i+= 32) {
+        SplitWord32 translation;
+        translation.wholeValue_ = i;
         byte pagePurgeInstruction[36] {
                 0x02,
-                static_cast<byte>(i >> 16),
-                static_cast<byte>(i >> 8),
-                static_cast<byte>(i),
+                translation.bytes[2],
+                translation.bytes[1],
+                translation.bytes[0],
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
@@ -787,9 +791,9 @@ void purgeSRAMCache() noexcept {
         };
         byte pageReadInstruction[36]{
                 0x03,
-                static_cast<byte>(i >> 16),
-                static_cast<byte>(i >> 8),
-                static_cast<byte>(i),
+                translation.bytes[2],
+                translation.bytes[1],
+                translation.bytes[0],
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,

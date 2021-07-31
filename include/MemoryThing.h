@@ -86,29 +86,35 @@ public:
     [[nodiscard]] constexpr auto getEndAddress() const noexcept { return end_; }
     [[nodiscard]] virtual Address makeAddressRelative(Address input) const noexcept { return input - base_; }
     [[nodiscard]] virtual uint16_t read(Address address, LoadStoreStyle style) noexcept {
-        auto offset = makeAddressRelative(address);
-        switch (style) {
+        SplitWord16 outcome;
+        outcome.wholeValue_ = 0;
+        switch (auto offset = makeAddressRelative(address); style) {
             case LoadStoreStyle::Full16:
-                return read16(offset);
+                outcome.wholeValue_ = read16(offset);
+                break;
             case LoadStoreStyle::Lower8:
-                return read8(offset);
+                outcome.bytes[0] = read8(offset);
+                break;
             case LoadStoreStyle::Upper8:
-                return static_cast<uint16_t>(read8(offset + 1)) << 8;
+                outcome.bytes[1] = read8(offset + 1);
+                break;
             default:
-                return 0;
+                break;
         }
+        return outcome.wholeValue_;
     }
     virtual void write(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-        auto offset = makeAddressRelative(address);
-        switch (style) {
+        SplitWord16 input;
+        input.wholeValue_ = value;
+        switch (auto offset = makeAddressRelative(address); style) {
             case LoadStoreStyle::Full16:
-                write16(offset, value);
+                write16(offset, input.wholeValue_);
                 break;
             case LoadStoreStyle::Upper8:
-                write8(offset+1, (value >> 8) );
+                write8(offset + 1, input.bytes[1]);
                 break;
             case LoadStoreStyle::Lower8:
-                write8(offset, value);
+                write8(offset, input.bytes[0]);
                 break;
             default:
                 break;

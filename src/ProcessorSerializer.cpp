@@ -84,9 +84,10 @@ namespace
                 0x00,
         };
         doSPI(buffer, 4);
-        auto lower = static_cast<uint16_t>(buffer[2]);
-        auto lowest = static_cast<uint16_t>(buffer[3]) << 8;
-        return lower | lowest;
+        SplitWord16 outcome;
+        outcome.bytes[0] = buffer[2];
+        outcome.bytes[1] = buffer[3];
+        return outcome.wholeValue_;
     }
     uint8_t read8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[3] = {
@@ -98,16 +99,18 @@ namespace
         doSPI(buffer, 3);
         return buffer[2];
     }
-    uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
+    inline uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
         return read16(addr, MCP23x17Registers::GPIO);
     }
 
     void write16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint16_t value) {
+        SplitWord16 valueDiv;
+        valueDiv.wholeValue_ = value;
         uint8_t buffer[4] = {
                 generateWriteOpcode(addr),
                 static_cast<byte>(opcode),
-                static_cast<uint8_t>(value),
-                static_cast<uint8_t>(value >> 8),
+                valueDiv.bytes[1],
+                valueDiv.bytes[0],
         };
         doSPI(buffer, 4);
     }
@@ -119,10 +122,10 @@ namespace
         };
         doSPI(buffer, 3);
     }
-    void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
+    inline void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
         write16(addr, MCP23x17Registers::GPIO, value);
     }
-    void writeDirection(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
+    inline void writeDirection(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
         write16(addr, MCP23x17Registers::IODIR, value);
     }
 }
