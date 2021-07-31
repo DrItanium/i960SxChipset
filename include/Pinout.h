@@ -390,7 +390,7 @@ struct DigitalPin {
 DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_BUS_EN, LOW, HIGH);
+DefOutputPin(i960Pinout::PSRAM_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
 DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);

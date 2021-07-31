@@ -29,11 +29,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 void
 CoreChipsetFeatures::writeLed(uint8_t value) noexcept {
-    digitalWrite(i960Pinout::CACHE_A0, value > 0 ? HIGH : LOW);
+    // disabled for the current board since the led is bound to the ready pin
+    //digitalWrite(i960Pinout::CACHE_A0, value > 0 ? HIGH : LOW);
 }
 uint8_t
 CoreChipsetFeatures::readLed() noexcept {
-    return static_cast<uint8_t>(digitalRead(i960Pinout::CACHE_A0));
+    // disabled for the current board since the led is bound to the ready pin
+    return 0;
+    //return static_cast<uint8_t>(digitalRead(i960Pinout::CACHE_A0));
 }
 void
 CoreChipsetFeatures::setDisplayMemoryReadsAndWrites(bool value) noexcept {

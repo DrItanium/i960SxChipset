@@ -680,7 +680,7 @@ private:
 
 using DisplayThing = TFTShieldThing;
 DisplayThing displayCommandSet(0x200);
-using OnboardPSRAM = PSRAMChip<i960Pinout::SPI_BUS_EN>;
+using OnboardPSRAM = PSRAMChip<i960Pinout::PSRAM_EN>;
 constexpr Address RAMStart = 0x8000'0000;
 OnboardPSRAM psram(RAMStart);
 // this file overlays with the normal psram chip so any memory not accounted for goes to sdcard
@@ -718,9 +718,9 @@ constexpr byte getChipId(uint32_t address) noexcept {
 }
 void setSRAMId(uint32_t address) noexcept {
     auto id = getChipId(address);
-    digitalWrite<i960Pinout::CACHE_A0>(id & 1 ? HIGH : LOW);
-    digitalWrite<i960Pinout::CACHE_A1>(id & 0b10 ? HIGH : LOW);
-    digitalWrite<i960Pinout::CACHE_A2>(id & 0b100 ? HIGH : LOW);
+    digitalWrite<i960Pinout::SPI_OFFSET0>(id & 1 ? HIGH : LOW);
+    digitalWrite<i960Pinout::SPI_OFFSET1>(id & 0b10 ? HIGH : LOW);
+    digitalWrite<i960Pinout::SPI_OFFSET2>(id & 0b100 ? HIGH : LOW);
 }
 constexpr uint8_t computeTagIndex(Address address) noexcept {
     return static_cast<uint8_t>(address >> 4);
@@ -1051,45 +1051,41 @@ void setup() {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     setupPins(OUTPUT,
-              i960Pinout::SPI_BUS_EN,
+              i960Pinout::PSRAM_EN,
               i960Pinout::DISPLAY_EN,
               i960Pinout::SD_EN,
               i960Pinout::Reset960,
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
-              i960Pinout::CACHE_A0,
-              i960Pinout::CACHE_A1,
-              i960Pinout::CACHE_A2,
+              i960Pinout::SPI_OFFSET0,
+              i960Pinout::SPI_OFFSET1,
+              i960Pinout::SPI_OFFSET2,
               i960Pinout::Int0_);
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
         digitalWriteBlock(HIGH,
-                          i960Pinout::SPI_BUS_EN,
+                          i960Pinout::PSRAM_EN,
                           i960Pinout::SD_EN,
                           i960Pinout::DISPLAY_EN,
                           i960Pinout::Ready,
                           i960Pinout::GPIOSelect,
                           i960Pinout::Int0_);
         digitalWriteBlock(LOW,
-                          i960Pinout::CACHE_A0,
-                          i960Pinout::CACHE_A1,
-                          i960Pinout::CACHE_A2);
+                          i960Pinout::SPI_OFFSET0,
+                          i960Pinout::SPI_OFFSET1,
+                          i960Pinout::SPI_OFFSET2);
         setupPins(INPUT,
                   i960Pinout::BLAST_,
                   i960Pinout::AS_,
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
                   i960Pinout::FAIL,
-                  i960Pinout::WR2,
                   i960Pinout::BA1,
                   i960Pinout::BA2,
                   i960Pinout::BA3,
                   i960Pinout::BE0,
-                  i960Pinout::BE1,
-                  i960Pinout::BLAST2,
-                  i960Pinout::SPI_BUS_A7);
-
+                  i960Pinout::BE1);
         SPI.begin();
 #ifdef ALLOW_SRAM_CACHE
         purgeSRAMCache();
