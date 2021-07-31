@@ -41,7 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
-#define ALLOW_SRAM_CACHE
+//#define ALLOW_SRAM_CACHE
+//#define DEN_CONNECTED_TO_INTERRUPT
 
 //bool displayReady = false;
 /**
@@ -506,7 +507,7 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
 constexpr bool EnableDebuggingCompileTime = false;
 bool CacheEntryDebugging = false;
 #ifdef ALLOW_SRAM_CACHE
-SPISettings sramCacheSpeed(8'000'000, MSBFIRST, SPI_MODE0);
+SPISettings sramCacheSpeed(10'000'000, MSBFIRST, SPI_MODE0);
 #endif
 class CacheEntry {
 public:
@@ -947,72 +948,6 @@ auto& getLine() noexcept {
     return theEntry;
 }
 
-void
-uncachedWrite() {
-    do {
-        processorInterface.updateDataCycle();
-        Address burstAddress = processorInterface.getAddress();
-        LoadStoreStyle style = processorInterface.getStyle();
-        theThing->write(burstAddress, processorInterface.getDataBits(), style);
-        DigitalPin<i960Pinout::Ready>::pulse();
-        if (processorInterface.isBurstLast()) {
-            return;
-        }
-    }  while (true);
-}
-void
-cachedWrite(CacheEntry& theEntry) {
-    do {
-        processorInterface.updateDataCycle();
-        SplitWord16 theBits(processorInterface.getDataBits());
-        theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
-        DigitalPin<i960Pinout::Ready>::pulse();
-        if (processorInterface.isBurstLast()) {
-            return;
-        }
-    }  while (true);
-}
-void
-uncachedRead() {
-    do {
-        processorInterface.updateDataCycle();
-        auto address = processorInterface.getAddress();
-        auto style = processorInterface.getStyle();
-        processorInterface.setDataBits(theThing->read(address, style));
-        DigitalPin<i960Pinout::Ready>::pulse();
-        if (processorInterface.isBurstLast()) {
-            return;
-        }
-    } while (true);
-}
-void
-cachedRead(CacheEntry& theEntry) {
-    do {
-        processorInterface.updateDataCycle();
-        auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
-        processorInterface.setDataBits(result);
-        DigitalPin<i960Pinout::Ready>::pulse();
-        if (processorInterface.isBurstLast()) {
-            return;
-        }
-    } while (true);
-}
-void
-writeOperation() {
-    if (theThing->bypassesCache()) {
-        uncachedWrite();
-    } else {
-        cachedWrite(getLine());
-    }
-}
-void
-readOperation() {
-    if (theThing->bypassesCache()) {
-        uncachedRead();
-    } else {
-        cachedRead(getLine());
-    }
-}
 void loop() {
     //fsm.run_machine();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
@@ -1049,9 +984,57 @@ void loop() {
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
     if (isReadOperation) {
-        readOperation();
+        if (theThing->bypassesCache()) {
+            do {
+                processorInterface.updateDataCycle();
+                auto address = processorInterface.getAddress();
+                auto style = processorInterface.getStyle();
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                processorInterface.setDataBits(theThing->read(address, style));
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    return;
+                }
+            } while (true);
+        } else {
+            auto& theEntry = getLine();
+            do {
+                processorInterface.updateDataCycle();
+                auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                processorInterface.setDataBits(result);
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    return;
+                }
+            } while (true);
+        }
     } else {
-        writeOperation();
+        if (theThing->bypassesCache()) {
+            do {
+                processorInterface.updateDataCycle();
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                Address burstAddress = processorInterface.getAddress();
+                LoadStoreStyle style = processorInterface.getStyle();
+                theThing->write(burstAddress, processorInterface.getDataBits(), style);
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    return;
+                }
+            }  while (true);
+        } else {
+            auto& theEntry = getLine();
+            do {
+                processorInterface.updateDataCycle();
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                SplitWord16 theBits(processorInterface.getDataBits());
+                theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    return;
+                }
+            }  while (true);
+        }
     }
 }
 

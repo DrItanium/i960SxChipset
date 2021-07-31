@@ -232,7 +232,6 @@ void ProcessorInterface::newDataCycle() noexcept {
     auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
     address_ = lower16Addr | upper16Addr;
     upperMaskedAddress_ = 0xFFFF'FFF0 & address_;
-    blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 }
 void ProcessorInterface::updateDataCycle() noexcept {
 #ifdef USE_IO_EXPANDER_FOR_CONTROL_BITS
@@ -241,7 +240,9 @@ void ProcessorInterface::updateDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
     address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
     burstAddressBits_ = static_cast<byte>(bits & 0b111);
+#ifdef QUERY_BLAST
     blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+#endif
 #else
     auto bits = PINA;
     auto byteEnableBits = static_cast<byte>(bits & 0b1110);
@@ -249,6 +250,8 @@ void ProcessorInterface::updateDataCycle() noexcept {
     //opcode_ = static_cast<TransactionDescription>(bits & 0b0111'0000);
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
     address_ = upperMaskedAddress_ | byteEnableBits;
+#ifdef QUERY_BLAST
     blastAsserted_ = (bits & 0b0100'0000) == 0;
+#endif
 #endif
 }
