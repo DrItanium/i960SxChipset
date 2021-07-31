@@ -195,6 +195,8 @@ union SplitWord16 {
     uint8_t bytes[2];
 };
 union SplitWord32 {
+    // adding this dropped program size by over 500 bytes!
+    explicit constexpr SplitWord32(uint32_t value = 0) : wholeValue_(value) { }
     uint32_t wholeValue_ = 0;
     int32_t signedWholeValue;
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];

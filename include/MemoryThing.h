@@ -87,7 +87,6 @@ public:
     [[nodiscard]] virtual Address makeAddressRelative(Address input) const noexcept { return input - base_; }
     [[nodiscard]] virtual uint16_t read(Address address, LoadStoreStyle style) noexcept {
         SplitWord16 outcome;
-        outcome.wholeValue_ = 0;
         switch (auto offset = makeAddressRelative(address); style) {
             case LoadStoreStyle::Full16:
                 outcome.wholeValue_ = read16(offset);
@@ -104,8 +103,7 @@ public:
         return outcome.wholeValue_;
     }
     virtual void write(Address address, uint16_t value, LoadStoreStyle style) noexcept {
-        SplitWord16 input;
-        input.wholeValue_ = value;
+        SplitWord16 input(value);
         switch (auto offset = makeAddressRelative(address); style) {
             case LoadStoreStyle::Full16:
                 write16(offset, input.wholeValue_);

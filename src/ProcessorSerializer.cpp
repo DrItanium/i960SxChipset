@@ -104,8 +104,7 @@ namespace
     }
 
     void write16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint16_t value) {
-        SplitWord16 valueDiv;
-        valueDiv.wholeValue_ = value;
+        SplitWord16 valueDiv(value);
         uint8_t buffer[4] = {
                 generateWriteOpcode(addr),
                 static_cast<byte>(opcode),
