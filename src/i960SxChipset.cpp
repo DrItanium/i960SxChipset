@@ -1093,6 +1093,7 @@ void setup() {
                   i960Pinout::BE0,
                   i960Pinout::BE1);
         SPI.begin();
+        pinMode(i960Pinout::MISO, INPUT_PULLUP);
 #ifdef ALLOW_SRAM_CACHE
         purgeSRAMCache();
 #endif
