@@ -228,10 +228,9 @@ void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
 }
 
 void ProcessorInterface::newDataCycle() noexcept {
-    auto lower16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines));
-    auto upper16Addr = static_cast<Address>(readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines)) << 16;
-    address_ = lower16Addr | upper16Addr;
-    upperMaskedAddress_ = 0xFFFF'FFF0 & address_;
+    address_.lowerHalf_ = readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+    address_.upperHalf_ = readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines);
+    upperMaskedAddress_.wholeValue_ = 0xFFFF'FFF0 & address_.wholeValue_;
 }
 void ProcessorInterface::updateDataCycle() noexcept {
 #ifdef USE_IO_EXPANDER_FOR_CONTROL_BITS
@@ -248,7 +247,8 @@ void ProcessorInterface::updateDataCycle() noexcept {
     auto byteEnableBits = static_cast<byte>(bits & 0b1110);
     burstAddressBits_ = byteEnableBits >> 1;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
-    address_ = upperMaskedAddress_ | byteEnableBits;
+    address_.bytes[0] = upperMaskedAddress_.bytes[0] | byteEnableBits;
+    //address_.wholeValue_ = upperMaskedAddress_.wholeValue_ | byteEnableBits;
 #ifdef QUERY_BLAST
     blastAsserted_ = (bits & 0b0100'0000) == 0;
 #endif

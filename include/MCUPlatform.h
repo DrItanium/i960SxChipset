@@ -198,6 +198,11 @@ union SplitWord32 {
     uint32_t wholeValue_ = 0;
     int32_t signedWholeValue;
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+    struct {
+        uint16_t lowerHalf_;
+        uint16_t upperHalf_;
+    };
+    byte bytes[sizeof(uint32_t)];
 };
 union SplitWord128 {
     uint8_t bytes[16] = { 0 };

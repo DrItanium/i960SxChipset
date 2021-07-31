@@ -86,7 +86,7 @@ public:
     static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 public:
     void begin() noexcept;
-    [[nodiscard]] constexpr Address getAddress() const noexcept { return address_; }
+    [[nodiscard]] constexpr Address getAddress() const noexcept { return address_.wholeValue_; }
     [[nodiscard]] uint16_t getDataBits() noexcept;
 #ifdef QUERY_BLAST
     [[nodiscard]] constexpr auto isBurstLast() const noexcept { return blastAsserted_; }
@@ -96,7 +96,7 @@ public:
     //[[nodiscard]] bool isWriteOperation() const noexcept;
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
-    [[nodiscard]] constexpr auto getAlignedAddress() const noexcept { return upperMaskedAddress_; }
+    [[nodiscard]] constexpr auto getAlignedAddress() const noexcept { return upperMaskedAddress_.wholeValue_; }
     [[nodiscard]] constexpr auto getBurstAddressBits() const noexcept { return burstAddressBits_; }
 public:
     void setPortZDirectionRegister(byte value) noexcept;
@@ -115,8 +115,8 @@ private:
     void updateOutputLatch() noexcept;
 private:
     uint16_t dataLinesDirection_ = 0xFFFF;
-    Address upperMaskedAddress_ = 0;
-    Address address_ = 0;
+    SplitWord32 upperMaskedAddress_;
+    SplitWord32 address_;
     LoadStoreStyle lss_ = LoadStoreStyle::None;
     bool initialized_ = false;
     bool lockValue_ = true;
