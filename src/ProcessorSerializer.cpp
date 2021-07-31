@@ -108,8 +108,9 @@ namespace
         uint8_t buffer[4] = {
                 generateWriteOpcode(addr),
                 static_cast<byte>(opcode),
-                valueDiv.bytes[1],
+                // this is not an address, so it must go lowerHalf then upperHalf
                 valueDiv.bytes[0],
+                valueDiv.bytes[1],
         };
         doSPI(buffer, 4);
     }
