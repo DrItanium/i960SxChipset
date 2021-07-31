@@ -43,9 +43,13 @@ public:
     }
     void
     begin() noexcept override {
+        // loop forever right now
         if (!SD.exists(const_cast<char*>(path_))) {
             // delete the file and start a new
-            signalHaltState(F("Could not find ram.bin! Please create one 512 megs in size!"));
+            Serial.print(F("Could not find file \""));
+            Serial.print(path_);
+            Serial.println(F("\""));
+            signalHaltState(F("Could not find file!"));
         }
         theFile_ = SD.open(path_, permissions_);
         if (!theFile_) {
