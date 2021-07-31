@@ -682,7 +682,7 @@ using DisplayThing = TFTShieldThing;
 DisplayThing displayCommandSet(0x200);
 using OnboardPSRAM = PSRAMChip<i960Pinout::PSRAM_EN>;
 constexpr Address RAMStart = 0x8000'0000;
-OnboardPSRAM psram(RAMStart);
+//OnboardPSRAM psram(RAMStart);
 // this file overlays with the normal psram chip so any memory not accounted for goes to sdcard
 RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
@@ -695,7 +695,7 @@ SDCardFilesystemInterface fs(0x300);
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
-        &psram, // must come before ram
+        //&psram, // must come before ram
         &ram,
         &rom,
         &dataRom,
@@ -943,7 +943,7 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     //displayCommandSet.begin();
     //displayReady = true;
-    psram.begin();
+    //psram.begin();
     rom.begin();
     dataRom.begin();
     ram.begin();
@@ -1041,6 +1041,10 @@ void purgeSRAMCache() noexcept {
 }
 #endif
 // the setup routine runs once when you press reset:
+volatile bool denTriggered = false;
+void triggerDataEnable() noexcept {
+    denTriggered = true;
+}
 void setup() {
 
     Serial.begin(115200);
@@ -1095,7 +1099,7 @@ void setup() {
         chipsetFunctions.begin();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
-
+        //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), triggerDataEnable, FALLING);
         processorInterface.begin();
         setupPeripherals();
         delay(1000);
@@ -1240,6 +1244,9 @@ void loop() {
     }
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    //while (!denTriggered);
+    //denTriggered = false;
+    //while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
