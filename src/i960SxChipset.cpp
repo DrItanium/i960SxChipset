@@ -88,7 +88,7 @@ public:
     ROMDataSection() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
     ~ROMDataSection() override = default;
 };
-SPISettings psramSettings(5_MHz, MSBFIRST, SPI_MODE0);
+SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
 /**
  * @brief Represents access to a single PSRAM chip
  */
