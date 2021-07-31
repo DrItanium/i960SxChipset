@@ -968,20 +968,22 @@ void loop() {
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (!theThing->respondsTo(processorInterface.getAddress(), LoadStoreStyle::Full16)) {
         theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
-    }
-    if (!theThing) {
-        // halt here because we've entered into unmapped memory state
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            Serial.print(F("UNMAPPED READ FROM 0x"));
-        } else {
-            Serial.print(F("UNMAPPED WRITE OF 0x"));
-            // expensive but something has gone horribly wrong anyway so whatever!
-            Serial.print(processorInterface.getDataBits(), HEX);
-            Serial.print(F(" TO 0x"));
+        // the only time that this is an issue is if we have to grab a new thing so only check
+        // validity on getting a new thing
+        if (!theThing) {
+            // halt here because we've entered into unmapped memory state
+            if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+                Serial.print(F("UNMAPPED READ FROM 0x"));
+            } else {
+                Serial.print(F("UNMAPPED WRITE OF 0x"));
+                // expensive but something has gone horribly wrong anyway so whatever!
+                Serial.print(processorInterface.getDataBits(), HEX);
+                Serial.print(F(" TO 0x"));
 
+            }
+            Serial.println(processorInterface.getAddress(), HEX);
+            signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
         }
-        Serial.println(processorInterface.getAddress(), HEX);
-        signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
     if (theThing->bypassesCache()) {
        if (isReadOperation)  {
