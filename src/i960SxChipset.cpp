@@ -735,41 +735,41 @@ void purgeSRAMCache() noexcept {
     constexpr uint32_t max = 128_KB; // only one SRAM chip on board
     Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
     for (uint32_t i = 0; i < max; i += 32) {
-        byte pagePurgeInstruction[32]{
+        byte pagePurgeInstruction[36]{
+                0x02,
+                static_cast<byte>(i >> 16),
+                static_cast<byte>(i >> 8),
+                static_cast<byte>(i),
                 1, 2, 3, 4, 5, 6, 7, 8,
                 9, 10, 11, 12, 13, 14, 15, 16,
                 17, 18, 19, 20, 21, 22, 23, 24,
                 25, 26, 27, 28, 29, 30, 31, 32,
         };
-        byte pageReadInstruction[32]{
+        byte pageReadInstruction[36]{
+                0x03,
+                static_cast<byte>(i >> 16),
+                static_cast<byte>(i >> 8),
+                static_cast<byte>(i),
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
         };
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(0x02);
-        SPI.transfer(i >> 16);
-        SPI.transfer(i >> 8);
-        SPI.transfer(i);
-        SPI.transfer(pagePurgeInstruction, 32);
+        SPI.transfer(pagePurgeInstruction, 36);
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(0x03);
-        SPI.transfer(i >> 16);
-        SPI.transfer(i >> 8);
-        SPI.transfer(i);
-        SPI.transfer(pageReadInstruction, 32);
+        SPI.transfer(pageReadInstruction, 36);
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        int index = 1;
-        for (auto a : pageReadInstruction) {
+        for (int x = 4; x < 36; ++x) {
+            auto a = pageReadInstruction[x];
+            auto index = x - 3;
             if (a != index) {
                 Serial.print(F("MISMATCH 0x"));
                 Serial.print(index, HEX);
                 Serial.print(F(" => 0x"));
                 Serial.println(a, HEX);
             }
-            ++index;
         }
     }
     Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
