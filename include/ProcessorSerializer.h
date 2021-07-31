@@ -108,7 +108,7 @@ public:
 
     void newDataCycle() noexcept;
     void updateDataCycle() noexcept;
-    [[nodiscard]] constexpr auto getOpcode() const noexcept { return opcode_; }
+    //[[nodiscard]] constexpr auto getOpcode() const noexcept { return opcode_; }
 private:
     void updateOutputLatch() noexcept;
 private:
@@ -121,7 +121,7 @@ private:
     bool holdValue_ = false;
     bool blastAsserted_ = false;
     byte burstAddressBits_ = 0;
-    TransactionDescription opcode_ = TransactionDescription::None;
+    //TransactionDescription opcode_ = TransactionDescription::None;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes
