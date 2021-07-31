@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
-
+#define ALLOW_SRAM_CACHE
 
 //bool displayReady = false;
 /**
@@ -87,224 +87,6 @@ public:
 public:
     ROMDataSection() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
     ~ROMDataSection() override = default;
-};
-SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
-/**
- * @brief Represents access to a single PSRAM chip
- */
- template<i960Pinout enablePin>
-class PSRAMChip : public MemoryThing {
-public:
-    static constexpr uint32_t Size = 8_MB;
-    static constexpr uint32_t Mask = Size - 1;
-    explicit PSRAMChip(Address start) : MemoryThing(start, start + Size) { }
-    ~PSRAMChip() override = default;
-    uint8_t read8(Address address) noexcept override {
-        Serial.print(F("PSRAM: READ8 FROM 0x"));
-        Serial.println(address, HEX);
-        return readOneByte(address);
-    }
-    size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        // do not copy the buf but just use it as a transfer medium instead
-        SPI.beginTransaction(psramSettings);
-        auto times = capacity / 32;
-        auto slop = capacity % 32;
-        auto* theBuf = buf;
-        for (size_t i = 0; i < times; ++i, theBuf += 32) {
-            byte header[4]{
-                    0x02,
-                    static_cast<byte>(address >> 16),
-                    static_cast<byte>(address >> 8),
-                    static_cast<byte>(address),
-            };
-            digitalWrite<enablePin, LOW>();
-            SPI.transfer(header, 4);
-            SPI.transfer(theBuf, 32);
-            digitalWrite<enablePin, HIGH>();
-        }
-        // there should be some slop left over
-        if (slop > 0) {
-            byte header[36]{
-                    0x02,
-                    static_cast<byte>(address >> 16),
-                    static_cast<byte>(address >> 8),
-                    static_cast<byte>(address),
-            };
-
-            digitalWrite<enablePin, LOW>();
-            SPI.transfer(header, 4);
-            SPI.transfer(theBuf, slop);
-            digitalWrite<enablePin, HIGH>();
-        }
-        SPI.endTransaction();
-        return capacity;
-    }
-    size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        SPI.beginTransaction(psramSettings);
-        auto times = capacity / 32;
-        auto slop = capacity % 32;
-        auto* theBuf = buf;
-        for (size_t i = 0; i < times; ++i, theBuf += 32) {
-            byte header[4]{
-                    0x03,
-                    static_cast<byte>(address >> 16),
-                    static_cast<byte>(address >> 8),
-                    static_cast<byte>(address),
-            };
-            digitalWrite<enablePin, LOW>();
-            SPI.transfer(header, 4);
-            SPI.transfer(theBuf, 32);
-            digitalWrite<enablePin, HIGH>();
-        }
-        // there should be some slop left over
-        if (slop > 0) {
-            byte header[4]{
-                    0x03,
-                    static_cast<byte>(address >> 16),
-                    static_cast<byte>(address >> 8),
-                    static_cast<byte>(address),
-            };
-            digitalWrite<enablePin, LOW>();
-            SPI.transfer(header, 4);
-            SPI.transfer(theBuf, 32);
-            digitalWrite<enablePin, HIGH>();
-        }
-        SPI.endTransaction();
-        return capacity;
-    }
-    uint16_t read16(Address address) noexcept override {
-        Serial.print(F("PSRAM: READ16 FROM 0x"));
-        Serial.println(address, HEX);
-        return readTwoBytes(address);
-    }
-    void write8(Address address, uint8_t value) noexcept override {
-        Serial.print(F("PSRAM: WRITE8 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" to 0x"));
-        Serial.println(address, HEX);
-        writeOneByte(address, value);
-    }
-    void write16(Address address, uint16_t value) noexcept override {
-        Serial.print(F("PSRAM: WRITE16 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" to 0x"));
-        Serial.println(address, HEX);
-        writeTwoBytes(address, value);
-    }
-    void begin() noexcept override {
-        delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-        SPI.beginTransaction(psramSettings);
-        digitalWrite<enablePin, LOW>();
-        SPI.transfer(0x66);
-        digitalWrite<enablePin, HIGH>();
-        asm("nop");
-        digitalWrite<enablePin, LOW>();
-        SPI.transfer(0x99);
-        digitalWrite<enablePin, HIGH>();
-        SPI.endTransaction();
-        Serial.println(F("CLEARING PSRAM!"));
-        for (uint32_t addr = 0; addr < Size; addr +=32) {
-            byte theInstruction[36]{
-                    0x02,
-                    static_cast<byte>(addr >> 16),
-                    static_cast<byte>(addr >> 8),
-                    static_cast<byte>(addr),
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-            };
-            doSPI(theInstruction, 36);
-            theInstruction[0]  = 0x03;
-            theInstruction[1] =  static_cast<byte>(addr >> 16);
-            theInstruction[2] =  static_cast<byte>(addr >> 8);
-            theInstruction[3] = static_cast<byte>(addr);
-            // rest of the values do not matter!
-            doSPI(theInstruction, 36);
-            byte* ptr = theInstruction + 4;
-            for (int i = 0; i < 32; ++i) {
-                if (ptr[i] != 0) {
-                    Serial.print(F("MISMATCH GOT 0x"));
-                    Serial.print(ptr[i], HEX);
-                    Serial.println(F(" EXPECTED 0x0"));
-                    available_ = false;
-                    break;
-                }
-            }
-            if (!available_) {
-                break;
-            }
-        }
-        SPI.endTransaction();
-        if (available_) {
-            Serial.println(F("DONE STARTING UP PSRAM!"));
-        } else {
-            Serial.println(F("PSRAM ERROR ON STARTUP, DISABLING!"));
-        }
-    }
-    [[nodiscard]] bool respondsTo(Address address) const noexcept override {
-        return available_ && MemoryThing::respondsTo(address);
-    }
-private:
-    void doSPI(byte* command, size_t length) {
-        SPI.beginTransaction(psramSettings);
-        digitalWrite<enablePin, LOW>();
-        SPI.transfer(command, length);
-        digitalWrite<enablePin, HIGH>();
-        SPI.endTransaction();
-        // make extra sure that the psram has enough time to do its refresh in between operations
-        asm("nop"); // 100 ns
-        asm("nop"); // 100 ns
-        asm("nop"); // 100 ns
-        asm("nop"); // 100 ns
-    }
-    uint16_t readTwoBytes(Address addr) noexcept {
-        byte theInstruction[6]{
-                0x03,
-                static_cast<byte>(addr >> 16),
-                static_cast<byte>(addr >> 8),
-                static_cast<byte>(addr),
-                0, 0
-        };
-        doSPI(theInstruction, 6);
-        auto lower = static_cast<uint16_t>(theInstruction[4]);
-        auto upper = static_cast<uint16_t>(theInstruction[5]) << 8;
-        return lower | upper;
-    }
-    uint8_t readOneByte(Address addr) noexcept {
-        byte theInstruction[5]{
-                0x03,
-                static_cast<byte>(addr >> 16),
-                static_cast<byte>(addr >> 8),
-                static_cast<byte>(addr),
-                0
-        };
-        doSPI(theInstruction, 5);
-        return theInstruction[4];
-    }
-    void writeTwoBytes(Address addr, uint16_t value) noexcept {
-        byte theInstruction[6] {
-                0x02,
-                static_cast<byte>(addr >> 16),
-                static_cast<byte>(addr >> 8),
-                static_cast<byte>(addr),
-                static_cast<byte>(value),
-                static_cast<byte>(value >> 8)
-        };
-        doSPI(theInstruction, 6);
-    }
-    void writeOneByte(Address addr, uint8_t value) noexcept {
-        byte theInstruction[5] {
-                0x02,
-                static_cast<byte>(addr >> 16),
-                static_cast<byte>(addr >> 8),
-                static_cast<byte>(addr),
-                static_cast<byte>(value),
-        };
-        doSPI(theInstruction, 5);
-    }
-private:
-    bool available_ = true;
 };
 class RAMFile : public MemoryMappedFile {
     //<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>
@@ -680,9 +462,7 @@ private:
 
 using DisplayThing = TFTShieldThing;
 DisplayThing displayCommandSet(0x200);
-using OnboardPSRAM = PSRAMChip<i960Pinout::PSRAM_EN>;
 constexpr Address RAMStart = 0x8000'0000;
-//OnboardPSRAM psram(RAMStart);
 // this file overlays with the normal psram chip so any memory not accounted for goes to sdcard
 RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
@@ -695,7 +475,6 @@ SDCardFilesystemInterface fs(0x300);
 
 // list of io memory devices to walk through
 MemoryThing* things[] {
-        //&psram, // must come before ram
         &ram,
         &rom,
         &dataRom,
@@ -716,12 +495,7 @@ MemoryThing* theThing = nullptr;
 constexpr byte getChipId(uint32_t address) noexcept {
     return (address >> 17) & 0b111;
 }
-void setSRAMId(uint32_t address) noexcept {
-    auto id = getChipId(address);
-    digitalWrite<i960Pinout::SPI_OFFSET0>(id & 1 ? HIGH : LOW);
-    digitalWrite<i960Pinout::SPI_OFFSET1>(id & 0b10 ? HIGH : LOW);
-    digitalWrite<i960Pinout::SPI_OFFSET2>(id & 0b100 ? HIGH : LOW);
-}
+// we only have a single 128kb cache chip
 constexpr uint8_t computeTagIndex(Address address) noexcept {
     return static_cast<uint8_t>(address >> 4);
 }
@@ -767,7 +541,6 @@ private:
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.println(F("absorbEntryFromSRAMCache {"));
         }
-        setSRAMId(newTag);
         Address actualSRAMIndex = computeL2TagIndex(newTag);
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.print(F("BEFORE LOAD: NEW TAG SRAM INDEX 0x"));
@@ -778,13 +551,13 @@ private:
             Serial.println(tag, HEX);
         }
         SPI.beginTransaction(sramCacheSpeed);
-        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x03);
         SPI.transfer(actualSRAMIndex >> 16);
         SPI.transfer(actualSRAMIndex >> 8);
         SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32);
-        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         SPI.endTransaction();
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.print(F("AFTER LOAD: TAG 0x"));
@@ -806,7 +579,6 @@ private:
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.println(F("commitToSRAM {"));
         }
-        setSRAMId(tag);
         Address actualSRAMIndex = computeL2TagIndex(tag);
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.print(F("COMMIT: ACTUAL SRAM INDEX 0x"));
@@ -815,13 +587,13 @@ private:
             Serial.println(tag, HEX);
         }
         SPI.beginTransaction(sramCacheSpeed);
-        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x02);
         SPI.transfer(actualSRAMIndex >> 16);
         SPI.transfer(actualSRAMIndex >> 8);
         SPI.transfer(actualSRAMIndex); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
-        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         SPI.endTransaction();
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.print(F("AFTER COMMIT: TAG 0x"));
@@ -957,13 +729,12 @@ void setupPeripherals() {
  */
 void purgeSRAMCache() noexcept {
     // 23lc1024s are in sequential by default :)
-    digitalWrite(i960Pinout::SPI_BUS_EN, LOW);
+    digitalWrite(i960Pinout::CACHE_EN_, LOW);
     SPI.transfer(0xFF);
-    digitalWrite(i960Pinout::SPI_BUS_EN, HIGH);
-    constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+    digitalWrite(i960Pinout::CACHE_EN_, HIGH);
+    constexpr uint32_t max = 128_KB; // only one SRAM chip on board
     Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
     for (uint32_t i = 0; i < max; i += 32) {
-        setSRAMId(i);
         byte pagePurgeInstruction[32]{
                 1, 2, 3, 4, 5, 6, 7, 8,
                 9, 10, 11, 12, 13, 14, 15, 16,
@@ -976,20 +747,20 @@ void purgeSRAMCache() noexcept {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
         };
-        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x02);
         SPI.transfer(i >> 16);
         SPI.transfer(i >> 8);
         SPI.transfer(i);
         SPI.transfer(pagePurgeInstruction, 32);
-        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
-        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x03);
         SPI.transfer(i >> 16);
         SPI.transfer(i >> 8);
         SPI.transfer(i);
         SPI.transfer(pageReadInstruction, 32);
-        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         int index = 1;
         for (auto a : pageReadInstruction) {
             if (a != index) {
@@ -1004,7 +775,6 @@ void purgeSRAMCache() noexcept {
     Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
     Serial.println(F("PURGING SRAM CACHE!"));
     for (uint32_t i = 0; i < max; i+= 32) {
-        setSRAMId(i);
         byte pagePurgeInstruction[36] {
                 0x02,
                 static_cast<byte>(i >> 16),
@@ -1025,12 +795,12 @@ void purgeSRAMCache() noexcept {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
         };
-        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(pagePurgeInstruction, 36);
-        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
-        digitalWrite<i960Pinout::SPI_BUS_EN, LOW>();
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(pageReadInstruction, 36);
-        digitalWrite<i960Pinout::SPI_BUS_EN, HIGH>();
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         for (int x = 4; x < 36; ++x) {
             if (pageReadInstruction[x] != 0) {
                 Serial.print(F("CHECK FAILURE!!!"));
@@ -1041,10 +811,12 @@ void purgeSRAMCache() noexcept {
 }
 #endif
 // the setup routine runs once when you press reset:
+#ifdef DEN_CONNECTED_TO_INTERRUPT
 volatile bool denTriggered = false;
 void triggerDataEnable() noexcept {
     denTriggered = true;
 }
+#endif
 void setup() {
 
     Serial.begin(115200);
@@ -1092,8 +864,8 @@ void setup() {
                   i960Pinout::BA3,
                   i960Pinout::BE0,
                   i960Pinout::BE1);
+        //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
-        pinMode(i960Pinout::MISO, INPUT_PULLUP);
 #ifdef ALLOW_SRAM_CACHE
         purgeSRAMCache();
 #endif
@@ -1102,7 +874,9 @@ void setup() {
         chipsetFunctions.begin();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
-        //attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), triggerDataEnable, FALLING);
+#ifdef DEN_CONNECTED_TO_INTERRUPT
+        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), triggerDataEnable, FALLING);
+#endif
         processorInterface.begin();
         setupPeripherals();
         delay(1000);
@@ -1246,10 +1020,12 @@ void loop() {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
+#ifdef DEN_CONNECTED_TO_INTERRUPT
+    while (!denTriggered);
+    denTriggered = false;
+#else
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-    //while (!denTriggered);
-    //denTriggered = false;
-    //while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+#endif
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
