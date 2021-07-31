@@ -244,8 +244,10 @@ void ProcessorInterface::updateDataCycle() noexcept {
     blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
 #endif
 #else
-    currentPortContents_ = PINA;
-    auto byteEnableBits = static_cast<byte>(currentPortContents_ & 0b1110);
+    auto bits = PINA;
+    auto byteEnableBits = static_cast<byte>(bits & 0b1110);
+    burstAddressBits_ = byteEnableBits >> 1;
+    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000) >> 4);
     address_ = upperMaskedAddress_ | byteEnableBits;
 #ifdef QUERY_BLAST
     blastAsserted_ = (bits & 0b0100'0000) == 0;

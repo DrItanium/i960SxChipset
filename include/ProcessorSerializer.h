@@ -92,7 +92,7 @@ public:
     [[nodiscard]] constexpr auto isBurstLast() const noexcept { return blastAsserted_; }
 #endif
     void setDataBits(uint16_t value) noexcept;
-    [[nodiscard]] constexpr auto getStyle() const noexcept { return static_cast<LoadStoreStyle>(byteEnableBits); }
+    [[nodiscard]] constexpr auto getStyle() const noexcept { return static_cast<LoadStoreStyle>(lss_); }
     //[[nodiscard]] bool isWriteOperation() const noexcept;
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
@@ -117,23 +117,15 @@ private:
     uint16_t dataLinesDirection_ = 0xFFFF;
     Address upperMaskedAddress_ = 0;
     Address address_ = 0;
+    LoadStoreStyle lss_ = LoadStoreStyle::None;
     bool initialized_ = false;
     bool lockValue_ = true;
     bool holdValue_ = false;
-    union {
-        byte currentPortContents_;
-        struct {
-            bool isWriteOperation_ : 1;
-            byte burstAddressBits_ : 3;
-            byte byteEnableBits : 2;
-            bool isBurstOperation : 1;
-            bool checksumFailure : 1;
-        };
-    };
+    byte burstAddressBits_ = 0;
+    //TransactionDescription opcode_ = TransactionDescription::None;
 #ifdef QUERY_BLAST
     bool blastAsserted_ = false;
 #endif
-    //TransactionDescription opcode_ = TransactionDescription::None;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes
