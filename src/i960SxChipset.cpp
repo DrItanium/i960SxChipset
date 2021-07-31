@@ -983,21 +983,35 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
         signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
     }
-    if (isReadOperation) {
-        if (theThing->bypassesCache()) {
-            do {
-                processorInterface.updateDataCycle();
-                auto address = processorInterface.getAddress();
-                auto style = processorInterface.getStyle();
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                processorInterface.setDataBits(theThing->read(address, style));
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    return;
-                }
-            } while (true);
-        } else {
-            auto& theEntry = getLine();
+    if (theThing->bypassesCache()) {
+       if (isReadOperation)  {
+           do {
+               processorInterface.updateDataCycle();
+               auto address = processorInterface.getAddress();
+               auto style = processorInterface.getStyle();
+               auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+               processorInterface.setDataBits(theThing->read(address, style));
+               DigitalPin<i960Pinout::Ready>::pulse();
+               if (isBurstLast) {
+                   break;
+               }
+           } while (true);
+       } else {
+           // write
+           do {
+               processorInterface.updateDataCycle();
+               auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+               Address burstAddress = processorInterface.getAddress();
+               LoadStoreStyle style = processorInterface.getStyle();
+               theThing->write(burstAddress, processorInterface.getDataBits(), style);
+               DigitalPin<i960Pinout::Ready>::pulse();
+               if (isBurstLast) {
+                   break;
+               }
+           }  while (true);
+       }
+    } else {
+        if (auto& theEntry = getLine(); isReadOperation) {
             do {
                 processorInterface.updateDataCycle();
                 auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
@@ -1005,25 +1019,10 @@ void loop() {
                 processorInterface.setDataBits(result);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
-                    return;
+                    break;
                 }
             } while (true);
-        }
-    } else {
-        if (theThing->bypassesCache()) {
-            do {
-                processorInterface.updateDataCycle();
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                Address burstAddress = processorInterface.getAddress();
-                LoadStoreStyle style = processorInterface.getStyle();
-                theThing->write(burstAddress, processorInterface.getDataBits(), style);
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    return;
-                }
-            }  while (true);
         } else {
-            auto& theEntry = getLine();
             do {
                 processorInterface.updateDataCycle();
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -1031,7 +1030,7 @@ void loop() {
                 theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
-                    return;
+                    break;
                 }
             }  while (true);
         }
