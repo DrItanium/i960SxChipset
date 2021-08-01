@@ -84,10 +84,7 @@ namespace
                 0x00,
         };
         doSPI(buffer, 4);
-        SplitWord16 outcome;
-        outcome.bytes[0] = buffer[2];
-        outcome.bytes[1] = buffer[3];
-        return outcome.wholeValue_;
+        return SplitWord16(buffer[2], buffer[3]).wholeValue_;
     }
     uint8_t read8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[3] = {

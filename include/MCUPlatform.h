@@ -190,21 +190,24 @@ static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16
  */
 union SplitWord16 {
     explicit constexpr SplitWord16(uint16_t value = 0) noexcept : wholeValue_(value) { }
+    constexpr SplitWord16(uint8_t lower, uint8_t upper) noexcept : bytes{lower, upper} { }
     constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     uint16_t wholeValue_ = 0;
     uint8_t bytes[2];
 };
 union SplitWord32 {
     // adding this dropped program size by over 500 bytes!
-    explicit constexpr SplitWord32(uint32_t value = 0) : wholeValue_(value) { }
+    explicit constexpr SplitWord32(uint32_t value = 0) noexcept : wholeValue_(value) { }
+    constexpr SplitWord32(uint8_t lowest, uint8_t lower, uint8_t higher, uint8_t highest) noexcept : bytes{lowest, lower, higher, highest} {}
+    constexpr SplitWord32(uint16_t lower, uint16_t upper) noexcept : halves{lower, upper} { }
     uint32_t wholeValue_ = 0;
     int32_t signedWholeValue;
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+    byte bytes[sizeof(uint32_t)];
     struct {
         uint16_t lowerHalf_;
         uint16_t upperHalf_;
     };
-    byte bytes[sizeof(uint32_t)];
 };
 union SplitWord128 {
     uint8_t bytes[16] = { 0 };
