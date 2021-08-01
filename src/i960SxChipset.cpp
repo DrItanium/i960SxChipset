@@ -514,13 +514,13 @@ auto& getLine() noexcept {
     }
     return theEntry;
 }
-bool
-signalDone() noexcept {
-    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-    DigitalPin<i960Pinout::Ready>::pulse();
-    return isBurstLast;
-}
 void loop() {
+    auto signalDone = []() noexcept {
+        // this seems to be faster as a lambda for some reason
+        auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        DigitalPin<i960Pinout::Ready>::pulse();
+        return isBurstLast;
+    };
     do {
         if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
             signalHaltState(F("CHECKSUM FAILURE!"));
