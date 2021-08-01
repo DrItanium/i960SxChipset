@@ -2,8 +2,8 @@
 // Created by jwscoggins on 7/31/21.
 //
 
-#ifndef I960SXCHIPSET_PSRAMCHIP_H
-#define I960SXCHIPSET_PSRAMCHIP_H
+#ifndef I960SXCHIPSET_SRAMCHIP_H
+#define I960SXCHIPSET_SRAMCHIP_H
 #include <Arduino.h>
 #include <SPI.h>
 #include "Pinout.h"
@@ -22,70 +22,33 @@ public:
             return readOneByte(address);
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
-            // do not copy the buf but just use it as a transfer medium instead
-            auto times = capacity / 32;
-            auto slop = capacity % 32;
-            auto* theBuf = buf;
-            SplitWord32 trackedAddress(address);
-            for (size_t i = 0; i < times; ++i, theBuf += 32, trackedAddress.wholeValue_ += 32) {
-                byte header[4]{
-                        0x02,
-                        trackedAddress.bytes[2],
-                        trackedAddress.bytes[1],
-                        trackedAddress.bytes[0],
-                };
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(header, 4);
-                SPI.transfer(theBuf, 32);
-                digitalWrite<enablePin, HIGH>();
-            }
-            // there should be some slop left over
-            if (slop > 0) {
-                byte header[36]{
-                        0x02,
-                        trackedAddress.bytes[2],
-                        trackedAddress.bytes[1],
-                        trackedAddress.bytes[0],
-                };
-
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(header, 4);
-                SPI.transfer(theBuf, slop);
-                digitalWrite<enablePin, HIGH>();
-            }
-            return capacity;
+        // do not copy the buf but just use it as a transfer medium instead
+        SplitWord32 trackedAddress(address);
+        byte header[4]{
+                0x02,
+                trackedAddress.bytes[2],
+                trackedAddress.bytes[1],
+                trackedAddress.bytes[0],
+        };
+        digitalWrite<enablePin, LOW>();
+        SPI.transfer(header, 4);
+        SPI.transfer(buf, capacity);
+        digitalWrite<enablePin, HIGH>();
+        return capacity;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
-            auto times = capacity / 32;
-            auto slop = capacity % 32;
-            auto* theBuf = buf;
-            SplitWord32 trackedAddress(address);
-            for (size_t i = 0; i < times; ++i, theBuf += 32, trackedAddress.wholeValue_ += 32) {
-                byte header[4]{
-                        0x03,
-                        trackedAddress.bytes[2],
-                        trackedAddress.bytes[1],
-                        trackedAddress.bytes[0],
-                };
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(header, 4);
-                SPI.transfer(theBuf, 32);
-                digitalWrite<enablePin, HIGH>();
-            }
-            // there should be some slop left over
-            if (slop > 0) {
-                byte header[4]{
-                        0x03,
-                        trackedAddress.bytes[2],
-                        trackedAddress.bytes[1],
-                        trackedAddress.bytes[0],
-                };
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(header, 4);
-                SPI.transfer(theBuf, slop);
-                digitalWrite<enablePin, HIGH>();
-            }
-            return capacity;
+        SplitWord32 trackedAddress(address);
+        byte header[4]{
+                0x03,
+                trackedAddress.bytes[2],
+                trackedAddress.bytes[1],
+                trackedAddress.bytes[0],
+        };
+        digitalWrite<enablePin, LOW>();
+        SPI.transfer(header, 4);
+        SPI.transfer(buf, capacity);
+        digitalWrite<enablePin, HIGH>();
+        return capacity;
     }
     uint16_t read16(Address address) noexcept override {
             Serial.print(F("SRAM: READ16 FROM 0x"));
@@ -247,4 +210,4 @@ private:
 };
 
 using OnBoardSRAM = SRAMChip<i960Pinout::CACHE_EN_>;
-#endif //I960SXCHIPSET_PSRAMCHIP_H
+#endif //I960SXCHIPSET_SRAMCHIP_H
