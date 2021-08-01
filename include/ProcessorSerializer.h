@@ -93,7 +93,10 @@ public:
     //[[nodiscard]] bool isWriteOperation() const noexcept;
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
-    [[nodiscard]] constexpr auto getAlignedAddress() const noexcept { return upperMaskedAddress_.wholeValue_; }
+    [[nodiscard]] constexpr auto getAlignedAddress() const noexcept {
+        // aligned to 32-byte boundaries
+        return upperMaskedAddress_.wholeValue_ & 0xFFFF'FFE0;
+    }
     [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept {
         // shift by 1 to get the 16-bit offset expected by the cache entry system
         return address_.bytes[0] >> 1;

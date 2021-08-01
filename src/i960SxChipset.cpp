@@ -144,8 +144,8 @@ union TaggedAddress {
 private:
     Address base;
     struct {
-        uint8_t lowest : 5;
-        uint8_t tagIndex : 8;
+        Address lowest : 5;
+        Address tagIndex : 8;
         Address rest : 19;
     };
 };
@@ -156,7 +156,7 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
     // we don't care about the upper most bit because the SRAM cache isn't large enough
     return (address & 0xFFFF'FFE0) << 1;
 }
-constexpr bool EnableDebuggingCompileTime = false;
+constexpr bool EnableDebuggingCompileTime = true;
 class CacheEntry {
 public:
     static constexpr size_t ActualCacheEntrySize = 40;
@@ -169,7 +169,7 @@ public:
     static void invalidateAllEntries() noexcept {
 #ifdef ALLOW_SRAM_CACHE
         // we need to walk through all of the sram cache entries, committing all entries back to the backing store
-        for (uint32_t i = 0; i < SramCacheSize; i += SramCacheSize) {
+        for (uint32_t i = 0; i < SramCacheSize; i += SramCacheEntrySize) {
             CacheEntry target(i); // load from the cache and purge the hell out of it
             target.invalidate(); // try and invalidate it as well
         }
