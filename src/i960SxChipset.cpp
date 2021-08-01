@@ -537,7 +537,6 @@ void loop() {
         processorInterface.newDataCycle();
         // W\~R is latched on chip for the entire duration of the transaction,
         // there is no reason to not cache it here
-        auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
         if (!theThing->respondsTo(processorInterface.getAddress(), LoadStoreStyle::Full16)) {
             theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
             // the only time that this is an issue is if we have to grab a new thing so only check
@@ -557,7 +556,7 @@ void loop() {
                 signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
             }
         }
-        if (theThing->bypassesCache()) {
+        if (auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted(); theThing->bypassesCache()) {
             if (isReadOperation) {
                 do {
                     processorInterface.updateDataCycle();
