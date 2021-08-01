@@ -8,6 +8,9 @@
 #include <SPI.h>
 #include "Pinout.h"
 #include "MemoryThing.h"
+#include "../.pio/libdeps/1284p/SdFat/src/common/FmtNumber.h"
+#include "../.pio/libdeps/1284p/SdFat/src/FsLib/FsNew.h"
+
 /**
  * @brief Represents access to a single PSRAM chip
  */

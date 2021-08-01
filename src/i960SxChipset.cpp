@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
-#define ALLOW_SRAM_CACHE
+//#define ALLOW_SRAM_CACHE
 #ifndef ALLOW_SRAM_CACHE
 #include "SRAMChip.h"
 #endif
