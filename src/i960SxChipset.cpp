@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTShieldThing.h"
 #define ALLOW_SRAM_CACHE
 //#define DEN_CONNECTED_TO_INTERRUPT
+constexpr bool EnableDebuggingCompileTime = false;
 
 //bool displayReady = false;
 /**
@@ -156,7 +157,6 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
     // we don't care about the upper most bit because the SRAM cache isn't large enough
     return (address & 0xFFFF'FFE0) << 1;
 }
-constexpr bool EnableDebuggingCompileTime = true;
 class CacheEntry {
 public:
     static constexpr size_t ActualCacheEntrySize = 40;
