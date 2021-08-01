@@ -215,12 +215,14 @@ public:
         // no match so pull the data in from main memory
         if (valid() && isDirty()) {
             // just do the write out to disk to save time
+            // still an expensive operation
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
         }
         valid_ = true; // always set this
         dirty_ = false;
         tag = newTag;
         backingThing = &thing;
+        // this is a _very_ expensive operation
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
     }
     void invalidate() noexcept {
@@ -573,7 +575,7 @@ void loop() {
                 } while (!signalDone());
             }
         } else {
-            if (auto &theEntry = getLine(); isReadOperation) {
+            if (auto& theEntry = getLine(); isReadOperation) {
                 do {
                     processorInterface.updateDataCycle();
                     processorInterface.setDataBits(theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue());

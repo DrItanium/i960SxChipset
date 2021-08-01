@@ -95,10 +95,7 @@ protected:
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         if (permissions_ != FILE_READ) {
             theFile_.seek(address);
-            auto result = theFile_.write(buf, capacity);
-            // make sure...
-            //theFile_.flush();
-            return result;
+            return theFile_.write(buf, capacity);
         }
         return 0;
     }
