@@ -21,8 +21,12 @@ public:
     static constexpr uint32_t Mask = Size - 1;
     explicit SRAMChip(Address start) : MemoryThing(start, start + Size) { }
     ~SRAMChip() override = default;
+
+    bool respondsTo(Address address) const noexcept override {
+        return MemoryThing::respondsTo(address);
+    }
     uint8_t read8(Address address) noexcept override {
-            return readOneByte(address);
+        return readOneByte(address);
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // do not copy the buf but just use it as a transfer medium instead
@@ -54,22 +58,12 @@ public:
         return capacity;
     }
     uint16_t read16(Address address) noexcept override {
-            Serial.print(F("SRAM: READ16 FROM 0x"));
-            Serial.println(address, HEX);
             return readTwoBytes(address);
     }
     void write8(Address address, uint8_t value) noexcept override {
-            Serial.print(F("SRAM: WRITE8 0x"));
-            Serial.print(value, HEX);
-            Serial.print(F(" to 0x"));
-            Serial.println(address, HEX);
             writeOneByte(address, value);
     }
     void write16(Address address, uint16_t value) noexcept override {
-            Serial.print(F("SRAM: WRITE16 0x"));
-            Serial.print(value, HEX);
-            Serial.print(F(" to 0x"));
-            Serial.println(address, HEX);
             writeTwoBytes(address, value);
     }
     void begin() noexcept override {
@@ -77,7 +71,7 @@ public:
             SPI.transfer(0xFF);
             digitalWrite(i960Pinout::CACHE_EN_, HIGH);
             constexpr uint32_t max = 128_KB; // only one SRAM chip on board
-            Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
+            Serial.println(F("CHECKING SRAM..."));
             for (uint32_t i = 0; i < max; i += 32) {
                 SplitWord32 translation(i);
                 byte pagePurgeInstruction[36]{
@@ -118,7 +112,7 @@ public:
                 }
             }
             Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
-            Serial.println(F("PURGING SRAM CACHE!"));
+            Serial.println(F("PURGING SRAM!"));
             for (uint32_t i = 0; i < max; i+= 32) {
                 SplitWord32 translation(i);
                 byte pagePurgeInstruction[36] {
@@ -210,6 +204,8 @@ private:
         };
         doSPI(theInstruction, 5);
     }
+public:
+    [[nodiscard]] bool bypassesCache() const noexcept override { return true; }
 };
 
 using OnBoardSRAM = SRAMChip<i960Pinout::CACHE_EN_>;
