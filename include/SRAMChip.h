@@ -228,8 +228,8 @@ private:
                 addrTmp.bytes[2],
                 addrTmp.bytes[1],
                 addrTmp.bytes[0],
-                value.bytes[0],
-                value.bytes[1],
+                tmp.bytes[0],
+                tmp.bytes[1],
         };
         doSPI(theInstruction, 6);
     }
@@ -246,5 +246,5 @@ private:
     }
 };
 
-using OnBoardSRAM = PSRAMChip<i960Pinout::CACHE_EN_>;
+using OnBoardSRAM = SRAMChip<i960Pinout::CACHE_EN_>;
 #endif //I960SXCHIPSET_PSRAMCHIP_H
