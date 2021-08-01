@@ -94,7 +94,10 @@ public:
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
     [[nodiscard]] constexpr auto getAlignedAddress() const noexcept { return upperMaskedAddress_.wholeValue_; }
-    [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept { return address_.bytes[0]; }
+    [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept {
+        // shift by 1 to get the 16-bit offset expected by the cache entry system
+        return address_.bytes[0] >> 1;
+    }
 public:
     void setPortZDirectionRegister(byte value) noexcept;
     byte getPortZDirectionRegister() noexcept;
