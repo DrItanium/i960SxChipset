@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
-#define ALLOW_SRAM_CACHE
+//#define ALLOW_SRAM_CACHE
 //#define DEN_CONNECTED_TO_INTERRUPT
 constexpr bool EnableDebuggingCompileTime = false;
 
@@ -143,10 +143,12 @@ public:
     static constexpr size_t TagIndexSize = 8;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
-    static constexpr size_t ActualCacheEntrySize = 40;
+    static constexpr size_t ActualCacheEntrySize = NumBytesCached + 8;
     static constexpr auto SramCacheSize = 128_KB;
     static constexpr auto SramCacheEntrySize = 64;
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
+    static constexpr byte OffsetMask = static_cast<byte>(~TagMask) >> 1;  // remember that this 16-bit aligned
+
     union TaggedAddress {
         constexpr explicit TaggedAddress(Address value = 0)  noexcept : base(value) { }
         [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
@@ -252,10 +254,10 @@ public:
         }
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
-    [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b1111]; }
+    [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & OffsetMask]; }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         dirty_ = true;
-        switch (auto& target = data[offset & 0b1111]; style) {
+        switch (auto& target = data[offset & OffsetMask]; style) {
             case LoadStoreStyle::Full16:
                 target.wholeValue_ = value.wholeValue_;
                 break;

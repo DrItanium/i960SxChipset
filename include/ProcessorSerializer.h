@@ -96,7 +96,7 @@ public:
     [[nodiscard]] constexpr auto getAlignedAddress() const noexcept {
         // a copy should actually be faster
         auto copy = upperMaskedAddress_;
-        copy.bytes[0] &= 0xE0;
+        copy.bytes[0] &= 0xC0;
         return copy.wholeValue_;
     }
     [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept {
