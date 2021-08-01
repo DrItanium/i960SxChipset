@@ -144,7 +144,7 @@ public:
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
     static constexpr size_t ActualCacheEntrySize = NumBytesCached + 8;
     static constexpr auto SramCacheSize = 128_KB;
-    static constexpr auto SramCacheEntrySize = 64;
+    static constexpr auto SramCacheEntrySize = NumBytesCached * 2; // we need to waste a bunch of space in this design but it will help with locality
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
     static constexpr byte OffsetMask = static_cast<byte>(~TagMask) >> 1;  // remember that this 16-bit aligned
 
@@ -287,7 +287,8 @@ private:
     };
 };
 static_assert(sizeof(CacheEntry) == CacheEntry::ActualCacheEntrySize);
-CacheEntry entries[256]; // we actually are holding more bytes in the cache than before
+constexpr auto NumCacheEntries = 256;
+CacheEntry entries[NumCacheEntries]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
     // commit all entries back
