@@ -280,7 +280,7 @@ private:
             bool dirty_;
             MemoryThing* backingThing; // 2 bytes
             Address tag; // 4 bytes
-            SplitWord16 data[16]; // 32 bytes
+            SplitWord16 data[NumWordsCached]; // 32 bytes
             // unused 24 bytes
         };
     };
