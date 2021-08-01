@@ -135,32 +135,41 @@ MemoryThing* things[] {
 // ----------------------------------------------------------------
 
 // we only have a single 128kb cache chip
-union TaggedAddress {
-    constexpr explicit TaggedAddress(Address value = 0)  noexcept : base(value) { }
-    [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
-    [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
-    [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
-    [[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
-private:
-    Address base;
-    struct {
-        Address lowest : 5;
-        Address tagIndex : 8;
-        Address rest : 19;
-    };
-};
-constexpr uint8_t computeTagIndex(Address address) noexcept {
-    return TaggedAddress(address).getTagIndex();
-}
-constexpr Address computeL2TagIndex(Address address) noexcept {
-    // we don't care about the upper most bit because the SRAM cache isn't large enough
-    return (address & 0xFFFF'FFE0) << 1;
-}
 class CacheEntry {
 public:
+    static constexpr size_t NumBytesCached = 32;
+    static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
+    static constexpr size_t LowestBitCount = 5;
+    static constexpr size_t TagIndexSize = 8;
+    static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
+    static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
     static constexpr size_t ActualCacheEntrySize = 40;
     static constexpr auto SramCacheSize = 128_KB;
     static constexpr auto SramCacheEntrySize = 64;
+    static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
+    union TaggedAddress {
+        constexpr explicit TaggedAddress(Address value = 0)  noexcept : base(value) { }
+        [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
+        [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
+        [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
+        [[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
+    private:
+        Address base;
+        struct {
+            Address lowest : LowestBitCount;
+            Address tagIndex : TagIndexSize;
+            Address rest : UpperBitCount;
+        };
+    };
+    static constexpr uint8_t computeTagIndex(Address address) noexcept {
+        return TaggedAddress(address).getTagIndex();
+    }
+    static constexpr Address computeL2TagIndex(Address address) noexcept {
+        // we don't care about the upper most bit because the SRAM cache isn't large enough
+        SplitWord32 tmp(address);
+        tmp.bytes[0] &= TagMask;
+        return tmp.wholeValue_ << 1;
+    }
 public:
     CacheEntry() noexcept { };
     [[nodiscard]] constexpr bool valid() const noexcept { return valid_; }
@@ -508,13 +517,13 @@ auto& getLine(MemoryThing& theThing) noexcept {
     }
     auto address = processorInterface.getAlignedAddress();
     if constexpr (EnableDebuggingCompileTime) {
-        auto tagIndex = computeTagIndex(address);
+        auto tagIndex = CacheEntry::computeTagIndex(address);
         Serial.print(F("ADDRESS: 0x"));
         Serial.println(address, HEX);
         Serial.print(F("TAG INDEX: 0x"));
         Serial.println(tagIndex, HEX);
     }
-    auto& theEntry = entries[computeTagIndex(address)];
+    auto& theEntry = entries[CacheEntry::computeTagIndex(address)];
     if (!theEntry.matches(address)) {
         theEntry.reset(address, theThing);
     }
