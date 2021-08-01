@@ -552,56 +552,41 @@ void loop() {
                 signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
             }
         }
+        auto signalDone = []() {
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            return isBurstLast;
+        };
         if (theThing->bypassesCache()) {
             if (isReadOperation) {
                 do {
                     processorInterface.updateDataCycle();
                     auto address = processorInterface.getAddress();
                     auto style = processorInterface.getStyle();
-                    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                     processorInterface.setDataBits(theThing->read(address, style));
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    if (isBurstLast) {
-                        break;
-                    }
-                } while (true);
+                } while (!signalDone());
             } else {
                 // write
                 do {
                     processorInterface.updateDataCycle();
-                    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                     Address burstAddress = processorInterface.getAddress();
                     LoadStoreStyle style = processorInterface.getStyle();
                     theThing->write(burstAddress, processorInterface.getDataBits(), style);
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    if (isBurstLast) {
-                        break;
-                    }
-                } while (true);
+                } while (!signalDone());
             }
         } else {
             if (auto &theEntry = getLine(); isReadOperation) {
                 do {
                     processorInterface.updateDataCycle();
                     auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
-                    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                     processorInterface.setDataBits(result);
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    if (isBurstLast) {
-                        break;
-                    }
-                } while (true);
+                } while (!signalDone());
             } else {
                 do {
                     processorInterface.updateDataCycle();
-                    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                     SplitWord16 theBits(processorInterface.getDataBits());
                     theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    if (isBurstLast) {
-                        break;
-                    }
-                } while (true);
+                } while (!signalDone());
             }
         }
     } while (true);
