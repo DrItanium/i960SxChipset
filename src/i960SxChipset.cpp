@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
 #define ALLOW_SRAM_CACHE
-//#define DEN_CONNECTED_TO_INTERRUPT
 constexpr bool EnableDebuggingCompileTime = false;
 
 bool displayReady = false;
@@ -315,9 +314,9 @@ void setupPeripherals() {
  */
 void purgeSRAMCache() noexcept {
     // 23lc1024s are in sequential by default :)
-    digitalWrite(i960Pinout::CACHE_EN_, LOW);
+    digitalWrite<i960Pinout::CACHE_EN_, LOW>();
     SPI.transfer(0xFF);
-    digitalWrite(i960Pinout::CACHE_EN_, HIGH);
+    digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
     constexpr uint32_t max = 128_KB; // only one SRAM chip on board
     Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
     for (uint32_t i = 0; i < max; i += 32) {
@@ -399,12 +398,6 @@ void purgeSRAMCache() noexcept {
 }
 #endif
 // the setup routine runs once when you press reset:
-#ifdef DEN_CONNECTED_TO_INTERRUPT
-volatile bool denTriggered = false;
-void triggerDataEnable() noexcept {
-    denTriggered = true;
-}
-#endif
 void setup() {
 
     Serial.begin(115200);
@@ -461,9 +454,6 @@ void setup() {
         chipsetFunctions.begin();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
-#ifdef DEN_CONNECTED_TO_INTERRUPT
-        attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), triggerDataEnable, FALLING);
-#endif
         processorInterface.begin();
         setupPeripherals();
         delay(1000);
@@ -546,12 +536,7 @@ void loop() {
             signalHaltState(F("CHECKSUM FAILURE!"));
         }
         // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-#ifdef DEN_CONNECTED_TO_INTERRUPT
-        while (!denTriggered);
-        denTriggered = false;
-#else
         while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-#endif
         // keep processing data requests until we
         // when we do the transition, record the information we need
         processorInterface.newDataCycle();
