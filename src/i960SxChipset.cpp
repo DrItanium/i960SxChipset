@@ -284,9 +284,12 @@ public:
         }
 #endif
         // no match so pull the data in from main memory
-        invalidate();
+        if (valid() && isDirty()) {
+            // just do the write out to disk to save time
+            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+        }
+        valid_ = true; // always set this
         dirty_ = false;
-        valid_ = true;
         tag = newTag;
         backingThing = &thing;
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
@@ -302,8 +305,8 @@ public:
                 Serial.println(F("INVALIDATING CACHE!"));
             }
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
-            dirty_ = false;
             valid_ = false;
+            dirty_ = false;
             tag = 0;
             backingThing = nullptr;
             //unused = 0; // make sure that this is correctly purged
@@ -335,9 +338,9 @@ private:
         struct {
             bool valid_;
             bool dirty_;
-            SplitWord16 data[8]; // 16 bytes
-            Address tag; // 4 bytes
             MemoryThing* backingThing; // 2 bytes
+            Address tag; // 4 bytes
+            SplitWord16 data[8]; // 16 bytes
             //uint64_t unused; // 8 bytes
         };
     };
