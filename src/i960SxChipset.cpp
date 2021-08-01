@@ -191,15 +191,13 @@ private:
         }
         SplitWord32 translation;
         translation.wholeValue_ = actualSRAMIndex;
-        //SPI.beginTransaction(sramCacheSpeed);
-        DigitalPin<i960Pinout::CACHE_EN_>::togglePin();
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x03);
         SPI.transfer(translation.bytes[2]);
         SPI.transfer(translation.bytes[1]);
         SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32);
-        DigitalPin<i960Pinout::CACHE_EN_>::togglePin();
-        //SPI.endTransaction();
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.print(F("AFTER LOAD: TAG 0x"));
             Serial.println(tag, HEX);
@@ -229,15 +227,13 @@ private:
         }
         SplitWord32 translation;
         translation.wholeValue_ = actualSRAMIndex;
-        //SPI.beginTransaction(sramCacheSpeed);
-        DigitalPin<i960Pinout::CACHE_EN_>::togglePin();
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x02);
         SPI.transfer(translation.bytes[2]);
         SPI.transfer(translation.bytes[1]);
         SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
-        DigitalPin<i960Pinout::CACHE_EN_>::togglePin();
-        //SPI.endTransaction();
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.print(F("AFTER COMMIT: TAG 0x"));
             Serial.println(tag, HEX);
