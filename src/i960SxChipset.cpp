@@ -513,7 +513,7 @@ public:
     static void invalidateAllEntries() noexcept {
 #ifdef ALLOW_SRAM_CACHE
         // we need to walk through all of the sram cache entries, committing all entries back to the backing store
-        constexpr uint32_t max = static_cast<uint32_t>(1024) * static_cast<uint32_t>(1024);
+        constexpr uint32_t max = 128_KB;
         CacheEntryDebugging = false;
         for (uint32_t i = 0; i < max; i += 32) {
             CacheEntry target(i); // load from the cache and purge the hell out of it
