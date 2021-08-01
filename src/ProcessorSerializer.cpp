@@ -68,13 +68,10 @@ namespace
     constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
-    SPISettings ioexpander(10_MHz, MSBFIRST, SPI_MODE0);
     inline void doSPI(uint8_t* buffer, size_t count) {
-        SPI.beginTransaction(ioexpander);
         DigitalPin<i960Pinout::GPIOSelect>::togglePin();
         SPI.transfer(buffer, count);
         DigitalPin<i960Pinout::GPIOSelect>::togglePin();
-        SPI.endTransaction();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
@@ -240,18 +237,13 @@ void ProcessorInterface::updateDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
     address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
     burstAddressBits_ = static_cast<byte>(bits & 0b111);
-#ifdef QUERY_BLAST
-    blastAsserted_ = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-#endif
 #else
+    // currentPortContents is part of a union that defers many operations as long as possible
     auto bits = PINA;
-    auto byteEnableBits = static_cast<byte>(bits & 0b1110);
-    burstAddressBits_ = byteEnableBits >> 1;
+    // with the way we have designed the enum, this is the only type that has to be stored separately
+    auto maskedBits = static_cast<byte>(bits & 0b1110);
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
-    address_.bytes[0] = upperMaskedAddress_.bytes[0] | byteEnableBits;
-    //address_.wholeValue_ = upperMaskedAddress_.wholeValue_ | byteEnableBits;
-#ifdef QUERY_BLAST
-    blastAsserted_ = (bits & 0b0100'0000) == 0;
-#endif
+    burstAddressBits_ = maskedBits >> 1;
+    address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
 #endif
 }

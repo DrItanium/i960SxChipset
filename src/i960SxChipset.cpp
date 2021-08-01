@@ -145,7 +145,7 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
 constexpr bool EnableDebuggingCompileTime = false;
 bool CacheEntryDebugging = false;
 #ifdef ALLOW_SRAM_CACHE
-SPISettings sramCacheSpeed(10'000'000, MSBFIRST, SPI_MODE0);
+SPISettings sramCacheSpeed(10_MHz, MSBFIRST, SPI_MODE0);
 #endif
 class CacheEntry {
 public:
@@ -191,15 +191,15 @@ private:
         }
         SplitWord32 translation;
         translation.wholeValue_ = actualSRAMIndex;
-        SPI.beginTransaction(sramCacheSpeed);
-        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+        //SPI.beginTransaction(sramCacheSpeed);
+        DigitalPin<i960Pinout::CACHE_EN_>::togglePin();
         SPI.transfer(0x03);
         SPI.transfer(translation.bytes[2]);
         SPI.transfer(translation.bytes[1]);
         SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32);
-        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        SPI.endTransaction();
+        DigitalPin<i960Pinout::CACHE_EN_>::togglePin();
+        //SPI.endTransaction();
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.print(F("AFTER LOAD: TAG 0x"));
             Serial.println(tag, HEX);
@@ -229,15 +229,15 @@ private:
         }
         SplitWord32 translation;
         translation.wholeValue_ = actualSRAMIndex;
-        SPI.beginTransaction(sramCacheSpeed);
-        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+        //SPI.beginTransaction(sramCacheSpeed);
+        DigitalPin<i960Pinout::CACHE_EN_>::togglePin();
         SPI.transfer(0x02);
         SPI.transfer(translation.bytes[2]);
         SPI.transfer(translation.bytes[1]);
         SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
-        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        SPI.endTransaction();
+        DigitalPin<i960Pinout::CACHE_EN_>::togglePin();
+        //SPI.endTransaction();
         if (EnableDebuggingCompileTime && CacheEntryDebugging) {
             Serial.print(F("AFTER COMMIT: TAG 0x"));
             Serial.println(tag, HEX);

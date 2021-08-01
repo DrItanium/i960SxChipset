@@ -88,9 +88,6 @@ public:
     void begin() noexcept;
     [[nodiscard]] constexpr Address getAddress() const noexcept { return address_.wholeValue_; }
     [[nodiscard]] uint16_t getDataBits() noexcept;
-#ifdef QUERY_BLAST
-    [[nodiscard]] constexpr auto isBurstLast() const noexcept { return blastAsserted_; }
-#endif
     void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] constexpr auto getStyle() const noexcept { return static_cast<LoadStoreStyle>(lss_); }
     //[[nodiscard]] bool isWriteOperation() const noexcept;
@@ -110,7 +107,7 @@ public:
 
     void newDataCycle() noexcept;
     void updateDataCycle() noexcept;
-    //[[nodiscard]] constexpr auto getOpcode() const noexcept { return opcode_; }
+
 private:
     void updateOutputLatch() noexcept;
 private:
@@ -122,10 +119,6 @@ private:
     bool lockValue_ = true;
     bool holdValue_ = false;
     byte burstAddressBits_ = 0;
-    //TransactionDescription opcode_ = TransactionDescription::None;
-#ifdef QUERY_BLAST
-    bool blastAsserted_ = false;
-#endif
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

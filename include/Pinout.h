@@ -394,18 +394,21 @@ struct DigitalPin {
         inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
         inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
     }
+#define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
 
-DefOutputPin(i960Pinout::GPIOSelect, LOW, HIGH);
+DefSPICSPin(i960Pinout::GPIOSelect);
+DefSPICSPin(i960Pinout::CACHE_EN_);
+DefSPICSPin(i960Pinout::SD_EN);
+DefSPICSPin(i960Pinout::PSRAM_EN);
+DefSPICSPin(i960Pinout::DISPLAY_EN);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-DefOutputPin(i960Pinout::PSRAM_EN, LOW, HIGH);
-DefOutputPin(i960Pinout::DISPLAY_EN, LOW, HIGH);
-DefOutputPin(i960Pinout::SD_EN, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::AS_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
+#undef DefSPICSPin
 #undef DefInputPin
 #undef DefOutputPin
 
