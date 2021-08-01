@@ -281,7 +281,6 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     //displayCommandSet.begin();
     //displayReady = true;
-    //psram.begin();
     rom.begin();
     dataRom.begin();
     ram.begin();
