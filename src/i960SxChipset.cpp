@@ -514,7 +514,12 @@ auto& getLine() noexcept {
     }
     return theEntry;
 }
-
+bool
+signalDone() noexcept {
+    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    DigitalPin<i960Pinout::Ready>::pulse();
+    return isBurstLast;
+}
 void loop() {
     do {
         if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
@@ -552,40 +557,34 @@ void loop() {
                 signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
             }
         }
-        auto signalDone = []() {
-            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            return isBurstLast;
-        };
         if (theThing->bypassesCache()) {
             if (isReadOperation) {
                 do {
                     processorInterface.updateDataCycle();
-                    auto address = processorInterface.getAddress();
-                    auto style = processorInterface.getStyle();
-                    processorInterface.setDataBits(theThing->read(address, style));
+                    processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
+                                                                  processorInterface.getStyle()));
                 } while (!signalDone());
             } else {
                 // write
                 do {
                     processorInterface.updateDataCycle();
-                    Address burstAddress = processorInterface.getAddress();
-                    LoadStoreStyle style = processorInterface.getStyle();
-                    theThing->write(burstAddress, processorInterface.getDataBits(), style);
+                    theThing->write(processorInterface.getAddress(),
+                                    processorInterface.getDataBits(),
+                                    processorInterface.getStyle());
                 } while (!signalDone());
             }
         } else {
             if (auto &theEntry = getLine(); isReadOperation) {
                 do {
                     processorInterface.updateDataCycle();
-                    auto result = theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue();
-                    processorInterface.setDataBits(result);
+                    processorInterface.setDataBits(theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue());
                 } while (!signalDone());
             } else {
                 do {
                     processorInterface.updateDataCycle();
-                    SplitWord16 theBits(processorInterface.getDataBits());
-                    theEntry.set(processorInterface.getBurstAddressBits(), processorInterface.getStyle(), theBits);
+                    theEntry.set(processorInterface.getBurstAddressBits(),
+                                 processorInterface.getStyle(),
+                                 SplitWord16{processorInterface.getDataBits()});
                 } while (!signalDone());
             }
         }
