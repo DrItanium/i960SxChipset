@@ -587,12 +587,12 @@ void loop() {
             if (auto& theEntry = getLine(); isReadOperation) {
                 do {
                     processorInterface.updateDataCycle();
-                    processorInterface.setDataBits(theEntry.get(processorInterface.getBurstAddressBits()).getWholeValue());
+                    processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
                 } while (!signalDone());
             } else {
                 do {
                     processorInterface.updateDataCycle();
-                    theEntry.set(processorInterface.getBurstAddressBits(),
+                    theEntry.set(processorInterface.getCacheOffsetEntry(),
                                  processorInterface.getStyle(),
                                  SplitWord16{processorInterface.getDataBits()});
                 } while (!signalDone());

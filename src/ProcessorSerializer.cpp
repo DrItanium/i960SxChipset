@@ -243,7 +243,6 @@ void ProcessorInterface::updateDataCycle() noexcept {
     // with the way we have designed the enum, this is the only type that has to be stored separately
     auto maskedBits = static_cast<byte>(bits & 0b1110);
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
-    burstAddressBits_ = maskedBits >> 1;
     address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
 #endif
 }
