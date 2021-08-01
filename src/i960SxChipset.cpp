@@ -41,9 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
 #define ALLOW_SRAM_CACHE
-#ifndef ALLOW_SRAM_CACHE
-#include "SRAMChip.h"
-#endif
 //#define DEN_CONNECTED_TO_INTERRUPT
 constexpr bool EnableDebuggingCompileTime = false;
 
@@ -119,14 +116,8 @@ RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters,
 ROMTextSection rom;
 ROMDataSection dataRom;
 SDCardFilesystemInterface fs(0x300);
-#ifndef ALLOW_SRAM_CACHE
-OnBoardSRAM sram(RAMStart);
-#endif
 // list of io memory devices to walk through
 MemoryThing* things[] {
-#ifndef ALLOW_SRAM_CACHE
-    &sram, // must come before ram file
-#endif
         &ram,
         &rom,
         &dataRom,
@@ -310,9 +301,6 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     //displayCommandSet.begin();
     //displayReady = true;
-#ifndef ALLOW_SRAM_CACHE
-    sram.begin();
-#endif
     rom.begin();
     dataRom.begin();
     ram.begin();
