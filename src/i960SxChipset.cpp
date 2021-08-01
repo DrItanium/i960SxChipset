@@ -137,12 +137,16 @@ MemoryThing* theThing = nullptr;
 // we only have a single 128kb cache chip
 union TaggedAddress {
     constexpr explicit TaggedAddress(Address value = 0)  noexcept : base(value) { }
-    constexpr auto getTagIndex() const noexcept { return tagIndex; }
+    [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
+    [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
+    [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
+    [[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
+private:
     Address base;
     struct {
-        uint8_t lowest4 : 4;
+        uint8_t lowest : 5;
         uint8_t tagIndex : 8;
-        Address rest : 20;
+        Address rest : 19;
     };
 };
 constexpr uint8_t computeTagIndex(Address address) noexcept {
@@ -150,10 +154,14 @@ constexpr uint8_t computeTagIndex(Address address) noexcept {
 }
 constexpr Address computeL2TagIndex(Address address) noexcept {
     // we don't care about the upper most bit because the SRAM cache isn't large enough
-    return (address & 0xFFFF'FFF0) << 1;
+    return (address & 0xFFFF'FFE0) << 1;
 }
 constexpr bool EnableDebuggingCompileTime = false;
 class CacheEntry {
+public:
+    static constexpr size_t ActualCacheEntrySize = 40;
+    static constexpr auto SramCacheSize = 128_KB;
+    static constexpr auto SramCacheEntrySize = 64;
 public:
     CacheEntry() noexcept { };
     [[nodiscard]] constexpr bool valid() const noexcept { return valid_; }
@@ -161,7 +169,7 @@ public:
     static void invalidateAllEntries() noexcept {
 #ifdef ALLOW_SRAM_CACHE
         // we need to walk through all of the sram cache entries, committing all entries back to the backing store
-        for (uint32_t i = 0; i < 128_KB; i += 32) {
+        for (uint32_t i = 0; i < SramCacheSize; i += SramCacheSize) {
             CacheEntry target(i); // load from the cache and purge the hell out of it
             target.invalidate(); // try and invalidate it as well
         }
@@ -183,7 +191,7 @@ private:
         SPI.transfer(translation.bytes[2]);
         SPI.transfer(translation.bytes[1]);
         SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
-        SPI.transfer(backingStorage, 32);
+        SPI.transfer(backingStorage, ActualCacheEntrySize);
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         // and we are done!
     }
@@ -195,7 +203,7 @@ private:
         SPI.transfer(translation.bytes[2]);
         SPI.transfer(translation.bytes[1]);
         SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
-        SPI.transfer(backingStorage, 32); // this will garbage out things by design
+        SPI.transfer(backingStorage, ActualCacheEntrySize); // this will garbage out things by design
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
     }
 #endif
@@ -236,10 +244,10 @@ public:
         }
     }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
-    [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b111]; }
+    [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & 0b1111]; }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         dirty_ = true;
-        switch (auto& target = data[offset & 0b111];style) {
+        switch (auto& target = data[offset & 0b1111]; style) {
             case LoadStoreStyle::Full16:
                 target.wholeValue_ = value.wholeValue_;
                 break;
@@ -258,7 +266,7 @@ private:
     union {
         // align to 40-bytes, this does waste some space on l2 cache
         // (we have to make the entries 64-bytes in size for simple alignment)
-        byte backingStorage[40] = { 0 };
+        byte backingStorage[ActualCacheEntrySize] = { 0 };
         struct {
             bool valid_;
             bool dirty_;
@@ -269,7 +277,7 @@ private:
         };
     };
 };
-static_assert(sizeof(CacheEntry) == 40);
+static_assert(sizeof(CacheEntry) == CacheEntry::ActualCacheEntrySize);
 CacheEntry entries[256]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
