@@ -153,10 +153,6 @@ constexpr Address computeL2TagIndex(Address address) noexcept {
     return (address & 0xFFFF'FFF0) << 1;
 }
 constexpr bool EnableDebuggingCompileTime = false;
-bool CacheEntryDebugging = false;
-#ifdef ALLOW_SRAM_CACHE
-SPISettings sramCacheSpeed(10_MHz, MSBFIRST, SPI_MODE0);
-#endif
 class CacheEntry {
 public:
     CacheEntry() noexcept { };
@@ -165,13 +161,10 @@ public:
     static void invalidateAllEntries() noexcept {
 #ifdef ALLOW_SRAM_CACHE
         // we need to walk through all of the sram cache entries, committing all entries back to the backing store
-        constexpr uint32_t max = 128_KB;
-        CacheEntryDebugging = false;
-        for (uint32_t i = 0; i < max; i += 32) {
+        for (uint32_t i = 0; i < 128_KB; i += 32) {
             CacheEntry target(i); // load from the cache and purge the hell out of it
             target.invalidate(); // try and invalidate it as well
         }
-        CacheEntryDebugging = true;
 #endif
     }
 private:
@@ -181,26 +174,10 @@ private:
      * @param tag The address to use to pull from the SRAM cache
      */
     explicit CacheEntry(Address tag) noexcept {
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.println(F("NEW CACHE ENTRY!"));
-        }
         absorbEntryFromSRAMCache(tag);
     }
     void absorbEntryFromSRAMCache(Address newTag) noexcept {
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.println(F("absorbEntryFromSRAMCache {"));
-        }
-        Address actualSRAMIndex = computeL2TagIndex(newTag);
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.print(F("BEFORE LOAD: NEW TAG SRAM INDEX 0x"));
-            Serial.print(actualSRAMIndex, HEX);
-            Serial.print(F(" FROM 0x"));
-            Serial.println(newTag, HEX);
-            Serial.print(F("OLD TAG: 0x"));
-            Serial.println(tag, HEX);
-        }
-        SplitWord32 translation;
-        translation.wholeValue_ = actualSRAMIndex;
+        SplitWord32 translation(computeL2TagIndex(newTag));
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x03);
         SPI.transfer(translation.bytes[2]);
@@ -208,35 +185,11 @@ private:
         SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32);
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.print(F("AFTER LOAD: TAG 0x"));
-            Serial.println(tag, HEX);
-            Serial.print(F("IS VALID? "));
-            if (valid()) {
-                Serial.println(F("YES!"));
-            } else {
-                Serial.println(F("NO!"));
-            }
-        }
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.println(F("}"));
-        }
         // and we are done!
     }
 private:
     void commitToSRAM() noexcept {
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.println(F("commitToSRAM {"));
-        }
-        Address actualSRAMIndex = computeL2TagIndex(tag);
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.print(F("COMMIT: ACTUAL SRAM INDEX 0x"));
-            Serial.print(actualSRAMIndex, HEX);
-            Serial.print(F(" FROM 0x"));
-            Serial.println(tag, HEX);
-        }
-        SplitWord32 translation;
-        translation.wholeValue_ = actualSRAMIndex;
+        SplitWord32 translation(computeL2TagIndex(tag));
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x02);
         SPI.transfer(translation.bytes[2]);
@@ -244,44 +197,14 @@ private:
         SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, 32); // this will garbage out things by design
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.print(F("AFTER COMMIT: TAG 0x"));
-            Serial.println(tag, HEX);
-        }
-        if (EnableDebuggingCompileTime && CacheEntryDebugging) {
-            Serial.println(F("}"));
-        }
     }
 #endif
 public:
     void reset(Address newTag, MemoryThing& thing) noexcept {
 #ifdef ALLOW_SRAM_CACHE
-        if constexpr (EnableDebuggingCompileTime) {
-            Serial.println(F("RESET {"));
-            Serial.println(F("DUMPING OLD TAG OUT OF RAM BACK TO MEMORY"));
-        }
-
-        // pull the old tag out of sram and commit it
-        //CacheEntry currentSramBacking(tag);
-        // commit it back to memory by invalidating it
-        //currentSramBacking.invalidate();
-        if constexpr (EnableDebuggingCompileTime) {
-            Serial.print(F("COMMITTING OLD TAG AT 0x"));
-            Serial.print(tag, HEX);
-            Serial.println(F(" TO SRAM"));
-            if (valid()) {
-                Serial.println(F("\tNOTE: TAG IS VALID!"));
-            } else {
-                Serial.println(F("\tNOTE: TAG IS INVALID!"));
-            }
-        }
         // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
         // at no point can the cache ever be manipulated outside of this method
         commitToSRAM();
-        if constexpr (EnableDebuggingCompileTime) {
-            Serial.print(F("Pulling from new tag 0x"));
-            Serial.println(newTag, HEX);
-        }
         // pull the new tag's address out of sram and do some work with it
         absorbEntryFromSRAMCache(newTag);
         if (matches(newTag)) {
@@ -299,17 +222,9 @@ public:
         tag = newTag;
         backingThing = &thing;
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-#ifdef ALLOW_SRAM_CACHE
-        if constexpr (EnableDebuggingCompileTime) {
-            Serial.println(F("}"));
-        }
-#endif
     }
     void invalidate() noexcept {
         if (valid() && isDirty()) {
-            if constexpr (EnableDebuggingCompileTime) {
-                Serial.println(F("INVALIDATING CACHE!"));
-            }
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
             valid_ = false;
             dirty_ = false;
@@ -386,8 +301,7 @@ void purgeSRAMCache() noexcept {
     constexpr uint32_t max = 128_KB; // only one SRAM chip on board
     Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
     for (uint32_t i = 0; i < max; i += 32) {
-        SplitWord32 translation;
-        translation.wholeValue_ = i;
+        SplitWord32 translation(i);
         byte pagePurgeInstruction[36]{
                 0x02,
                 translation.bytes[2],
@@ -428,8 +342,7 @@ void purgeSRAMCache() noexcept {
     Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
     Serial.println(F("PURGING SRAM CACHE!"));
     for (uint32_t i = 0; i < max; i+= 32) {
-        SplitWord32 translation;
-        translation.wholeValue_ = i;
+        SplitWord32 translation(i);
         byte pagePurgeInstruction[36] {
                 0x02,
                 translation.bytes[2],
