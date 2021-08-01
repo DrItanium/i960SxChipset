@@ -256,20 +256,21 @@ public:
     }
 private:
     union {
-        // align to 32-bytes to make sure that it perfectly aligns to pages in the secondary level cache
-        byte backingStorage[32] = { 0 };
+        // align to 40-bytes, this does waste some space on l2 cache
+        // (we have to make the entries 64-bytes in size for simple alignment)
+        byte backingStorage[40] = { 0 };
         struct {
             bool valid_;
             bool dirty_;
             MemoryThing* backingThing; // 2 bytes
             Address tag; // 4 bytes
-            SplitWord16 data[8]; // 16 bytes
-            //uint64_t unused; // 8 bytes
+            SplitWord16 data[16]; // 32 bytes
+            // unused 24 bytes
         };
     };
 };
-static_assert(sizeof(CacheEntry) == 32);
-CacheEntry entries[256];
+static_assert(sizeof(CacheEntry) == 40);
+CacheEntry entries[256]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
     // commit all entries back
