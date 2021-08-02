@@ -26,75 +26,48 @@ public:
     uint8_t read8(Address address) noexcept override {
             return readOneByte(address);
     }
+    union BlockCapacityInfo {
+        constexpr explicit BlockCapacityInfo(size_t value = 0) : value_(value) { }
+        size_t value_;
+        struct {
+            // avr specific at this point
+            size_t slop : 5;
+            size_t times : 11;
+        };
+    };
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
-            // do not copy the buf but just use it as a transfer medium instead
-            SPI.beginTransaction(getSettings());
-            auto times = capacity / 32;
-            auto slop = capacity % 32;
-            auto* theBuf = buf;
-            SplitWord32 theAddress(address);
-            for (size_t i = 0; i < times; ++i, theBuf += 32, theAddress.wholeValue_ += 32) {
-                byte header[4]{
-                        0x02,
-                        theAddress.bytes[2],
-                        theAddress.bytes[1],
-                        theAddress.bytes[0],
-                };
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(header, 4);
-                SPI.transfer(theBuf, 32);
-                digitalWrite<enablePin, HIGH>();
-            }
-            // there should be some slop left over
-            if (slop > 0) {
-                byte header[36]{
-                        0x02,
-                        theAddress.bytes[2],
-                        theAddress.bytes[1],
-                        theAddress.bytes[0]
-                };
-
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(header, 4);
-                SPI.transfer(theBuf, slop);
-                digitalWrite<enablePin, HIGH>();
-            }
-            SPI.endTransaction();
-            return capacity;
+        SPI.beginTransaction(getSettings());
+        SplitWord32 theAddress(address);
+        digitalWrite<enablePin, LOW>();
+        SPI.transfer(0x02);
+        SPI.transfer(theAddress.bytes[2]);
+        SPI.transfer(theAddress.bytes[1]);
+        SPI.transfer(theAddress.bytes[0]);
+        SPI.transfer(buf, capacity);
+        digitalWrite<enablePin, HIGH>();
+        asm volatile ("nop");
+        asm volatile ("nop");
+        asm volatile ("nop");
+        asm volatile ("nop");
+        SPI.endTransaction();
+        return capacity;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
-            SPI.beginTransaction(getSettings());
-            auto times = capacity / 32;
-            auto slop = capacity % 32;
-            auto* theBuf = buf;
-            SplitWord32 theAddress(address);
-            for (size_t i = 0; i < times; ++i, theBuf += 32, theAddress.wholeValue_ += 32) {
-                byte header[4]{
-                        0x03,
-                        theAddress.bytes[2],
-                        theAddress.bytes[1],
-                        theAddress.bytes[0],
-                };
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(header, 4);
-                SPI.transfer(theBuf, 32);
-                digitalWrite<enablePin, HIGH>();
-            }
-            // there should be some slop left over
-            if (slop > 0) {
-                byte header[4]{
-                        0x03,
-                        theAddress.bytes[2],
-                        theAddress.bytes[1],
-                        theAddress.bytes[0],
-                };
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(header, 4);
-                SPI.transfer(theBuf, slop);
-                digitalWrite<enablePin, HIGH>();
-            }
-            SPI.endTransaction();
-            return capacity;
+        SPI.beginTransaction(getSettings());
+        SplitWord32 theAddress(address);
+        digitalWrite<enablePin, LOW>();
+        SPI.transfer(0x03);
+        SPI.transfer(theAddress.bytes[2]);
+        SPI.transfer(theAddress.bytes[1]);
+        SPI.transfer(theAddress.bytes[0]);
+        SPI.transfer(buf, capacity);
+        digitalWrite<enablePin, HIGH>();
+        asm volatile ("nop");
+        asm volatile ("nop");
+        asm volatile ("nop");
+        asm volatile ("nop");
+        SPI.endTransaction();
+        return capacity;
     }
     uint16_t read16(Address address) noexcept override {
             return readTwoBytes(address);
@@ -106,25 +79,28 @@ public:
             writeTwoBytes(address, value);
     }
     void begin() noexcept override {
-            delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-            SPI.beginTransaction(getSettings());
-            digitalWrite<enablePin, LOW>();
-            SPI.transfer(0x66);
-            digitalWrite<enablePin, HIGH>();
-            asm("nop");
-            digitalWrite<enablePin, LOW>();
-            SPI.transfer(0x99);
-            digitalWrite<enablePin, HIGH>();
-            SPI.endTransaction();
-            Serial.println(F("CLEARING PSRAM!"));
-            for (uint32_t addr = 0; addr < Size; addr +=32) {
-                SplitWord32 translated(addr);
-                byte theInstruction[36]{
-                        0x02,
-                        translated.bytes[2],
-                        translated.bytes[1],
-                        translated.bytes[0],
-                        0, 0, 0, 0, 0, 0, 0, 0,
+        delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
+        SPI.beginTransaction(getSettings());
+        digitalWrite<enablePin, LOW>();
+        SPI.transfer(0x66);
+        digitalWrite<enablePin, HIGH>();
+        asm volatile ("nop");
+        asm volatile ("nop");
+        asm volatile ("nop");
+        asm volatile ("nop");
+        digitalWrite<enablePin, LOW>();
+        SPI.transfer(0x99);
+        digitalWrite<enablePin, HIGH>();
+        SPI.endTransaction();
+        Serial.println(F("CLEARING PSRAM!"));
+        for (uint32_t addr = 0; addr < Size; addr +=32) {
+            SplitWord32 translated(addr);
+            byte theInstruction[36]{
+                    0x02,
+                    translated.bytes[2],
+                    translated.bytes[1],
+                    translated.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0,
