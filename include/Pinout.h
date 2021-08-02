@@ -340,11 +340,6 @@ inline void pulse() noexcept {
     thePort ^= getPinMask<pin>();
     SREG = theSREG;
 }
-template<i960Pinout pin>
-inline void toggle() noexcept {
-    auto& thePort = getAssociatedInputPort<pin>();
-    thePort |= getPinMask<pin>();
-}
 
 template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() {
@@ -422,9 +417,6 @@ struct DigitalPin {
         inline static void pulse() noexcept {   \
             ::pulse<pin>();                                     \
         }                                       \
-        inline static void togglePin() noexcept { \
-            ::toggle<pin>(); \
-        } \
     }
 #define DefInputPin(pin, asserted, deasserted) \
     template<> \
