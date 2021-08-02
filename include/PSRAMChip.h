@@ -16,7 +16,7 @@ template<i960Pinout enablePin>
 class PSRAMChip : public MemoryThing {
 public:
     static SPISettings& getSettings() noexcept {
-        static SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
+        static SPISettings psramSettings(10_MHz, MSBFIRST, SPI_MODE0);
         return psramSettings;
     }
     static constexpr uint32_t Size = 8_MB;
@@ -24,8 +24,6 @@ public:
     explicit PSRAMChip(Address start) : MemoryThing(start, start + Size) { }
     ~PSRAMChip() override = default;
     uint8_t read8(Address address) noexcept override {
-            Serial.print(F("PSRAM: READ8 FROM 0x"));
-            Serial.println(address, HEX);
             return readOneByte(address);
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
@@ -34,12 +32,13 @@ public:
             auto times = capacity / 32;
             auto slop = capacity % 32;
             auto* theBuf = buf;
-            for (size_t i = 0; i < times; ++i, theBuf += 32) {
+            SplitWord32 theAddress(address);
+            for (size_t i = 0; i < times; ++i, theBuf += 32, theAddress.wholeValue_ += 32) {
                 byte header[4]{
                         0x02,
-                        static_cast<byte>(address >> 16),
-                        static_cast<byte>(address >> 8),
-                        static_cast<byte>(address),
+                        theAddress.bytes[2],
+                        theAddress.bytes[1],
+                        theAddress.bytes[0],
                 };
                 digitalWrite<enablePin, LOW>();
                 SPI.transfer(header, 4);
@@ -50,9 +49,9 @@ public:
             if (slop > 0) {
                 byte header[36]{
                         0x02,
-                        static_cast<byte>(address >> 16),
-                        static_cast<byte>(address >> 8),
-                        static_cast<byte>(address),
+                        theAddress.bytes[2],
+                        theAddress.bytes[1],
+                        theAddress.bytes[0]
                 };
 
                 digitalWrite<enablePin, LOW>();
@@ -68,12 +67,13 @@ public:
             auto times = capacity / 32;
             auto slop = capacity % 32;
             auto* theBuf = buf;
-            for (size_t i = 0; i < times; ++i, theBuf += 32) {
+            SplitWord32 theAddress(address);
+            for (size_t i = 0; i < times; ++i, theBuf += 32, theAddress.wholeValue_ += 32) {
                 byte header[4]{
                         0x03,
-                        static_cast<byte>(address >> 16),
-                        static_cast<byte>(address >> 8),
-                        static_cast<byte>(address),
+                        theAddress.bytes[2],
+                        theAddress.bytes[1],
+                        theAddress.bytes[0],
                 };
                 digitalWrite<enablePin, LOW>();
                 SPI.transfer(header, 4);
@@ -84,35 +84,25 @@ public:
             if (slop > 0) {
                 byte header[4]{
                         0x03,
-                        static_cast<byte>(address >> 16),
-                        static_cast<byte>(address >> 8),
-                        static_cast<byte>(address),
+                        theAddress.bytes[2],
+                        theAddress.bytes[1],
+                        theAddress.bytes[0],
                 };
                 digitalWrite<enablePin, LOW>();
                 SPI.transfer(header, 4);
-                SPI.transfer(theBuf, 32);
+                SPI.transfer(theBuf, slop);
                 digitalWrite<enablePin, HIGH>();
             }
             SPI.endTransaction();
             return capacity;
     }
     uint16_t read16(Address address) noexcept override {
-            Serial.print(F("PSRAM: READ16 FROM 0x"));
-            Serial.println(address, HEX);
             return readTwoBytes(address);
     }
     void write8(Address address, uint8_t value) noexcept override {
-            Serial.print(F("PSRAM: WRITE8 0x"));
-            Serial.print(value, HEX);
-            Serial.print(F(" to 0x"));
-            Serial.println(address, HEX);
             writeOneByte(address, value);
     }
     void write16(Address address, uint16_t value) noexcept override {
-            Serial.print(F("PSRAM: WRITE16 0x"));
-            Serial.print(value, HEX);
-            Serial.print(F(" to 0x"));
-            Serial.println(address, HEX);
             writeTwoBytes(address, value);
     }
     void begin() noexcept override {
@@ -128,11 +118,12 @@ public:
             SPI.endTransaction();
             Serial.println(F("CLEARING PSRAM!"));
             for (uint32_t addr = 0; addr < Size; addr +=32) {
+                SplitWord32 translated(addr);
                 byte theInstruction[36]{
                         0x02,
-                        static_cast<byte>(addr >> 16),
-                        static_cast<byte>(addr >> 8),
-                        static_cast<byte>(addr),
+                        translated.bytes[2],
+                        translated.bytes[1],
+                        translated.bytes[0],
                         0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0,
@@ -140,9 +131,9 @@ public:
                 };
                 doSPI(theInstruction, 36);
                 theInstruction[0]  = 0x03;
-                theInstruction[1] =  static_cast<byte>(addr >> 16);
-                theInstruction[2] =  static_cast<byte>(addr >> 8);
-                theInstruction[3] = static_cast<byte>(addr);
+                theInstruction[1] =  translated.bytes[2];
+                theInstruction[2] =  translated.bytes[1];
+                theInstruction[3] = translated.bytes[0];
                 // rest of the values do not matter!
                 doSPI(theInstruction, 36);
                 byte* ptr = theInstruction + 4;
@@ -183,46 +174,49 @@ private:
         asm volatile ("nop"); // 100 ns
     }
     uint16_t readTwoBytes(Address addr) noexcept {
+        SplitWord32 translated(addr);
         byte theInstruction[6]{
                 0x03,
-                static_cast<byte>(addr >> 16),
-                static_cast<byte>(addr >> 8),
-                static_cast<byte>(addr),
+                translated.bytes[2],
+                translated.bytes[1],
+                translated.bytes[0],
                 0, 0
         };
         doSPI(theInstruction, 6);
-        auto lower = static_cast<uint16_t>(theInstruction[4]);
-        auto upper = static_cast<uint16_t>(theInstruction[5]) << 8;
-        return lower | upper;
+        return SplitWord16(theInstruction[4], theInstruction[5]).getWholeValue();
     }
     uint8_t readOneByte(Address addr) noexcept {
+        SplitWord32 translated(addr);
         byte theInstruction[5]{
                 0x03,
-                static_cast<byte>(addr >> 16),
-                static_cast<byte>(addr >> 8),
-                static_cast<byte>(addr),
+                translated.bytes[2],
+                translated.bytes[1],
+                translated.bytes[0],
                 0
         };
         doSPI(theInstruction, 5);
         return theInstruction[4];
     }
     void writeTwoBytes(Address addr, uint16_t value) noexcept {
+        SplitWord32 theAddress(addr);
+        SplitWord16 theValue(value);
         byte theInstruction[6] {
                 0x02,
-                static_cast<byte>(addr >> 16),
-                static_cast<byte>(addr >> 8),
-                static_cast<byte>(addr),
-                static_cast<byte>(value),
-                static_cast<byte>(value >> 8)
+                theAddress.bytes[2],
+                theAddress.bytes[1],
+                theAddress.bytes[0],
+                theValue.bytes[0],
+                theValue.bytes[1],
         };
         doSPI(theInstruction, 6);
     }
     void writeOneByte(Address addr, uint8_t value) noexcept {
+        SplitWord32 theAddress(addr);
         byte theInstruction[5] {
                 0x02,
-                static_cast<byte>(addr >> 16),
-                static_cast<byte>(addr >> 8),
-                static_cast<byte>(addr),
+                theAddress.bytes[2],
+                theAddress.bytes[1],
+                theAddress.bytes[0],
                 static_cast<byte>(value),
         };
         doSPI(theInstruction, 5);
