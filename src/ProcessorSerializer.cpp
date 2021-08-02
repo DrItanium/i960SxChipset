@@ -69,9 +69,9 @@ namespace
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
     inline void doSPI(uint8_t* buffer, size_t count) {
-        DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(buffer, count);
-        DigitalPin<i960Pinout::GPIOSelect>::togglePin();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {

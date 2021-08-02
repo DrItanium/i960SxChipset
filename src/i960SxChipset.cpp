@@ -524,6 +524,7 @@ auto& getLine(MemoryThing& theThing) noexcept {
     }
     return theEntry;
 }
+//volatile byte cycleIndex = 0;
 void loop() {
     auto signalDone = []() noexcept {
         // this seems to be faster as a lambda for some reason
@@ -586,6 +587,10 @@ void loop() {
                 }
             }
         }
+        //digitalWrite<i960Pinout::SPI_OFFSET0>((cycleIndex & 0b001) != 0 ? HIGH : LOW);
+        //digitalWrite<i960Pinout::SPI_OFFSET1>((cycleIndex & 0b010) != 0 ? HIGH : LOW);
+        //digitalWrite<i960Pinout::SPI_OFFSET2>((cycleIndex & 0b100) != 0 ? HIGH : LOW);
+        //++cycleIndex;
     } while (true);
 }
 
