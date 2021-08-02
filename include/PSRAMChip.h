@@ -6,6 +6,7 @@
 #define I960SXCHIPSET_PSRAMCHIP_H
 #include <Arduino.h>
 #include <SPI.h>
+#include "MCUPlatform.h"
 #include "Pinout.h"
 #include "MemoryThing.h"
 /**
@@ -14,7 +15,10 @@
 template<i960Pinout enablePin>
 class PSRAMChip : public MemoryThing {
 public:
-    static SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
+    static SPISettings& getSettings() noexcept {
+        static SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
+        return psramSettings;
+    }
     static constexpr uint32_t Size = 8_MB;
     static constexpr uint32_t Mask = Size - 1;
     explicit PSRAMChip(Address start) : MemoryThing(start, start + Size) { }
@@ -26,7 +30,7 @@ public:
     }
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
             // do not copy the buf but just use it as a transfer medium instead
-            SPI.beginTransaction(psramSettings);
+            SPI.beginTransaction(getSettings());
             auto times = capacity / 32;
             auto slop = capacity % 32;
             auto* theBuf = buf;
@@ -60,7 +64,7 @@ public:
             return capacity;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
-            SPI.beginTransaction(psramSettings);
+            SPI.beginTransaction(getSettings());
             auto times = capacity / 32;
             auto slop = capacity % 32;
             auto* theBuf = buf;
@@ -113,7 +117,7 @@ public:
     }
     void begin() noexcept override {
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-            SPI.beginTransaction(psramSettings);
+            SPI.beginTransaction(getSettings());
             digitalWrite<enablePin, LOW>();
             SPI.transfer(0x66);
             digitalWrite<enablePin, HIGH>();
@@ -167,16 +171,16 @@ public:
     }
 private:
     void doSPI(byte* command, size_t length) {
-        SPI.beginTransaction(psramSettings);
+        SPI.beginTransaction(getSettings());
         digitalWrite<enablePin, LOW>();
         SPI.transfer(command, length);
         digitalWrite<enablePin, HIGH>();
         SPI.endTransaction();
         // make extra sure that the psram has enough time to do its refresh in between operations
-        asm("nop"); // 100 ns
-        asm("nop"); // 100 ns
-        asm("nop"); // 100 ns
-        asm("nop"); // 100 ns
+        asm volatile ("nop"); // 100 ns
+        asm volatile ("nop"); // 100 ns
+        asm volatile ("nop"); // 100 ns
+        asm volatile ("nop"); // 100 ns
     }
     uint16_t readTwoBytes(Address addr) noexcept {
         byte theInstruction[6]{
