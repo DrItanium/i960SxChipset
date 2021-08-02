@@ -16,7 +16,7 @@ template<i960Pinout enablePin>
 class PSRAMChip : public MemoryThing {
 public:
     static SPISettings& getSettings() noexcept {
-        static SPISettings psramSettings(5_MHz, MSBFIRST, SPI_MODE0);
+        static SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
         return psramSettings;
     }
     static constexpr uint32_t Size = 8_MB;
@@ -105,17 +105,25 @@ public:
                     17, 18, 19, 20, 21, 22, 23, 24,
                     25, 26, 27, 28, 29, 30, 31, 32,
             };
+            byte theInstruction2[36]{
+                    0x03,
+                    translated.bytes[2],
+                    translated.bytes[1],
+                    translated.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+            };
             doSPI(theInstruction, 36);
-            theInstruction[0]  = 0x03;
-            theInstruction[1] =  translated.bytes[2];
-            theInstruction[2] =  translated.bytes[1];
-            theInstruction[3] = translated.bytes[0];
             // rest of the values do not matter!
-            doSPI(theInstruction, 36);
-            byte* ptr = theInstruction + 4;
+            doSPI(theInstruction2, 36);
+            byte* ptr = theInstruction2 + 4;
             for (int i = 0; i < 32; ++i) {
                 if (ptr[i] != (i+1)) {
-                    Serial.print(F("MISMATCH GOT 0x"));
+                    Serial.print(F("MISMATCH @ ADDRESS 0x"));
+                    Serial.print(translated.wholeValue_, HEX);
+                    Serial.print(F(" GOT 0x"));
                     Serial.print(ptr[i], HEX);
                     Serial.print(F(" EXPECTED 0x"));
                     Serial.println((i + 1), HEX);
@@ -141,14 +149,20 @@ public:
                         0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0,
                 };
+                byte theInstruction2[36]{
+                        0x03,
+                        translated.bytes[2],
+                        translated.bytes[1],
+                        translated.bytes[0],
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                };
                 doSPI(theInstruction, 36);
-                theInstruction[0]  = 0x03;
-                theInstruction[1] =  translated.bytes[2];
-                theInstruction[2] =  translated.bytes[1];
-                theInstruction[3] = translated.bytes[0];
                 // rest of the values do not matter!
-                doSPI(theInstruction, 36);
-                byte* ptr = theInstruction + 4;
+                doSPI(theInstruction2, 36);
+                byte* ptr = theInstruction2 + 4;
                 for (int i = 0; i < 32; ++i) {
                     if (ptr[i] != 0) {
                         Serial.print(F("MISMATCH GOT 0x"));
