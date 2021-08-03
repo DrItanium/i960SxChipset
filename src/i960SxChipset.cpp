@@ -117,12 +117,12 @@ RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters,
 ROMTextSection rom;
 ROMDataSection dataRom;
 SDCardFilesystemInterface fs(0x300);
-OnboardSRAMBlock sramBlock(RAMStart);
+//OnboardSRAMBlock sramBlock(RAMStart);
 //OnboardPSRAM psram(RAMStart);
 // list of io memory devices to walk through
 MemoryThing* things[] {
  //       &psram, // must come before ram to overlay properly
-        &sramBlock,
+ //       &sramBlock,
         &ram,
         &rom,
         &dataRom,
@@ -307,7 +307,7 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
     displayReady = true;
-    sramBlock.begin();
+    //sramBlock.begin();
     //psram.begin();
     rom.begin();
     dataRom.begin();

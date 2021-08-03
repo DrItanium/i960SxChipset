@@ -22,6 +22,10 @@ public:
     explicit SRAMChip(Address start) : MemoryThing(start, start + Size) { }
     ~SRAMChip() override = default;
 
+    static SPISettings& getSettings() noexcept {
+        static SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
+        return psramSettings;
+    }
     bool respondsTo(Address address) const noexcept override {
         return MemoryThing::respondsTo(address);
     }
@@ -37,10 +41,12 @@ public:
                 trackedAddress.bytes[1],
                 trackedAddress.bytes[0],
         };
+        SPI.beginTransaction(getSettings());
         digitalWrite<enablePin, LOW>();
         SPI.transfer(header, 4);
         SPI.transfer(buf, capacity);
         digitalWrite<enablePin, HIGH>();
+        SPI.endTransaction();
         return capacity;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
@@ -51,10 +57,12 @@ public:
                 trackedAddress.bytes[1],
                 trackedAddress.bytes[0],
         };
+        SPI.beginTransaction(getSettings());
         digitalWrite<enablePin, LOW>();
         SPI.transfer(header, 4);
         SPI.transfer(buf, capacity);
         digitalWrite<enablePin, HIGH>();
+        SPI.endTransaction();
         return capacity;
     }
     uint16_t read16(Address address) noexcept override {
@@ -67,6 +75,7 @@ public:
             writeTwoBytes(address, value);
     }
     void begin() noexcept override {
+        SPI.beginTransaction(getSettings());
             digitalWrite(i960Pinout::CACHE_EN_, LOW);
             SPI.transfer(0xFF);
             digitalWrite(i960Pinout::CACHE_EN_, HIGH);
@@ -150,12 +159,15 @@ public:
                 }
             }
             Serial.println(F("DONE PURGING SRAM CACHE!"));
+            SPI.endTransaction();
     }
 private:
     void doSPI(byte* command, size_t length) {
+        SPI.beginTransaction(getSettings());
         digitalWrite<enablePin, LOW>();
         SPI.transfer(command, length);
         digitalWrite<enablePin, HIGH>();
+        SPI.endTransaction();
         // make extra sure that the psram has enough time to do its refresh in between operations
     }
     uint16_t readTwoBytes(Address addr) noexcept {
