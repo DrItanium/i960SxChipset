@@ -146,13 +146,12 @@ public:
      * @return the number of bytes actually read into the buffer
      */
     virtual size_t read(uint32_t baseAddress, byte* buffer, size_t size) noexcept {
-        auto relativeAddress = makeAddressRelative(baseAddress);
         // compute how many bytes we can actually write within this memory thing in case the buffer spans multiple devices
         size_t count = size;
         if (auto actualLength = lengthFollowingTargetAddress(baseAddress); size > actualLength) {
             count = actualLength;
         }
-        return blockRead(relativeAddress, buffer, count);
+        return blockRead(makeAddressRelative(baseAddress), buffer, count);
     }
     /**
      * @brief Turn off any sort of caching that this memory thing has
