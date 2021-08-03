@@ -19,11 +19,12 @@ class SRAMChip : public MemoryThing {
 public:
     static constexpr uint32_t Size = 128_KB;
     static constexpr uint32_t Mask = Size - 1;
+    static constexpr auto EnablePin = enablePin;
     explicit SRAMChip(Address start) : MemoryThing(start, start + Size) { }
     ~SRAMChip() override = default;
 
     static SPISettings& getSettings() noexcept {
-        static SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
+        static SPISettings psramSettings(1_MHz, MSBFIRST, SPI_MODE0);
         return psramSettings;
     }
     bool respondsTo(Address address) const noexcept override {
@@ -66,107 +67,113 @@ public:
         return capacity;
     }
     uint16_t read16(Address address) noexcept override {
-            return readTwoBytes(address);
+        return readTwoBytes(address);
     }
     void write8(Address address, uint8_t value) noexcept override {
-            writeOneByte(address, value);
+        writeOneByte(address, value);
     }
     void write16(Address address, uint16_t value) noexcept override {
-            writeTwoBytes(address, value);
+        writeTwoBytes(address, value);
     }
     void begin() noexcept override {
         SPI.beginTransaction(getSettings());
-            digitalWrite(i960Pinout::CACHE_EN_, LOW);
-            SPI.transfer(0xFF);
-            digitalWrite(i960Pinout::CACHE_EN_, HIGH);
-            constexpr uint32_t max = 128_KB; // only one SRAM chip on board
-            Serial.println(F("CHECKING SRAM..."));
-            for (uint32_t i = 0; i < max; i += 32) {
-                SplitWord32 translation(i);
-                byte pagePurgeInstruction[36]{
-                        0x02,
-                        translation.bytes[2],
-                        translation.bytes[1],
-                        translation.bytes[0],
-                        1, 2, 3, 4, 5, 6, 7, 8,
-                        9, 10, 11, 12, 13, 14, 15, 16,
-                        17, 18, 19, 20, 21, 22, 23, 24,
-                        25, 26, 27, 28, 29, 30, 31, 32,
-                };
-                byte pageReadInstruction[36]{
-                        0x03,
-                        translation.bytes[2],
-                        translation.bytes[1],
-                        translation.bytes[0],
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                };
-                digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-                SPI.transfer(pagePurgeInstruction, 36);
-                digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-                digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-                SPI.transfer(pageReadInstruction, 36);
-                digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-                for (int x = 4; x < 36; ++x) {
-                    auto a = pageReadInstruction[x];
-                    auto index = x - 3;
-                    if (a != index) {
-                        Serial.print(F("MISMATCH 0x"));
-                        Serial.print(index, HEX);
-                        Serial.print(F(" => 0x"));
-                        Serial.println(a, HEX);
-                        signalHaltState(F("SRAM CHECK FAILURE! HALTING!!"));
-                    }
+        digitalWrite<EnablePin, LOW>();
+        SPI.transfer(0xFF);
+        digitalWrite<EnablePin, HIGH>();
+        constexpr uint32_t max = 128_KB; // only one SRAM chip on board
+        Serial.println(F("CHECKING SRAM..."));
+        for (uint32_t i = 0; i < max; i += 32) {
+            SplitWord32 translation(i);
+            byte pagePurgeInstruction[36]{
+                    0x02,
+                    translation.bytes[2],
+                    translation.bytes[1],
+                    translation.bytes[0],
+                    1, 2, 3, 4, 5, 6, 7, 8,
+                    9, 10, 11, 12, 13, 14, 15, 16,
+                    17, 18, 19, 20, 21, 22, 23, 24,
+                    25, 26, 27, 28, 29, 30, 31, 32,
+            };
+            byte pageReadInstruction[36]{
+                    0x03,
+                    translation.bytes[2],
+                    translation.bytes[1],
+                    translation.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+            };
+            digitalWrite<EnablePin, LOW>();
+            SPI.transfer(pagePurgeInstruction, 36);
+            digitalWrite<EnablePin, HIGH>();
+            digitalWrite<EnablePin, LOW>();
+            SPI.transfer(pageReadInstruction, 36);
+            digitalWrite<EnablePin, HIGH>();
+            for (int x = 4; x < 36; ++x) {
+                auto a = pageReadInstruction[x];
+                auto index = x - 3;
+                if (a != index) {
+                    Serial.print(F("MISMATCH 0x"));
+                    Serial.print(index, HEX);
+                    Serial.print(F(" => 0x"));
+                    Serial.println(a, HEX);
+                    available_ = false;
+                    break;
                 }
             }
+        }
+        if (available_) {
             Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
             Serial.println(F("PURGING SRAM!"));
             for (uint32_t i = 0; i < max; i+= 32) {
                 SplitWord32 translation(i);
                 byte pagePurgeInstruction[36] {
-                        0x02,
-                        translation.bytes[2],
-                        translation.bytes[1],
-                        translation.bytes[0],
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                };
+                    0x02,
+                    translation.bytes[2],
+                    translation.bytes[1],
+                    translation.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    };
                 byte pageReadInstruction[36]{
-                        0x03,
-                        translation.bytes[2],
-                        translation.bytes[1],
-                        translation.bytes[0],
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                };
-                digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+                    0x03,
+                    translation.bytes[2],
+                    translation.bytes[1],
+                    translation.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    };
+                digitalWrite<EnablePin, LOW>();
                 SPI.transfer(pagePurgeInstruction, 36);
-                digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-                digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+                digitalWrite<EnablePin, HIGH>();
+                digitalWrite<EnablePin, LOW>();
                 SPI.transfer(pageReadInstruction, 36);
-                digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+                digitalWrite<EnablePin, HIGH>();
                 for (int x = 4; x < 36; ++x) {
                     if (pageReadInstruction[x] != 0) {
                         Serial.print(F("CHECK FAILURE!!!"));
-                        signalHaltState(F("SRAM PURGE FAILURE! HALTING!!"));
+                        available_ = false;
+                        break;
                     }
                 }
             }
-            Serial.println(F("DONE PURGING SRAM CACHE!"));
-            SPI.endTransaction();
+            if (available_) {
+                Serial.println(F("DONE PURGING SRAM CACHE!"));
+            }
+        }
+        SPI.endTransaction();
     }
 private:
     void doSPI(byte* command, size_t length) {
         SPI.beginTransaction(getSettings());
-        digitalWrite<enablePin, LOW>();
+        digitalWrite<EnablePin, LOW>();
         SPI.transfer(command, length);
-        digitalWrite<enablePin, HIGH>();
+        digitalWrite<EnablePin, HIGH>();
         SPI.endTransaction();
         // make extra sure that the psram has enough time to do its refresh in between operations
     }
@@ -218,8 +225,10 @@ private:
         };
         doSPI(theInstruction, 5);
     }
+public:
+    constexpr auto isAvailable() const noexcept { return available_; }
 private:
-    bool available_ = false;
+    bool available_ = true;
 };
 /**
  * @brief Wraps eight different SPI sram chips into a single object
@@ -249,16 +258,16 @@ public:
     static_assert(Mask == 0x0F'FFFF, "SRAMBlock8 mask is wrong!");
 public:
     explicit SRAMBlock8(Address base) : MemoryThing(base, base + Size),
-    backingChips{
-        SingleSRAMChip (base + (0 * SingleChipSize)),
-        SingleSRAMChip (base + (1 * SingleChipSize)),
-        SingleSRAMChip (base + (2 * SingleChipSize)),
-        SingleSRAMChip (base + (3 * SingleChipSize)),
-        SingleSRAMChip (base + (4 * SingleChipSize)),
-        SingleSRAMChip (base + (5 * SingleChipSize)),
-        SingleSRAMChip (base + (6 * SingleChipSize)),
-        SingleSRAMChip (base + (7 * SingleChipSize)),
-    } {
+                                        backingChips{
+                                                SingleSRAMChip (base + (0 * SingleChipSize)),
+                                                SingleSRAMChip (base + (1 * SingleChipSize)),
+                                                SingleSRAMChip (base + (2 * SingleChipSize)),
+                                                SingleSRAMChip (base + (3 * SingleChipSize)),
+                                                SingleSRAMChip (base + (4 * SingleChipSize)),
+                                                SingleSRAMChip (base + (5 * SingleChipSize)),
+                                                SingleSRAMChip (base + (6 * SingleChipSize)),
+                                                SingleSRAMChip (base + (7 * SingleChipSize)),
+                                        } {
 
     }
     ~SRAMBlock8() override = default;
@@ -368,17 +377,29 @@ public:
             for (int i = 0; i < 8; ++i) {
                 setChipId(i);
                 backingChips[i].begin();
+                if (!backingChips[i].isAvailable()) {
+                    available_ = false;
+                    break;
+                }
             }
-            Serial.println(F("Done bringing up sram memory blocks!"));
+            if (available_) {
+                Serial.println(F("Done bringing up sram memory blocks!"));
+            } else {
+                Serial.println(F("DISABLING ONBOARD SRAM ACCESS"));
+            }
         }
     }
+    bool respondsTo(Address address) const noexcept override {
+        return available_ && MemoryThing::respondsTo(address);
+    }
 private:
+    bool available_ = true;
     bool initialized_ = false;
     Decomposition currentIndex_;
     SingleSRAMChip backingChips[8];
 };
 using OnboardSRAMBlock = SRAMBlock8<i960Pinout::PSRAM_EN,
-                                    i960Pinout::SPI_OFFSET0,
-                                    i960Pinout::SPI_OFFSET1,
-                                    i960Pinout::SPI_OFFSET2>;
+        i960Pinout::SPI_OFFSET0,
+        i960Pinout::SPI_OFFSET1,
+        i960Pinout::SPI_OFFSET2>;
 #endif //I960SXCHIPSET_SRAMCHIP_H
