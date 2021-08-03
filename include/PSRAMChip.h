@@ -162,19 +162,6 @@ public:
                 doSPI(theInstruction, 36);
                 // rest of the values do not matter!
                 doSPI(theInstruction2, 36);
-                byte* ptr = theInstruction2 + 4;
-                for (int i = 0; i < 32; ++i) {
-                    if (ptr[i] != 0) {
-                        Serial.print(F("MISMATCH GOT 0x"));
-                        Serial.print(ptr[i], HEX);
-                        Serial.println(F(" EXPECTED 0x0"));
-                        available_ = false;
-                        break;
-                    }
-                }
-                if (!available_) {
-                    break;
-                }
             }
         }
         SPI.endTransaction();

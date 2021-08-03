@@ -545,6 +545,8 @@ void loop() {
         // keep processing data requests until we
         // when we do the transition, record the information we need
         processorInterface.newDataCycle();
+        //Serial.print(F("REQUESTED ADDRESS: 0x"));
+        //Serial.println(processorInterface.getAddress(), HEX);
         if (auto* theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); !theThing) {
             // halt here because we've entered into unmapped memory state
             if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
