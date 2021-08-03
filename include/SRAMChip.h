@@ -108,6 +108,7 @@ public:
                         Serial.print(index, HEX);
                         Serial.print(F(" => 0x"));
                         Serial.println(a, HEX);
+                        signalHaltState(F("SRAM CHECK FAILURE! HALTING!!"));
                     }
                 }
             }
@@ -144,6 +145,7 @@ public:
                 for (int x = 4; x < 36; ++x) {
                     if (pageReadInstruction[x] != 0) {
                         Serial.print(F("CHECK FAILURE!!!"));
+                        signalHaltState(F("SRAM PURGE FAILURE! HALTING!!"));
                     }
                 }
             }
@@ -204,8 +206,8 @@ private:
         };
         doSPI(theInstruction, 5);
     }
-public:
-    [[nodiscard]] bool bypassesCache() const noexcept override { return true; }
+private:
+    bool available_ = false;
 };
 /**
  * @brief Wraps eight different SPI sram chips into a single object
@@ -228,12 +230,25 @@ public:
     static constexpr auto NumSRAMChips = 8;
     static constexpr auto Size = NumSRAMChips * SingleSRAMChip::Size;
     static constexpr auto Mask = Size - 1;
+    static constexpr auto SingleChipSize = SingleSRAMChip::Size;
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
     static_assert(Size == 1_MB, "SRAMBlock8 needs to be 1 megabyte in size");
     static_assert(Mask == 0x0F'FFFF, "SRAMBlock8 mask is wrong!");
 public:
-    explicit SRAMBlock8(Address base) : MemoryThing(base, base + Size) { }
+    explicit SRAMBlock8(Address base) : MemoryThing(base, base + Size),
+    backingChips{
+        SingleSRAMChip (base + (0 * SingleChipSize)),
+        SingleSRAMChip (base + (1 * SingleChipSize)),
+        SingleSRAMChip (base + (2 * SingleChipSize)),
+        SingleSRAMChip (base + (3 * SingleChipSize)),
+        SingleSRAMChip (base + (4 * SingleChipSize)),
+        SingleSRAMChip (base + (5 * SingleChipSize)),
+        SingleSRAMChip (base + (6 * SingleChipSize)),
+        SingleSRAMChip (base + (7 * SingleChipSize)),
+    } {
+
+    }
     ~SRAMBlock8() override = default;
     union Address20 {
         constexpr explicit Address20(Address value = 0) : base(value) { }
@@ -334,6 +349,7 @@ private:
 public:
     void begin() noexcept override  {
         if (!initialized_) {
+            Serial.println(F("BRINGING UP SRAM MEMORY BLOCK"));
             initialized_ = true;
             currentIndex_.index = 0;
             setChipId(0);
@@ -341,6 +357,7 @@ public:
                 setChipId(i);
                 backingChips[i].begin();
             }
+            Serial.println(F("Done bringing up sram memory blocks!"));
         }
     }
 private:
