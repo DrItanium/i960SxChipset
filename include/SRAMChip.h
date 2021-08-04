@@ -122,6 +122,9 @@ public:
                     break;
                 }
             }
+            if (!available_) {
+                break;
+            }
         }
         if (available_) {
             Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
@@ -160,6 +163,9 @@ public:
                         available_ = false;
                         break;
                     }
+                }
+                if (!available_) {
+                    break;
                 }
             }
             if (available_) {
