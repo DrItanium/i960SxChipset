@@ -40,8 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
-//#include "PSRAMChip.h"
-#include "SRAMChip.h"
 #define ALLOW_SRAM_CACHE
 constexpr bool EnableDebuggingCompileTime = false;
 
@@ -117,12 +115,8 @@ RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters,
 ROMTextSection rom;
 ROMDataSection dataRom;
 SDCardFilesystemInterface fs(0x300);
-OnboardSRAMBlock sramBlock(RAMStart);
-//OnboardPSRAM psram(RAMStart);
 // list of io memory devices to walk through
 MemoryThing* things[] {
- //       &psram, // must come before ram to overlay properly
-        &sramBlock,
         &ram,
         &rom,
         &dataRom,
@@ -311,7 +305,6 @@ void setupPeripherals() {
     rom.begin();
     dataRom.begin();
     ram.begin();
-    sramBlock.begin();
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
