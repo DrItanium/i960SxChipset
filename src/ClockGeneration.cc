@@ -5,7 +5,7 @@
 #include "ClockGeneration.h"
 
 void setupClockSource() noexcept {
-#ifdef ARDUINO_ADAFRUIT_GRAND_CENTRAL_M4
+#ifdef ARDUINO_GRAND_CENTRAL_M4
 constexpr auto ClockDivider_10MHZ = 6;
 constexpr auto ClockDivider_12MHZ = 5;
 constexpr auto ClockDivider_15MHZ = 4;
