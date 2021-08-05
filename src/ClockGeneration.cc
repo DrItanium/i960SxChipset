@@ -2,17 +2,17 @@
 // Created by jwscoggins on 8/5/21.
 //
 
+#include <Arduino.h>
 #include "ClockGeneration.h"
 
 void setupClockSource() noexcept {
 #ifdef ARDUINO_GRAND_CENTRAL_M4
-constexpr auto ClockDivider_10MHZ = 6;
-constexpr auto ClockDivider_12MHZ = 5;
-constexpr auto ClockDivider_15MHZ = 4;
-constexpr auto ClockDivider_20MHZ = 3;
-//constexpr auto ClockDivider_40MHZ = 2; // THIS IS ALSO DAMN DANGEROUS
-//constexpr auto ClockDivider_80MHZ = 1; // DEAR GOD DO NOT USE THIS!!!!
-GCLK->GENCTRL[3].reg = GCLK_GENCTRL_DIV(ClockDivider_10MHZ) |
+constexpr auto ClockSignal_20MHz = 6;
+constexpr auto ClockSignal_24MHz = 5;
+constexpr auto ClockSignal_30MHz = 4;
+constexpr auto ClockSignal_40MHz = 3;
+constexpr auto ClockSignal_60MHZ = 2; // THIS IS ALSO DAMN DANGEROUS
+GCLK->GENCTRL[3].reg = GCLK_GENCTRL_DIV(ClockSignal_20MHz) |
                        GCLK_GENCTRL_IDC |
                        GCLK_GENCTRL_GENEN |
                        GCLK_GENCTRL_OE |
