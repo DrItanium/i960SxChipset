@@ -185,7 +185,7 @@ static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16
 union SplitWord16 {
     explicit constexpr SplitWord16(uint16_t value = 0) noexcept : wholeValue_(value) { }
     constexpr SplitWord16(uint8_t lower, uint8_t upper) noexcept : bytes{lower, upper} { }
-    constexpr auto getWholeValue() const noexcept { return wholeValue_; }
+    [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     uint16_t wholeValue_ = 0;
     uint8_t bytes[2];
 };
