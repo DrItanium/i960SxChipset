@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
+#include "PSRAMChip.h"
 #define ALLOW_SRAM_CACHE
 constexpr bool EnableDebuggingCompileTime = false;
 
@@ -116,8 +117,10 @@ RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters,
 ROMTextSection rom;
 ROMDataSection dataRom;
 SDCardFilesystemInterface fs(0x300);
+OnboardPSRAM  psram(RAMStart);
 // list of io memory devices to walk through
 MemoryThing* things[] {
+    &psram,
         &ram,
         &rom,
         &dataRom,
@@ -302,7 +305,7 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
     displayReady = true;
-    //psram.begin();
+    psram.begin();
     rom.begin();
     dataRom.begin();
     ram.begin();
@@ -576,6 +579,8 @@ void loop() {
                 if (isReadOperation) {
                     do {
                         processorInterface.updateDataCycle();
+                        //Serial.print(processorInterface.getAddress(), HEX);
+                        //Serial.print(" ");
                         processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
                                                                       processorInterface.getStyle()));
                     } while (!signalDone());
@@ -583,6 +588,8 @@ void loop() {
                     // write
                     do {
                         processorInterface.updateDataCycle();
+                        //Serial.print(processorInterface.getAddress(), HEX);
+                        //Serial.print(" ");
                         theThing->write(processorInterface.getAddress(),
                                         processorInterface.getDataBits(),
                                         processorInterface.getStyle());
@@ -592,11 +599,15 @@ void loop() {
                 if (auto &theEntry = getLine(*theThing); isReadOperation) {
                     do {
                         processorInterface.updateDataCycle();
+                        //Serial.print(processorInterface.getAddress(), HEX);
+                        //Serial.print(" ");
                         processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
                     } while (!signalDone());
                 } else {
                     do {
                         processorInterface.updateDataCycle();
+                        //Serial.print(processorInterface.getAddress(), HEX);
+                        //Serial.print(" ");
                         theEntry.set(processorInterface.getCacheOffsetEntry(),
                                      processorInterface.getStyle(),
                                      SplitWord16{processorInterface.getDataBits()});

@@ -16,7 +16,7 @@ template<i960Pinout enablePin>
 class PSRAMChip : public MemoryThing {
 public:
     static SPISettings& getSettings() noexcept {
-        static SPISettings psramSettings(8_MHz, MSBFIRST, SPI_MODE0);
+        static SPISettings psramSettings(10_MHz / 4, MSBFIRST, SPI_MODE0);
         return psramSettings;
     }
     static constexpr uint32_t Size = 8_MB;
@@ -135,6 +135,7 @@ public:
                 break;
             }
         }
+#if 0
         if (available_) {
             Serial.println(F("CLEARING PSRAM!"));
             for (uint32_t addr = 0; addr < Size; addr +=32) {
@@ -164,6 +165,7 @@ public:
                 doSPI(theInstruction2, 36);
             }
         }
+#endif
         SPI.endTransaction();
         if (available_) {
             Serial.println(F("DONE STARTING UP PSRAM!"));
@@ -176,6 +178,10 @@ public:
     }
 private:
     void doSPI(byte* command, size_t length) {
+        asm volatile ("nop"); // 100 ns
+        asm volatile ("nop"); // 100 ns
+        asm volatile ("nop"); // 100 ns
+        asm volatile ("nop"); // 100 ns
         SPI.beginTransaction(getSettings());
         digitalWrite<enablePin, LOW>();
         //asm volatile ("nop"); // 100 ns
