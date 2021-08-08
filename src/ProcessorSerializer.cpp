@@ -129,10 +129,7 @@ ProcessorInterface::getDataBits() noexcept {
         dataLinesDirection_ = 0xFFFF;
         writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
     }
-    auto result = readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
-    //Serial.print(F("DATA LINES GET 0x"));
-    //Serial.println(result, HEX);
-    return result;
+    return readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
 }
 
 void
@@ -141,8 +138,6 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
         dataLinesDirection_ = 0;
         writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
     }
-    //Serial.print(F("DATA LINES SET 0x"));
-    //Serial.println(value, HEX);
     writeGPIO16(ProcessorInterface::IOExpanderAddress::DataLines, value);
 }
 

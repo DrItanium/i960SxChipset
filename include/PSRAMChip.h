@@ -16,7 +16,7 @@ template<i960Pinout enablePin>
 class PSRAMChip : public MemoryThing {
 public:
     static SPISettings& getSettings() noexcept {
-        static SPISettings psramSettings(10_MHz / 4, MSBFIRST, SPI_MODE0);
+        static SPISettings psramSettings(10_MHz / 1, MSBFIRST, SPI_MODE0);
         return psramSettings;
     }
     static constexpr uint32_t Size = 8_MB;
@@ -45,10 +45,6 @@ public:
         SPI.transfer(theAddress.bytes[0]);
         SPI.transfer(buf, capacity);
         digitalWrite<enablePin, HIGH>();
-        asm volatile ("nop");
-        asm volatile ("nop");
-        asm volatile ("nop");
-        asm volatile ("nop");
         SPI.endTransaction();
         return capacity;
     }
@@ -62,10 +58,6 @@ public:
         SPI.transfer(theAddress.bytes[0]);
         SPI.transfer(buf, capacity);
         digitalWrite<enablePin, HIGH>();
-        asm volatile ("nop");
-        asm volatile ("nop");
-        asm volatile ("nop");
-        asm volatile ("nop");
         SPI.endTransaction();
         return capacity;
     }
@@ -134,38 +126,19 @@ public:
             if (!available_) {
                 break;
             }
+            // then clear the memory area
+            byte theInstruction3[36]{
+                    0x02,
+                    translated.bytes[2],
+                    translated.bytes[1],
+                    translated.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+            };
+            doSPI(theInstruction3, 36);
         }
-#if 0
-        if (available_) {
-            Serial.println(F("CLEARING PSRAM!"));
-            for (uint32_t addr = 0; addr < Size; addr +=32) {
-                SplitWord32 translated(addr);
-                byte theInstruction[36]{
-                        0x02,
-                        translated.bytes[2],
-                        translated.bytes[1],
-                        translated.bytes[0],
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                };
-                byte theInstruction2[36]{
-                        0x03,
-                        translated.bytes[2],
-                        translated.bytes[1],
-                        translated.bytes[0],
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0, 0, 0,
-                };
-                doSPI(theInstruction, 36);
-                // rest of the values do not matter!
-                doSPI(theInstruction2, 36);
-            }
-        }
-#endif
         SPI.endTransaction();
         if (available_) {
             Serial.println(F("DONE STARTING UP PSRAM!"));
@@ -178,22 +151,12 @@ public:
     }
 private:
     void doSPI(byte* command, size_t length) {
-        asm volatile ("nop"); // 100 ns
-        asm volatile ("nop"); // 100 ns
-        asm volatile ("nop"); // 100 ns
-        asm volatile ("nop"); // 100 ns
         SPI.beginTransaction(getSettings());
         digitalWrite<enablePin, LOW>();
-        //asm volatile ("nop"); // 100 ns
         SPI.transfer(command, length);
-        //asm volatile ("nop"); // 100 ns
         digitalWrite<enablePin, HIGH>();
         SPI.endTransaction();
         // make extra sure that the psram has enough time to do its refresh in between operations
-        asm volatile ("nop"); // 100 ns
-        asm volatile ("nop"); // 100 ns
-        asm volatile ("nop"); // 100 ns
-        asm volatile ("nop"); // 100 ns
     }
     uint16_t readTwoBytes(Address addr) noexcept {
         SplitWord32 translated(addr);

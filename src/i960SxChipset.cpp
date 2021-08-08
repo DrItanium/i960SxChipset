@@ -575,12 +575,11 @@ void loop() {
             Serial.println(processorInterface.getAddress(), HEX);
             signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
         } else {
+            Serial.println(processorInterface.getAddress(), HEX);
             if (auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted(); theThing->bypassesCache()) {
                 if (isReadOperation) {
                     do {
                         processorInterface.updateDataCycle();
-                        //Serial.print(processorInterface.getAddress(), HEX);
-                        //Serial.print(" ");
                         processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
                                                                       processorInterface.getStyle()));
                     } while (!signalDone());
@@ -588,8 +587,6 @@ void loop() {
                     // write
                     do {
                         processorInterface.updateDataCycle();
-                        //Serial.print(processorInterface.getAddress(), HEX);
-                        //Serial.print(" ");
                         theThing->write(processorInterface.getAddress(),
                                         processorInterface.getDataBits(),
                                         processorInterface.getStyle());
@@ -599,15 +596,11 @@ void loop() {
                 if (auto &theEntry = getLine(*theThing); isReadOperation) {
                     do {
                         processorInterface.updateDataCycle();
-                        //Serial.print(processorInterface.getAddress(), HEX);
-                        //Serial.print(" ");
                         processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
                     } while (!signalDone());
                 } else {
                     do {
                         processorInterface.updateDataCycle();
-                        //Serial.print(processorInterface.getAddress(), HEX);
-                        //Serial.print(" ");
                         theEntry.set(processorInterface.getCacheOffsetEntry(),
                                      processorInterface.getStyle(),
                                      SplitWord16{processorInterface.getDataBits()});
@@ -615,10 +608,6 @@ void loop() {
                 }
             }
         }
-        //digitalWrite<i960Pinout::SPI_OFFSET0>((cycleIndex & 0b001) != 0 ? HIGH : LOW);
-        //digitalWrite<i960Pinout::SPI_OFFSET1>((cycleIndex & 0b010) != 0 ? HIGH : LOW);
-        //digitalWrite<i960Pinout::SPI_OFFSET2>((cycleIndex & 0b100) != 0 ? HIGH : LOW);
-        //++cycleIndex;
     } while (true);
 }
 
