@@ -12,7 +12,7 @@
 /**
  * @brief Represents access to a single PSRAM chip
  */
-template<i960Pinout enablePin>
+template<i960Pinout enablePin, bool sanityCheckOnBegin = true>
 class PSRAMChip : public MemoryThing {
 public:
     static SPISettings& getSettings() noexcept {
@@ -86,55 +86,61 @@ public:
         digitalWrite<enablePin, LOW>();
         SPI.transfer(0x99);
         digitalWrite<enablePin, HIGH>();
-        Serial.println(F("TESTING PSRAM!"));
+        if constexpr (sanityCheckOnBegin) {
+            Serial.println(F("TESTING PSRAM!"));
+        } else {
+            Serial.println(F("CLEARING PSRAM ONLY!"));
+        }
         constexpr auto ActualSize = 64;
         for (uint32_t addr = 0; addr < Size; addr +=ActualSize) {
             SplitWord32 translated(addr);
-            byte theInstruction[ActualSize + 4]{
-                    0x02,
-                    translated.bytes[2],
-                    translated.bytes[1],
-                    translated.bytes[0],
-                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-            };
-            byte theInstruction2[ActualSize + 4]{
-                    0x03,
-                    translated.bytes[2],
-                    translated.bytes[1],
-                    translated.bytes[0],
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-            };
-            doSPI<false>(theInstruction, ActualSize + 4);
-            // rest of the values do not matter!
-            doSPI<false>(theInstruction2, ActualSize + 4);
-            byte* ptr = theInstruction2 + 4;
-            for (int i = 0; i < ActualSize; ++i) {
-                if (ptr[i] != 0x55) {
-                    Serial.print(F("MISMATCH @ ADDRESS 0x"));
-                    Serial.print(translated.wholeValue_, HEX);
-                    Serial.print(F(" GOT 0x"));
-                    Serial.print(ptr[i], HEX);
-                    Serial.println(F(" EXPECTED 0x55"));
-                    available_ = false;
+            if constexpr (sanityCheckOnBegin) {
+                byte theInstruction[ActualSize + 4]{
+                        0x02,
+                        translated.bytes[2],
+                        translated.bytes[1],
+                        translated.bytes[0],
+                        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                };
+                doSPI<false>(theInstruction, ActualSize + 4);
+                byte theInstruction2[ActualSize + 4]{
+                        0x03,
+                        translated.bytes[2],
+                        translated.bytes[1],
+                        translated.bytes[0],
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                };
+                // rest of the values do not matter!
+                doSPI<false>(theInstruction2, ActualSize + 4);
+                byte* ptr = theInstruction2 + 4;
+                for (int i = 4; i < (ActualSize + 4); ++i) {
+                    if (theInstruction2[i] != 0x55) {
+                        Serial.print(F("MISMATCH @ ADDRESS 0x"));
+                        Serial.print(translated.wholeValue_, HEX);
+                        Serial.print(F(" GOT 0x"));
+                        Serial.print(ptr[i], HEX);
+                        Serial.println(F(" EXPECTED 0x55"));
+                        available_ = false;
+                        break;
+                    }
+                }
+                if (!available_) {
                     break;
                 }
-            }
-            if (!available_) {
-                break;
             }
             // then clear the memory area
             byte theInstruction3[ActualSize + 4]{
@@ -238,6 +244,7 @@ private:
  * @tparam sel2 The upper pin used to select the target device
  */
 template<i960Pinout enablePin,
+        bool performSanityCheck = true,
         i960Pinout sel0 = i960Pinout::SPI_OFFSET0,
         i960Pinout sel1 = i960Pinout::SPI_OFFSET1,
         i960Pinout sel2 = i960Pinout::SPI_OFFSET2>
@@ -247,7 +254,7 @@ public:
     static constexpr auto Select0 = sel0;
     static constexpr auto Select1 = sel1;
     static constexpr auto Select2 = sel2;
-    using SingleChip = PSRAMChip<EnablePin>;
+    using SingleChip = PSRAMChip<EnablePin, performSanityCheck>;
     static constexpr auto NumChips = 8;
     static constexpr auto Size = NumChips * SingleChip::Size;
     static constexpr auto Mask = Size - 1;
@@ -399,6 +406,8 @@ private:
     SingleChip backingChips[NumChips];
 };
 
-using OnboardPSRAM = PSRAMChip<i960Pinout::PSRAM_EN>;
-using OnboardPSRAMBlock = PSRAMBlock8<i960Pinout::PSRAM_EN>;
+template<bool performSanityCheck>
+using OnboardPSRAM = PSRAMChip<i960Pinout::PSRAM_EN, performSanityCheck>;
+template<bool performSanityCheck>
+using OnboardPSRAMBlock = PSRAMBlock8<i960Pinout::PSRAM_EN, performSanityCheck>;
 #endif //I960SXCHIPSET_PSRAMCHIP_H
