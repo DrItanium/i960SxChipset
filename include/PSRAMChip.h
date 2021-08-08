@@ -16,7 +16,7 @@ template<i960Pinout enablePin>
 class PSRAMChip : public MemoryThing {
 public:
     static SPISettings& getSettings() noexcept {
-        static SPISettings psramSettings(10_MHz / 1, MSBFIRST, SPI_MODE0);
+        static SPISettings psramSettings(10_MHz / 4, MSBFIRST, SPI_MODE0);
         return psramSettings;
     }
     static constexpr uint32_t Size = 8_MB;
