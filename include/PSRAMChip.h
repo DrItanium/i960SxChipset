@@ -86,7 +86,6 @@ public:
         digitalWrite<enablePin, LOW>();
         SPI.transfer(0x99);
         digitalWrite<enablePin, HIGH>();
-        SPI.endTransaction();
         Serial.println(F("TESTING PSRAM!"));
         constexpr auto ActualSize = 64;
         for (uint32_t addr = 0; addr < Size; addr +=ActualSize) {
@@ -119,9 +118,9 @@ public:
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0,
             };
-            doSPI(theInstruction, ActualSize + 4);
+            doSPI<false>(theInstruction, ActualSize + 4);
             // rest of the values do not matter!
-            doSPI(theInstruction2, ActualSize + 4);
+            doSPI<false>(theInstruction2, ActualSize + 4);
             byte* ptr = theInstruction2 + 4;
             for (int i = 0; i < ActualSize; ++i) {
                 if (ptr[i] != (i+1)) {
@@ -153,7 +152,7 @@ public:
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0,
             };
-            doSPI(theInstruction3, ActualSize + 4);
+            doSPI<false>(theInstruction3, ActualSize + 4);
         }
         SPI.endTransaction();
         if (available_) {
@@ -166,12 +165,17 @@ public:
         return available_ && MemoryThing::respondsTo(address);
     }
 private:
+    template<bool independentTransaction = true>
     void doSPI(byte* command, size_t length) {
-        SPI.beginTransaction(getSettings());
+        if constexpr (independentTransaction) {
+            SPI.beginTransaction(getSettings());
+        }
         digitalWrite<enablePin, LOW>();
         SPI.transfer(command, length);
         digitalWrite<enablePin, HIGH>();
-        SPI.endTransaction();
+        if constexpr (independentTransaction) {
+            SPI.endTransaction();
+        }
         // make extra sure that the psram has enough time to do its refresh in between operations
     }
     uint16_t readTwoBytes(Address addr) noexcept {
