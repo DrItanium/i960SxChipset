@@ -24,11 +24,8 @@ public:
     ~SRAMChip() override = default;
 
     static SPISettings& getSettings() noexcept {
-        static SPISettings psramSettings(1_MHz, MSBFIRST, SPI_MODE0);
+        static SPISettings psramSettings(10_MHz / 2, MSBFIRST, SPI_MODE0);
         return psramSettings;
-    }
-    bool respondsTo(Address address) const noexcept override {
-        return MemoryThing::respondsTo(address);
     }
     uint8_t read8(Address address) noexcept override {
         return readOneByte(address);
