@@ -16,6 +16,9 @@ template<i960Pinout enablePin>
 class PSRAMChip : public MemoryThing {
 public:
     static SPISettings& getSettings() noexcept {
+        // I am using 74HC series circuits in a 3.3v domain, because of that the maximum swtiching speed is around 150ns or so
+        // so for now I must run the psram at 5 mhz or so
+
         static SPISettings psramSettings(10_MHz / 2, MSBFIRST, SPI_MODE0);
         return psramSettings;
     }
