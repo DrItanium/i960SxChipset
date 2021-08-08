@@ -137,7 +137,7 @@ MemoryThing* things[] {
 // we only have a single 128kb cache chip
 class CacheEntry {
 public:
-    static constexpr size_t NumBytesCached = 32;
+    static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr size_t LowestBitCount = 5;
     static constexpr size_t TagIndexSize = 8;
@@ -208,6 +208,7 @@ private:
 private:
     void commitToSRAM() noexcept {
         SplitWord32 translation(computeL2TagIndex(tag));
+        translation.bytes[3] = 0x02;
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
         SPI.transfer(0x02);
         SPI.transfer(translation.bytes[2]);
@@ -283,13 +284,11 @@ private:
             MemoryThing* backingThing; // 2 bytes
             Address tag; // 4 bytes
             SplitWord16 data[NumWordsCached]; // 32 bytes
-            // unused 24 bytes
         };
     };
 };
 static_assert(sizeof(CacheEntry) == CacheEntry::ActualCacheEntrySize);
-constexpr auto NumCacheEntries = 256;
-CacheEntry entries[NumCacheEntries]; // we actually are holding more bytes in the cache than before
+CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
     // commit all entries back

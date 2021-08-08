@@ -94,7 +94,7 @@ constexpr MCUConfiguration BoardDescription = {0, 8, 512, 32, 10_MHz, false, fal
 template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         16_KB,
-        256, 16,
+        256, 32,
         32,
         10_MHz,
         false,
