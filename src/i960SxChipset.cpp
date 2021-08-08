@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
-//#include "PSRAMChip.h"
+#include "PSRAMChip.h"
 //#include "SRAMChip.h"
 #define ALLOW_SRAM_CACHE
 constexpr bool EnableDebuggingCompileTime = false;
@@ -108,13 +108,17 @@ public:
 };
 DisplayThing displayCommandSet(0x200);
 constexpr Address RAMStart = 0x8000'0000;
+constexpr Address PSRAMSize = OnboardPSRAM::Size;
+constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 // this file overlays with the normal psram chip so any memory not accounted for goes to sdcard
-RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+OnboardPSRAM psram(RAMStart);
+RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
 ROMDataSection dataRom;
 SDCardFilesystemInterface fs(0x300);
 // list of io memory devices to walk through
 MemoryThing* things[] {
+        &psram,
         &ram,
         &rom,
         &dataRom,
@@ -299,6 +303,7 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
     displayReady = true;
+    psram.begin();
     rom.begin();
     dataRom.begin();
     ram.begin();
