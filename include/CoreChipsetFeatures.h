@@ -47,15 +47,6 @@ public:
 #define SixteenByteEntry(Prefix) \
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
-        SixteenByteEntry(PatternEngine_ActualPattern),
-        FourByteEntry(PatternEngine_StartAddress),
-        FourByteEntry(PatternEngine_Length),
-        TwoByteEntry(PatternEngine_Doorbell),
-        // dma transfer engine
-        FourByteEntry(CopyEngine_SourceAddress),
-        FourByteEntry(CopyEngine_DestinationAddress),
-        FourByteEntry(CopyEngine_Length),
-        TwoByteEntry(CopyEngine_Doorbell),
         TwoByteEntry(ConsoleFlush),
         TwoByteEntry(ConsoleAvailable),
         TwoByteEntry(ConsoleAvailableForWrite),
@@ -63,10 +54,6 @@ public:
         Led, // one byte
         DisplayMemoryReadsAndWrites,
         DisplayCacheLineUpdates,
-        PortZGPIO, // one byte wide
-        PortZGPIODirection, // one byte wide
-        PortZGPIOPolarity,
-        PortZGPIOPullup,
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -77,27 +64,6 @@ public:
         ConsoleAvailable = ConsoleAvailable0,
         ConsoleAvailableForWrite = ConsoleAvailableForWrite0,
         ConsoleIO = ConsoleIO0,
-        PatternEngine_ActualPattern000 = PatternEngine_ActualPattern0000,
-        PatternEngine_ActualPattern001 = PatternEngine_ActualPattern0010,
-        PatternEngine_ActualPattern010 = PatternEngine_ActualPattern0100,
-        PatternEngine_ActualPattern011 = PatternEngine_ActualPattern0110,
-        PatternEngine_ActualPattern100 = PatternEngine_ActualPattern1000,
-        PatternEngine_ActualPattern101 = PatternEngine_ActualPattern1010,
-        PatternEngine_ActualPattern110 = PatternEngine_ActualPattern1100,
-        PatternEngine_ActualPattern111 = PatternEngine_ActualPattern1110,
-        PatternEngine_ActualPattern = PatternEngine_ActualPattern000,
-        PatternEngine_StartAddressLower = PatternEngine_StartAddress00,
-        PatternEngine_StartAddressUpper = PatternEngine_StartAddress10,
-        PatternEngine_LengthLower = PatternEngine_Length00,
-        PatternEngine_LengthUpper = PatternEngine_Length10,
-        PatternEngine_Doorbell = PatternEngine_Doorbell0,
-        CopyEngine_SourceAddressLower = CopyEngine_SourceAddress00,
-        CopyEngine_SourceAddressUpper = CopyEngine_SourceAddress10,
-        CopyEngine_LengthLower = CopyEngine_Length00,
-        CopyEngine_LengthUpper = CopyEngine_Length10,
-        CopyEngine_DestinationAddressLower = CopyEngine_DestinationAddress00,
-        CopyEngine_DestinationAddressUpper = CopyEngine_DestinationAddress10,
-        CopyEngine_Doorbell = CopyEngine_Doorbell0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
@@ -116,24 +82,8 @@ public:
 private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;
-    [[nodiscard]] uint16_t invokePatternEngine() noexcept;
-    [[nodiscard]] uint16_t invokeCopyEngine() noexcept;
-    static constexpr auto UnderlyingCacheSizeInBytes = 512;
-    static constexpr auto CopyEngineCacheSize = UnderlyingCacheSizeInBytes;
-    static constexpr auto PatternEngineCacheSizeInBytes = UnderlyingCacheSizeInBytes;
-    static constexpr auto PatternEngineCacheEntries = PatternEngineCacheSizeInBytes / sizeof(SplitWord128);
 private:
     bool displayMemoryReadsAndWrites_ = false;
     bool displayCacheLineUpdates_ = false;
-    SplitWord128 pattern_;
-    SplitWord32 patternLength_;
-    SplitWord32 patternAddress_;
-    SplitWord32 copyEngineSourceAddress_;
-    SplitWord32 copyEngineDestinationAddress_;
-    SplitWord32 copyEngineLength_;
-    union {
-        uint8_t copyEngineBuffer_[CopyEngineCacheSize] = { 0 };
-        SplitWord128 patternCache_[PatternEngineCacheEntries];
-    };
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
