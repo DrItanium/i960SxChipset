@@ -77,9 +77,8 @@ public:
         digitalWrite<EnablePin, LOW>();
         SPI.transfer(0xFF);
         digitalWrite<EnablePin, HIGH>();
-        constexpr uint32_t max = 128_KB; // only one SRAM chip on board
         Serial.println(F("CHECKING SRAM..."));
-        for (uint32_t i = 0; i < max; i += 32) {
+        for (uint32_t i = 0; i < Size; i += 32) {
             SplitWord32 translation(i);
             byte pagePurgeInstruction[36]{
                     0x02,
@@ -122,23 +121,7 @@ public:
             if (!available_) {
                 break;
             }
-        }
-        if (available_) {
-            Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
-            Serial.println(F("PURGING SRAM!"));
-            for (uint32_t i = 0; i < max; i+= 32) {
-                SplitWord32 translation(i);
-                byte pagePurgeInstruction[36] {
-                    0x02,
-                    translation.bytes[2],
-                    translation.bytes[1],
-                    translation.bytes[0],
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    };
-                byte pageReadInstruction[36]{
+            byte clearInstruction[36]{
                     0x03,
                     translation.bytes[2],
                     translation.bytes[1],
@@ -147,27 +130,15 @@ public:
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0,
-                    };
-                digitalWrite<EnablePin, LOW>();
-                SPI.transfer(pagePurgeInstruction, 36);
-                digitalWrite<EnablePin, HIGH>();
-                digitalWrite<EnablePin, LOW>();
-                SPI.transfer(pageReadInstruction, 36);
-                digitalWrite<EnablePin, HIGH>();
-                for (int x = 4; x < 36; ++x) {
-                    if (pageReadInstruction[x] != 0) {
-                        Serial.print(F("CHECK FAILURE!!!"));
-                        available_ = false;
-                        break;
-                    }
-                }
-                if (!available_) {
-                    break;
-                }
-            }
-            if (available_) {
-                Serial.println(F("DONE PURGING SRAM CACHE!"));
-            }
+            };
+            digitalWrite<EnablePin, LOW>();
+            SPI.transfer(clearInstruction, 36);
+            digitalWrite<EnablePin, HIGH>();
+        }
+        if (available_) {
+            Serial.println(F("DONE PURGING SRAM CACHE!"));
+        } else {
+            Serial.println(F("SRAM CACHE PURGE FAILED!"));
         }
         SPI.endTransaction();
     }
