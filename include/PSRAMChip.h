@@ -351,7 +351,7 @@ private:
 public:
     void begin() noexcept override  {
         if (!initialized_) {
-            Serial.println(F("BRINGING UP SRAM MEMORY BLOCK"));
+            Serial.println(F("BRINGING UP PSRAM MEMORY BLOCK"));
             initialized_ = true;
             currentIndex_.index = 0;
             setChipId(0);
@@ -364,9 +364,9 @@ public:
                 }
             }
             if (available_) {
-                Serial.println(F("Done bringing up sram memory blocks!"));
+                Serial.println(F("Done bringing up psram memory blocks!"));
             } else {
-                Serial.println(F("DISABLING ONBOARD SRAM ACCESS"));
+                Serial.println(F("DISABLING ONBOARD PSRAM ACCESS"));
             }
         }
     }
