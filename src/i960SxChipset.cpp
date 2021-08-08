@@ -133,9 +133,9 @@ MemoryThing* things[] {
 // we only have a single 128kb cache chip
 class CacheEntry {
 public:
-    static constexpr size_t NumBytesCached = 16;
+    static constexpr size_t NumBytesCached = 32;
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
-    static constexpr size_t LowestBitCount = 4;
+    static constexpr size_t LowestBitCount = 5;
     static constexpr size_t TagIndexSize = 8;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
@@ -192,9 +192,11 @@ private:
     }
     void absorbEntryFromSRAMCache(Address newTag) noexcept {
         SplitWord32 translation(computeL2TagIndex(newTag));
-        translation.bytes[3] = 0x03;
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(reinterpret_cast<byte*>(&translation), sizeof(translation));
+        SPI.transfer(0x03);
+        SPI.transfer(translation.bytes[2]);
+        SPI.transfer(translation.bytes[1]);
+        SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, ActualCacheEntrySize);
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         // and we are done!
@@ -202,9 +204,11 @@ private:
 private:
     void commitToSRAM() noexcept {
         SplitWord32 translation(computeL2TagIndex(tag));
-        translation.bytes[3] = 0x02;
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(reinterpret_cast<byte*>(&translation), sizeof(translation));
+        SPI.transfer(0x02);
+        SPI.transfer(translation.bytes[2]);
+        SPI.transfer(translation.bytes[1]);
+        SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
         SPI.transfer(backingStorage, ActualCacheEntrySize); // this will garbage out things by design
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
     }
