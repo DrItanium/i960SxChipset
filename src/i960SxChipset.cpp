@@ -42,7 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
 //#include "PSRAMChip.h"
-#include "SRAMChip.h"
+//#include "SRAMChip.h"
 #define ALLOW_SRAM_CACHE
 constexpr bool EnableDebuggingCompileTime = false;
 
@@ -94,16 +94,11 @@ public:
 class RAMFile : public MemoryMappedFile {
     //<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>
 public:
-    static constexpr Address MaxRamSize = 32 * 0x0100'0000; // 32 Memory Spaces or 512 Megabytes
+    static constexpr Address MaxRamSize = 512_MB;
     static constexpr auto RamMask = MaxRamSize - 1;
     using Parent = MemoryMappedFile;
     explicit RAMFile(Address baseAddress) noexcept : Parent(baseAddress, baseAddress + MaxRamSize, MaxRamSize, "ram.bin", FILE_WRITE) { }
     ~RAMFile() override = default;
-    [[nodiscard]] Address
-    makeAddressRelative(Address input) const noexcept override {
-        // in this case, we want relative offsets
-        return input & RamMask;
-    }
     void begin() noexcept override {
         Parent::begin();
         if (Parent::getFileSize() != MaxRamSize) {
@@ -118,11 +113,8 @@ RAMFile ram(RAMStart); // we want 4k but laid out for multiple sd card clusters,
 ROMTextSection rom;
 ROMDataSection dataRom;
 SDCardFilesystemInterface fs(0x300);
-OnboardSRAMBlock psram(RAMStart);
-//OnboardPSRAM  psram(RAMStart);
 // list of io memory devices to walk through
 MemoryThing* things[] {
-    &psram,
         &ram,
         &rom,
         &dataRom,
@@ -141,9 +133,9 @@ MemoryThing* things[] {
 // we only have a single 128kb cache chip
 class CacheEntry {
 public:
-    static constexpr size_t NumBytesCached = 32;
+    static constexpr size_t NumBytesCached = 16;
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
-    static constexpr size_t LowestBitCount = 5;
+    static constexpr size_t LowestBitCount = 4;
     static constexpr size_t TagIndexSize = 8;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
@@ -200,11 +192,9 @@ private:
     }
     void absorbEntryFromSRAMCache(Address newTag) noexcept {
         SplitWord32 translation(computeL2TagIndex(newTag));
+        translation.bytes[3] = 0x03;
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(0x03);
-        SPI.transfer(translation.bytes[2]);
-        SPI.transfer(translation.bytes[1]);
-        SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
+        SPI.transfer(reinterpret_cast<byte*>(&translation), sizeof(translation));
         SPI.transfer(backingStorage, ActualCacheEntrySize);
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
         // and we are done!
@@ -212,11 +202,9 @@ private:
 private:
     void commitToSRAM() noexcept {
         SplitWord32 translation(computeL2TagIndex(tag));
+        translation.bytes[3] = 0x02;
         digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(0x02);
-        SPI.transfer(translation.bytes[2]);
-        SPI.transfer(translation.bytes[1]);
-        SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
+        SPI.transfer(reinterpret_cast<byte*>(&translation), sizeof(translation));
         SPI.transfer(backingStorage, ActualCacheEntrySize); // this will garbage out things by design
         digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
     }
@@ -307,7 +295,6 @@ void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
     displayReady = true;
-    psram.begin();
     rom.begin();
     dataRom.begin();
     ram.begin();
