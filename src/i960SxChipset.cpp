@@ -60,61 +60,52 @@ CoreChipsetFeatures chipsetFunctions(0);
 
 class ROMTextSection : public MemoryMappedFile {
 public:
-    static constexpr Address ROMStart = 0;
-    static constexpr Address ROMEnd = 0x2000'0000;
-    static constexpr Address ROMMask = ROMEnd - 1;
+    static constexpr Address Size = 512_MB;
+    static constexpr Address Mask = Size - 1;
     using Parent = MemoryMappedFile;
 public:
-    ROMTextSection() noexcept : Parent(ROMStart, ROMEnd, ROMEnd - 1, "boot.rom", FILE_READ){ }
+    explicit ROMTextSection(Address base) noexcept : Parent(base, base + Size, Size, "boot.rom", FILE_READ){ }
     ~ROMTextSection() override = default;
-    [[nodiscard]] Address
-    makeAddressRelative(Address input) const noexcept override {
-        return input & ROMMask;
-    }
-    [[nodiscard]] bool
-    respondsTo(Address address) const noexcept override {
-        return address < Parent::getFileSize();
-    }
-    using MemoryThing::respondsTo;
 };
 
 /// @todo add support for the boot data section that needs to be copied into ram by the i960 on bootup
 class ROMDataSection : public MemoryMappedFile {
 public:
     // two clusters are held onto at a time
-    static constexpr Address ROMStart = 0x2000'0000;
-    static constexpr Address ROMEnd = 0x8000'0000;
-    static constexpr Address DataSizeMax = ROMEnd - ROMStart;
+    static constexpr Address Size = 512_MB;
+    static constexpr auto Mask = Size - 1;
     using Parent = MemoryMappedFile;
 public:
-    ROMDataSection() noexcept : Parent(ROMStart, ROMEnd, DataSizeMax, "boot.dat", FILE_READ) { }
+    explicit ROMDataSection(Address base) noexcept : Parent(base, base + Size, Size, "boot.dat", FILE_READ) { }
     ~ROMDataSection() override = default;
 };
 class RAMFile : public MemoryMappedFile {
     //<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>
 public:
-    static constexpr Address MaxRamSize = 512_MB;
-    static constexpr auto RamMask = MaxRamSize - 1;
+    static constexpr Address Size = 512_MB;
+    static constexpr auto Mask = Size - 1;
     using Parent = MemoryMappedFile;
-    explicit RAMFile(Address baseAddress) noexcept : Parent(baseAddress, baseAddress + MaxRamSize, MaxRamSize, "ram.bin", FILE_WRITE) { }
+    explicit RAMFile(Address baseAddress) noexcept : Parent(baseAddress, baseAddress + Size, Size, "ram.bin", FILE_WRITE) { }
     ~RAMFile() override = default;
     void begin() noexcept override {
         Parent::begin();
-        if (Parent::getFileSize() != MaxRamSize) {
+        if (Parent::getFileSize() != Size) {
             signalHaltState(F("RAM.BIN MUST BE 512 MEGS IN SIZE!"));
         }
     }
 };
 DisplayThing displayCommandSet(0x200);
 constexpr Address RAMStart = 0x8000'0000;
+constexpr Address textSectionStart = 0x0000'0000;
+constexpr Address dataSectionStart = 0x2000'0000;
 constexpr auto PerformPSRAMSanityCheck = false;
 using OnboardMemoryBlock = OnboardPSRAMBlock<PerformPSRAMSanityCheck>;
 constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
 constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
 RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
-ROMTextSection rom;
-ROMDataSection dataRom;
+ROMTextSection rom(textSectionStart);
+ROMDataSection dataRom(dataSectionStart);
 SDCardFilesystemInterface fs(0x300);
 // list of io memory devices to walk through
 MemoryThing* things[] {
