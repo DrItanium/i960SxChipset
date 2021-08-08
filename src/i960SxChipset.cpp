@@ -108,7 +108,7 @@ public:
 DisplayThing displayCommandSet(0x200);
 constexpr Address RAMStart = 0x8000'0000;
 constexpr auto PerformPSRAMSanityCheck = false;
-using OnboardMemoryBlock = OnboardPSRAM<PerformPSRAMSanityCheck>;
+using OnboardMemoryBlock = OnboardPSRAMBlock<PerformPSRAMSanityCheck>;
 constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
 constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
