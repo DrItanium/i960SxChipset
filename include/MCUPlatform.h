@@ -65,12 +65,14 @@ public:
                                uint32_t cacheLineSize,
                                uint32_t maxOpenFiles,
                                uint32_t ioExpanderSpeedCap,
+                               uint32_t psramSpeedCap,
                                bool hasBuiltinSDCard,
                                bool usesDisplayShield) noexcept : sramAmount_(sramSize),
                                cacheLineCount_(cacheLineCount),
                                cacheLineSize_(cacheLineSize),
                              maximumNumberOfOpenFiles_(maxOpenFiles),
                              ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
+                             psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap),
                              builtinSDCard_(hasBuiltinSDCard),
                              usesDisplayShield_(usesDisplayShield) { }
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
@@ -80,23 +82,34 @@ public:
     [[nodiscard]] constexpr auto hasBuiltinSDCard() const noexcept { return builtinSDCard_; }
     [[nodiscard]] constexpr auto usesDisplayShield() const noexcept { return usesDisplayShield_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
+    [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
 private:
     uint32_t sramAmount_;
     uint32_t cacheLineCount_;
     uint32_t cacheLineSize_;
     uint32_t maximumNumberOfOpenFiles_;
     uint32_t ioExpanderPeripheralSpeed_;
+    uint32_t psramSpeedCap_;
     bool builtinSDCard_;
     bool usesDisplayShield_;
 };
 template<TargetMCU mcu>
-constexpr MCUConfiguration BoardDescription = {0, 8, 512, 32, 10_MHz, false, false};
+constexpr MCUConfiguration BoardDescription = {
+        0,
+        8, 512,
+        32,
+        10_MHz,
+        5_MHz,
+        false,
+        false
+};
 template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         16_KB,
         256, 32,
         32,
         10_MHz,
+        5_MHz, // due to the current design, we have to run the psram at 5 Mhz
         false,
         true
 };
@@ -106,6 +119,7 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::GrandCentralM4> = {
         256, 64, // 256, 64 element lines
         64,
         10_MHz,
+        5_MHz,
         true,
         true,
 };
@@ -167,6 +181,7 @@ public:
     [[nodiscard]] static constexpr auto cacheLineSize() noexcept { return BoardDescription<getMCUTarget()>.getCacheLineSize(); }
     [[nodiscard]] static constexpr auto maximumNumberOfOpenFilesFromSDCard() noexcept { return BoardDescription<getMCUTarget()>.getMaximumNumberOfOpenFiles(); }
     [[nodiscard]] static constexpr auto runIOExpanderSPIInterfaceAt() noexcept { return BoardDescription<getMCUTarget()>.runIOExpanderSPIInterfaceAt(); }
+    [[nodiscard]] static constexpr auto runPSRAMAt() noexcept { return BoardDescription<getMCUTarget()>.runPSRAMAt(); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;

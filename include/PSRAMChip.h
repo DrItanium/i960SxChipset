@@ -19,7 +19,7 @@ public:
         // I am using 74HC series circuits in a 3.3v domain, because of that the maximum swtiching speed is around 150ns or so
         // so for now I must run the psram at 5 mhz or so
 
-        static SPISettings psramSettings(10_MHz / 2, MSBFIRST, SPI_MODE0);
+        static SPISettings psramSettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0);
         return psramSettings;
     }
     static constexpr uint32_t Size = 8_MB;
