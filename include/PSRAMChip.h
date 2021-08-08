@@ -95,14 +95,14 @@ public:
                     translated.bytes[2],
                     translated.bytes[1],
                     translated.bytes[0],
-                    1, 2, 3, 4, 5, 6, 7, 8,
-                    9, 10, 11, 12, 13, 14, 15, 16,
-                    17, 18, 19, 20, 21, 22, 23, 24,
-                    25, 26, 27, 28, 29, 30, 31, 32,
-                    33, 34, 35, 36, 37, 38, 39, 40,
-                    41, 42, 43, 44, 45, 46, 47, 48,
-                    49, 50, 51, 52, 53, 54, 55, 56,
-                    57, 58, 59, 60, 61, 62, 63, 64,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
             };
             byte theInstruction2[ActualSize + 4]{
                     0x03,
@@ -123,13 +123,12 @@ public:
             doSPI<false>(theInstruction2, ActualSize + 4);
             byte* ptr = theInstruction2 + 4;
             for (int i = 0; i < ActualSize; ++i) {
-                if (ptr[i] != (i+1)) {
+                if (ptr[i] != 0x55) {
                     Serial.print(F("MISMATCH @ ADDRESS 0x"));
                     Serial.print(translated.wholeValue_, HEX);
                     Serial.print(F(" GOT 0x"));
                     Serial.print(ptr[i], HEX);
-                    Serial.print(F(" EXPECTED 0x"));
-                    Serial.println((i + 1), HEX);
+                    Serial.println(F(" EXPECTED 0x55"));
                     available_ = false;
                     break;
                 }
