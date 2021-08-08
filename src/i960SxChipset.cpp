@@ -108,10 +108,10 @@ public:
 };
 DisplayThing displayCommandSet(0x200);
 constexpr Address RAMStart = 0x8000'0000;
-constexpr Address PSRAMSize = OnboardPSRAM::Size;
+constexpr Address PSRAMSize = OnboardPSRAMBlock::Size;
 constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 // this file overlays with the normal psram chip so any memory not accounted for goes to sdcard
-OnboardPSRAM psram(RAMStart);
+OnboardPSRAMBlock psram(RAMStart);
 RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom;
 ROMDataSection dataRom;

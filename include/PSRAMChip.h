@@ -206,6 +206,8 @@ private:
         };
         doSPI(theInstruction, 5);
     }
+public:
+    [[nodiscard]] constexpr auto isAvailable() const noexcept { return available_; }
 private:
     bool available_ = true;
 };
@@ -234,7 +236,7 @@ public:
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
     static_assert(Size == 64_MB, "PSRAMBlock8 needs to be 1 megabyte in size");
-    static_assert(Mask == 0x0FFF'FFFF, "PSRAMBlock8 mask is wrong!");
+    static_assert(Mask == 0x03FF'FFFF, "PSRAMBlock8 mask is wrong!");
 public:
     explicit PSRAMBlock8(Address base) : MemoryThing(base, base + Size),
     backingChips{
