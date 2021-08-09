@@ -212,16 +212,31 @@ enum class i960Pinout : int {
     BE1 = TargetBoard::getByteEnable1Pin(),
     BLAST_ = TargetBoard::getBlastPin(),     // input
     FAIL = TargetBoard::getFailPin(),         // input
-    None = -1,
+    None = TargetBoard::getNonePin(),
 };
+inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
+    if (ip != i960Pinout::None) {
+        digitalWrite(static_cast<int>(ip), value);
+    }
+}
+
+inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
+    if (ip != i960Pinout::None) {
+        pinMode(static_cast<int>(ip), value);
+    }
+}
+inline auto digitalRead(i960Pinout ip) {
+    return digitalRead(static_cast<int>(ip));
+}
+#ifdef ARDUINO_AVR_ATmega1284
 template<i960Pinout pin>
-constexpr bool isValidPin = static_cast<byte>(pin) != static_cast<byte>(i960Pinout::None);
+constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(UnderlyingPinoutType::Count);
 //static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
-    switch (pin) {
-#define X(id, number) case i960Pinout:: PORT_ ## id ## number
+    switch (static_cast<UnderlyingPinoutType >(pin)) {
+#define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
 #define Y(id) \
     X(id, 0): \
     X(id, 1): \
@@ -246,8 +261,8 @@ template<i960Pinout pin>
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
-    switch (pin) {
-#define X(id, number) case i960Pinout:: PORT_ ## id ## number
+    switch (static_cast<UnderlyingPinoutType >(pin)) {
+#define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
 #define Y(id) \
     X(id, 0): \
     X(id, 1): \
@@ -270,8 +285,8 @@ template<i960Pinout pin>
 template<i960Pinout pin>
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
     static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
-    switch (pin) {
-#define X(id, number) case i960Pinout:: PORT_ ## id ## number : return _BV ( P ## id ## number )
+    switch (static_cast<UnderlyingPinoutType >(pin)) {
+#define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number : return _BV ( P ## id ## number )
 #define Y(id) \
     X(id, 0); \
     X(id, 1); \
@@ -292,8 +307,10 @@ template<i960Pinout pin>
     }
 }
 
+#endif
 template<i960Pinout pin>
-inline void pulse() noexcept {
+inline void pulse(decltype(HIGH) from = HIGH, decltype(LOW) to = LOW) noexcept {
+#ifdef ARDUINO_AVR_ATmega1284
     // save registers and do the pulse
     uint8_t theSREG = SREG;
     cli();
@@ -301,10 +318,16 @@ inline void pulse() noexcept {
     thePort ^= getPinMask<pin>();
     thePort ^= getPinMask<pin>();
     SREG = theSREG;
+#else
+    digitalWrite(pin, from);
+    digitalWrite(pin, to);
+    digitalWrite(pin, from);
+#endif
 }
 
 template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() {
+#ifdef ARDUINO_AVR_ATmega1284
     uint8_t theSREG = SREG;
     cli();
     auto& thePort = getAssociatedOutputPort<pin>();
@@ -314,9 +337,13 @@ inline void digitalWrite() {
         thePort |= getPinMask<pin>();
     }
     SREG = theSREG;
+#else
+    digitalWrite(pin, value);
+#endif
 }
 template<i960Pinout pin>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
+#ifdef ARDUINO_AVR_ATmega1284
     uint8_t theSREG = SREG;
     cli();
     auto& thePort = getAssociatedOutputPort<pin>();
@@ -326,21 +353,18 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
         thePort |= getPinMask<pin>();
     }
     SREG = theSREG;
+#else
+    digitalWrite(pin, value);
+#endif
 }
 
-inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
-    digitalWrite(static_cast<int>(ip), value);
-}
-
-inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
-    pinMode(static_cast<int>(ip), value);
-}
 template<i960Pinout pin>
 inline auto digitalRead() noexcept {
+#ifndef ARDUINO_AVR_ATmega1284
     return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
-}
-inline auto digitalRead(i960Pinout ip) {
-    return digitalRead(static_cast<int>(ip));
+#else
+    return digitalRead(pin);
+#endif
 }
 
 template<i960Pinout pin>

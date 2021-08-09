@@ -131,8 +131,10 @@ enum class TargetMCU {
     RaspberryPiPico,
     Unknown,
 };
+template<typename T>
 class MCUConfiguration final {
 public:
+    using UnderlyingPinoutType = T;
     constexpr MCUConfiguration(uint32_t sramSize,
                                uint32_t cacheLineCount,
                                uint32_t cacheLineSize,
@@ -205,7 +207,6 @@ public:
                  byteEnable1Pin_(byteEnable1Pin),
                  blastPin_(blastPin),
                  failPin_(failPin) {}
-    template<typename T>
     constexpr MCUConfiguration(uint32_t sramSize,
                                uint32_t cacheLineCount,
                                uint32_t cacheLineSize,
@@ -315,6 +316,7 @@ public:
     [[nodiscard]] constexpr auto getByteEnable1Pin() const noexcept { return byteEnable1Pin_; }
     [[nodiscard]] constexpr auto getBlastPin() const noexcept { return blastPin_; }
     [[nodiscard]] constexpr auto getFailPin() const noexcept { return failPin_; }
+    [[nodiscard]] constexpr auto getNoneSpecifier() const noexcept { return T::None; }
 private:
     uint32_t sramAmount_;
     uint32_t cacheLineCount_;
@@ -354,7 +356,7 @@ private:
     int failPin_ = -1;
 };
 template<TargetMCU mcu>
-constexpr MCUConfiguration BoardDescription = {
+constexpr MCUConfiguration<size_t> BoardDescription = {
         0,
         8, 512,
         32,
@@ -368,7 +370,7 @@ constexpr MCUConfiguration BoardDescription = {
         -1, -1, -1, -1, -1, -1, -1
 };
 template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
+constexpr MCUConfiguration<Pinout1284p> BoardDescription<TargetMCU::ATmega1284p> = {
         16_KB,
         256, 32,
         32,
@@ -406,7 +408,7 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p> = {
         Pinout1284p::PORT_A7
 };
 template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::RaspberryPiPico> = {
+constexpr MCUConfiguration<PinoutRaspberryPiPico> BoardDescription<TargetMCU::RaspberryPiPico> = {
         264_KB,
         256, 64, // 256, 64 element lines
         64,
@@ -447,7 +449,7 @@ public:
     [[nodiscard]] static constexpr auto getDigitalPinCount() noexcept { return NUM_DIGITAL_PINS; }
     [[nodiscard]] static constexpr auto getAnalogInputCount() noexcept { return NUM_ANALOG_INPUTS; }
     [[nodiscard]] static constexpr auto getAnalogOutputCount() noexcept { return NUM_ANALOG_OUTPUTS; }
-    [[nodiscard]] static constexpr auto getMCUTarget() noexcept {
+    [[nodiscard]] static constexpr TargetMCU getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
         return TargetMCU::ATmega1284p;
 #elif defined(ARDUINO_RASPBERRY_PI_PICO)
@@ -501,6 +503,7 @@ public:
     [[nodiscard]] static constexpr auto getByteEnable1Pin() noexcept { return BoardDescription<getMCUTarget()>.getByteEnable1Pin(); }
     [[nodiscard]] static constexpr auto getBlastPin() noexcept { return BoardDescription<getMCUTarget()>.getBlastPin(); }
     [[nodiscard]] static constexpr auto getFailPin() noexcept { return BoardDescription<getMCUTarget()>.getFailPin(); }
+    [[nodiscard]] static constexpr auto getNonePin() noexcept { return static_cast<int>(BoardDescription<getMCUTarget()>.getNoneSpecifier()); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
@@ -545,4 +548,5 @@ union SplitWord128 {
 };
 static_assert(TargetBoard::cpuIsAVRArchitecture() || TargetBoard::cpuIsARMArchitecture(), "ONLY AVR or ARM BASED MCUS ARE SUPPORTED!");
 void invalidateGlobalCache() noexcept;
+using UnderlyingPinoutType = decltype(BoardDescription<TargetBoard::getMCUTarget()>.getNoneSpecifier());
 #endif //I960SXCHIPSET_MCUPLATFORM_H
