@@ -228,12 +228,10 @@ inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));
 }
 #ifdef ARDUINO_AVR_ATmega1284
-template<i960Pinout pin>
-constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(UnderlyingPinoutType::Count);
 //static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
-    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+    static_assert(isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>, "INVALID PIN PROVIDED");
     switch (static_cast<UnderlyingPinoutType >(pin)) {
 #define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
 #define Y(id) \
@@ -259,7 +257,7 @@ template<i960Pinout pin>
 
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
-    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+    static_assert(isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>, "INVALID PIN PROVIDED");
     switch (static_cast<UnderlyingPinoutType >(pin)) {
 #define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
 #define Y(id) \
@@ -283,7 +281,7 @@ template<i960Pinout pin>
 }
 template<i960Pinout pin>
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
-    static_assert(isValidPin<pin>, "INVALID PIN PROVIDED");
+    static_assert(isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>, "INVALID PIN PROVIDED");
     switch (static_cast<UnderlyingPinoutType >(pin)) {
 #define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number : return _BV ( P ## id ## number )
 #define Y(id) \
