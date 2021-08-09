@@ -28,12 +28,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef I960SXCHIPSET_MCUPLATFORM_H
 #define I960SXCHIPSET_MCUPLATFORM_H
 #include <Arduino.h>
+#include "DependentFalse.h"
 #ifdef ARDUINO_AVR_ATmega1284
 #define PACKED_ATTRIBUTE
 #else
 #define PACKED_ATTRIBUTE __attribute__((packed))
 #endif
-#include "DependentFalse.h"
+#ifdef ARDUINO_AVR_ATmega1284
+#ifndef PIN_SERIAL_RX
+#define PIN_SERIAL_RX 8
+#endif // end !defined(PIN_SERIAL_RX)
+#ifndef PIN_SERIAL_TX
+#define PIN_SERIAL_TX 9
+#endif // end !defined(PIN_SERIAL_TX)
+#endif // end defined(ARDUINO_AVR_ATmega1284)
 #define DEFINE_PINOUT_REQUIREMENTS \
     Count,                         \
     None,                          \
@@ -124,6 +132,8 @@ enum class Pinout1284p : int {
     PORT_A6,
     PORT_A7,
     DEFINE_PINOUT_REQUIREMENTS,
+    RX0 = PIN_SERIAL_RX,
+    TX0 = PIN_SERIAL_TX,
     CS = PIN_SPI_SS,
     SCK = PIN_SPI_SCK,
     MOSI = PIN_SPI_MOSI,

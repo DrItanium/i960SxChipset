@@ -227,11 +227,13 @@ inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
 inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));
 }
+template<i960Pinout pin>
+constexpr auto isValidPin960_v = isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>;
 #ifdef ARDUINO_AVR_ATmega1284
 //static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
-    static_assert(isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>, "INVALID PIN PROVIDED");
+    static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
     switch (static_cast<UnderlyingPinoutType >(pin)) {
 #define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
 #define Y(id) \
@@ -257,7 +259,7 @@ template<i960Pinout pin>
 
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
-    static_assert(isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>, "INVALID PIN PROVIDED");
+    static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
     switch (static_cast<UnderlyingPinoutType >(pin)) {
 #define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
 #define Y(id) \
@@ -281,7 +283,7 @@ template<i960Pinout pin>
 }
 template<i960Pinout pin>
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
-    static_assert(isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>, "INVALID PIN PROVIDED");
+    static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
     switch (static_cast<UnderlyingPinoutType >(pin)) {
 #define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number : return _BV ( P ## id ## number )
 #define Y(id) \
@@ -376,6 +378,7 @@ struct DigitalPin {
     static constexpr bool isOutputPin() noexcept { return false; }
     static constexpr bool getDirection() noexcept { return false; }
     static constexpr auto getPin() noexcept { return pin; }
+    static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }
 };
 
 #define DefOutputPin(pin, asserted, deasserted) \
@@ -397,6 +400,7 @@ struct DigitalPin {
         inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState()>(); } \
         inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
         inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
+        static constexpr auto valid() noexcept { return isValidPin960_v<pin>; } \
         inline static void pulse() noexcept {   \
             ::pulse<pin>();                                     \
         }                                       \
@@ -420,6 +424,7 @@ struct DigitalPin {
         inline static auto read() noexcept { return digitalRead<pin>(); } \
         inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
         inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
+        static constexpr auto valid() noexcept { return isValidPin960_v<pin>; } \
     }
 #define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
 
