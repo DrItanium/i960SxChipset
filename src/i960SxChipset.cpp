@@ -31,7 +31,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Board Platform: MightyCore
 #include <SPI.h>
 #include <SdFat.h>
-#include <Wire.h>
 #include "Pinout.h"
 
 #include "ProcessorSerializer.h"
