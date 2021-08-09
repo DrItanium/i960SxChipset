@@ -180,45 +180,42 @@ enum class TransactionDescription : uint8_t {
     ErrorValueWriteOffset7           = 0b0111'1111,
 };
 /// @todo fix this pinout for different targets
-enum class i960Pinout : decltype(A0) {
+enum class i960Pinout : int {
     // PORT B
-    Ready = PORT_B0,
-    CLOCK_OUT = PORT_B1,
-    AS_ = PORT_B2,
-    PSRAM_EN = PORT_B3,
-    GPIOSelect = PORT_B4,
-    MOSI = PORT_B5,          // reserved
-    MISO = PORT_B6,          // reserved
-    SCK = PORT_B7,          // reserved
-    RX0 = PORT_D0,          // reserved
-    TX0 = PORT_D1,          // reserved
-    DEN_ = PORT_D2,      // AVR Interrupt INT0
-    CACHE_EN_ = PORT_D3,
+    Ready = TargetBoard::getReadyPin(),
+    CLOCK_OUT = TargetBoard::getClockOutPin(),
+    AS_ = TargetBoard::getAddressStatePin(),
+    PSRAM_EN = TargetBoard::getPsramEnPin(),
+    GPIOSelect = TargetBoard::getGpioSelectPin(),
+    MOSI = TargetBoard::getMosiPin(),          // reserved
+    MISO = TargetBoard::getMisoPin(),          // reserved
+    SCK = TargetBoard::getSckPin(),          // reserved
+    DEN_ = TargetBoard::getDenPin(),      // AVR Interrupt INT0
+    CACHE_EN_ = TargetBoard::getCacheEnPin(),
     // PD4 is not used by simple management card
-    Reset960= PORT_D5,
-    Int0_ = PORT_D6,
+    Reset960= TargetBoard::getReset960Pin(),
+    Int0_ = TargetBoard::getInt0Pin(),
     // PD7 is not used by simple management card
-    SCL = PORT_C0,
-    SDA = PORT_C1,
-    SPI_OFFSET0 = PORT_C2,
-    SPI_OFFSET1 = PORT_C3,
-    SPI_OFFSET2 = PORT_C4,
-    DISPLAY_EN = PORT_C5,
-    DC = PORT_C6,     // output
-    SD_EN = PORT_C7,      // output
-    W_R_ = PORT_A0,
-    BA1 = PORT_A1,
-    BA2 = PORT_A2,
-    BA3 = PORT_A3,
-    BE0 = PORT_A4,
-    BE1 = PORT_A5,
-    BLAST_ = PORT_A6,     // input
-    FAIL = PORT_A7,         // input
-
+    SCL = TargetBoard::getSclPin(),
+    SDA = TargetBoard::getSdaPin(),
+    SPI_OFFSET0 = TargetBoard::getSpiOffset0Pin(),
+    SPI_OFFSET1 = TargetBoard::getSpiOffset1Pin(),
+    SPI_OFFSET2 = TargetBoard::getSpiOffset2Pin(),
+    DISPLAY_EN = TargetBoard::getDisplayEnPin(),
+    DC = TargetBoard::getDcPin(),     // output
+    SD_EN = TargetBoard::getSdEnablePin(),      // output
+    W_R_ = TargetBoard::getWrPin(),
+    BA1 = TargetBoard::getBurstAddress1Pin(),
+    BA2 = TargetBoard::getBurstAddress2Pin(),
+    BA3 = TargetBoard::getBurstAddress3Pin(),
+    BE0 = TargetBoard::getByteEnable0Pin(),
+    BE1 = TargetBoard::getByteEnable1Pin(),
+    BLAST_ = TargetBoard::getBlastPin(),     // input
+    FAIL = TargetBoard::getFailPin(),         // input
+    None = -1,
 };
 template<i960Pinout pin>
-constexpr bool isValidPin = static_cast<byte>(pin) < static_cast<byte>(i960Pinout::Count);
-static_assert(!isValidPin<i960Pinout::Count>, "The Count \"pin\" should be an invalid pin!");
+constexpr bool isValidPin = static_cast<byte>(pin) != static_cast<byte>(i960Pinout::None);
 //static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {

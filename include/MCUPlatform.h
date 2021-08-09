@@ -473,34 +473,34 @@ public:
     [[nodiscard]] static constexpr auto maximumNumberOfOpenFilesFromSDCard() noexcept { return BoardDescription<getMCUTarget()>.getMaximumNumberOfOpenFiles(); }
     [[nodiscard]] static constexpr auto runIOExpanderSPIInterfaceAt() noexcept { return BoardDescription<getMCUTarget()>.runIOExpanderSPIInterfaceAt(); }
     [[nodiscard]] static constexpr auto runPSRAMAt() noexcept { return BoardDescription<getMCUTarget()>.runPSRAMAt(); }
-    [[nodiscard]] constexpr auto getReadyPin() const noexcept { return BoardDescription<getMCUTarget()>.getReadyPin(); }
-    [[nodiscard]] constexpr auto getClockOutPin() const noexcept { return BoardDescription<getMCUTarget()>.getClockOutPin(); }
-    [[nodiscard]] constexpr auto getAddressStatePin() const noexcept { return BoardDescription<getMCUTarget()>.getAddressStatePin(); }
-    [[nodiscard]] constexpr auto getPsramEnPin() const noexcept { return BoardDescription<getMCUTarget()>.getPsramEnPin(); }
-    [[nodiscard]] constexpr auto getGpioSelectPin() const noexcept { return BoardDescription<getMCUTarget()>.getGpioSelectPin(); }
-    [[nodiscard]] constexpr auto getMisoPin() const noexcept { return BoardDescription<getMCUTarget()>.getMisoPin(); }
-    [[nodiscard]] constexpr auto getMosiPin() const noexcept { return BoardDescription<getMCUTarget()>.getMosiPin(); }
-    [[nodiscard]] constexpr auto getSckPin() const noexcept { return BoardDescription<getMCUTarget()>.getSckPin(); }
-    [[nodiscard]] constexpr auto getDenPin() const noexcept { return BoardDescription<getMCUTarget()>.getDenPin(); }
-    [[nodiscard]] constexpr auto getCacheEnPin() const noexcept { return BoardDescription<getMCUTarget()>.getCacheEnPin(); }
-    [[nodiscard]] constexpr auto getReset960Pin() const noexcept { return BoardDescription<getMCUTarget()>.getReset960Pin(); }
-    [[nodiscard]] constexpr auto getInt0Pin() const noexcept { return BoardDescription<getMCUTarget()>.getInt0Pin(); }
-    [[nodiscard]] constexpr auto getSclPin() const noexcept { return BoardDescription<getMCUTarget()>.getSclPin(); }
-    [[nodiscard]] constexpr auto getSdaPin() const noexcept { return BoardDescription<getMCUTarget()>.getSdaPin(); }
-    [[nodiscard]] constexpr auto getSpiOffset0Pin() const noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset0Pin(); }
-    [[nodiscard]] constexpr auto getSpiOffset1Pin() const noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset1Pin(); }
-    [[nodiscard]] constexpr auto getSpiOffset2Pin() const noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset2Pin(); }
-    [[nodiscard]] constexpr auto getDisplayEnPin() const noexcept { return BoardDescription<getMCUTarget()>.getDisplayEnPin(); }
-    [[nodiscard]] constexpr auto getDcPin() const noexcept { return BoardDescription<getMCUTarget()>.getDcPin(); }
-    [[nodiscard]] constexpr auto getSdEnablePin() const noexcept { return BoardDescription<getMCUTarget()>.getSdEnablePin(); }
-    [[nodiscard]] constexpr auto getWrPin() const noexcept { return BoardDescription<getMCUTarget()>.getWrPin(); }
-    [[nodiscard]] constexpr auto getBurstAddress1Pin() const noexcept { return BoardDescription<getMCUTarget()>.getBurstAddress1Pin(); }
-    [[nodiscard]] constexpr auto getBurstAddress2Pin() const noexcept { return BoardDescription<getMCUTarget()>.getBurstAddress2Pin(); }
-    [[nodiscard]] constexpr auto getBurstAddress3Pin() const noexcept { return BoardDescription<getMCUTarget()>.getBurstAddress3Pin(); }
-    [[nodiscard]] constexpr auto getByteEnable0Pin() const noexcept { return BoardDescription<getMCUTarget()>.getByteEnable0Pin(); }
-    [[nodiscard]] constexpr auto getByteEnable1Pin() const noexcept { return BoardDescription<getMCUTarget()>.getByteEnable1Pin(); }
-    [[nodiscard]] constexpr auto getBlastPin() const noexcept { return BoardDescription<getMCUTarget()>.getBlastPin(); }
-    [[nodiscard]] constexpr auto getFailPin() const noexcept { return BoardDescription<getMCUTarget()>.getFailPin(); }
+    [[nodiscard]] static constexpr auto getReadyPin() noexcept { return BoardDescription<getMCUTarget()>.getReadyPin(); }
+    [[nodiscard]] static constexpr auto getClockOutPin() noexcept { return BoardDescription<getMCUTarget()>.getClockOutPin(); }
+    [[nodiscard]] static constexpr auto getAddressStatePin() noexcept { return BoardDescription<getMCUTarget()>.getAddressStatePin(); }
+    [[nodiscard]] static constexpr auto getPsramEnPin() noexcept { return BoardDescription<getMCUTarget()>.getPsramEnPin(); }
+    [[nodiscard]] static constexpr auto getGpioSelectPin() noexcept { return BoardDescription<getMCUTarget()>.getGpioSelectPin(); }
+    [[nodiscard]] static constexpr auto getMisoPin() noexcept { return BoardDescription<getMCUTarget()>.getMisoPin(); }
+    [[nodiscard]] static constexpr auto getMosiPin() noexcept { return BoardDescription<getMCUTarget()>.getMosiPin(); }
+    [[nodiscard]] static constexpr auto getSckPin() noexcept { return BoardDescription<getMCUTarget()>.getSckPin(); }
+    [[nodiscard]] static constexpr auto getDenPin() noexcept { return BoardDescription<getMCUTarget()>.getDenPin(); }
+    [[nodiscard]] static constexpr auto getCacheEnPin() noexcept { return BoardDescription<getMCUTarget()>.getCacheEnPin(); }
+    [[nodiscard]] static constexpr auto getReset960Pin() noexcept { return BoardDescription<getMCUTarget()>.getReset960Pin(); }
+    [[nodiscard]] static constexpr auto getInt0Pin() noexcept { return BoardDescription<getMCUTarget()>.getInt0Pin(); }
+    [[nodiscard]] static constexpr auto getSclPin() noexcept { return BoardDescription<getMCUTarget()>.getSclPin(); }
+    [[nodiscard]] static constexpr auto getSdaPin() noexcept { return BoardDescription<getMCUTarget()>.getSdaPin(); }
+    [[nodiscard]] static constexpr auto getSpiOffset0Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset0Pin(); }
+    [[nodiscard]] static constexpr auto getSpiOffset1Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset1Pin(); }
+    [[nodiscard]] static constexpr auto getSpiOffset2Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset2Pin(); }
+    [[nodiscard]] static constexpr auto getDisplayEnPin() noexcept { return BoardDescription<getMCUTarget()>.getDisplayEnPin(); }
+    [[nodiscard]] static constexpr auto getDcPin() noexcept { return BoardDescription<getMCUTarget()>.getDcPin(); }
+    [[nodiscard]] static constexpr auto getSdEnablePin() noexcept { return BoardDescription<getMCUTarget()>.getSdEnablePin(); }
+    [[nodiscard]] static constexpr auto getWrPin() noexcept { return BoardDescription<getMCUTarget()>.getWrPin(); }
+    [[nodiscard]] static constexpr auto getBurstAddress1Pin() noexcept { return BoardDescription<getMCUTarget()>.getBurstAddress1Pin(); }
+    [[nodiscard]] static constexpr auto getBurstAddress2Pin() noexcept { return BoardDescription<getMCUTarget()>.getBurstAddress2Pin(); }
+    [[nodiscard]] static constexpr auto getBurstAddress3Pin() noexcept { return BoardDescription<getMCUTarget()>.getBurstAddress3Pin(); }
+    [[nodiscard]] static constexpr auto getByteEnable0Pin() noexcept { return BoardDescription<getMCUTarget()>.getByteEnable0Pin(); }
+    [[nodiscard]] static constexpr auto getByteEnable1Pin() noexcept { return BoardDescription<getMCUTarget()>.getByteEnable1Pin(); }
+    [[nodiscard]] static constexpr auto getBlastPin() noexcept { return BoardDescription<getMCUTarget()>.getBlastPin(); }
+    [[nodiscard]] static constexpr auto getFailPin() noexcept { return BoardDescription<getMCUTarget()>.getFailPin(); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
