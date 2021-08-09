@@ -181,41 +181,6 @@ enum class TransactionDescription : uint8_t {
 };
 /// @todo fix this pinout for different targets
 enum class i960Pinout : decltype(A0) {
-        // this is described in digial pin order!
-        // leave this one alone
-        PORT_B0 = 0,
-        PORT_B1,
-    PORT_B2,
-    PORT_B3,
-    PORT_B4,
-    PORT_B5,
-    PORT_B6,
-    PORT_B7,
-    PORT_D0,
-    PORT_D1,
-    PORT_D2,
-    PORT_D3,
-    PORT_D4,
-    PORT_D5,
-    PORT_D6,
-    PORT_D7,
-    PORT_C0,
-    PORT_C1,
-    PORT_C2,
-    PORT_C3,
-    PORT_C4,
-    PORT_C5,
-    PORT_C6,
-    PORT_C7,
-    PORT_A0,
-    PORT_A1,
-    PORT_A2,
-    PORT_A3,
-    PORT_A4,
-    PORT_A5,
-    PORT_A6,
-    PORT_A7,
-    Count,          // special, must be last
     // PORT B
     Ready = PORT_B0,
     CLOCK_OUT = PORT_B1,
