@@ -56,7 +56,7 @@ IOEXPANDER_PA2 , \
                                    NODISPLAY, \
                                    NODC
 
-enum class UndefinedPinout : byte {
+enum class UndefinedPinout : int {
     DEFINE_PINOUT_REQUIREMENTS,
     MISO,
     MOSI,
@@ -86,7 +86,7 @@ enum class UndefinedPinout : byte {
     DISPLAY_EN_,
     DC,
 };
-enum class Pinout1284p : byte {
+enum class Pinout1284p : int {
     // this is described in digial pin order!
     // leave this one alone
     PORT_B0 = 0,
@@ -150,7 +150,7 @@ enum class Pinout1284p : byte {
     BLAST_ = PORT_A6,
     FAIL960 = PORT_A7,
 };
-enum class PinoutRaspberryPiPico : byte {
+enum class PinoutRaspberryPiPico : int {
     GPIO0 = 0,
     GPIO1,
     GPIO2,
@@ -215,7 +215,8 @@ static_assert(static_cast<int>(PinoutRaspberryPiPico::Count) == 30, "Raspberry P
 
 template<typename E>
 constexpr bool isValidPin(E pin) noexcept {
-    return static_cast<byte>(pin) < static_cast<byte>(E::Count);
+    return static_cast<int>(pin) < static_cast<int>(E::Count) &&
+           static_cast<int>(pin) >= 0;
 }
 template<auto pin>
 constexpr bool isValidPin_v = isValidPin(pin);
@@ -251,7 +252,6 @@ template<typename T>
 class MCUConfiguration final {
 public:
     using UnderlyingPinoutType = T;
-private:
     constexpr MCUConfiguration(uint32_t sramSize,
                                uint32_t cacheLineCount,
                                uint32_t cacheLineSize,
@@ -259,34 +259,7 @@ private:
                                uint32_t ioExpanderSpeedCap,
                                uint32_t psramSpeedCap,
                                bool hasBuiltinSDCard,
-                               bool usesDisplayShield,
-                               int readyPin,
-                               int clockOutPin,
-                               int psramEnPin,
-                               int gpioSelectPin,
-                               int misoPin,
-                               int mosiPin,
-                               int sckPin,
-                               int denPin,
-                               int cacheEnPin,
-                               int reset960Pin,
-                               int int0Pin,
-                               int sclPin,
-                               int sdaPin,
-                               int spiOffset0Pin,
-                               int spiOffset1Pin,
-                               int spiOffset2Pin,
-                               int displayEnPin,
-                               int dcPin,
-                               int sdEnablePin,
-                               int wrPin,
-                               int burstAddress1Pin,
-                               int burstAddress2Pin,
-                               int burstAddress3Pin,
-                               int byteEnable0Pin,
-                               int byteEnable1Pin,
-                               int blastPin,
-                               int failPin
+                               bool usesDisplayShield
     ) noexcept : sramAmount_(sramSize),
                  cacheLineCount_(cacheLineCount),
                  cacheLineSize_(cacheLineSize),
@@ -294,77 +267,7 @@ private:
                  ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
                  psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap),
                  builtinSDCard_(hasBuiltinSDCard),
-                 usesDisplayShield_(usesDisplayShield),
-                 readyPin_(readyPin),
-                 clockOutPin_(clockOutPin),
-                 psramEnPin_(psramEnPin),
-                 gpioSelectPin_(gpioSelectPin),
-                 misoPin_(misoPin),
-                 mosiPin_(mosiPin),
-                 sckPin_(sckPin),
-                 denPin_(denPin),
-                 cacheEnPin_(cacheEnPin),
-                 reset960Pin_(reset960Pin),
-                 int0Pin_(int0Pin),
-                 sclPin_(sclPin),
-                 sdaPin_(sdaPin),
-                 spiOffset0Pin_(spiOffset0Pin),
-                 spiOffset1Pin_(spiOffset1Pin),
-                 spiOffset2Pin_(spiOffset2Pin),
-                 displayEnPin_(displayEnPin),
-                 dcPin_(dcPin),
-                 sdEnablePin_(sdEnablePin),
-                 wrPin_(wrPin),
-                 burstAddress1Pin_(burstAddress1Pin),
-                 burstAddress2Pin_(burstAddress2Pin),
-                 burstAddress3Pin_(burstAddress3Pin),
-                 byteEnable0Pin_(byteEnable0Pin),
-                 byteEnable1Pin_(byteEnable1Pin),
-                 blastPin_(blastPin),
-                 failPin_(failPin) {}
-public:
-    constexpr MCUConfiguration(uint32_t sramSize,
-                               uint32_t cacheLineCount,
-                               uint32_t cacheLineSize,
-                               uint32_t maxOpenFiles,
-                               uint32_t ioExpanderSpeedCap,
-                               uint32_t psramSpeedCap,
-                               bool hasBuiltinSDCard,
-                               bool usesDisplayShield) noexcept : MCUConfiguration(sramSize,
-                                  cacheLineCount,
-                                  cacheLineSize,
-                                  maxOpenFiles,
-                                  ioExpanderSpeedCap,
-                                  psramSpeedCap,
-                                  hasBuiltinSDCard,
-                                  usesDisplayShield,
-                                  static_cast<int>(T::READY_),
-                                  static_cast<int>(T::CLKO),
-                                  static_cast<int>(T::PSRAM_EN_),
-                                  static_cast<int>(T::CS),
-                                  static_cast<int>(T::MISO),
-                                  static_cast<int>(T::MOSI),
-                                  static_cast<int>(T::SCK),
-                                  static_cast<int>(T::DEN_),
-                                  static_cast<int>(T::CACHE_EN_),
-                                  static_cast<int>(T::RESET960_),
-                                  static_cast<int>(T::Int0_),
-                                  static_cast<int>(T::SCL),
-                                  static_cast<int>(T::SDA),
-                                  static_cast<int>(T::SPI_OFFSET0),
-                                  static_cast<int>(T::SPI_OFFSET1),
-                                  static_cast<int>(T::SPI_OFFSET2),
-                                  static_cast<int>(T::DISPLAY_EN_),
-                                  static_cast<int>(T::DC),
-                                  static_cast<int>(T::SD_EN_),
-                                  static_cast<int>(T::W_R_),
-                                  static_cast<int>(T::BA1),
-                                  static_cast<int>(T::BA2),
-                                  static_cast<int>(T::BA3),
-                                  static_cast<int>(T::BE0_),
-                                  static_cast<int>(T::BE1_),
-                                  static_cast<int>(T::BLAST_),
-                                  static_cast<int>(T::FAIL960)) {}
+                 usesDisplayShield_(usesDisplayShield) { }
 
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
     [[nodiscard]] constexpr uint32_t getCacheLineCount() const noexcept { return cacheLineCount_; }
@@ -374,33 +277,33 @@ public:
     [[nodiscard]] constexpr auto usesDisplayShield() const noexcept { return usesDisplayShield_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
     [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
-    [[nodiscard]] constexpr auto getReadyPin() const noexcept { return readyPin_; }
-    [[nodiscard]] constexpr auto getClockOutPin() const noexcept { return clockOutPin_; }
-    [[nodiscard]] constexpr auto getPsramEnPin() const noexcept { return psramEnPin_; }
-    [[nodiscard]] constexpr auto getGpioSelectPin() const noexcept { return gpioSelectPin_; }
-    [[nodiscard]] constexpr auto getMisoPin() const noexcept { return misoPin_; }
-    [[nodiscard]] constexpr auto getMosiPin() const noexcept { return mosiPin_; }
-    [[nodiscard]] constexpr auto getSckPin() const noexcept { return sckPin_; }
-    [[nodiscard]] constexpr auto getDenPin() const noexcept { return denPin_; }
-    [[nodiscard]] constexpr auto getCacheEnPin() const noexcept { return cacheEnPin_; }
-    [[nodiscard]] constexpr auto getReset960Pin() const noexcept { return reset960Pin_; }
-    [[nodiscard]] constexpr auto getInt0Pin() const noexcept { return int0Pin_; }
-    [[nodiscard]] constexpr auto getSclPin() const noexcept { return sclPin_; }
-    [[nodiscard]] constexpr auto getSdaPin() const noexcept { return sdaPin_; }
-    [[nodiscard]] constexpr auto getSpiOffset0Pin() const noexcept { return spiOffset0Pin_; }
-    [[nodiscard]] constexpr auto getSpiOffset1Pin() const noexcept { return spiOffset1Pin_; }
-    [[nodiscard]] constexpr auto getSpiOffset2Pin() const noexcept { return spiOffset2Pin_; }
-    [[nodiscard]] constexpr auto getDisplayEnPin() const noexcept { return displayEnPin_; }
-    [[nodiscard]] constexpr auto getDcPin() const noexcept { return dcPin_; }
-    [[nodiscard]] constexpr auto getSdEnablePin() const noexcept { return sdEnablePin_; }
-    [[nodiscard]] constexpr auto getWrPin() const noexcept { return wrPin_; }
-    [[nodiscard]] constexpr auto getBurstAddress1Pin() const noexcept { return burstAddress1Pin_; }
-    [[nodiscard]] constexpr auto getBurstAddress2Pin() const noexcept { return burstAddress2Pin_; }
-    [[nodiscard]] constexpr auto getBurstAddress3Pin() const noexcept { return burstAddress3Pin_; }
-    [[nodiscard]] constexpr auto getByteEnable0Pin() const noexcept { return byteEnable0Pin_; }
-    [[nodiscard]] constexpr auto getByteEnable1Pin() const noexcept { return byteEnable1Pin_; }
-    [[nodiscard]] constexpr auto getBlastPin() const noexcept { return blastPin_; }
-    [[nodiscard]] constexpr auto getFailPin() const noexcept { return failPin_; }
+    [[nodiscard]] constexpr auto getReadyPin() const noexcept { return static_cast<int>(T::READY_); }
+    [[nodiscard]] constexpr auto getClockOutPin() const noexcept { return static_cast<int>(T::CLKO); }
+    [[nodiscard]] constexpr auto getPsramEnPin() const noexcept { return static_cast<int>(T::PSRAM_EN_); }
+    [[nodiscard]] constexpr auto getGpioSelectPin() const noexcept { return static_cast<int>(T::CS); }
+    [[nodiscard]] constexpr auto getMisoPin() const noexcept { return static_cast<int>(T::MISO); }
+    [[nodiscard]] constexpr auto getMosiPin() const noexcept { return static_cast<int>(T::MOSI); }
+    [[nodiscard]] constexpr auto getSckPin() const noexcept { return static_cast<int>(T::SCK); }
+    [[nodiscard]] constexpr auto getDenPin() const noexcept { return static_cast<int>(T::DEN_); }
+    [[nodiscard]] constexpr auto getCacheEnPin() const noexcept { return static_cast<int>(T::CACHE_EN_); }
+    [[nodiscard]] constexpr auto getReset960Pin() const noexcept { return static_cast<int>(T::RESET960_); }
+    [[nodiscard]] constexpr auto getInt0Pin() const noexcept { return static_cast<int>(T::Int0_); }
+    [[nodiscard]] constexpr auto getSclPin() const noexcept { return static_cast<int>(T::SCL); }
+    [[nodiscard]] constexpr auto getSdaPin() const noexcept { return static_cast<int>(T::SDA); }
+    [[nodiscard]] constexpr auto getSpiOffset0Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET0); }
+    [[nodiscard]] constexpr auto getSpiOffset1Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET1); }
+    [[nodiscard]] constexpr auto getSpiOffset2Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET2); }
+    [[nodiscard]] constexpr auto getDisplayEnPin() const noexcept { return static_cast<int>(T::DISPLAY_EN_); }
+    [[nodiscard]] constexpr auto getDcPin() const noexcept { return static_cast<int>(T::DC); }
+    [[nodiscard]] constexpr auto getSdEnablePin() const noexcept { return static_cast<int>(T::SD_EN_); }
+    [[nodiscard]] constexpr auto getWrPin() const noexcept { return static_cast<int>(T::W_R_); }
+    [[nodiscard]] constexpr auto getBurstAddress1Pin() const noexcept { return static_cast<int>(T::BA1); }
+    [[nodiscard]] constexpr auto getBurstAddress2Pin() const noexcept { return static_cast<int>(T::BA2); }
+    [[nodiscard]] constexpr auto getBurstAddress3Pin() const noexcept { return static_cast<int>(T::BA3); }
+    [[nodiscard]] constexpr auto getByteEnable0Pin() const noexcept { return static_cast<int>(T::BE0_); }
+    [[nodiscard]] constexpr auto getByteEnable1Pin() const noexcept { return static_cast<int>(T::BE1_); }
+    [[nodiscard]] constexpr auto getBlastPin() const noexcept { return static_cast<int>(T::BLAST_); }
+    [[nodiscard]] constexpr auto getFailPin() const noexcept { return static_cast<int>(T::FAIL960); }
     [[nodiscard]] constexpr auto getNoneSpecifier() const noexcept { return T::None; }
 private:
     uint32_t sramAmount_;
@@ -411,33 +314,6 @@ private:
     uint32_t psramSpeedCap_;
     bool builtinSDCard_;
     bool usesDisplayShield_;
-    int readyPin_ = -1;
-    int clockOutPin_ = -1;
-    int psramEnPin_ = -1;
-    int gpioSelectPin_ = -1;
-    int misoPin_ = -1;
-    int mosiPin_ = -1;
-    int sckPin_ = -1;
-    int denPin_ = -1;
-    int cacheEnPin_ = -1;
-    int reset960Pin_ = -1;
-    int int0Pin_ = -1;
-    int sclPin_ = -1;
-    int sdaPin_ = -1;
-    int spiOffset0Pin_ = -1;
-    int spiOffset1Pin_ = -1;
-    int spiOffset2Pin_ = -1;
-    int displayEnPin_ = -1;
-    int dcPin_ = -1;
-    int sdEnablePin_ = -1;
-    int wrPin_ = -1;
-    int burstAddress1Pin_ = -1;
-    int burstAddress2Pin_ = -1;
-    int burstAddress3Pin_ = -1;
-    int byteEnable0Pin_ = -1;
-    int byteEnable1Pin_ = -1;
-    int blastPin_ = -1;
-    int failPin_ = -1;
 };
 template<TargetMCU mcu>
 constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
