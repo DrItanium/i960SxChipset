@@ -35,26 +35,28 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include "DependentFalse.h"
 #define DEFINE_PINOUT_REQUIREMENTS \
-    Count, \
-    None,                      \
-                                   IOEXPANDER_PA0, \
-                                   IOEXPANDER_PA1, \
-IOEXPANDER_PA2 , \
-        IOEXPANDER_PA3 , \
-        IOEXPANDER_PA4 , \
-        IOEXPANDER_PA5 , \
-        IOEXPANDER_PA6 , \
-        IOEXPANDER_PA7 , \
-        IOEXPANDER_PB0 , \
-                                   IOEXPANDER_PB1, \
-                                   IOEXPANDER_PB2, \
-                                   IOEXPANDER_PB3, \
-                                   IOEXPANDER_PB4, \
-                                   IOEXPANDER_PB5, \
-                                   IOEXPANDER_PB6, \
-                                   IOEXPANDER_PB7, \
-                                   NODISPLAY, \
-                                   NODC
+    Count,                         \
+    None,                          \
+    IOEXPANDER_PA0,                \
+    IOEXPANDER_PA1,                \
+    IOEXPANDER_PA2,                \
+   IOEXPANDER_PA3,                 \
+   IOEXPANDER_PA4,                 \
+   IOEXPANDER_PA5,                 \
+   IOEXPANDER_PA6,                 \
+   IOEXPANDER_PA7,                 \
+   IOEXPANDER_PB0,                 \
+   IOEXPANDER_PB1,                 \
+   IOEXPANDER_PB2,                 \
+   IOEXPANDER_PB3,                 \
+   IOEXPANDER_PB4,                 \
+   IOEXPANDER_PB5,                 \
+   IOEXPANDER_PB6,                 \
+   IOEXPANDER_PB7,                 \
+   NODISPLAY,                      \
+   NODC,                           \
+   NOCACHE_EN_
+
 
 enum class UndefinedPinout : int {
     DEFINE_PINOUT_REQUIREMENTS,
@@ -182,34 +184,36 @@ enum class PinoutRaspberryPiPico : int {
     GPIO28,
     GPIO29,
     DEFINE_PINOUT_REQUIREMENTS,
+    RX0 = PIN_SERIAL_RX,
+    TX0 = PIN_SERIAL_TX,
     MISO = PIN_SPI_MISO,
     MOSI = PIN_SPI_MOSI,
     SCK = PIN_SPI_SCK,
     CS = PIN_SPI_SS,
     SCL = PIN_WIRE_SCL,
     SDA = PIN_WIRE_SDA,
-    LED = GPIO25,
+    READY_ = GPIO8,
+    DEN_ = GPIO9,
+    W_R_ = GPIO10,
+    BA1 = GPIO11,
+    BA2 = GPIO12,
+    BA3 = GPIO13,
+    BE0_ = GPIO14,
+    BE1_ = GPIO15,
+    BLAST_ = GPIO16,
+    FAIL960 = GPIO17,
+    RESET960_ = GPIO18,
+    Int0_ = GPIO19,
+    PSRAM_EN_ = GPIO20,
     CLKO = GPIO21,
-    READY_ = GPIO0,
-    DEN_ = GPIO1,
-    PSRAM_EN_ = GPIO8,
-    CACHE_EN_ = GPIO9,
-    SD_EN_ = GPIO10,
-    SPI_OFFSET0 = GPIO11,
-    SPI_OFFSET1 = GPIO12,
-    SPI_OFFSET2 = GPIO13,
-    W_R_ = GPIO14,
-    BLAST_ = GPIO15,
-    FAIL960 = GPIO16,
+    SD_EN_ = GPIO22,
+    LED = GPIO25,
+    SPI_OFFSET0 = GPIO26,
+    SPI_OFFSET1 = GPIO27,
+    SPI_OFFSET2 = GPIO28,
     DISPLAY_EN_ = NODISPLAY,
     DC = NODC,
-    RESET960_ = GPIO17,
-    Int0_ = GPIO18,
-    BA1 = GPIO19,
-    BA2 = GPIO20,
-    BA3 = GPIO22,
-    BE0_ = GPIO26,
-    BE1_ = GPIO27,
+    CACHE_EN_ = NOCACHE_EN_,
 };
 static_assert(static_cast<int>(PinoutRaspberryPiPico::Count) == 30, "Raspberry Pi Pico Has 30 GPIO");
 
