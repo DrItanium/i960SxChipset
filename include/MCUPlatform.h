@@ -28,6 +28,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef I960SXCHIPSET_MCUPLATFORM_H
 #define I960SXCHIPSET_MCUPLATFORM_H
 #include <Arduino.h>
+#ifdef ARDUINO_AVR_ATmega1284
+#define PACKED_ATTRIBUTE
+#else
+#define PACKED_ATTRIBUTE __attribute__((packed))
+#endif
 #include "DependentFalse.h"
 enum class UndefinedPinout : int {
     Count = 0,

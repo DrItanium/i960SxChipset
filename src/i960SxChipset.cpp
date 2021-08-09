@@ -29,12 +29,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Language options:
 /// - C++17
 /// Board Platform: MightyCore
-#include <Arduino.h>
-#ifdef abs
-#undef abs
-#endif
-using std::abs;
-using std::round;
 #include <SPI.h>
 #include <SdFat.h>
 #include "Pinout.h"
@@ -281,7 +275,7 @@ private:
             MemoryThing* backingThing; // 2 bytes
             Address tag; // 4 bytes
             SplitWord16 data[NumWordsCached]; // 32 bytes
-        } __attribute__((packed));
+        } PACKED_ATTRIBUTE ;
     };
 };
 static_assert(sizeof(CacheEntry) == CacheEntry::ActualCacheEntrySize);
