@@ -230,18 +230,17 @@ void ProcessorInterface::newDataCycle() noexcept {
     upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
 }
 void ProcessorInterface::updateDataCycle() noexcept {
-#ifdef USE_IO_EXPANDER_FOR_CONTROL_BITS
-    // leave this around for targets with fewer pins
-    auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
-    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) >> 3));
-    address_ = upperMaskedAddress_ | static_cast<byte>((bits & 0b111) << 1);
-    burstAddressBits_ = static_cast<byte>(bits & 0b111);
-#else
+#ifdef ARDUINO_AVR_ATmega1284
     // currentPortContents is part of a union that defers many operations as long as possible
     auto bits = PINA;
     // with the way we have designed the enum, this is the only type that has to be stored separately
     auto maskedBits = static_cast<byte>(bits & 0b1110);
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
     address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
+#else
+    // leave this around for targets with fewer pins
+    auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
+    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
+    address_.bytes[0] = upperMaskedAddress_.bytes[0] | static_cast<byte>((bits & 0b111) << 1);
 #endif
 }

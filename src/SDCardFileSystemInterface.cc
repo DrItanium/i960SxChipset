@@ -197,6 +197,7 @@ SDCardFilesystemInterface::write16(Address address, uint16_t value) noexcept {
                 break;
             case Registers::OpenReadWrite:
                 openReadWrite_ = value != 0;
+                break;
             case Registers::AddressLower:
                 address_.halves[0] = value;
                 break;

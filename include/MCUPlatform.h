@@ -29,7 +29,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_MCUPLATFORM_H
 #include <Arduino.h>
 #include "DependentFalse.h"
-
+enum class UndefinedPinout : int {
+    Count = 0,
+    None = -1,
+};
 enum class Pinout1284p : int {
     // this is described in digial pin order!
     // leave this one alone
@@ -356,7 +359,7 @@ private:
     int failPin_ = -1;
 };
 template<TargetMCU mcu>
-constexpr MCUConfiguration<size_t> BoardDescription = {
+constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
         0,
         8, 512,
         32,
@@ -364,10 +367,14 @@ constexpr MCUConfiguration<size_t> BoardDescription = {
         5_MHz,
         false,
         false,
-        -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1,
-        -1, -1, -1, -1, -1, -1, -1
+        UndefinedPinout::None,
+        UndefinedPinout::None,
+        UndefinedPinout::None,
+        UndefinedPinout::None,
+        UndefinedPinout::None,
+        UndefinedPinout::None,
+        UndefinedPinout::None,
+        UndefinedPinout::None,
 };
 template<>
 constexpr MCUConfiguration<Pinout1284p> BoardDescription<TargetMCU::ATmega1284p> = {
@@ -380,7 +387,6 @@ constexpr MCUConfiguration<Pinout1284p> BoardDescription<TargetMCU::ATmega1284p>
         true,
         Pinout1284p::PORT_B0,
         Pinout1284p::PORT_B1,
-        Pinout1284p::None, //Pinout1284p::PORT_B2, // unused but originally B2
         Pinout1284p::PORT_B3,
         Pinout1284p::PORT_B4,
         Pinout1284p::PORT_B5,
@@ -410,7 +416,7 @@ constexpr MCUConfiguration<Pinout1284p> BoardDescription<TargetMCU::ATmega1284p>
 template<>
 constexpr MCUConfiguration<PinoutRaspberryPiPico> BoardDescription<TargetMCU::RaspberryPiPico> = {
         264_KB,
-        256, 64, // 256, 64 element lines
+        256, 32, // 256, 32 element lines
         64,
         10_MHz,
         5_MHz,

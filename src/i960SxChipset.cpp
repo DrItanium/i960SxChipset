@@ -29,6 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Language options:
 /// - C++17
 /// Board Platform: MightyCore
+#include <Arduino.h>
+#ifdef abs
+#undef abs
+#endif
+using std::abs;
+using std::round;
 #include <SPI.h>
 #include <SdFat.h>
 #include "Pinout.h"
@@ -134,7 +140,7 @@ public:
     static constexpr size_t TagIndexSize = 8;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
-    static constexpr size_t ActualCacheEntrySize = NumBytesCached + 8;
+    static constexpr size_t ActualCacheEntrySize = NumBytesCached + (2*sizeof(bool)) + sizeof(void*) + sizeof(Address);
     static constexpr auto SramCacheSize = 128_KB;
     static constexpr auto SramCacheEntrySize = NumBytesCached * 2; // we need to waste a bunch of space in this design but it will help with locality
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
@@ -275,7 +281,7 @@ private:
             MemoryThing* backingThing; // 2 bytes
             Address tag; // 4 bytes
             SplitWord16 data[NumWordsCached]; // 32 bytes
-        };
+        } __attribute__((packed));
     };
 };
 static_assert(sizeof(CacheEntry) == CacheEntry::ActualCacheEntrySize);
@@ -429,7 +435,6 @@ void setup() {
                           i960Pinout::SPI_OFFSET2);
         setupPins(INPUT,
                   i960Pinout::BLAST_,
-                  i960Pinout::AS_,
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
                   i960Pinout::FAIL,
@@ -613,6 +618,21 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
     }
 }
 
+[[noreturn]]
+void
+signalHaltState(const char* haltMsg) {
+    if (displayReady) {
+        displayCommandSet.clearScreen();
+        displayCommandSet.setCursor(0, 0);
+        displayCommandSet.setTextSize(2);
+        displayCommandSet.println(haltMsg);
+    }
+    Serial.println(haltMsg);
+    while(true) {
+        delay(1000);
+    }
+}
+
 MemoryThing*
 getThing(Address address, LoadStoreStyle style) noexcept {
     for (auto *currentThing : things) {
@@ -625,15 +645,17 @@ getThing(Address address, LoadStoreStyle style) noexcept {
 SdFat SD;
 /// @todo Eliminate after MightyCore update
 #if __cplusplus >= 201402L
+#ifdef ARDUINO_AVR_ATmega1284
 
 void operator delete(void * ptr, size_t)
 {
     ::operator delete(ptr);
 }
 
+
 void operator delete[](void * ptr, size_t)
 {
     ::operator delete(ptr);
 }
-
+#endif
 #endif // end language is C++14 or greater

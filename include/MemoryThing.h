@@ -25,8 +25,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_MEMORYTHING_H
 #define I960SXCHIPSET_MEMORYTHING_H
+#include <Arduino.h>
 #include "Pinout.h"
 [[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
+[[noreturn]] void signalHaltState(const char* msg);
 /**
  * @brief Describes the interface between a component and a memory request, it introduces some latency with the trade off being easier maintenance
  */
@@ -164,6 +166,7 @@ public:
 
     [[nodiscard]] virtual bool bypassesCache() const noexcept { return false; }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
+    virtual void signalHaltState(const char* thing) noexcept { ::signalHaltState(thing); }
 private:
     Address base_;
     Address end_;
