@@ -211,21 +211,27 @@ enum class i960Pinout : int {
     BE1 = TargetBoard::getByteEnable1Pin(),
     BLAST_ = TargetBoard::getBlastPin(),     // input
     FAIL = TargetBoard::getFailPin(),         // input
-    None = TargetBoard::getNonePin(),
 };
+constexpr bool isValidPin(i960Pinout pin) noexcept {
+    return isValidPin<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pin));
+}
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
-    if (ip != i960Pinout::None) {
+    if (isValidPin(ip)) {
         digitalWrite(static_cast<int>(ip), value);
     }
 }
 
 inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
-    if (ip != i960Pinout::None) {
+    if (isValidPin(ip)) {
         pinMode(static_cast<int>(ip), value);
     }
 }
 inline auto digitalRead(i960Pinout ip) {
-    return digitalRead(static_cast<int>(ip));
+    if (isValidPin(ip)) {
+        return digitalRead(static_cast<int>(ip));
+    } else {
+        return LOW;
+    }
 }
 template<i960Pinout pin>
 constexpr auto isValidPin960_v = isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>;
