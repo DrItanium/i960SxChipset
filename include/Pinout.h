@@ -184,7 +184,6 @@ enum class i960Pinout : int {
     // PORT B
     Ready = TargetBoard::getReadyPin(),
     CLOCK_OUT = TargetBoard::getClockOutPin(),
-    AS_ = TargetBoard::getAddressStatePin(),
     PSRAM_EN = TargetBoard::getPsramEnPin(),
     GPIOSelect = TargetBoard::getGpioSelectPin(),
     MOSI = TargetBoard::getMosiPin(),          // reserved
@@ -360,7 +359,7 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
 
 template<i960Pinout pin>
 inline auto digitalRead() noexcept {
-#ifndef ARDUINO_AVR_ATmega1284
+#ifdef ARDUINO_AVR_ATmega1284
     return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
 #else
     return digitalRead(pin);

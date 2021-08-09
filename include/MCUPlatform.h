@@ -101,6 +101,12 @@ enum class PinoutRaspberryPiPico : int {
     GPIO29,
     Count,
     None = -1,
+    MISO = PIN_SPI_MISO,
+    MOSI = PIN_SPI_MOSI,
+    SCK = PIN_SPI_SCK,
+    CS = PIN_SPI_SS,
+    SCL = PIN_WIRE_SCL,
+    SDA = PIN_WIRE_SDA,
 };
 static_assert(static_cast<int>(PinoutRaspberryPiPico::Count) == 30, "Raspberry Pi Pico Has 30 GPIO");
 constexpr unsigned long long int operator "" _KB(unsigned long long int value) noexcept { return value * 1024; }
@@ -145,7 +151,6 @@ public:
                                bool usesDisplayShield,
                                int readyPin = -1,
                                int clockOutPin = -1,
-                               int addressStatePin = -1,
                                int psramEnPin = -1,
                                int gpioSelectPin = -1,
                                int misoPin = -1,
@@ -181,7 +186,6 @@ public:
                  usesDisplayShield_(usesDisplayShield),
                  readyPin_(readyPin),
                  clockOutPin_(clockOutPin),
-                 addressStatePin_(addressStatePin),
                  psramEnPin_(psramEnPin),
                  gpioSelectPin_(gpioSelectPin),
                  misoPin_(misoPin),
@@ -217,7 +221,6 @@ public:
                                bool usesDisplayShield,
                                T readyPin = T::None,
                                T clockOutPin = T::None,
-                               T addressStatePin = T::None,
                                T psramEnPin = T::None,
                                T gpioSelectPin = T::None,
                                T misoPin = T::None,
@@ -253,7 +256,6 @@ public:
                                   usesDisplayShield,
                                   static_cast<int>(readyPin),
                                   static_cast<int>(clockOutPin),
-                                  static_cast<int>(addressStatePin),
                                   static_cast<int>(psramEnPin),
                                   static_cast<int>(gpioSelectPin),
                                   static_cast<int>(misoPin),
@@ -290,7 +292,6 @@ public:
     [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
     [[nodiscard]] constexpr auto getReadyPin() const noexcept { return readyPin_; }
     [[nodiscard]] constexpr auto getClockOutPin() const noexcept { return clockOutPin_; }
-    [[nodiscard]] constexpr auto getAddressStatePin() const noexcept { return addressStatePin_; }
     [[nodiscard]] constexpr auto getPsramEnPin() const noexcept { return psramEnPin_; }
     [[nodiscard]] constexpr auto getGpioSelectPin() const noexcept { return gpioSelectPin_; }
     [[nodiscard]] constexpr auto getMisoPin() const noexcept { return misoPin_; }
@@ -328,7 +329,6 @@ private:
     bool usesDisplayShield_;
     int readyPin_ = -1;
     int clockOutPin_ = -1;
-    int addressStatePin_ = -1;
     int psramEnPin_ = -1;
     int gpioSelectPin_ = -1;
     int misoPin_ = -1;
@@ -418,8 +418,32 @@ constexpr MCUConfiguration<PinoutRaspberryPiPico> BoardDescription<TargetMCU::Ra
         false,
         PinoutRaspberryPiPico::GPIO0,
         PinoutRaspberryPiPico::GPIO21,
-        PinoutRaspberryPiPico::None,
-        PinoutRaspberryPiPico::GPIO1
+        PinoutRaspberryPiPico::GPIO1,
+        PinoutRaspberryPiPico::CS,
+        PinoutRaspberryPiPico::MISO,
+        PinoutRaspberryPiPico::MOSI,
+        PinoutRaspberryPiPico::SCK,
+        PinoutRaspberryPiPico::GPIO8,
+        PinoutRaspberryPiPico::GPIO9,
+        PinoutRaspberryPiPico::GPIO10,
+        PinoutRaspberryPiPico::GPIO11,
+        PinoutRaspberryPiPico::SCL,
+        PinoutRaspberryPiPico::SDA,
+        PinoutRaspberryPiPico::GPIO12,
+        PinoutRaspberryPiPico::GPIO13,
+        PinoutRaspberryPiPico::GPIO14,
+        PinoutRaspberryPiPico::GPIO15,
+        PinoutRaspberryPiPico::GPIO16,
+        PinoutRaspberryPiPico::GPIO17,
+        PinoutRaspberryPiPico::GPIO18,
+        PinoutRaspberryPiPico::GPIO19,
+        PinoutRaspberryPiPico::GPIO20,
+        PinoutRaspberryPiPico::GPIO22,
+        PinoutRaspberryPiPico::GPIO23,
+        PinoutRaspberryPiPico::GPIO24,
+        PinoutRaspberryPiPico::GPIO25,
+        PinoutRaspberryPiPico::GPIO26,
+
 };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
@@ -477,7 +501,6 @@ public:
     [[nodiscard]] static constexpr auto runPSRAMAt() noexcept { return BoardDescription<getMCUTarget()>.runPSRAMAt(); }
     [[nodiscard]] static constexpr auto getReadyPin() noexcept { return BoardDescription<getMCUTarget()>.getReadyPin(); }
     [[nodiscard]] static constexpr auto getClockOutPin() noexcept { return BoardDescription<getMCUTarget()>.getClockOutPin(); }
-    [[nodiscard]] static constexpr auto getAddressStatePin() noexcept { return BoardDescription<getMCUTarget()>.getAddressStatePin(); }
     [[nodiscard]] static constexpr auto getPsramEnPin() noexcept { return BoardDescription<getMCUTarget()>.getPsramEnPin(); }
     [[nodiscard]] static constexpr auto getGpioSelectPin() noexcept { return BoardDescription<getMCUTarget()>.getGpioSelectPin(); }
     [[nodiscard]] static constexpr auto getMisoPin() noexcept { return BoardDescription<getMCUTarget()>.getMisoPin(); }
