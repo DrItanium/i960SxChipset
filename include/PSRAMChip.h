@@ -113,17 +113,12 @@ public:
         digitalWrite<enablePin, LOW>();
         SPI.transfer(0x99);
         digitalWrite<enablePin, HIGH>();
-        if constexpr (clearOnBegin) {
-            if constexpr (sanityCheckOnBegin) {
-                Serial.println(F("TESTING PSRAM!"));
-            } else {
-                Serial.println(F("CLEARING PSRAM ONLY!"));
-            }
+        if constexpr (clearOnBegin && sanityCheckOnBegin) {
+            Serial.println(F("TESTING PSRAM!"));
             constexpr auto ActualSize = 64;
             for (uint32_t addr = 0; addr < Size; addr +=ActualSize) {
                 SplitWord32 translated(addr);
-                if constexpr (sanityCheckOnBegin) {
-                    byte theInstruction[ActualSize + 4]{
+                byte theInstruction[ActualSize + 4]{
                         0x02,
                         translated.bytes[2],
                         translated.bytes[1],
@@ -136,9 +131,9 @@ public:
                         0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
                         0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
                         0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                        };
-                    doSPI<false>(theInstruction, ActualSize + 4);
-                    byte theInstruction2[ActualSize + 4]{
+                };
+                doSPI<false>(theInstruction, ActualSize + 4);
+                byte theInstruction2[ActualSize + 4]{
                         0x03,
                         translated.bytes[2],
                         translated.bytes[1],
@@ -151,55 +146,79 @@ public:
                         0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0, 0, 0, 0, 0, 0, 0,
-                        };
-                    // rest of the values do not matter!
-                    doSPI<false>(theInstruction2, ActualSize + 4);
-                    byte* ptr = theInstruction2 + 4;
-                    for (int i = 4; i < (ActualSize + 4); ++i) {
-                        if (theInstruction2[i] != 0x55) {
-                            Serial.print(F("MISMATCH @ ADDRESS 0x"));
-                            Serial.print(translated.wholeValue_, HEX);
-                            Serial.print(F(" GOT 0x"));
-                            Serial.print(ptr[i], HEX);
-                            Serial.println(F(" EXPECTED 0x55"));
-                            available_ = false;
-                            break;
-                        }
-                    }
-                    if (!available_) {
+                };
+                // rest of the values do not matter!
+                doSPI<false>(theInstruction2, ActualSize + 4);
+                byte* ptr = theInstruction2 + 4;
+                for (int i = 4; i < (ActualSize + 4); ++i) {
+                    if (theInstruction2[i] != 0x55) {
+                        Serial.print(F("MISMATCH @ ADDRESS 0x"));
+                        Serial.print(translated.wholeValue_, HEX);
+                        Serial.print(F(" GOT 0x"));
+                        Serial.print(ptr[i], HEX);
+                        Serial.println(F(" EXPECTED 0x55"));
+                        available_ = false;
                         break;
                     }
                 }
+                if (!available_) {
+                    break;
+                }
                 // then clear the memory area
                 byte theInstruction3[ActualSize + 4]{
-                    0x02,
-                    translated.bytes[2],
-                    translated.bytes[1],
-                    translated.bytes[0],
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0,
-                    };
+                        0x02,
+                        translated.bytes[2],
+                        translated.bytes[1],
+                        translated.bytes[0],
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                };
                 doSPI<false>(theInstruction3, ActualSize + 4);
             }
+            if (available_) {
+                Serial.println(F("DONE STARTING UP PSRAM!"));
+            } else {
+                Serial.println(F("PSRAM ERROR ON STARTUP, DISABLING!"));
+            }
+        } else if (clearOnBegin && !sanityCheckOnBegin) {
+            Serial.println(F("CLEARING PSRAM"));
+            constexpr auto ActualSize = 128;
+            for (uint32_t addr = 0; addr < Size; addr += ActualSize) {
+                SplitWord32 translated(addr);
+                // then clear the memory area
+                byte theInstruction3[ActualSize + 4]{
+                        0x02,
+                        translated.bytes[2],
+                        translated.bytes[1],
+                        translated.bytes[0],
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                };
+                doSPI<false>(theInstruction3, ActualSize + 4);
+            }
+            Serial.println(F("DONE CLEARING PSRAM!"));
         }
         SPI.endTransaction();
-        if constexpr (clearOnBegin) {
-            if constexpr (sanityCheckOnBegin) {
-                if (available_) {
-                    Serial.println(F("DONE STARTING UP PSRAM!"));
-                } else {
-                    Serial.println(F("PSRAM ERROR ON STARTUP, DISABLING!"));
-                }
-            } else {
-                Serial.println(F("DONE CLEARING PSRAM!"));
-            }
-        }
     }
     [[nodiscard]] bool respondsTo(Address address) const noexcept override {
         if constexpr (sanityCheckOnBegin) {
@@ -257,16 +276,16 @@ public:
     static_assert(Mask == 0x03FF'FFFF, "PSRAMBlock8 mask is wrong!");
 public:
     explicit PSRAMBlock8(Address base) : MemoryThing(base, base + Size),
-    backingChips{
-                SingleChip (base + (0 * SingleChipSize)),
-                SingleChip (base + (1 * SingleChipSize)),
-                SingleChip (base + (2 * SingleChipSize)),
-                SingleChip (base + (3 * SingleChipSize)),
-                SingleChip (base + (4 * SingleChipSize)),
-                SingleChip (base + (5 * SingleChipSize)),
-                SingleChip (base + (6 * SingleChipSize)),
-                SingleChip (base + (7 * SingleChipSize)),
-    } {
+                                         backingChips{
+                                                 SingleChip (base + (0 * SingleChipSize)),
+                                                 SingleChip (base + (1 * SingleChipSize)),
+                                                 SingleChip (base + (2 * SingleChipSize)),
+                                                 SingleChip (base + (3 * SingleChipSize)),
+                                                 SingleChip (base + (4 * SingleChipSize)),
+                                                 SingleChip (base + (5 * SingleChipSize)),
+                                                 SingleChip (base + (6 * SingleChipSize)),
+                                                 SingleChip (base + (7 * SingleChipSize)),
+                                         } {
 
     }
     ~PSRAMBlock8() override = default;
