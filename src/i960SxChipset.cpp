@@ -103,14 +103,14 @@ using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMS
 constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
 constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
-RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
+//RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 ROMTextSection rom(textSectionStart);
 ROMDataSection dataRom(dataSectionStart);
 SDCardFilesystemInterface fs(0x300);
 // list of io memory devices to walk through
 MemoryThing* things[] {
         &ramBlock,
-        &ram,
+        //&ram,
         &rom,
         &dataRom,
         &chipsetFunctions,
@@ -296,7 +296,7 @@ void setupPeripherals() {
     ramBlock.begin();
     rom.begin();
     dataRom.begin();
-    ram.begin();
+    //ram.begin();
     // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
