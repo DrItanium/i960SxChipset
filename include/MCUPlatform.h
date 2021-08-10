@@ -335,7 +335,7 @@ constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
         8, 512,
         32,
         10_MHz,
-        5_MHz,
+        8_MHz,
         false,
         false
 };
@@ -345,7 +345,7 @@ constexpr MCUConfiguration<Pinout1284p> BoardDescription<TargetMCU::ATmega1284p>
         256, 32,
         32,
         10_MHz,
-        5_MHz, // due to the current design, we have to run the psram at 5 Mhz
+        8_MHz, // due to the current design, we have to run the psram at 5 Mhz
         false,
         true
 };
@@ -355,7 +355,7 @@ constexpr MCUConfiguration<PinoutRaspberryPiPico> BoardDescription<TargetMCU::Ra
         256, 32, // 256, 32 element lines
         64,
         10_MHz,
-        5_MHz,
+        8_MHz,
         false,
         false,
 };
