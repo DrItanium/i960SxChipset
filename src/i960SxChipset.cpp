@@ -537,7 +537,6 @@ void loop() {
         DigitalPin<i960Pinout::Ready>::pulse();
         return isBurstLast;
     };
-    do {
         if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
             signalHaltState(F("CHECKSUM FAILURE!"));
         }
@@ -594,7 +593,6 @@ void loop() {
                 }
             }
         }
-    } while (true);
 }
 
 [[noreturn]]
