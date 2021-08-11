@@ -197,8 +197,9 @@ public:
                 SPI.transfer(translated.bytes[1]);
                 SPI.transfer(translated.bytes[0]);
                 // then clear the memory area
-                for (int i = 0; i < ActualSize; ++i) {
-                    SPI.transfer(0);
+                for (int i = 0; i < ActualSize / 4; ++i) {
+                    byte container[4] { 0, 0, 0, 0 };
+                    SPI.transfer(container, 4);
                 }
                 digitalWrite<enablePin, HIGH>();
             }
