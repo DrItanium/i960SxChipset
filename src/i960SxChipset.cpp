@@ -551,10 +551,9 @@ void loop() {
     processorInterface.newDataCycle();
     //Serial.print(F("REQUESTED ADDRESS: 0x"));
     //Serial.println(processorInterface.getAddress(), HEX);
-    auto address = processorInterface.getAddress();
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    if (!theThing->respondsTo(address)) {
-        theThing = getThing(address, LoadStoreStyle::Full16);
+    if (!theThing->respondsTo(processorInterface.getAddress())) {
+        theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
         if (!theThing) {
             // halt here because we've entered into unmapped memory state
             if (isReadOperation) {
