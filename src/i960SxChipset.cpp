@@ -444,7 +444,7 @@ void setup() {
 #ifdef ALLOW_SRAM_CACHE
         purgeSRAMCache();
 #endif
-        theThing = &rom;
+        theThing = getThing(0, LoadStoreStyle::Full16);
         bypassesCache = theThing->bypassesCache();
         fs.begin();
         chipsetFunctions.begin();
@@ -541,69 +541,67 @@ void loop() {
         DigitalPin<i960Pinout::Ready>::pulse();
         return isBurstLast;
     };
-        if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-            signalHaltState(F("CHECKSUM FAILURE!"));
-        }
-        // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-        while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-        // keep processing data requests until we
-        // when we do the transition, record the information we need
-        processorInterface.newDataCycle();
-        //Serial.print(F("REQUESTED ADDRESS: 0x"));
-        //Serial.println(processorInterface.getAddress(), HEX);
-        auto address = processorInterface.getAddress();
-        auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-        if (!theThing->respondsTo(address)) {
-            theThing = getThing(address, LoadStoreStyle::Full16);
-            if (!theThing) {
-                // halt here because we've entered into unmapped memory state
-                if (isReadOperation) {
-                    Serial.print(F("UNMAPPED READ FROM 0x"));
-                } else {
-                    Serial.print(F("UNMAPPED WRITE OF 0x"));
-                    // expensive but something has gone horribly wrong anyway so whatever!
-                    Serial.print(processorInterface.getDataBits(), HEX);
-                    Serial.print(F(" TO 0x"));
-
-                }
-                Serial.println(processorInterface.getAddress(), HEX);
-                signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
+    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+        signalHaltState(F("CHECKSUM FAILURE!"));
+    }
+    // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    // keep processing data requests until we
+    // when we do the transition, record the information we need
+    processorInterface.newDataCycle();
+    //Serial.print(F("REQUESTED ADDRESS: 0x"));
+    //Serial.println(processorInterface.getAddress(), HEX);
+    auto address = processorInterface.getAddress();
+    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
+    if (!theThing->respondsTo(address)) {
+        theThing = getThing(address, LoadStoreStyle::Full16);
+        if (!theThing) {
+            // halt here because we've entered into unmapped memory state
+            if (isReadOperation) {
+                Serial.print(F("UNMAPPED READ FROM 0x"));
             } else {
-                bypassesCache = theThing->bypassesCache();
+                Serial.print(F("UNMAPPED WRITE OF 0x"));
+                // expensive but something has gone horribly wrong anyway so whatever!
+                Serial.print(processorInterface.getDataBits(), HEX);
+                Serial.print(F(" TO 0x"));
             }
+            Serial.println(processorInterface.getAddress(), HEX);
+            signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
         } else {
-            if (bypassesCache) {
-                if (isReadOperation) {
-                    do {
-                        processorInterface.updateDataCycle();
-                        processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
-                                                                      processorInterface.getStyle()));
-                    } while (!signalDone());
-                } else {
-                    // write
-                    do {
-                        processorInterface.updateDataCycle();
-                        theThing->write(processorInterface.getAddress(),
-                                        processorInterface.getDataBits(),
-                                        processorInterface.getStyle());
-                    } while (!signalDone());
-                }
-            } else {
-                if (auto &theEntry = getLine(); isReadOperation) {
-                    do {
-                        processorInterface.updateDataCycle();
-                        processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-                    } while (!signalDone());
-                } else {
-                    do {
-                        processorInterface.updateDataCycle();
-                        theEntry.set(processorInterface.getCacheOffsetEntry(),
-                                     processorInterface.getStyle(),
-                                     SplitWord16{processorInterface.getDataBits()});
-                    } while (!signalDone());
-                }
-            }
+            bypassesCache = theThing->bypassesCache();
         }
+    }
+    if (bypassesCache) {
+        if (isReadOperation) {
+            do {
+                processorInterface.updateDataCycle();
+                processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
+                                                              processorInterface.getStyle()));
+            } while (!signalDone());
+        } else {
+            // write
+            do {
+                processorInterface.updateDataCycle();
+                theThing->write(processorInterface.getAddress(),
+                                processorInterface.getDataBits(),
+                                processorInterface.getStyle());
+            } while (!signalDone());
+        }
+    } else {
+        if (auto &theEntry = getLine(); isReadOperation) {
+            do {
+                processorInterface.updateDataCycle();
+                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+            } while (!signalDone());
+        } else {
+            do {
+                processorInterface.updateDataCycle();
+                theEntry.set(processorInterface.getCacheOffsetEntry(),
+                             processorInterface.getStyle(),
+                             SplitWord16{processorInterface.getDataBits()});
+            } while (!signalDone());
+        }
+    }
 }
 
 [[noreturn]]
