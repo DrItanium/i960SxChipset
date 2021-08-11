@@ -196,7 +196,6 @@ public:
                 SPI.transfer(translated.bytes[2]);
                 SPI.transfer(translated.bytes[1]);
                 SPI.transfer(translated.bytes[0]);
-                // then clear the memory area
                 for (size_t i = 0; i < ActualSize ; ++i) {
                     SPI.transfer(0);
                 }
