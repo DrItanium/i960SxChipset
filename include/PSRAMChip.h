@@ -189,7 +189,8 @@ public:
         } else if (clearOnBegin && !sanityCheckOnBegin) {
             Serial.println(F("CLEARING PSRAM"));
             constexpr auto ActualSize = 1024;
-            static_assert(((ActualSize / sizeof(uint32_t)) * sizeof(uint32_t)) == ActualSize, "TransferBlockSize is not even divisible by a 32-bit unsigned integer!");
+            constexpr auto TransferBlockSize = sizeof(uint32_t);
+            static_assert(((ActualSize / TransferBlockSize) * TransferBlockSize) == ActualSize, "TransferBlockSize is not even divisible into ActualSize!");
             for (uint32_t addr = 0; addr < Size; addr += ActualSize) {
                 SplitWord32 translated(addr);
                 digitalWrite<enablePin, LOW>();
@@ -198,9 +199,9 @@ public:
                 SPI.transfer(translated.bytes[1]);
                 SPI.transfer(translated.bytes[0]);
                 // then clear the memory area
-                for (size_t i = 0; i < ActualSize / sizeof(uint32_t); ++i) {
-                    uint32_t container = 0;
-                    SPI.transfer(reinterpret_cast<byte*>(container), sizeof(uint32_t));
+                for (size_t i = 0; i < ActualSize / TransferBlockSize; ++i) {
+                    byte container[TransferBlockSize] = { 0 };
+                    SPI.transfer(container, TransferBlockSize);
                 }
                 digitalWrite<enablePin, HIGH>();
             }
