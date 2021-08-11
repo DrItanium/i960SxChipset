@@ -104,14 +104,6 @@ public:
         return address_.bytes[0] >> 1;
     }
 public:
-    void setPortZDirectionRegister(byte value) noexcept;
-    byte getPortZDirectionRegister() noexcept;
-    void setPortZPolarityRegister(byte value) noexcept;
-    byte getPortZPolarityRegister() noexcept;
-    void setPortZPullupResistorRegister(byte value) noexcept;
-    byte getPortZPullupResistorRegister() noexcept;
-    byte readPortZGPIORegister() noexcept;
-    void writePortZGPIORegister(byte value) noexcept;
 
     void newDataCycle() noexcept;
     void updateDataCycle() noexcept;

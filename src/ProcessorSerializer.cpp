@@ -196,32 +196,6 @@ ProcessorInterface::begin() noexcept {
 
     }
 }
-void
-ProcessorInterface::setPortZDirectionRegister(byte value) noexcept {
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IODIRB, value);
-}
-byte
-ProcessorInterface::getPortZDirectionRegister() noexcept {
-    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IODIRB);
-}
-void ProcessorInterface::setPortZPolarityRegister(byte value) noexcept {
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IPOLB, value);
-}
-byte ProcessorInterface::getPortZPolarityRegister() noexcept {
-    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IPOLB);
-}
-void ProcessorInterface::setPortZPullupResistorRegister(byte value) noexcept {
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPPUB, value);
-}
-byte ProcessorInterface::getPortZPullupResistorRegister() noexcept {
-    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPPUB);
-}
-byte ProcessorInterface::readPortZGPIORegister() noexcept {
-    return read8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOB);
-}
-void ProcessorInterface::writePortZGPIORegister(byte value) noexcept {
-    write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOB, value);
-}
 
 void ProcessorInterface::newDataCycle() noexcept {
     address_.lowerHalf_ = readGPIO16(ProcessorInterface::IOExpanderAddress::Lower16Lines);
