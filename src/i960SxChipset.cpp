@@ -390,6 +390,8 @@ void purgeSRAMCache() noexcept {
     Serial.println(F("DONE PURGING SRAM CACHE!"));
 }
 #endif
+MemoryThing* theThing = nullptr;
+bool bypassesCache = false;
 // the setup routine runs once when you press reset:
 void setup() {
     setupClockSource();
@@ -442,6 +444,8 @@ void setup() {
 #ifdef ALLOW_SRAM_CACHE
         purgeSRAMCache();
 #endif
+        theThing = &rom;
+        bypassesCache = theThing->bypassesCache();
         fs.begin();
         chipsetFunctions.begin();
         Serial.println(F("i960Sx chipset bringup"));
@@ -508,21 +512,21 @@ void setup() {
 // Ti -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
-auto& getLine(MemoryThing& theThing) noexcept {
+auto& getLine() noexcept {
     if constexpr (EnableDebuggingCompileTime) {
         Serial.println(F("getLine() {"));
     }
     auto address = processorInterface.getAlignedAddress();
+    auto tagIndex = CacheEntry::computeTagIndex(address);
     if constexpr (EnableDebuggingCompileTime) {
-        auto tagIndex = CacheEntry::computeTagIndex(address);
         Serial.print(F("ADDRESS: 0x"));
         Serial.println(address, HEX);
         Serial.print(F("TAG INDEX: 0x"));
         Serial.println(tagIndex, HEX);
     }
-    auto& theEntry = entries[CacheEntry::computeTagIndex(address)];
+    auto& theEntry = entries[tagIndex];
     if (!theEntry.matches(address)) {
-        theEntry.reset(address, theThing);
+        theEntry.reset(address, *theThing);
     }
     if constexpr (EnableDebuggingCompileTime) {
         Serial.println(F("}"));
@@ -547,21 +551,28 @@ void loop() {
         processorInterface.newDataCycle();
         //Serial.print(F("REQUESTED ADDRESS: 0x"));
         //Serial.println(processorInterface.getAddress(), HEX);
-        if (auto* theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); !theThing) {
-            // halt here because we've entered into unmapped memory state
-            if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-                Serial.print(F("UNMAPPED READ FROM 0x"));
-            } else {
-                Serial.print(F("UNMAPPED WRITE OF 0x"));
-                // expensive but something has gone horribly wrong anyway so whatever!
-                Serial.print(processorInterface.getDataBits(), HEX);
-                Serial.print(F(" TO 0x"));
+        auto address = processorInterface.getAddress();
+        auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
+        if (!theThing->respondsTo(address)) {
+            theThing = getThing(address, LoadStoreStyle::Full16);
+            if (!theThing) {
+                // halt here because we've entered into unmapped memory state
+                if (isReadOperation) {
+                    Serial.print(F("UNMAPPED READ FROM 0x"));
+                } else {
+                    Serial.print(F("UNMAPPED WRITE OF 0x"));
+                    // expensive but something has gone horribly wrong anyway so whatever!
+                    Serial.print(processorInterface.getDataBits(), HEX);
+                    Serial.print(F(" TO 0x"));
 
+                }
+                Serial.println(processorInterface.getAddress(), HEX);
+                signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
+            } else {
+                bypassesCache = theThing->bypassesCache();
             }
-            Serial.println(processorInterface.getAddress(), HEX);
-            signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
         } else {
-            if (auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted(); theThing->bypassesCache()) {
+            if (bypassesCache) {
                 if (isReadOperation) {
                     do {
                         processorInterface.updateDataCycle();
@@ -578,7 +589,7 @@ void loop() {
                     } while (!signalDone());
                 }
             } else {
-                if (auto &theEntry = getLine(*theThing); isReadOperation) {
+                if (auto &theEntry = getLine(); isReadOperation) {
                     do {
                         processorInterface.updateDataCycle();
                         processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
