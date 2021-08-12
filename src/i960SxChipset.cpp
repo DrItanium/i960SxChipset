@@ -41,7 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
 #include "PSRAMChip.h"
+#ifndef ARDUINO_ARCH_RP2040
 #define ALLOW_SRAM_CACHE
+#endif
 constexpr bool EnableDebuggingCompileTime = false;
 
 bool displayReady = false;
