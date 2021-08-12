@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ClockGeneration.h"
 #include "PSRAMChip.h"
 #include "hitagimon.h"
+#include "OnChipMemoryThing.h"
 constexpr bool EnableDebuggingCompileTime = false;
 
 bool displayReady = false;
@@ -103,10 +104,17 @@ using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMS
 constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
 constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
-//RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
-//ROMTextSection rom(textSectionStart);
-//ROMDataSection dataRom(dataSectionStart);
+#ifdef ARDUINO_ARCH_RP2040
+ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom());
+ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, getBootDataLength(), getBootData());
+#else
+ROMTextSection rom(textSectionStart);
+ROMDataSection dataRom(dataSectionStart);
+#endif
+#ifndef ARDUINO_ARCH_RP2040
 SDCardFilesystemInterface fs(0x300);
+#endif
+//RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 // list of io memory devices to walk through
 MemoryThing* things[] {
         &ramBlock,
@@ -115,7 +123,9 @@ MemoryThing* things[] {
         &dataRom,
         &chipsetFunctions,
         &displayCommandSet,
+#ifndef ARDUINO_ARCH_RP2040
         &fs,
+#endif
 };
 
 
@@ -457,7 +467,9 @@ void setup() {
         purgeSRAMCache();
         theThing = getThing(0, LoadStoreStyle::Full16);
         bypassesCache = theThing->bypassesCache();
+#ifndef ARDUINO_ARCH_RP2040
         fs.begin();
+#endif
         chipsetFunctions.begin();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages

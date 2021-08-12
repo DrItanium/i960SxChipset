@@ -4,8 +4,10 @@
 
 #ifndef SXCHIPSET_HITAGIMON_H
 #define SXCHIPSET_HITAGIMON_H
-const unsigned char* getBootRom() noexcept;
-const unsigned char* getBootDat() noexcept;
-unsigned int getBootRomLength() noexcept;
-unsigned int getBootDataLength() noexcept;
+#include <Arduino.h>
+#include "Pinout.h"
+const byte* getBootRom() noexcept;
+const byte* getBootData() noexcept;
+Address getBootRomLength() noexcept;
+Address getBootDataLength() noexcept;
 #endif //SXCHIPSET_HITAGIMON_H
