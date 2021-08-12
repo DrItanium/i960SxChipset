@@ -79,6 +79,7 @@ public:
     explicit ROMDataSection(Address base) noexcept : Parent(base, base + Size, Size, "boot.dat", FILE_READ) { }
     ~ROMDataSection() override = default;
 };
+
 class RAMFile : public MemoryMappedFile {
     //<TargetBoard::numberOfDataCacheLines(), TargetBoard::getDataCacheLineSize()>
 public:
@@ -109,6 +110,8 @@ ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom()
 //ROMTextSection rom(textSectionStart);
 //ROMDataSection dataRom(dataSectionStart);
 ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, getBootDataLength(), getBootData());
+//ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, 16, nullptr);
+//ReadOnlyOnChipMemoryThing rom(textSectionStart, 16, nullptr);
 #else
 ROMTextSection rom(textSectionStart);
 ROMDataSection dataRom(dataSectionStart);
@@ -413,6 +416,9 @@ void setup() {
     Serial.begin(115200);
     while(!Serial) {
         delay(10);
+    }
+    while (true) {
+        delay(1000);
     }
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
