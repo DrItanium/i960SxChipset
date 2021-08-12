@@ -83,79 +83,81 @@ public:
      * @return the value to return to the i960 if it makes sense (otherwise it will be zero)
      */
     uint16_t invoke(uint16_t /* unused */) {
-        // perhaps we'll do nothing with the value but hold onto it for now
-        switch (command_) {
-            case Opcodes::SetRotation:
-                display_.setRotation(x_);
-                break;
-            case Opcodes::InvertDisplay:
-                display_.invertDisplay(x_ != 0);
-                break;
-            case Opcodes::DrawPixel:
-                display_.drawPixel(x_, y_, color_);
-                break;
-            case Opcodes::FillRect:
-                display_.fillRect(x_, y_, w_, h_, color_);
-                break;
-            case Opcodes::FillScreen:
-                display_.fillScreen(color_);
-                break;
-            case Opcodes::Color565:
-                return display_.color565(r_, g_, b_);
-            case Opcodes::DrawLine:
-                display_.drawLine(x0_, y0_, x1_, y1_, color_);
-                break;
-            case Opcodes::DrawRect:
-                display_.drawRect(x_, y_, w_, h_, color_);
-                break;
-            case Opcodes::DrawCircle:
-                display_.drawCircle(x0_, y0_, r_, color_);
-                break;
-            case Opcodes::FillCircle:
-                display_.fillCircle(x0_, y0_, r_, color_);
-                break;
-            case Opcodes::DrawTriangle:
-                display_.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
-                break;
-            case Opcodes::FillTriangle:
-                display_.fillCircle(x0_, y0_, r_, color_);
-                break;
-            case Opcodes::DrawRoundRect:
-                display_.drawRoundRect(x_, y_, w_, h_, r_, color_);
-                break;
-            case Opcodes::FillRoundRect:
-                display_.fillRoundRect(x_, y_, w_, h_, r_, color_);
-                break;
-            case Opcodes::SetTextSizeSquare:
-                display_.setTextSize(x_);
-                break;
-            case Opcodes::SetTextSizeRectangle:
-                display_.setTextSize(x_, y_);
-                break;
-            case Opcodes::SetCursor:
-                display_.setCursor(x_, y_);
-                break;
-            case Opcodes::SetTextColor0:
-                display_.setTextColor(color_);
-                break;
-            case Opcodes::SetTextColor1:
-                display_.setTextColor(color_, bgcolor_);
-                break;
-            case Opcodes::SetTextWrap:
-                display_.setTextWrap(x_ != 0);
-                break;
-            case Opcodes::GetWidth:
-                return display_.width();
-            case Opcodes::GetHeight:
-                return display_.height();
-            case Opcodes::GetRotation:
-                return display_.getRotation();
-            case Opcodes::GetCursorX:
-                return display_.getCursorX();
-            case Opcodes::GetCursorY:
-                return display_.getCursorY();
-            default:
-                return 0;
+        if constexpr (DisplayActive_v) {
+            // perhaps we'll do nothing with the value but hold onto it for now
+            switch (command_) {
+                case Opcodes::SetRotation:
+                    display_.setRotation(x_);
+                    break;
+                case Opcodes::InvertDisplay:
+                    display_.invertDisplay(x_ != 0);
+                    break;
+                case Opcodes::DrawPixel:
+                    display_.drawPixel(x_, y_, color_);
+                    break;
+                case Opcodes::FillRect:
+                    display_.fillRect(x_, y_, w_, h_, color_);
+                    break;
+                case Opcodes::FillScreen:
+                    display_.fillScreen(color_);
+                    break;
+                case Opcodes::Color565:
+                    return display_.color565(r_, g_, b_);
+                case Opcodes::DrawLine:
+                    display_.drawLine(x0_, y0_, x1_, y1_, color_);
+                    break;
+                case Opcodes::DrawRect:
+                    display_.drawRect(x_, y_, w_, h_, color_);
+                    break;
+                case Opcodes::DrawCircle:
+                    display_.drawCircle(x0_, y0_, r_, color_);
+                    break;
+                case Opcodes::FillCircle:
+                    display_.fillCircle(x0_, y0_, r_, color_);
+                    break;
+                case Opcodes::DrawTriangle:
+                    display_.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
+                    break;
+                case Opcodes::FillTriangle:
+                    display_.fillCircle(x0_, y0_, r_, color_);
+                    break;
+                case Opcodes::DrawRoundRect:
+                    display_.drawRoundRect(x_, y_, w_, h_, r_, color_);
+                    break;
+                case Opcodes::FillRoundRect:
+                    display_.fillRoundRect(x_, y_, w_, h_, r_, color_);
+                    break;
+                case Opcodes::SetTextSizeSquare:
+                    display_.setTextSize(x_);
+                    break;
+                case Opcodes::SetTextSizeRectangle:
+                    display_.setTextSize(x_, y_);
+                    break;
+                case Opcodes::SetCursor:
+                    display_.setCursor(x_, y_);
+                    break;
+                case Opcodes::SetTextColor0:
+                    display_.setTextColor(color_);
+                    break;
+                case Opcodes::SetTextColor1:
+                    display_.setTextColor(color_, bgcolor_);
+                    break;
+                case Opcodes::SetTextWrap:
+                    display_.setTextWrap(x_ != 0);
+                    break;
+                case Opcodes::GetWidth:
+                    return display_.width();
+                case Opcodes::GetHeight:
+                    return display_.height();
+                case Opcodes::GetRotation:
+                    return display_.getRotation();
+                case Opcodes::GetCursorX:
+                    return display_.getCursorX();
+                case Opcodes::GetCursorY:
+                    return display_.getCursorY();
+                default:
+                    return 0;
+            }
         }
         return 0;
     }
@@ -195,19 +197,26 @@ public:
     void setG(int16_t value) noexcept { g_ = value; }
     void setB(int16_t value) noexcept { b_ = value; }
     void flush() {
-        display_.flush();
+        if constexpr (DisplayActive_v) {
+            display_.flush();
+        }
     }
     void print(char c) {
-        display_.print(c);
+        if constexpr (DisplayActive_v) {
+            display_.print(c);
+        }
     }
     [[nodiscard]] bool available() noexcept { return true; }
     [[nodiscard]] bool availableForWriting() noexcept {
-        return display_.availableForWrite();
-        return false;
+        if constexpr (DisplayActive_v) {
+            return display_.availableForWrite();
+        } else {
+            return true;
+        }
     }
     uint16_t read16(Address address) noexcept override {
-        switch (address) {
-#ifndef ARDUINO_ARCH_RP2040
+        if constexpr (DisplayActive_v) {
+            switch (address) {
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
                 X(Available) : return available();
                 X(AvailableForWrite) : return availableForWriting();
@@ -234,73 +243,85 @@ public:
                 X(ButtonsLower) : return buttonsCache_ & 0xFFFF;
                 X(ButtonsUpper) : return (buttonsCache_ >> 16) & 0xFFFF;
 #undef X
-#endif
-            default: return 0;
+                default: return 0;
+            }
+        } else {
+            return 0;
         }
     }
     void write16(Address address, uint16_t value) noexcept override {
-        switch (address) {
-#ifndef ARDUINO_ARCH_RP2040
+        if constexpr (DisplayActive_v) {
+            switch (address) {
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
-            X(Command) :
+                X(Command) :
                 setCommand(static_cast<Opcodes>(value));
                 break;
-            X(X) : setX(static_cast<int16_t>(value)); break;
-            X(Y) : setY(static_cast<int16_t>(value)); break;
-            X(W) : setW(static_cast<int16_t>(value)); break;
-            X(H) : setH(static_cast<int16_t>(value)); break;
-            X(Radius) : setRadius(static_cast<int16_t>(value)); break;
-            X(Color) : setColor(value); break;
-            X(BGColor) : setBackgroundColor(value); break;
-            X(X0) : setX0(static_cast<int16_t>(value)); break;
-            X(Y0) : setY0(static_cast<int16_t>(value)); break;
-            X(X1) : setX1(static_cast<int16_t>(value)); break;
-            X(Y1) : setY1(static_cast<int16_t>(value)); break;
-            X(X2) : setX2(static_cast<int16_t>(value)); break;
-            X(Y2) : setY2(static_cast<int16_t>(value)); break;
-            X(R) : setR(static_cast<int16_t>(value)); break;
-            X(G) : setG(static_cast<int16_t>(value)); break;
-            X(B) : setB(static_cast<int16_t>(value)); break;
-            X(Doorbell) :
+                X(X) : setX(static_cast<int16_t>(value)); break;
+                X(Y) : setY(static_cast<int16_t>(value)); break;
+                X(W) : setW(static_cast<int16_t>(value)); break;
+                X(H) : setH(static_cast<int16_t>(value)); break;
+                X(Radius) : setRadius(static_cast<int16_t>(value)); break;
+                X(Color) : setColor(value); break;
+                X(BGColor) : setBackgroundColor(value); break;
+                X(X0) : setX0(static_cast<int16_t>(value)); break;
+                X(Y0) : setY0(static_cast<int16_t>(value)); break;
+                X(X1) : setX1(static_cast<int16_t>(value)); break;
+                X(Y1) : setY1(static_cast<int16_t>(value)); break;
+                X(X2) : setX2(static_cast<int16_t>(value)); break;
+                X(Y2) : setY2(static_cast<int16_t>(value)); break;
+                X(R) : setR(static_cast<int16_t>(value)); break;
+                X(G) : setG(static_cast<int16_t>(value)); break;
+                X(B) : setB(static_cast<int16_t>(value)); break;
+                X(Doorbell) :
                 resultLower_ = invoke(value);
                 break;
-            X(Backlight) :
+                X(Backlight) :
                 backlightStatus_ = value != 0 ? 1 : 0;
                 backlightStatus_ = value != 0 ? TFTSHIELD_BACKLIGHT_ON : TFTSHIELD_BACKLIGHT_OFF;
                 ss.setBacklight(backlightStatus_);
                 break;
-            X(BacklightFrequency) :
+                X(BacklightFrequency) :
                 backlightFrequency_ = value;
                 ss.setBacklightFreq(backlightFrequency_);
                 break;
-            X(ButtonsQuery):
+                X(ButtonsQuery):
                 buttonsCache_ = 0;
                 ss.readButtons();
                 break;
 #undef X
-#endif
-            default: break;
+                default: break;
+            }
         }
     }
     inline void fillScreen(uint16_t value) noexcept {
-        display_.fillScreen(value);
+        if constexpr (DisplayActive_v) {
+            display_.fillScreen(value);
+        }
     }
     inline void setCursor(int16_t x, int16_t y) noexcept {
-        display_.setCursor(x, y);
+        if constexpr (DisplayActive_v) {
+            display_.setCursor(x, y);
+        }
     }
     inline void setTextColor(uint16_t value) noexcept {
-        display_.setTextColor(value);
+        if constexpr (DisplayActive_v) {
+            display_.setTextColor(value);
+        }
     }
     inline void setTextSize(uint16_t size) noexcept {
-        display_.setTextSize(size);
+        if constexpr (DisplayActive_v) {
+            display_.setTextSize(size);
+        }
     }
     template<typename T, typename ... Args>
     inline void println(T msg, Args&& ... args) noexcept {
-        display_.println(msg, args...);
+        if constexpr (DisplayActive_v) {
+            display_.println(msg, args...);
+        }
     }
     void
     begin() noexcept override {
-        if constexpr (static_cast<UnderlyingPinoutType>(i960Pinout::DISPLAY_EN) != UnderlyingPinoutType ::NODISPLAY) {
+        if constexpr (DisplayActive_v) {
             Serial.println(F("Setting up the seesaw"));
             if (!ss.begin()) {
                 signalHaltState(F("NO SEESAW"));
@@ -322,7 +343,9 @@ public:
     }
     void
     clearScreen() {
-        display_.fillScreen(ST7735_BLACK);
+        if constexpr (DisplayActive_v) {
+            display_.fillScreen(ST7735_BLACK);
+        }
     }
 private:
     Opcodes command_ = Opcodes::None;
