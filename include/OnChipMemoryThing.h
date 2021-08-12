@@ -9,7 +9,7 @@
 class ReadOnlyOnChipMemoryThing : public MemoryThing {
 public:
     using Parent = MemoryThing;
-    ReadOnlyOnChipMemoryThing(Address baseAddress, Address length, const byte* pointer) : Parent(baseAddress, length), pointer_(pointer) { }
+    ReadOnlyOnChipMemoryThing(Address baseAddress, Address length, byte const * const pointer) : Parent(baseAddress, length), pointer_(pointer) { }
     ~ReadOnlyOnChipMemoryThing() override = default;
 public:
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
@@ -26,7 +26,7 @@ public:
     }
     [[nodiscard]] bool bypassesCache() const noexcept override { return true; }
 private:
-    const byte* pointer_ = nullptr;
+    byte const * const pointer_ = nullptr;
 };
 
 
