@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
 #include "PSRAMChip.h"
+#include "hitagimon.h"
 constexpr bool EnableDebuggingCompileTime = false;
 
 bool displayReady = false;
@@ -103,8 +104,8 @@ constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
 constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
 //RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
-ROMTextSection rom(textSectionStart);
-ROMDataSection dataRom(dataSectionStart);
+//ROMTextSection rom(textSectionStart);
+//ROMDataSection dataRom(dataSectionStart);
 SDCardFilesystemInterface fs(0x300);
 // list of io memory devices to walk through
 MemoryThing* things[] {
