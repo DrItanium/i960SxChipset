@@ -105,9 +105,10 @@ constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
 constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
 #ifdef ARDUINO_ARCH_RP2040
-ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom());
-//ROMTextSection rom(textSectionStart);
-ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, getBootDataLength(), getBootData());
+//ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom());
+ROMTextSection rom(textSectionStart);
+ROMDataSection dataRom(dataSectionStart);
+//ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, getBootDataLength(), getBootData());
 #else
 ROMTextSection rom(textSectionStart);
 ROMDataSection dataRom(dataSectionStart);
