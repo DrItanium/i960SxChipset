@@ -43,7 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "PSRAMChip.h"
 #include "hitagimon.h"
 #include "OnChipMemoryThing.h"
-constexpr bool EnableDebuggingCompileTime = false;
+constexpr bool EnableDebuggingCompileTime = true;
 
 bool displayReady = false;
 /**
@@ -99,7 +99,7 @@ DisplayThing displayCommandSet(0x200);
 constexpr Address RAMStart = 0x8000'0000;
 constexpr Address textSectionStart = 0x0000'0000;
 constexpr Address dataSectionStart = 0x2000'0000;
-constexpr auto PerformPSRAMSanityCheck = false;
+constexpr auto PerformPSRAMSanityCheck = true;
 constexpr auto PerformClearOnBootup = true;
 using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMSanityCheck>;
 constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
@@ -107,11 +107,7 @@ constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
 #ifdef ARDUINO_ARCH_RP2040
 ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom());
-//ROMTextSection rom(textSectionStart);
-//ROMDataSection dataRom(dataSectionStart);
 ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, getBootDataLength(), getBootData());
-//ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, 16, nullptr);
-//ReadOnlyOnChipMemoryThing rom(textSectionStart, 16, nullptr);
 #else
 ROMTextSection rom(textSectionStart);
 ROMDataSection dataRom(dataSectionStart);
@@ -408,17 +404,13 @@ MemoryThing* theThing = nullptr;
 bool bypassesCache = false;
 // the setup routine runs once when you press reset:
 void setup() {
-#ifdef ARDUINO_ARCH_RP2040
-    pinMode(25, OUTPUT);
-    digitalWrite(25, HIGH);
-#endif
     setupClockSource();
     Serial.begin(115200);
     while(!Serial) {
         delay(10);
     }
-    while (true) {
-        delay(1000);
+    if constexpr (ARDUINO_ARCH_RP2040) {
+        delay(2000); // wait two seconds before continuing on
     }
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
@@ -582,8 +574,8 @@ void loop() {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
-    //Serial.print(F("REQUESTED ADDRESS: 0x"));
-    //Serial.println(processorInterface.getAddress(), HEX);
+    Serial.print(F("REQUESTED ADDRESS: 0x"));
+    Serial.println(processorInterface.getAddress(), HEX);
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (!theThing->respondsTo(processorInterface.getAddress())) {
         theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);

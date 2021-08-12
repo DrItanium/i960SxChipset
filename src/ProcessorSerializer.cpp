@@ -69,9 +69,11 @@ namespace
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
     inline void doSPI(uint8_t* buffer, size_t count) {
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(buffer, count);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        SPI.endTransaction();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
@@ -176,6 +178,7 @@ void
 ProcessorInterface::begin() noexcept {
     if (!initialized_) {
         initialized_ = true;
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         pinMode(i960Pinout::GPIOSelect, OUTPUT);
         digitalWrite(i960Pinout::GPIOSelect, HIGH);
         // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
@@ -193,7 +196,7 @@ ProcessorInterface::begin() noexcept {
         writeDirection(IOExpanderAddress::MemoryCommitExtras, 0x005F);
         // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
         write8(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, 0b1000'0000);
-
+        SPI.endTransaction();
     }
 }
 
