@@ -106,12 +106,11 @@ constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
 #ifdef ARDUINO_ARCH_RP2040
 ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom());
+//ROMTextSection rom(textSectionStart);
 ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, getBootDataLength(), getBootData());
 #else
 ROMTextSection rom(textSectionStart);
 ROMDataSection dataRom(dataSectionStart);
-#endif
-#ifndef ARDUINO_ARCH_RP2040
 SDCardFilesystemInterface fs(0x300);
 #endif
 //RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
@@ -405,6 +404,10 @@ MemoryThing* theThing = nullptr;
 bool bypassesCache = false;
 // the setup routine runs once when you press reset:
 void setup() {
+#ifdef ARDUINO_ARCH_RP2040
+    pinMode(25, OUTPUT);
+    digitalWrite(25, HIGH);
+#endif
     setupClockSource();
     Serial.begin(115200);
     while(!Serial) {
