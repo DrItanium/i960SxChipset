@@ -329,13 +329,9 @@ inline void pulse(decltype(HIGH) from = HIGH, decltype(LOW) to = LOW) noexcept {
     thePort ^= getPinMask<pin>();
     SREG = theSREG;
 #else
-    delayMicroseconds(1);
     digitalWrite(pin, from);
-    delayMicroseconds(1);
     digitalWrite(pin, to);
-    delayMicroseconds(1);
     digitalWrite(pin, from);
-    delayMicroseconds(1);
 #endif
 }
 

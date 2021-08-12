@@ -570,7 +570,12 @@ void loop() {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
     // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted()) {
+        if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+            signalHaltState(F("CHECKSUM FAILURE!"));
+        }
+    }
+    delayMicroseconds(1); // wait a microsecond before continuing
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
@@ -598,14 +603,20 @@ void loop() {
     if (bypassesCache) {
         if (isReadOperation) {
             do {
+                delayMicroseconds(1);
                 processorInterface.updateDataCycle();
+                Serial.print(F("UNCACHED READ: 0x"));
+                Serial.println(processorInterface.getAddress());
                 processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
                                                               processorInterface.getStyle()));
             } while (!signalDone());
         } else {
             // write
             do {
+                delayMicroseconds(1);
                 processorInterface.updateDataCycle();
+                Serial.print(F("UNCACHED WRITE: 0x"));
+                Serial.println(processorInterface.getAddress());
                 theThing->write(processorInterface.getAddress(),
                                 processorInterface.getDataBits(),
                                 processorInterface.getStyle());
@@ -614,12 +625,18 @@ void loop() {
     } else {
         if (auto &theEntry = getLine(); isReadOperation) {
             do {
+                delayMicroseconds(1);
                 processorInterface.updateDataCycle();
+                Serial.print(F("CACHED READ: 0x"));
+                Serial.println(processorInterface.getAddress());
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
             } while (!signalDone());
         } else {
             do {
+                delayMicroseconds(1);
                 processorInterface.updateDataCycle();
+                Serial.print(F("CACHED WRITE: 0x"));
+                Serial.println(processorInterface.getAddress());
                 theEntry.set(processorInterface.getCacheOffsetEntry(),
                              processorInterface.getStyle(),
                              SplitWord16{processorInterface.getDataBits()});
