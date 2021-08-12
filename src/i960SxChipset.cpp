@@ -41,9 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
 #include "PSRAMChip.h"
-#ifndef ARDUINO_ARCH_RP2040
+//#ifndef ARDUINO_ARCH_RP2040
 #define ALLOW_SRAM_CACHE
-#endif
+//#endif
 constexpr bool EnableDebuggingCompileTime = false;
 
 bool displayReady = false;
@@ -170,16 +170,14 @@ public:
     [[nodiscard]] constexpr bool valid() const noexcept { return valid_; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_; }
     static void invalidateAllEntries() noexcept {
-#ifdef ALLOW_SRAM_CACHE
-        // we need to walk through all of the sram cache entries, committing all entries back to the backing store
-        for (uint32_t i = 0; i < SramCacheSize; i += SramCacheEntrySize) {
-            CacheEntry target(i); // load from the cache and purge the hell out of it
-            target.invalidate(); // try and invalidate it as well
+        if constexpr (CacheActive_v) {
+            for (uint32_t i = 0; i < SramCacheSize; i += SramCacheEntrySize) {
+                CacheEntry target(i); // load from the cache and purge the hell out of it
+                target.invalidate(); // try and invalidate it as well
+            }
         }
-#endif
     }
 private:
-#ifdef ALLOW_SRAM_CACHE
     /**
      * @brief Construct a cache entry from the SRAM cache
      * @param tag The address to use to pull from the SRAM cache
@@ -188,42 +186,45 @@ private:
         absorbEntryFromSRAMCache(tag);
     }
     void absorbEntryFromSRAMCache(Address newTag) noexcept {
-        SplitWord32 translation(computeL2TagIndex(newTag));
-        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(0x03);
-        SPI.transfer(translation.bytes[2]);
-        SPI.transfer(translation.bytes[1]);
-        SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
-        SPI.transfer(backingStorage, ActualCacheEntrySize);
-        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        // and we are done!
+        if constexpr (CacheActive_v) {
+            SplitWord32 translation(computeL2TagIndex(newTag));
+            digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+            SPI.transfer(0x03);
+            SPI.transfer(translation.bytes[2]);
+            SPI.transfer(translation.bytes[1]);
+            SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
+            SPI.transfer(backingStorage, ActualCacheEntrySize);
+            digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+            // and we are done!
+        }
     }
 private:
     void commitToSRAM() noexcept {
-        SplitWord32 translation(computeL2TagIndex(tag));
-        translation.bytes[3] = 0x02;
-        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(0x02);
-        SPI.transfer(translation.bytes[2]);
-        SPI.transfer(translation.bytes[1]);
-        SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
-        SPI.transfer(backingStorage, ActualCacheEntrySize); // this will garbage out things by design
-        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+        if constexpr (CacheActive_v) {
+            SplitWord32 translation(computeL2TagIndex(tag));
+            translation.bytes[3] = 0x02;
+            digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+            SPI.transfer(0x02);
+            SPI.transfer(translation.bytes[2]);
+            SPI.transfer(translation.bytes[1]);
+            SPI.transfer(translation.bytes[0]); // aligned to 32-byte boundaries
+            SPI.transfer(backingStorage, ActualCacheEntrySize); // this will garbage out things by design
+            digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+        }
     }
-#endif
 public:
     void reset(Address newTag, MemoryThing& thing) noexcept {
-#ifdef ALLOW_SRAM_CACHE
-        // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
-        // at no point can the cache ever be manipulated outside of this method
-        commitToSRAM();
-        // pull the new tag's address out of sram and do some work with it
-        absorbEntryFromSRAMCache(newTag);
-        if (matches(newTag)) {
-            // we got a match to just return
-            return;
+        if constexpr (CacheActive_v) {
+            // commit what we currently have in this object to sram cache (this could be invalid but it is important!)
+            // at no point can the cache ever be manipulated outside of this method
+            commitToSRAM();
+            // pull the new tag's address out of sram and do some work with it
+            absorbEntryFromSRAMCache(newTag);
+            if (matches(newTag)) {
+                // we got a match to just return
+                return;
+            }
         }
-#endif
         // no match so pull the data in from main memory
         if (valid() && isDirty()) {
             // just do the write out to disk to save time
@@ -303,20 +304,20 @@ void setupPeripherals() {
     Serial.println(F("Done setting up peripherals..."));
 }
 
-#ifdef ALLOW_SRAM_CACHE
 /**
  * @brief Just in case, purge the sram of data
  */
 void purgeSRAMCache() noexcept {
-    // 23lc1024s are in sequential by default :)
-    digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-    SPI.transfer(0xFF);
-    digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-    constexpr uint32_t max = 128_KB; // only one SRAM chip on board
-    Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
-    for (uint32_t i = 0; i < max; i += 32) {
-        SplitWord32 translation(i);
-        byte pagePurgeInstruction[36]{
+    if constexpr (CacheActive_v) {
+        // 23lc1024s are in sequential by default :)
+        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+        SPI.transfer(0xFF);
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+        constexpr uint32_t max = 128_KB; // only one SRAM chip on board
+        Serial.println(F("CHECKING SRAM IS PROPERLY WRITABLE"));
+        for (uint32_t i = 0; i < max; i += 32) {
+            SplitWord32 translation(i);
+            byte pagePurgeInstruction[36]{
                 0x02,
                 translation.bytes[2],
                 translation.bytes[1],
@@ -325,8 +326,8 @@ void purgeSRAMCache() noexcept {
                 9, 10, 11, 12, 13, 14, 15, 16,
                 17, 18, 19, 20, 21, 22, 23, 24,
                 25, 26, 27, 28, 29, 30, 31, 32,
-        };
-        byte pageReadInstruction[36]{
+                };
+            byte pageReadInstruction[36]{
                 0x03,
                 translation.bytes[2],
                 translation.bytes[1],
@@ -335,29 +336,29 @@ void purgeSRAMCache() noexcept {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
-        };
-        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(pagePurgeInstruction, 36);
-        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(pageReadInstruction, 36);
-        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        for (int x = 4; x < 36; ++x) {
-            auto a = pageReadInstruction[x];
-            auto index = x - 3;
-            if (a != index) {
-                Serial.print(F("MISMATCH 0x"));
-                Serial.print(index, HEX);
-                Serial.print(F(" => 0x"));
-                Serial.println(a, HEX);
+                };
+            digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+            SPI.transfer(pagePurgeInstruction, 36);
+            digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+            digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+            SPI.transfer(pageReadInstruction, 36);
+            digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+            for (int x = 4; x < 36; ++x) {
+                auto a = pageReadInstruction[x];
+                auto index = x - 3;
+                if (a != index) {
+                    Serial.print(F("MISMATCH 0x"));
+                    Serial.print(index, HEX);
+                    Serial.print(F(" => 0x"));
+                    Serial.println(a, HEX);
+                }
             }
         }
-    }
-    Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
-    Serial.println(F("PURGING SRAM CACHE!"));
-    for (uint32_t i = 0; i < max; i+= 32) {
-        SplitWord32 translation(i);
-        byte pagePurgeInstruction[36] {
+        Serial.println(F("SUCCESSFULLY CHECKED SRAM CACHE!"));
+        Serial.println(F("PURGING SRAM CACHE!"));
+        for (uint32_t i = 0; i < max; i+= 32) {
+            SplitWord32 translation(i);
+            byte pagePurgeInstruction[36] {
                 0x02,
                 translation.bytes[2],
                 translation.bytes[1],
@@ -366,8 +367,8 @@ void purgeSRAMCache() noexcept {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
-        };
-        byte pageReadInstruction[36]{
+                };
+            byte pageReadInstruction[36]{
                 0x03,
                 translation.bytes[2],
                 translation.bytes[1],
@@ -376,22 +377,22 @@ void purgeSRAMCache() noexcept {
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
-        };
-        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(pagePurgeInstruction, 36);
-        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        digitalWrite<i960Pinout::CACHE_EN_, LOW>();
-        SPI.transfer(pageReadInstruction, 36);
-        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
-        for (int x = 4; x < 36; ++x) {
-            if (pageReadInstruction[x] != 0) {
-                Serial.print(F("CHECK FAILURE!!!"));
+                };
+            digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+            SPI.transfer(pagePurgeInstruction, 36);
+            digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+            digitalWrite<i960Pinout::CACHE_EN_, LOW>();
+            SPI.transfer(pageReadInstruction, 36);
+            digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+            for (int x = 4; x < 36; ++x) {
+                if (pageReadInstruction[x] != 0) {
+                    Serial.print(F("CHECK FAILURE!!!"));
+                }
             }
         }
+        Serial.println(F("DONE PURGING SRAM CACHE!"));
     }
-    Serial.println(F("DONE PURGING SRAM CACHE!"));
 }
-#endif
 MemoryThing* theThing = nullptr;
 bool bypassesCache = false;
 // the setup routine runs once when you press reset:
@@ -443,9 +444,7 @@ void setup() {
                   i960Pinout::BE1);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
-#ifdef ALLOW_SRAM_CACHE
         purgeSRAMCache();
-#endif
         theThing = getThing(0, LoadStoreStyle::Full16);
         bypassesCache = theThing->bypassesCache();
         fs.begin();

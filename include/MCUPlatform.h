@@ -227,7 +227,6 @@ enum class PinoutRaspberryPiPico : int {
     CACHE_EN_ = NOCACHE_EN_,
 };
 static_assert(static_cast<int>(PinoutRaspberryPiPico::Count) == 30, "Raspberry Pi Pico Has 30 GPIO");
-
 template<typename E>
 constexpr bool isValidPin(E pin) noexcept {
     return static_cast<int>(pin) < static_cast<int>(E::Count) &&

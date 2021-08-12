@@ -207,6 +207,7 @@ public:
     }
     uint16_t read16(Address address) noexcept override {
         switch (address) {
+#ifndef ARDUINO_ARCH_RP2040
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
                 X(Available) : return available();
                 X(AvailableForWrite) : return availableForWriting();
@@ -233,11 +234,13 @@ public:
                 X(ButtonsLower) : return buttonsCache_ & 0xFFFF;
                 X(ButtonsUpper) : return (buttonsCache_ >> 16) & 0xFFFF;
 #undef X
+#endif
             default: return 0;
         }
     }
     void write16(Address address, uint16_t value) noexcept override {
         switch (address) {
+#ifndef ARDUINO_ARCH_RP2040
 #define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
             X(Command) :
                 setCommand(static_cast<Opcodes>(value));
@@ -275,6 +278,7 @@ public:
                 ss.readButtons();
                 break;
 #undef X
+#endif
             default: break;
         }
     }
@@ -296,23 +300,25 @@ public:
     }
     void
     begin() noexcept override {
+        if constexpr (static_cast<UnderlyingPinoutType>(i960Pinout::DISPLAY_EN) != UnderlyingPinoutType ::NODISPLAY) {
             Serial.println(F("Setting up the seesaw"));
-        if (!ss.begin()) {
-            signalHaltState(F("NO SEESAW"));
+            if (!ss.begin()) {
+                signalHaltState(F("NO SEESAW"));
+            }
+            Serial.println(F("seesaw started"));
+            Serial.print(F("Version: "));
+            Serial.println(ss.getVersion(), HEX);
+            ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
+            ss.tftReset();
+            display_.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
+            ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
+            Serial.println(F("TFT OK!"));
+            display_.fillScreen(ST77XX_BLACK);
+            display_.setCursor(0, 0);
+            display_.setTextColor(ST77XX_WHITE);
+            display_.setTextSize(3);
+            display_.println(F("i960Sx!"));
         }
-        Serial.println(F("seesaw started"));
-        Serial.print(F("Version: "));
-        Serial.println(ss.getVersion(), HEX);
-        ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
-        ss.tftReset();
-        display_.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
-        ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
-        Serial.println(F("TFT OK!"));
-        display_.fillScreen(ST77XX_BLACK);
-        display_.setCursor(0, 0);
-        display_.setTextColor(ST77XX_WHITE);
-        display_.setTextSize(3);
-        display_.println(F("i960Sx!"));
     }
     void
     clearScreen() {

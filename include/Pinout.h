@@ -215,6 +215,7 @@ enum class i960Pinout : int {
 constexpr bool isValidPin(i960Pinout pin) noexcept {
     return isValidPin<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pin));
 }
+constexpr bool CacheActive_v = isValidPin(i960Pinout::CACHE_EN_);
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     if (isValidPin(ip)) {
         digitalWrite(static_cast<int>(ip), value);
