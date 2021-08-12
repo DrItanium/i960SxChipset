@@ -226,6 +226,30 @@ enum class PinoutRaspberryPiPico : int {
     DC = NODC,
     CACHE_EN_ = NOCACHE_EN_,
 };
+template<typename E>
+constexpr bool attachedToIOExpander(E value) noexcept {
+    switch (value) {
+        case E::IOEXPANDER_PA0:
+        case E::IOEXPANDER_PA1:
+        case E::IOEXPANDER_PA2:
+        case E::IOEXPANDER_PA3:
+        case E::IOEXPANDER_PA4:
+        case E::IOEXPANDER_PA5:
+        case E::IOEXPANDER_PA6:
+        case E::IOEXPANDER_PA7:
+        case E::IOEXPANDER_PB0:
+        case E::IOEXPANDER_PB1:
+        case E::IOEXPANDER_PB2:
+        case E::IOEXPANDER_PB3:
+        case E::IOEXPANDER_PB4:
+        case E::IOEXPANDER_PB5:
+        case E::IOEXPANDER_PB6:
+        case E::IOEXPANDER_PB7:
+            return true;
+        default:
+            return false;
+    }
+}
 static_assert(static_cast<int>(PinoutRaspberryPiPico::Count) == 30, "Raspberry Pi Pico Has 30 GPIO");
 template<typename E>
 constexpr bool isValidPin(E pin) noexcept {

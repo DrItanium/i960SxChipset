@@ -216,6 +216,10 @@ constexpr bool isValidPin(i960Pinout pin) noexcept {
     return isValidPin<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pin));
 }
 constexpr bool CacheActive_v = isValidPin(i960Pinout::CACHE_EN_);
+constexpr bool DisplayActive_v = isValidPin(i960Pinout::DISPLAY_EN);
+constexpr auto attachedToIOExpander(i960Pinout pinout) noexcept {
+    return attachedToIOExpander<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pinout));
+}
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     if (isValidPin(ip)) {
         digitalWrite(static_cast<int>(ip), value);

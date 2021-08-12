@@ -41,9 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
 #include "PSRAMChip.h"
-//#ifndef ARDUINO_ARCH_RP2040
-#define ALLOW_SRAM_CACHE
-//#endif
 constexpr bool EnableDebuggingCompileTime = false;
 
 bool displayReady = false;
@@ -407,41 +404,53 @@ void setup() {
     // duration of the setup function
     setupPins(OUTPUT,
               i960Pinout::PSRAM_EN,
-              i960Pinout::DISPLAY_EN,
-              i960Pinout::CACHE_EN_,
               i960Pinout::SD_EN,
               i960Pinout::Reset960,
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
               i960Pinout::SPI_OFFSET0,
               i960Pinout::SPI_OFFSET1,
-              i960Pinout::SPI_OFFSET2,
-              i960Pinout::Int0_);
+              i960Pinout::SPI_OFFSET2);
+    if constexpr (DisplayActive_v) {
+        pinMode(i960Pinout::DISPLAY_EN, OUTPUT);
+        digitalWrite<i960Pinout::DISPLAY_EN, HIGH>();
+    }
+    if constexpr (!attachedToIOExpander(i960Pinout::Reset960)) {
+        pinMode(i960Pinout::Reset960, OUTPUT);
+        digitalWrite<i960Pinout::Reset960, HIGH>();
+    }
+    if constexpr (!attachedToIOExpander(i960Pinout::Int0_)) {
+        pinMode(i960Pinout::Int0_, OUTPUT);
+        digitalWrite<i960Pinout::Int0_, HIGH>();
+    }
+    if constexpr (CacheActive_v) {
+        pinMode(i960Pinout::CACHE_EN_, OUTPUT);
+        digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
+    }
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
         digitalWriteBlock(HIGH,
                           i960Pinout::PSRAM_EN,
                           i960Pinout::SD_EN,
-                          i960Pinout::CACHE_EN_,
                           i960Pinout::DISPLAY_EN,
                           i960Pinout::Ready,
-                          i960Pinout::GPIOSelect,
-                          i960Pinout::Int0_);
+                          i960Pinout::GPIOSelect);
         digitalWriteBlock(LOW,
                           i960Pinout::SPI_OFFSET0,
                           i960Pinout::SPI_OFFSET1,
                           i960Pinout::SPI_OFFSET2);
+        // setup the pins that could be attached to an io expander separately
+        if constexpr (!attachedToIOExpander(i960Pinout::BA1)) { pinMode(i960Pinout::BA1, INPUT); }
+        if constexpr (!attachedToIOExpander(i960Pinout::BA2)) { pinMode(i960Pinout::BA2, INPUT); }
+        if constexpr (!attachedToIOExpander(i960Pinout::BA3)) { pinMode(i960Pinout::BA3, INPUT); }
+        if constexpr (!attachedToIOExpander(i960Pinout::BE0)) { pinMode(i960Pinout::BE0, INPUT); }
+        if constexpr (!attachedToIOExpander(i960Pinout::BE1)) { pinMode(i960Pinout::BE1, INPUT); }
         setupPins(INPUT,
                   i960Pinout::BLAST_,
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
-                  i960Pinout::FAIL,
-                  i960Pinout::BA1,
-                  i960Pinout::BA2,
-                  i960Pinout::BA3,
-                  i960Pinout::BE0,
-                  i960Pinout::BE1);
+                  i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
         purgeSRAMCache();
