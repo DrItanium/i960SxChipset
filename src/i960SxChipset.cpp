@@ -409,8 +409,8 @@ void setup() {
     while(!Serial) {
         delay(10);
     }
-    if constexpr (ARDUINO_ARCH_RP2040) {
-        delay(2000); // wait two seconds before continuing on
+    if constexpr (TargetBoard::onRaspberryPiPico()) {
+        delay(2000);
     }
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
@@ -575,7 +575,9 @@ void loop() {
             signalHaltState(F("CHECKSUM FAILURE!"));
         }
     }
-    delayMicroseconds(1); // wait a microsecond before continuing
+    if constexpr (TargetBoard::onRaspberryPiPico()) {
+        delayMicroseconds(1); // wait a microsecond before continuing
+    }
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
@@ -603,7 +605,9 @@ void loop() {
     if (bypassesCache) {
         if (isReadOperation) {
             do {
-                delayMicroseconds(1);
+                if constexpr (TargetBoard::onRaspberryPiPico()) {
+                    delayMicroseconds(1);
+                }
                 processorInterface.updateDataCycle();
                 Serial.print(F("UNCACHED READ: 0x"));
                 Serial.print(processorInterface.getAddress(), HEX);
@@ -616,7 +620,9 @@ void loop() {
         } else {
             // write
             do {
-                delayMicroseconds(1);
+                if constexpr (TargetBoard::onRaspberryPiPico()) {
+                    delayMicroseconds(1);
+                }
                 processorInterface.updateDataCycle();
                 Serial.print(F("UNCACHED WRITE: 0x"));
                 Serial.println(processorInterface.getAddress(), HEX);
@@ -628,7 +634,9 @@ void loop() {
     } else {
         if (auto &theEntry = getLine(); isReadOperation) {
             do {
-                delayMicroseconds(1);
+                if constexpr (TargetBoard::onRaspberryPiPico()) {
+                    delayMicroseconds(1);
+                }
                 processorInterface.updateDataCycle();
                 Serial.print(F("CACHED READ: 0x"));
                 Serial.println(processorInterface.getAddress(), HEX);
@@ -636,7 +644,9 @@ void loop() {
             } while (!signalDone());
         } else {
             do {
-                delayMicroseconds(1);
+                if constexpr (TargetBoard::onRaspberryPiPico()) {
+                    delayMicroseconds(1);
+                }
                 processorInterface.updateDataCycle();
                 Serial.print(F("CACHED WRITE: 0x"));
                 Serial.println(processorInterface.getAddress(), HEX);
