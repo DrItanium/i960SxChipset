@@ -310,10 +310,10 @@ void purgeSRAMCache() noexcept {
                 translation.bytes[2],
                 translation.bytes[1],
                 translation.bytes[0],
-                1, 2, 3, 4, 5, 6, 7, 8,
-                9, 10, 11, 12, 13, 14, 15, 16,
-                17, 18, 19, 20, 21, 22, 23, 24,
-                25, 26, 27, 28, 29, 30, 31, 32,
+                0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
                 };
             byte pageReadInstruction[36]{
                 0x03,
@@ -332,13 +332,9 @@ void purgeSRAMCache() noexcept {
             SPI.transfer(pageReadInstruction, 36);
             digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
             for (int x = 4; x < 36; ++x) {
-                auto a = pageReadInstruction[x];
-                auto index = x - 3;
-                if (a != index) {
-                    Serial.print(F("MISMATCH 0x"));
-                    Serial.print(index, HEX);
-                    Serial.print(F(" => 0x"));
-                    Serial.println(a, HEX);
+                if (pageReadInstruction[x] != 0x55) {
+                    Serial.print(F("MISMATCH EXPECTED 0x55 BUT GOT 0x"));
+                    Serial.println(pageReadInstruction[x], HEX);
                     signalHaltState(F("SRAM CACHE MISMATCH!!!"));
                 }
             }
@@ -591,12 +587,14 @@ void loop() {
                     delayMicroseconds(1);
                 }
                 processorInterface.updateDataCycle();
-                Serial.print(F("UNCACHED READ: 0x"));
-                Serial.print(processorInterface.getAddress(), HEX);
                 auto result = theThing->read(processorInterface.getAddress(),
-                processorInterface.getStyle());
-                Serial.print(F(" -> 0x"));
-                Serial.println(result, HEX);
+                                             processorInterface.getStyle());
+                if constexpr (TargetBoard::onRaspberryPiPico()) {
+                    Serial.print(F("UNCACHED READ: 0x"));
+                    Serial.println(processorInterface.getAddress(), HEX);
+                    Serial.print(F(" -> 0x"));
+                    Serial.println(result, HEX);
+                }
                 processorInterface.setDataBits(result);
             } while (!signalDone());
         } else {
@@ -606,8 +604,10 @@ void loop() {
                     delayMicroseconds(1);
                 }
                 processorInterface.updateDataCycle();
-                Serial.print(F("UNCACHED WRITE: 0x"));
-                Serial.println(processorInterface.getAddress(), HEX);
+                if constexpr (TargetBoard::onRaspberryPiPico()) {
+                    Serial.print(F("UNCACHED WRITE: 0x"));
+                    Serial.println(processorInterface.getAddress(), HEX);
+                }
                 theThing->write(processorInterface.getAddress(),
                                 processorInterface.getDataBits(),
                                 processorInterface.getStyle());
@@ -620,8 +620,10 @@ void loop() {
                     delayMicroseconds(1);
                 }
                 processorInterface.updateDataCycle();
-                Serial.print(F("CACHED READ: 0x"));
-                Serial.println(processorInterface.getAddress(), HEX);
+                if constexpr (TargetBoard::onRaspberryPiPico()) {
+                    Serial.print(F("CACHED READ: 0x"));
+                    Serial.println(processorInterface.getAddress(), HEX);
+                }
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
             } while (!signalDone());
         } else {
@@ -630,8 +632,10 @@ void loop() {
                     delayMicroseconds(1);
                 }
                 processorInterface.updateDataCycle();
-                Serial.print(F("CACHED WRITE: 0x"));
-                Serial.println(processorInterface.getAddress(), HEX);
+                if constexpr (TargetBoard::onRaspberryPiPico()) {
+                    Serial.print(F("CACHED WRITE: 0x"));
+                    Serial.println(processorInterface.getAddress(), HEX);
+                }
                 theEntry.set(processorInterface.getCacheOffsetEntry(),
                              processorInterface.getStyle(),
                              SplitWord16{processorInterface.getDataBits()});
