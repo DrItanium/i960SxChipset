@@ -470,19 +470,35 @@ void setup() {
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
-        if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
-            Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
-            // processor is already booted so just jump ahead
-            break;
+        if constexpr (TargetBoard::onRaspberryPiPico()) {
+            if (enteredDataState) {
+                Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
+                // processor is already booted so just jump ahead
+                break;
+            }
+        } else {
+            if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
+                Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
+                // processor is already booted so just jump ahead
+                break;
+            }
         }
     }
 
     // now wait until we leave self test state
     while (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-        if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
-            Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
-            // processor is already booted so just jump ahead
-            break;
+        if constexpr (TargetBoard::onRaspberryPiPico()) {
+            if (enteredDataState) {
+                Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
+                // processor is already booted so just jump ahead
+                break;
+            }
+        } else {
+            if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
+                Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
+                // processor is already booted so just jump ahead
+                break;
+            }
         }
     }
     // at this point we are in idle so we are safe to loaf around a bit
