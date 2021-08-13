@@ -225,12 +225,11 @@ void ProcessorInterface::burstNext() noexcept {
     // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
     // next 16-bit word
     // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
+    address_.wholeValue_ += 2;
 #ifdef ARDUINO_AVR_ATmega1284
-    address_.bytes[0] += 2;
     auto bits = PINA;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
 #else
-    address_.wholeValue_ += 2;
     auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
