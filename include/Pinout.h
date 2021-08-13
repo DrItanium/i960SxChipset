@@ -78,6 +78,7 @@ enum class i960Pinout : int {
     BE1 = TargetBoard::getByteEnable1Pin(),
     BLAST_ = TargetBoard::getBlastPin(),     // input
     FAIL = TargetBoard::getFailPin(),         // input
+    AS_ = TargetBoard::getAddressStatePin(),
 };
 constexpr bool isValidPin(i960Pinout pin) noexcept {
     return isValidPin<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pin));

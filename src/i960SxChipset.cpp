@@ -380,6 +380,8 @@ void purgeSRAMCache() noexcept {
 }
 MemoryThing* theThing = nullptr;
 bool bypassesCache = false;
+bool enteredDataState = false;
+bool enteredAddressState = false;
 // the setup routine runs once when you press reset:
 void setup() {
     setupClockSource();
@@ -455,6 +457,12 @@ void setup() {
         // purge the cache pages
         processorInterface.begin();
         setupPeripherals();
+        if constexpr (TargetBoard::onRaspberryPiPico()) {
+            // wait until the AS goes high again
+            pinMode(i960Pinout::AS_, INPUT);
+            attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), []() { enteredAddressState = true; }, FALLING);
+            attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), [](){enteredDataState = true; }, FALLING);
+        }
         delay(1000);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
@@ -541,14 +549,28 @@ void loop() {
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
-    // wait until den is triggered via interrupt, we could even access the base address of the memory transaction
-    while (DigitalPin<i960Pinout::DEN_>::isDeasserted()) {
-        if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-            signalHaltState(F("CHECKSUM FAILURE!"));
-        }
-    }
+    // wait until AS goes from low to high
     if constexpr (TargetBoard::onRaspberryPiPico()) {
-        delayMicroseconds(1); // wait a microsecond before continuing
+        while (!enteredAddressState) {
+            if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+                signalHaltState(F("CHECKSUM FAILURE!"));
+            }
+        }
+        while (!enteredDataState) {
+            if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+                signalHaltState(F("CHECKSUM FAILURE!"));
+            }
+        }
+        // then wait until the DEN state is asserted
+        enteredAddressState = false;
+        enteredDataState = false;
+    } else {
+        // then wait until the DEN state is asserted
+        while (DigitalPin<i960Pinout::DEN_>::isDeasserted()) {
+            if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+                signalHaltState(F("CHECKSUM FAILURE!"));
+            }
+        }
     }
     // keep processing data requests until we
     // when we do the transition, record the information we need

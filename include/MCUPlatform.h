@@ -142,6 +142,7 @@ enum class Pinout1284p : int {
     SDA = PIN_WIRE_SDA,
     CLKO = PORT_B1,
     READY_ = PORT_B0,
+    AS_ = PORT_B2,
     PSRAM_EN_ = PORT_B3,
     DEN_ = PORT_D2,
     CACHE_EN_ = PORT_D3,
@@ -207,6 +208,7 @@ enum class PinoutRaspberryPiPico : int {
     SPI_OFFSET1 = GPIO10,
     SPI_OFFSET2 = GPIO11,
     PSRAM_EN_ = GPIO12,
+    AS_ = GPIO13,
     // GPIO13 Unused
     FAIL960 = GPIO14,
     BLAST_ = GPIO15,
@@ -342,6 +344,7 @@ public:
     [[nodiscard]] constexpr auto getByteEnable1Pin() const noexcept { return static_cast<int>(T::BE1_); }
     [[nodiscard]] constexpr auto getBlastPin() const noexcept { return static_cast<int>(T::BLAST_); }
     [[nodiscard]] constexpr auto getFailPin() const noexcept { return static_cast<int>(T::FAIL960); }
+    [[nodiscard]] constexpr auto getASPin() const noexcept { return static_cast<int>(T::AS_); }
     [[nodiscard]] constexpr auto getNoneSpecifier() const noexcept { return T::None; }
 private:
     uint32_t sramAmount_;
@@ -465,6 +468,7 @@ public:
     [[nodiscard]] static constexpr auto getBlastPin() noexcept { return BoardDescription<getMCUTarget()>.getBlastPin(); }
     [[nodiscard]] static constexpr auto getFailPin() noexcept { return BoardDescription<getMCUTarget()>.getFailPin(); }
     [[nodiscard]] static constexpr auto getNonePin() noexcept { return static_cast<int>(BoardDescription<getMCUTarget()>.getNoneSpecifier()); }
+    [[nodiscard]] static constexpr auto getAddressStatePin() noexcept { return static_cast<int>(BoardDescription<getMCUTarget()>.getASPin()); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
