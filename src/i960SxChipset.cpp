@@ -585,35 +585,32 @@ void loop() {
     if (bypassesCache) {
         if (isReadOperation) {
             do {
-                if constexpr (TargetBoard::onRaspberryPiPico()) {
-                    delayMicroseconds(1);
-                }
-                processorInterface.updateDataCycle();
+                //processorInterface.updateDataCycle();
                 auto result = theThing->read(processorInterface.getAddress(),
                                              processorInterface.getStyle());
-                if constexpr (TargetBoard::onRaspberryPiPico()) {
-                    Serial.print(F("UNCACHED READ: 0x"));
-                    Serial.println(processorInterface.getAddress(), HEX);
-                    Serial.print(F(" -> 0x"));
-                    Serial.println(result, HEX);
-                }
                 processorInterface.setDataBits(result);
-            } while (!signalDone());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                } else {
+                    processorInterface.burstNext();
+                }
+            } while (true);
         } else {
-            // write
             do {
-                if constexpr (TargetBoard::onRaspberryPiPico()) {
-                    delayMicroseconds(1);
-                }
-                processorInterface.updateDataCycle();
-                if constexpr (TargetBoard::onRaspberryPiPico()) {
-                    Serial.print(F("UNCACHED WRITE: 0x"));
-                    Serial.println(processorInterface.getAddress(), HEX);
-                }
                 theThing->write(processorInterface.getAddress(),
                                 processorInterface.getDataBits(),
                                 processorInterface.getStyle());
-            } while (!signalDone());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                   break;
+                } else {
+                    // more to do with this transaction
+                    processorInterface.burstNext();
+                }
+            } while (true);
         }
     } else {
         if (auto &theEntry = getLine(); isReadOperation) {

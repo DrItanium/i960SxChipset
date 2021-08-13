@@ -205,6 +205,20 @@ void ProcessorInterface::newDataCycle() noexcept {
     address_.upperHalf_ = readGPIO16(ProcessorInterface::IOExpanderAddress::Upper16Lines);
     upperMaskedAddress_ = address_;
     upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
+#ifdef ARDUINO_AVR_ATmega1284
+    // no need to re-read the burst address bits
+    auto bits = PINA;
+    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
+    auto maskedBits = static_cast<byte>(bits & 0b1110);
+    address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
+#else
+    // leave this around for targets with fewer pins
+    auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
+    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
+    auto maskedBits = static_cast<byte>(((bits << 1) & 0x0E)); // LSB must be zero
+    address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
+#endif
+
 }
 void ProcessorInterface::updateDataCycle() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
@@ -213,6 +227,7 @@ void ProcessorInterface::updateDataCycle() noexcept {
     // with the way we have designed the enum, this is the only type that has to be stored separately
     auto maskedBits = static_cast<byte>(bits & 0b1110);
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
+    //++address_.wholeValue_;
     address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
 #else
     // leave this around for targets with fewer pins
@@ -220,5 +235,18 @@ void ProcessorInterface::updateDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
     auto maskedBits = static_cast<byte>(((bits << 1) & 0x0E)); // LSB must be zero
     address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
+#endif
+}
+
+void ProcessorInterface::burstNext() noexcept {
+    // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
+    // next 16-bit word
+    address_.wholeValue_ += 2;
+#ifdef ARDUINO_AVR_ATmega1284
+    auto bits = PINA;
+    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
+#else
+    auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
+    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
 }

@@ -106,6 +106,7 @@ public:
 public:
 
     void newDataCycle() noexcept;
+    void burstNext() noexcept;
     void updateDataCycle() noexcept;
 
 private:
