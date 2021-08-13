@@ -89,8 +89,6 @@ constexpr Address dataSectionStart = 0x2000'0000;
 constexpr auto PerformPSRAMSanityCheck = !TargetBoard::onAtmega1284p();
 constexpr auto PerformClearOnBootup = true;
 using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMSanityCheck>;
-constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
-constexpr Address RAMFileStart = RAMStart + PSRAMSize;
 OnboardMemoryBlock ramBlock(RAMStart);
 #ifdef ARDUINO_ARCH_RP2040
 ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom());
@@ -100,11 +98,9 @@ ROMTextSection rom(textSectionStart);
 ROMDataSection dataRom(dataSectionStart);
 SDCardFilesystemInterface fs(0x300);
 #endif
-//RAMFile ram(RAMFileStart); // we want 4k but laid out for multiple sd card clusters, we can hold onto 8 at a time
 // list of io memory devices to walk through
 MemoryThing* things[] {
         &ramBlock,
-        //&ram,
         &rom,
         &dataRom,
         &chipsetFunctions,
@@ -150,7 +146,7 @@ public:
             Address rest : UpperBitCount;
         };
     };
-    static constexpr uint8_t computeTagIndex(Address address) noexcept {
+    static constexpr auto computeTagIndex(Address address) noexcept {
         return TaggedAddress(address).getTagIndex();
     }
     static constexpr Address computeL2TagIndex(Address address) noexcept {
