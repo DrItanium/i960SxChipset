@@ -579,17 +579,14 @@ void loop() {
     if (bypassesCache) {
         if (isReadOperation) {
             do {
-                //processorInterface.updateDataCycle();
-                auto result = theThing->read(processorInterface.getAddress(),
-                                             processorInterface.getStyle());
-                processorInterface.setDataBits(result);
+                processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
+                                                              processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
                     break;
-                } else {
-                    processorInterface.burstNext();
                 }
+                processorInterface.burstNext();
             } while (true);
         } else {
             do {
@@ -600,10 +597,9 @@ void loop() {
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
                    break;
-                } else {
-                    // more to do with this transaction
-                    processorInterface.burstNext();
                 }
+                // more to do with this transaction
+                processorInterface.burstNext();
             } while (true);
         }
     } else {
@@ -615,10 +611,9 @@ void loop() {
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
                     break;
-                } else {
-                    // more to do with this transaction
-                    processorInterface.burstNext();
                 }
+                // more to do with this transaction
+                processorInterface.burstNext();
             } while (true);
         } else {
             do {
@@ -629,10 +624,8 @@ void loop() {
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
                     break;
-                } else {
-                    // more to do with this transaction
-                    processorInterface.burstNext();
                 }
+                processorInterface.burstNext();
             } while (true);
         }
     }
