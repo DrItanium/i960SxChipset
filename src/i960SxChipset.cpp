@@ -559,8 +559,10 @@ void loop() {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
-    Serial.print(F("REQUESTED ADDRESS: 0x"));
-    Serial.println(processorInterface.getAddress(), HEX);
+    if constexpr (TargetBoard::onRaspberryPiPico()) {
+        Serial.print(F("REQUESTED ADDRESS: 0x"));
+        Serial.println(processorInterface.getAddress(), HEX);
+    }
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (!theThing->respondsTo(processorInterface.getAddress())) {
         theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
@@ -615,6 +617,7 @@ void loop() {
         }
     } else {
         if (auto &theEntry = getLine(); isReadOperation) {
+            // first pass through we need to just do the action, this is the most expensive part
             do {
                 if constexpr (TargetBoard::onRaspberryPiPico()) {
                     delayMicroseconds(1);
