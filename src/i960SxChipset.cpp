@@ -41,8 +41,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
 #include "PSRAMChip.h"
+#ifdef ARDUINO_ARCH_RP2040
 #include "hitagimon.h"
 #include "OnChipMemoryThing.h"
+#endif
 constexpr bool EnableDebuggingCompileTime = true;
 
 bool displayReady = false;
@@ -99,7 +101,7 @@ DisplayThing displayCommandSet(0x200);
 constexpr Address RAMStart = 0x8000'0000;
 constexpr Address textSectionStart = 0x0000'0000;
 constexpr Address dataSectionStart = 0x2000'0000;
-constexpr auto PerformPSRAMSanityCheck = true;
+constexpr auto PerformPSRAMSanityCheck = !TargetBoard::onAtmega1284p();
 constexpr auto PerformClearOnBootup = true;
 using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMSanityCheck>;
 constexpr Address PSRAMSize = OnboardMemoryBlock::Size;
