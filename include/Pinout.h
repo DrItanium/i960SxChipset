@@ -329,9 +329,29 @@ inline void pulse(decltype(HIGH) from = HIGH, decltype(LOW) to = LOW) noexcept {
     thePort ^= getPinMask<pin>();
     SREG = theSREG;
 #else
+    // make sure that we stay at the high signal for long enough to matter
     digitalWrite(pin, from);
+#ifdef ARDUINO_ARCH_RP2040
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+#endif
     digitalWrite(pin, to);
+#ifdef ARDUINO_ARCH_RP2040
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+#endif
+    // then come back up after four cycles or so (tweak this as needed)
     digitalWrite(pin, from);
+#ifdef ARDUINO_ARCH_RP2040
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+#endif
 #endif
 }
 

@@ -28,7 +28,7 @@ PORT->Group[g_APinDescription[pinIndex0].ulPort].PINCFG[g_APinDescription[pinInd
 PORT->Group[g_APinDescription[pinIndex0].ulPort].PMUX[g_APinDescription[pinIndex0].ulPin >> 1].reg |= PORT_PMUX_PMUXO(MUX_PA17M_GCLK_IO3);
 #elif defined(ARDUINO_RASPBERRY_PI_PICO)
 // divide 133mhz by 6 to get ~ 20MHz (really 20.8 or so)
-    clock_gpio_init(static_cast<int>(i960Pinout::CLOCK_OUT), CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, 7);
+    clock_gpio_init(static_cast<int>(i960Pinout::CLOCK_OUT), CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, 6);
 #elif defined(ARDUINO_AVR_ATmega1284)
     // clock source is configured using fuses
 #else
