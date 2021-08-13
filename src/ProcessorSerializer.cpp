@@ -220,32 +220,17 @@ void ProcessorInterface::newDataCycle() noexcept {
 #endif
 
 }
-void ProcessorInterface::updateDataCycle() noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
-    // currentPortContents is part of a union that defers many operations as long as possible
-    auto bits = PINA;
-    // with the way we have designed the enum, this is the only type that has to be stored separately
-    auto maskedBits = static_cast<byte>(bits & 0b1110);
-    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
-    //++address_.wholeValue_;
-    address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
-#else
-    // leave this around for targets with fewer pins
-    auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
-    lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
-    auto maskedBits = static_cast<byte>(((bits << 1) & 0x0E)); // LSB must be zero
-    address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
-#endif
-}
 
 void ProcessorInterface::burstNext() noexcept {
     // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
     // next 16-bit word
-    address_.wholeValue_ += 2;
+    // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
 #ifdef ARDUINO_AVR_ATmega1284
+    address_.bytes[0] += 2;
     auto bits = PINA;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
 #else
+    address_.wholeValue_ += 2;
     auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
