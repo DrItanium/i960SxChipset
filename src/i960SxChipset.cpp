@@ -538,12 +538,6 @@ auto& getLine() noexcept {
 }
 //volatile byte cycleIndex = 0;
 void loop() {
-    auto signalDone = []() noexcept {
-        // this seems to be faster as a lambda for some reason
-        auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-        DigitalPin<i960Pinout::Ready>::pulse();
-        return isBurstLast;
-    };
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
@@ -616,30 +610,30 @@ void loop() {
         if (auto &theEntry = getLine(); isReadOperation) {
             // first pass through we need to just do the action, this is the most expensive part
             do {
-                if constexpr (TargetBoard::onRaspberryPiPico()) {
-                    delayMicroseconds(1);
-                }
-                processorInterface.updateDataCycle();
-                if constexpr (TargetBoard::onRaspberryPiPico()) {
-                    Serial.print(F("CACHED READ: 0x"));
-                    Serial.println(processorInterface.getAddress(), HEX);
-                }
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-            } while (!signalDone());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                } else {
+                    // more to do with this transaction
+                    processorInterface.burstNext();
+                }
+            } while (true);
         } else {
             do {
-                if constexpr (TargetBoard::onRaspberryPiPico()) {
-                    delayMicroseconds(1);
-                }
-                processorInterface.updateDataCycle();
-                if constexpr (TargetBoard::onRaspberryPiPico()) {
-                    Serial.print(F("CACHED WRITE: 0x"));
-                    Serial.println(processorInterface.getAddress(), HEX);
-                }
                 theEntry.set(processorInterface.getCacheOffsetEntry(),
                              processorInterface.getStyle(),
                              SplitWord16{processorInterface.getDataBits()});
-            } while (!signalDone());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                } else {
+                    // more to do with this transaction
+                    processorInterface.burstNext();
+                }
+            } while (true);
         }
     }
 }
