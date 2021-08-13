@@ -606,9 +606,12 @@ void loop() {
                 delayMicroseconds(1);
                 processorInterface.updateDataCycle();
                 Serial.print(F("UNCACHED READ: 0x"));
-                Serial.println(processorInterface.getAddress());
-                processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
-                                                              processorInterface.getStyle()));
+                Serial.print(processorInterface.getAddress(), HEX);
+                auto result = theThing->read(processorInterface.getAddress(),
+                processorInterface.getStyle());
+                Serial.print(F(" -> 0x"));
+                Serial.println(result, HEX);
+                processorInterface.setDataBits(result);
             } while (!signalDone());
         } else {
             // write
@@ -616,7 +619,7 @@ void loop() {
                 delayMicroseconds(1);
                 processorInterface.updateDataCycle();
                 Serial.print(F("UNCACHED WRITE: 0x"));
-                Serial.println(processorInterface.getAddress());
+                Serial.println(processorInterface.getAddress(), HEX);
                 theThing->write(processorInterface.getAddress(),
                                 processorInterface.getDataBits(),
                                 processorInterface.getStyle());
@@ -628,7 +631,7 @@ void loop() {
                 delayMicroseconds(1);
                 processorInterface.updateDataCycle();
                 Serial.print(F("CACHED READ: 0x"));
-                Serial.println(processorInterface.getAddress());
+                Serial.println(processorInterface.getAddress(), HEX);
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
             } while (!signalDone());
         } else {
@@ -636,7 +639,7 @@ void loop() {
                 delayMicroseconds(1);
                 processorInterface.updateDataCycle();
                 Serial.print(F("CACHED WRITE: 0x"));
-                Serial.println(processorInterface.getAddress());
+                Serial.println(processorInterface.getAddress(), HEX);
                 theEntry.set(processorInterface.getCacheOffsetEntry(),
                              processorInterface.getStyle(),
                              SplitWord16{processorInterface.getDataBits()});

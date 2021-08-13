@@ -218,6 +218,7 @@ void ProcessorInterface::updateDataCycle() noexcept {
     // leave this around for targets with fewer pins
     auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
-    address_.bytes[0] = upperMaskedAddress_.bytes[0] | static_cast<byte>((bits & 0b111) << 1);
+    auto maskedBits = static_cast<byte>(((bits << 1) & 0x0E)); // LSB must be zero
+    address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
 #endif
 }
