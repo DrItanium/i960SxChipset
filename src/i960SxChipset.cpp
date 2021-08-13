@@ -289,8 +289,6 @@ void setupPeripherals() {
     ramBlock.begin();
     rom.begin();
     dataRom.begin();
-    //ram.begin();
-    // setup the bus things
     Serial.println(F("Done setting up peripherals..."));
 }
 
@@ -341,6 +339,7 @@ void purgeSRAMCache() noexcept {
                     Serial.print(index, HEX);
                     Serial.print(F(" => 0x"));
                     Serial.println(a, HEX);
+                    signalHaltState(F("SRAM CACHE MISMATCH!!!"));
                 }
             }
         }
@@ -376,7 +375,7 @@ void purgeSRAMCache() noexcept {
             digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
             for (int x = 4; x < 36; ++x) {
                 if (pageReadInstruction[x] != 0) {
-                    Serial.print(F("CHECK FAILURE!!!"));
+                    signalHaltState(F("SRAM CACHE FAILURE!!!"));
                 }
             }
         }
