@@ -218,6 +218,7 @@ void ProcessorInterface::newDataCycle() noexcept {
     auto maskedBits = static_cast<byte>(((bits << 1) & 0x0E)); // LSB must be zero
     address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
 #endif
+    cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
 
 }
 
@@ -234,4 +235,5 @@ void ProcessorInterface::burstNext() noexcept {
     auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
+    ++cacheOffsetEntry_;
 }

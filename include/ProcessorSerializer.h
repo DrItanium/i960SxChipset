@@ -99,10 +99,7 @@ public:
         copy.bytes[0] &= 0xE0;
         return copy.wholeValue_;
     }
-    [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept {
-        // shift by 1 to get the 16-bit offset expected by the cache entry system
-        return address_.bytes[0] >> 1;
-    }
+    [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept { return cacheOffsetEntry_; }
 public:
 
     void newDataCycle() noexcept;
@@ -118,6 +115,7 @@ private:
     bool initialized_ = false;
     bool lockValue_ = true;
     bool holdValue_ = false;
+    byte cacheOffsetEntry_ = 0;
 };
 
 // 8 IOExpanders to a single enable line for SPI purposes

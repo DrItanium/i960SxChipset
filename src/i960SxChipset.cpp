@@ -579,6 +579,7 @@ void loop() {
     if (bypassesCache) {
         if (isReadOperation) {
             do {
+                //processorInterface.updateDataCycle();
                 processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
                                                               processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
