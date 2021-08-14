@@ -476,48 +476,22 @@ void setup() {
         // purge the cache pages
         processorInterface.begin();
         setupPeripherals();
-        if constexpr (TargetBoard::onRaspberryPiPico()) {
-            // wait until the AS goes high again
-            pinMode(i960Pinout::AS_, INPUT);
-            attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::AS_)), []() { enteredAddressState = true; }, FALLING);
-            attachInterrupt(digitalPinToInterrupt(static_cast<int>(i960Pinout::DEN_)), [](){enteredDataState = true; }, FALLING);
-        }
-        delay(1000);
+        delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
-        if constexpr (TargetBoard::onRaspberryPiPico()) {
-            if (enteredDataState) {
-                Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
-                // processor is already booted so just jump ahead
-                break;
-            }
-        } else {
-            if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
-                Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
-                // processor is already booted so just jump ahead
-                break;
-            }
+        if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
+            break;
         }
     }
 
     // now wait until we leave self test state
     while (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-        if constexpr (TargetBoard::onRaspberryPiPico()) {
-            if (enteredDataState) {
-                Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
-                // processor is already booted so just jump ahead
-                break;
-            }
-        } else {
-            if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
-                Serial.println(F("DEN ASSERTED SYSTEM TEST SKIPPED!"));
-                // processor is already booted so just jump ahead
-                break;
-            }
+        if (DigitalPin<i960Pinout::DEN_>::isAsserted()) {
+            break;
         }
     }
     // at this point we are in idle so we are safe to loaf around a bit
@@ -525,6 +499,7 @@ void setup() {
     // If the checksum is successful then execution will continue as normal
     // first set of 16-byte request from memory
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+
     processorInterface.newDataCycle();
     // we know that this will always get mapped to rom so no need to look this up constantly
     if (rom.bypassesCache()) {
@@ -619,24 +594,8 @@ void setup() {
 // NOTE: Tw may turn out to be synthetic
 void loop() {
     // wait until AS goes from low to high
-    if constexpr (TargetBoard::onRaspberryPiPico()) {
-        while (!enteredAddressState) {
-            if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-                signalHaltState(F("CHECKSUM FAILURE!"));
-            }
-        }
-        while (!enteredDataState) {
-            if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-                signalHaltState(F("CHECKSUM FAILURE!"));
-            }
-        }
-        // then wait until the DEN state is asserted
-        enteredAddressState = false;
-        enteredDataState = false;
-    } else {
-        // then wait until the DEN state is asserted
-        while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-    }
+    // then wait until the DEN state is asserted
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
