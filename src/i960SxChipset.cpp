@@ -558,7 +558,6 @@ auto& getLine(MemoryThing& theThing) noexcept {
     }
     return theEntry;
 }
-//volatile byte cycleIndex = 0;
 void loop() {
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
@@ -580,74 +579,43 @@ void loop() {
         enteredDataState = false;
     } else {
         // then wait until the DEN state is asserted
-        while (DigitalPin<i960Pinout::DEN_>::isDeasserted()) {
-            if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-                signalHaltState(F("CHECKSUM FAILURE!"));
-            }
-        }
+        while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     }
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
-    if constexpr (TargetBoard::onRaspberryPiPico()) {
-        Serial.print(F("REQUESTED ADDRESS: 0x"));
-        Serial.println(processorInterface.getAddress(), HEX);
-    }
-    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
-    if (theThing.bypassesCache()) {
-        if (isReadOperation) {
-            do {
-                //processorInterface.updateDataCycle();
-                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(),
-                                                              processorInterface.getStyle()));
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        } else {
-            do {
-                theThing.write(processorInterface.getAddress(),
-                               processorInterface.getDataBits(),
-                               processorInterface.getStyle());
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                   break;
-                }
-                // more to do with this transaction
-                processorInterface.burstNext();
-            } while (true);
-        }
+    if (auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); theThing.bypassesCache()) {
+        auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
+                  [](MemoryThing& theThing) { processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle())); } :
+                  [](MemoryThing& theThing) {theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle()); };
+        do {
+            fn(theThing);
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isBurstLast) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
     } else {
-        if (auto &theEntry = getLine(theThing); isReadOperation) {
-            // first pass through we need to just do the action, this is the most expensive part
-            do {
-                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    break;
-                }
-                // more to do with this transaction
-                processorInterface.burstNext();
-            } while (true);
-        } else {
-            do {
-                theEntry.set(processorInterface.getCacheOffsetEntry(),
-                             processorInterface.getStyle(),
-                             SplitWord16{processorInterface.getDataBits()});
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        }
+        auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
+                  [](CacheEntry& theEntry) {
+                      processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+                  } : [](CacheEntry& theEntry) {
+                    theEntry.set(processorInterface.getCacheOffsetEntry(),
+                                 processorInterface.getStyle(),
+                                 SplitWord16{processorInterface.getDataBits()});
+                } ;
+        auto& theEntry = getLine(theThing);
+        do {
+            fn(theEntry);
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isBurstLast) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
     }
 }
 
