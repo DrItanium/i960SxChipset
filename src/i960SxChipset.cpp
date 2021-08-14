@@ -90,6 +90,7 @@ constexpr auto PerformPSRAMSanityCheck = !TargetBoard::onAtmega1284p();
 constexpr auto PerformClearOnBootup = true;
 using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMSanityCheck>;
 OnboardMemoryBlock ramBlock(RAMStart);
+FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
 #ifdef ARDUINO_ARCH_RP2040
 ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom());
 ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, getBootDataLength(), getBootData());
@@ -108,6 +109,7 @@ MemoryThing* things[] {
 #ifndef ARDUINO_ARCH_RP2040
         &fs,
 #endif
+
 };
 
 
@@ -378,8 +380,6 @@ void purgeSRAMCache() noexcept {
         Serial.println(F("DONE PURGING SRAM CACHE!"));
     }
 }
-MemoryThing* theThing = nullptr;
-bool bypassesCache = false;
 bool enteredDataState = false;
 bool enteredAddressState = false;
 // the setup routine runs once when you press reset:
@@ -447,8 +447,6 @@ void setup() {
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
         purgeSRAMCache();
-        theThing = getThing(0, LoadStoreStyle::Full16);
-        bypassesCache = theThing->bypassesCache();
 #ifndef ARDUINO_ARCH_RP2040
         fs.begin();
 #endif
@@ -539,7 +537,7 @@ void setup() {
 // Ti -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
-auto& getLine() noexcept {
+auto& getLine(MemoryThing& theThing) noexcept {
     if constexpr (EnableDebuggingCompileTime) {
         Serial.println(F("getLine() {"));
     }
@@ -553,7 +551,7 @@ auto& getLine() noexcept {
     }
     auto& theEntry = entries[tagIndex];
     if (!theEntry.matches(address)) {
-        theEntry.reset(address, *theThing);
+        theEntry.reset(address, theThing);
     }
     if constexpr (EnableDebuggingCompileTime) {
         Serial.println(F("}"));
@@ -596,29 +594,12 @@ void loop() {
         Serial.println(processorInterface.getAddress(), HEX);
     }
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    if (!theThing->respondsTo(processorInterface.getAddress())) {
-        theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
-        if (!theThing) {
-            // halt here because we've entered into unmapped memory state
-            if (isReadOperation) {
-                Serial.print(F("UNMAPPED READ FROM 0x"));
-            } else {
-                Serial.print(F("UNMAPPED WRITE OF 0x"));
-                // expensive but something has gone horribly wrong anyway so whatever!
-                Serial.print(processorInterface.getDataBits(), HEX);
-                Serial.print(F(" TO 0x"));
-            }
-            Serial.println(processorInterface.getAddress(), HEX);
-            signalHaltState(F("UNMAPPED MEMORY REQUEST!"));
-        } else {
-            bypassesCache = theThing->bypassesCache();
-        }
-    }
-    if (bypassesCache) {
+    auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16);
+    if (theThing.bypassesCache()) {
         if (isReadOperation) {
             do {
                 //processorInterface.updateDataCycle();
-                processorInterface.setDataBits(theThing->read(processorInterface.getAddress(),
+                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(),
                                                               processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
@@ -629,9 +610,9 @@ void loop() {
             } while (true);
         } else {
             do {
-                theThing->write(processorInterface.getAddress(),
-                                processorInterface.getDataBits(),
-                                processorInterface.getStyle());
+                theThing.write(processorInterface.getAddress(),
+                               processorInterface.getDataBits(),
+                               processorInterface.getStyle());
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
@@ -642,7 +623,7 @@ void loop() {
             } while (true);
         }
     } else {
-        if (auto &theEntry = getLine(); isReadOperation) {
+        if (auto &theEntry = getLine(theThing); isReadOperation) {
             // first pass through we need to just do the action, this is the most expensive part
             do {
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
@@ -700,14 +681,14 @@ signalHaltState(const char* haltMsg) {
     }
 }
 
-MemoryThing*
+MemoryThing&
 getThing(Address address, LoadStoreStyle style) noexcept {
-    for (auto *currentThing : things) {
+    for (auto* currentThing : things) {
         if (currentThing->respondsTo(address, style)) {
-            return currentThing;
+            return *currentThing;
         }
     }
-    return nullptr;
+    return fallback;
 }
 SdFat SD;
 /// @todo Eliminate after MightyCore update

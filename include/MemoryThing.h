@@ -204,12 +204,47 @@ public:
     ~IOSpaceThing() override = default;
     [[nodiscard]] bool bypassesCache() const noexcept override { return true; }
 };
+
+/**
+ * @brief Special MemoryThing meant to be the fallback if nothing matches, acts as a sink
+ */
+class FallbackMemoryThing final : public MemoryThing {
+public:
+    static constexpr Address Size = 0xFFFF'FFFF;
+    static FallbackMemoryThing& getFallback() noexcept {
+        static FallbackMemoryThing theThing;
+        return theThing;
+    }
+private:
+    FallbackMemoryThing() noexcept : MemoryThing(0, 0xFFFF'FFFF) { }
+    ~FallbackMemoryThing() override = default;
+
+public:
+    [[nodiscard]] bool bypassesCache() const noexcept override { return true; }
+    [[nodiscard]] bool respondsTo(Address) const noexcept override { return true; }
+    uint16_t read(Address, LoadStoreStyle) noexcept override {
+        return 0;
+    }
+    void write(Address, uint16_t, LoadStoreStyle) noexcept override {
+        // do nothing
+    }
+    void begin() noexcept override {
+        // do nothing
+    }
+    size_t write(uint32_t, byte *, size_t ) noexcept override {
+        return 0;
+    }
+    size_t read(uint32_t, byte*, size_t) noexcept override {
+        return 0;
+    }
+};
 /**
  * @brief Does a lookup in the global thing collection to try and find a thing that will respond to the given address
  * @param address the address to check for a response to
  * @param style the width of the request
  * @return The thing that will respond to the given address
  */
-MemoryThing* getThing(Address address, LoadStoreStyle style) noexcept;
+MemoryThing& getThing(Address address, LoadStoreStyle style) noexcept;
+
 
 #endif //I960SXCHIPSET_MEMORYTHING_H
