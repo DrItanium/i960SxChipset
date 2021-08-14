@@ -284,6 +284,27 @@ void invalidateGlobalCache() noexcept {
     }
     CacheEntry::invalidateAllEntries();
 }
+auto& getLine(MemoryThing& theThing) noexcept {
+    if constexpr (EnableDebuggingCompileTime) {
+        Serial.println(F("getLine() {"));
+    }
+    auto address = processorInterface.getAlignedAddress();
+    auto tagIndex = CacheEntry::computeTagIndex(address);
+    if constexpr (EnableDebuggingCompileTime) {
+        Serial.print(F("ADDRESS: 0x"));
+        Serial.println(address, HEX);
+        Serial.print(F("TAG INDEX: 0x"));
+        Serial.println(tagIndex, HEX);
+    }
+    auto& theEntry = entries[tagIndex];
+    if (!theEntry.matches(address)) {
+        theEntry.reset(address, theThing);
+    }
+    if constexpr (EnableDebuggingCompileTime) {
+        Serial.println(F("}"));
+    }
+    return theEntry;
+}
 void setupPeripherals() {
     Serial.println(F("Setting up peripherals..."));
     displayCommandSet.begin();
@@ -500,7 +521,87 @@ void setup() {
         }
     }
     // at this point we are in idle so we are safe to loaf around a bit
-    Serial.println(F("SYSTEM TEST COMPLETE!"));
+    // at this point, the i960 will request 32-bytes to perform a boot check sum on.
+    // If the checksum is successful then execution will continue as normal
+    // first set of 16-byte request from memory
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    processorInterface.newDataCycle();
+    if (auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); theThing.bypassesCache()) {
+        auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
+                  [](MemoryThing& theThing) { processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle())); } :
+                  [](MemoryThing& theThing) {theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle()); };
+        do {
+            fn(theThing);
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isBurstLast) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
+    } else {
+        auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
+                  [](CacheEntry& theEntry) {
+                      processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+                  } : [](CacheEntry& theEntry) {
+                    theEntry.set(processorInterface.getCacheOffsetEntry(),
+                                 processorInterface.getStyle(),
+                                 SplitWord16{processorInterface.getDataBits()});
+                } ;
+        auto& theEntry = getLine(theThing);
+        do {
+            fn(theEntry);
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isBurstLast) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
+    }
+    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+        signalHaltState(F("CHECKSUM FAILURE!"));
+    }
+    // then do the second 16-byte request
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    processorInterface.newDataCycle();
+    if (auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); theThing.bypassesCache()) {
+        auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
+                  [](MemoryThing& theThing) { processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle())); } :
+                  [](MemoryThing& theThing) {theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle()); };
+        do {
+            fn(theThing);
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isBurstLast) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
+    } else {
+        auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
+                  [](CacheEntry& theEntry) {
+                      processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+                  } : [](CacheEntry& theEntry) {
+                    theEntry.set(processorInterface.getCacheOffsetEntry(),
+                                 processorInterface.getStyle(),
+                                 SplitWord16{processorInterface.getDataBits()});
+                } ;
+        auto& theEntry = getLine(theThing);
+        do {
+            fn(theEntry);
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isBurstLast) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
+    }
+    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+        signalHaltState(F("CHECKSUM FAILURE!"));
+    }
+    Serial.println(F("SYSTEM BOOT SUCCESSFUL!"));
 }
 // ----------------------------------------------------------------
 // state machine
@@ -537,27 +638,6 @@ void setup() {
 // Ti -> TChecksumFailure if FAIL is asserted
 
 // NOTE: Tw may turn out to be synthetic
-auto& getLine(MemoryThing& theThing) noexcept {
-    if constexpr (EnableDebuggingCompileTime) {
-        Serial.println(F("getLine() {"));
-    }
-    auto address = processorInterface.getAlignedAddress();
-    auto tagIndex = CacheEntry::computeTagIndex(address);
-    if constexpr (EnableDebuggingCompileTime) {
-        Serial.print(F("ADDRESS: 0x"));
-        Serial.println(address, HEX);
-        Serial.print(F("TAG INDEX: 0x"));
-        Serial.println(tagIndex, HEX);
-    }
-    auto& theEntry = entries[tagIndex];
-    if (!theEntry.matches(address)) {
-        theEntry.reset(address, theThing);
-    }
-    if constexpr (EnableDebuggingCompileTime) {
-        Serial.println(F("}"));
-    }
-    return theEntry;
-}
 void loop() {
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
