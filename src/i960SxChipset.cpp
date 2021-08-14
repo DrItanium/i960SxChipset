@@ -639,9 +639,6 @@ void setup() {
 
 // NOTE: Tw may turn out to be synthetic
 void loop() {
-    if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-        signalHaltState(F("CHECKSUM FAILURE!"));
-    }
     // wait until AS goes from low to high
     if constexpr (TargetBoard::onRaspberryPiPico()) {
         while (!enteredAddressState) {
