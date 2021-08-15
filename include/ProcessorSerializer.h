@@ -118,8 +118,6 @@ private:
     bool holdValue_ = false;
     byte cacheOffsetEntry_ = 0;
 };
-MemoryThing* getThingFromMSB(byte index) noexcept;
-MemoryThing* getIOSpaceDevice(byte index) noexcept;
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
 

@@ -205,13 +205,7 @@ ProcessorInterface::begin() noexcept {
 MemoryThing*
 ProcessorInterface::newDataCycle() noexcept {
     address_.upperHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines>();
-    // interleave getThing into the newDataCycle routines
-    auto newThing = getThingFromMSB(address_.bytes[3]);
     address_.lowerHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>();
-    if (!newThing) {
-        // only time we encounter a nullptr is if we are in io space so query at that point manually
-        newThing = getIOSpaceDevice(address_.bytes[1]);
-    }
     upperMaskedAddress_ = address_;
     upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
 #ifdef ARDUINO_AVR_ATmega1284
@@ -224,7 +218,7 @@ ProcessorInterface::newDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
-    return newThing;
+    return getThing(address_.wholeValue_);
 }
 
 void ProcessorInterface::burstNext() noexcept {

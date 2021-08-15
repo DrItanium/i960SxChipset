@@ -766,15 +766,6 @@ MemoryThing* ioSpaceSimpleMapping[256] {
     };
 
 MemoryThing*
-getThing(Address address) noexcept {
-    SplitWord32 decomposedAddress(address);
-    if (auto mapping = getThingFromMSB(decomposedAddress.bytes[3]); mapping == nullptr) {
-        return getIOSpaceDevice(decomposedAddress.bytes[1]);
-    } else {
-        return mapping;
-    }
-}
-MemoryThing*
 getThingFromMSB(byte index) noexcept {
     return memoryMapping[index];
 }
@@ -782,6 +773,15 @@ getThingFromMSB(byte index) noexcept {
 MemoryThing*
 getIOSpaceDevice(byte index) noexcept {
     return ioSpaceSimpleMapping[index];
+}
+MemoryThing*
+getThing(Address address) noexcept {
+    SplitWord32 decomposedAddress(address);
+    if (auto mapping = getThingFromMSB(decomposedAddress.bytes[3]); mapping == nullptr) {
+        return getIOSpaceDevice(decomposedAddress.bytes[1]);
+    } else {
+        return mapping;
+    }
 }
 SdFat SD;
 /// @todo Eliminate after MightyCore update
