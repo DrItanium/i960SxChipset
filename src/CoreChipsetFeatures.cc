@@ -106,3 +106,8 @@ CoreChipsetFeatures::begin() noexcept {
         Serial.println(static_cast<uint32_t>(Registers::Led) + 0xFE00'0000, HEX);
     }
 }
+Address
+CoreChipsetFeatures::makeAddressRelative(Address input) const noexcept {
+    // we already know that this address is exactly one byte wide so just return the lowest byte as it's own thing
+    return SplitWord32(input).bytes[0];
+}

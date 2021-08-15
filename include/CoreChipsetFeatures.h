@@ -79,6 +79,7 @@ public:
     void setDisplayCacheLineUpdates(bool value) noexcept;
     [[nodiscard]] constexpr bool debuggingActive() const noexcept { return AllowDebuggingStatements; }
     void begin() noexcept override;
+    Address makeAddressRelative(Address input) const noexcept override;
 private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;
