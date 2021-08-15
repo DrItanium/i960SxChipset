@@ -482,10 +482,10 @@ void setup() {
             for (Address addr = 0; addr < size; addr += 512) {
                 auto numRead = theFile.read(storage, 512);
                 numBytesTransferred += ramBlock.write(addr, storage, numRead);
-                Serial.print(F("BYTES TRANSFERED "));
-                Serial.print(numBytesTransferred);
-                Serial.print(F(" / "));
-                Serial.print(size);
+                Serial.print(F("BYTES TRANSFERED 0x"));
+                Serial.print(numBytesTransferred, HEX);
+                Serial.print(F(" / 0x"));
+                Serial.print(size, HEX);
                 Serial.println(F(" BYTES!"));
             }
             Serial.println(F("Transfer complete!"));
