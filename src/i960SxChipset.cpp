@@ -478,11 +478,10 @@ void setup() {
             Serial.println(F("Transferring boot.sys to the onboard psram prior to booting!"));
             Address size = theFile.size();
             byte storage[512] = { 0 };
-            Address numBytesTransferred = 0;
             Serial.print(F("TRANSFERRING BOOT.SYS TO PSRAM: ["));
             for (Address addr = 0; addr < size; addr += 512) {
                 auto numRead = theFile.read(storage, 512);
-                numBytesTransferred += ramBlock.write(addr, storage, numRead);
+                (void)ramBlock.write(addr, storage, numRead);
                 Serial.print('.');
             }
             Serial.println(F("] Transfer complete!"));
