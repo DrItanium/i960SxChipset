@@ -609,8 +609,7 @@ void loop() {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    auto theThing = processorInterface.newDataCycle();
-    if (theThing->bypassesCache()) {
+    if (auto theThing = processorInterface.newDataCycle(); theThing->bypassesCache()) {
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.setDataBits(theThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
@@ -769,12 +768,20 @@ MemoryThing* ioSpaceSimpleMapping[256] {
 MemoryThing*
 getThing(Address address) noexcept {
     SplitWord32 decomposedAddress(address);
-    if (auto mapping = memoryMapping[decomposedAddress.bytes[3]]; mapping == nullptr) {
-        // ignore byte 2 for now so we map these 256 devices over and over into the memory space
-        return ioSpaceSimpleMapping[decomposedAddress.bytes[1]];
+    if (auto mapping = getThingFromMSB(decomposedAddress.bytes[3]); mapping == nullptr) {
+        return getIOSpaceDevice(decomposedAddress.bytes[1]);
     } else {
         return mapping;
     }
+}
+MemoryThing*
+getThingFromMSB(byte index) noexcept {
+    return memoryMapping[index];
+}
+
+MemoryThing*
+getIOSpaceDevice(byte index) noexcept {
+    return ioSpaceSimpleMapping[index];
 }
 SdFat SD;
 /// @todo Eliminate after MightyCore update
