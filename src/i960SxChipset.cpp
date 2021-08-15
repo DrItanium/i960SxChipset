@@ -477,14 +477,15 @@ void setup() {
             // okay we were successful in opening the file, now copy the image into psram
             Serial.println(F("Transferring boot.sys to the onboard psram prior to booting!"));
             Address size = theFile.size();
-            byte storage[1024] = { 0 };
-            Serial.print(F("TRANSFERRING BOOT.SYS TO PSRAM: ["));
-            for (Address addr = 0; addr < size; addr += 1024) {
-                auto numRead = theFile.read(storage, 1024);
+            static constexpr auto CacheSize = 512;
+            byte storage[CacheSize] = { 0 };
+            Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
+            for (Address addr = 0; addr < size; addr += CacheSize) {
+                // do a linear read from the start to the end of storage
+                auto numRead = theFile.read(storage, CacheSize);
                 (void)ramBlock.write(addr, storage, numRead);
-                Serial.print('.');
             }
-            Serial.println(F("] Transfer complete!"));
+            Serial.println(F("Transfer complete!"));
         }
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
