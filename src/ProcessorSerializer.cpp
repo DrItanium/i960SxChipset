@@ -69,11 +69,15 @@ namespace
         return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
     }
     inline void doSPI(uint8_t* buffer, size_t count) {
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        if constexpr (!TargetBoard::onAtmega1284p()) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(buffer, count);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
+        if constexpr (!TargetBoard::onAtmega1284p()) {
+            SPI.endTransaction();
+        }
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
