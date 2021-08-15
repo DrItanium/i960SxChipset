@@ -87,14 +87,14 @@ namespace
         return SplitWord16(lower, upper).wholeValue_;
     }
     uint8_t read8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
-        uint8_t buffer[3] = {
-                generateReadOpcode(addr),
-                static_cast<byte>(opcode),
-                0x00,
-        };
-
-        doSPI(buffer, 3);
-        return buffer[2];
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPI.transfer(generateReadOpcode(addr));
+        SPI.transfer(static_cast<byte>(opcode));
+        auto lower = SPI.transfer(0);
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        SPI.endTransaction();
+        return lower;
     }
     inline uint16_t readGPIO16(ProcessorInterface::IOExpanderAddress addr) {
         return read16(addr, MCP23x17Registers::GPIO);
@@ -102,22 +102,23 @@ namespace
 
     void write16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint16_t value) {
         SplitWord16 valueDiv(value);
-        uint8_t buffer[4] = {
-                generateWriteOpcode(addr),
-                static_cast<byte>(opcode),
-                // this is not an address, so it must go lowerHalf then upperHalf
-                valueDiv.bytes[0],
-                valueDiv.bytes[1],
-        };
-        doSPI(buffer, 4);
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPI.transfer(generateWriteOpcode(addr));
+        SPI.transfer(static_cast<byte>(opcode));
+        SPI.transfer(valueDiv.bytes[0]);
+        SPI.transfer(valueDiv.bytes[1]);
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        SPI.endTransaction();
     }
     void write8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, uint8_t value) {
-        uint8_t buffer[3] = {
-                generateWriteOpcode(addr),
-                static_cast<byte>(opcode),
-                value
-        };
-        doSPI(buffer, 3);
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPI.transfer(generateWriteOpcode(addr));
+        SPI.transfer(static_cast<byte>(opcode));
+        SPI.transfer(value);
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        SPI.endTransaction();
     }
     inline void writeGPIO16(ProcessorInterface::IOExpanderAddress addr, uint16_t value) {
         write16(addr, MCP23x17Registers::GPIO, value);
