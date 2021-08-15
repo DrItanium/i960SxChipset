@@ -328,7 +328,9 @@ struct DigitalPin {
 #define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
 
 DefSPICSPin(i960Pinout::GPIOSelect);
+#ifdef ALLOW_SRAM_CACHE
 DefSPICSPin(i960Pinout::CACHE_EN_);
+#endif
 DefSPICSPin(i960Pinout::SD_EN);
 DefSPICSPin(i960Pinout::PSRAM_EN);
 DefSPICSPin(i960Pinout::DISPLAY_EN);

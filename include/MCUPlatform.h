@@ -29,6 +29,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_MCUPLATFORM_H
 #include <Arduino.h>
 #include "DependentFalse.h"
+
+// comment this out to disable sram cache support
+#define ALLOW_SRAM_CACHE
+
 #ifdef ARDUINO_AVR_ATmega1284
 #define PACKED_ATTRIBUTE
 #else
@@ -145,7 +149,11 @@ enum class Pinout1284p : int {
     AS_ = PORT_B2,
     PSRAM_EN_ = PORT_B3,
     DEN_ = PORT_D2,
+#ifdef ALLOW_SRAM_CACHE
     CACHE_EN_ = PORT_D3,
+#else
+    CACHE_EN_ = NOCACHE_EN_, // disable cache for experiment purposes
+#endif
     RESET960_ = PORT_D5,
     Int0_ = PORT_D6,
     SPI_OFFSET0 = PORT_C2,
