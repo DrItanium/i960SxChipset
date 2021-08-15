@@ -51,9 +51,9 @@ public:
         TwoByteEntry(ConsoleAvailable),
         TwoByteEntry(ConsoleAvailableForWrite),
         TwoByteEntry(ConsoleIO),
-        Led, // one byte
-        DisplayMemoryReadsAndWrites,
-        DisplayCacheLineUpdates,
+        TwoByteEntry(Led),
+        TwoByteEntry(DisplayMemoryReadsAndWrites),
+        TwoByteEntry(DisplayCacheLineUpdates),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -64,6 +64,9 @@ public:
         ConsoleAvailable = ConsoleAvailable0,
         ConsoleAvailableForWrite = ConsoleAvailableForWrite0,
         ConsoleIO = ConsoleIO0,
+        Led = Led0,
+        DisplayMemoryReadsAndWrites = DisplayMemoryReadsAndWrites0,
+        DisplayCacheLineUpdates = DisplayCacheLineUpdates0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
