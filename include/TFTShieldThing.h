@@ -43,7 +43,9 @@ public:
         X(ButtonsUpper),
         X(ButtonsQuery),
 #undef X
+        Count,
     };
+    static_assert(static_cast<int>(Registers::Count) <= 0x100, "This device takes up at most 256 of io space");
     enum class Opcodes : uint16_t {
         None = 0,
         SetRotation,
@@ -323,18 +325,13 @@ public:
     void
     begin() noexcept override {
         if constexpr (DisplayActive_v) {
-            Serial.println(F("Setting up the seesaw"));
             if (!ss.begin()) {
                 signalHaltState(F("NO SEESAW"));
             }
-            Serial.println(F("seesaw started"));
-            Serial.print(F("Version: "));
-            Serial.println(ss.getVersion(), HEX);
             ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
             ss.tftReset();
             display_.initR(INITR_BLACKTAB); // initialize a ST7735S, black tab
             ss.setBacklight(TFTSHIELD_BACKLIGHT_ON);
-            Serial.println(F("TFT OK!"));
             display_.fillScreen(ST77XX_BLACK);
             display_.setCursor(0, 0);
             display_.setTextColor(ST77XX_WHITE);
@@ -347,6 +344,10 @@ public:
         if constexpr (DisplayActive_v) {
             display_.fillScreen(ST7735_BLACK);
         }
+    }
+    Address makeAddressRelative(Address input) const noexcept override {
+        // just like other io space devices these entries are mapped into a single 256 byte section
+        return SplitWord32(input).bytes[0];
     }
 private:
     Opcodes command_ = Opcodes::None;
