@@ -77,8 +77,5 @@ public:
 private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;
-private:
-    bool displayMemoryReadsAndWrites_ = false;
-    bool displayCacheLineUpdates_ = false;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
