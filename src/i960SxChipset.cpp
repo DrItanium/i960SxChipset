@@ -568,8 +568,6 @@ void setup() {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
     Serial.println(F("SYSTEM BOOT SUCCESSFUL!"));
-    pinMode(12, OUTPUT);
-    digitalWrite(12, HIGH);
 }
 // ----------------------------------------------------------------
 // state machine
@@ -613,9 +611,7 @@ void loop() {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    digitalWrite(12, LOW);
     processorInterface.newDataCycle();
-    digitalWrite(12, HIGH);
     if (auto theThing = getThing(processorInterface.getAddress()); theThing->bypassesCache()) {
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
