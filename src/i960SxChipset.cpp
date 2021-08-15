@@ -411,7 +411,6 @@ void purgeSRAMCache() noexcept {
     }
 }
 // the setup routine runs once when you press reset:
-MemoryThing* theThing = nullptr;
 void setup() {
     setupClockSource();
     Serial.begin(115200);
@@ -564,7 +563,6 @@ void setup() {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
     Serial.println(F("SYSTEM BOOT SUCCESSFUL!"));
-    theThing = &rom;
 }
 // ----------------------------------------------------------------
 // state machine
@@ -608,9 +606,7 @@ void loop() {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
-    if (!theThing->respondsTo(processorInterface.getAddress())) {
-        theThing = getThing(processorInterface.getAddress());
-    }
+    auto theThing = getThing(processorInterface.getAddress());
     if (theThing->bypassesCache()) {
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
