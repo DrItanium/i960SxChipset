@@ -209,8 +209,9 @@ void ProcessorInterface::newDataCycle() noexcept {
     // no need to re-read the burst address bits
     auto bits = PINA;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
-    auto maskedBits = static_cast<byte>(bits & 0b1110);
-    address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
+    // don't manipulate the burst address bits as we already have them at this point in time
+    //auto maskedBits = static_cast<byte>(bits & 0b1110);
+    //address_.bytes[0] = upperMaskedAddress_.bytes[0] | maskedBits;
 #else
     // leave this around for targets with fewer pins
     auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
