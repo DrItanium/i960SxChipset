@@ -52,8 +52,6 @@ public:
         TwoByteEntry(ConsoleAvailableForWrite),
         TwoByteEntry(ConsoleIO),
         TwoByteEntry(Led),
-        TwoByteEntry(DisplayMemoryReadsAndWrites),
-        TwoByteEntry(DisplayCacheLineUpdates),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -65,17 +63,11 @@ public:
         ConsoleAvailableForWrite = ConsoleAvailableForWrite0,
         ConsoleIO = ConsoleIO0,
         Led = Led0,
-        DisplayMemoryReadsAndWrites = DisplayMemoryReadsAndWrites0,
-        DisplayCacheLineUpdates = DisplayCacheLineUpdates0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
     ~CoreChipsetFeatures() override = default;
 public:
-    [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
-    [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
-    void setDisplayMemoryReadsAndWrites(bool value) noexcept;
-    void setDisplayCacheLineUpdates(bool value) noexcept;
     [[nodiscard]] constexpr bool debuggingActive() const noexcept { return AllowDebuggingStatements; }
     void begin() noexcept override;
     Address makeAddressRelative(Address input) const noexcept override;

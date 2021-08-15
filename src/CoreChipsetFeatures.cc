@@ -38,18 +38,6 @@ CoreChipsetFeatures::readLed() noexcept {
     return 0;
     //return static_cast<uint8_t>(digitalRead(i960Pinout::CACHE_A0));
 }
-void
-CoreChipsetFeatures::setDisplayMemoryReadsAndWrites(bool value) noexcept {
-    if constexpr (AllowDebuggingStatements) {
-        displayMemoryReadsAndWrites_ = value;
-    }
-}
-void
-CoreChipsetFeatures::setDisplayCacheLineUpdates(bool value) noexcept {
-    if constexpr (AllowDebuggingStatements) {
-        displayCacheLineUpdates_ = value;
-    }
-}
 CoreChipsetFeatures::CoreChipsetFeatures(Address offsetFromIOBase) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) {
 }
 
@@ -78,8 +66,6 @@ CoreChipsetFeatures::read(Address address, LoadStoreStyle) noexcept {
     // force override the default implementation
     SplitWord32 addr(address);
     switch (static_cast<Registers>(addr.bytes[0])) {
-        case Registers::DisplayMemoryReadsAndWrites: return displayMemoryReadsAndWrites();
-        case Registers::DisplayCacheLineUpdates: return displayCacheLineUpdates();
         case Registers::ConsoleIO: return Serial.read();
         case Registers::ConsoleAvailable: return Serial.available();
         case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
@@ -90,12 +76,6 @@ void
 CoreChipsetFeatures::write(Address address, uint16_t value, LoadStoreStyle) noexcept {
     SplitWord32 addr(address);
     switch (static_cast<Registers>(addr.bytes[0])) {
-        case Registers::DisplayMemoryReadsAndWrites:
-            setDisplayMemoryReadsAndWrites(value != 0);
-            break;
-        case Registers::DisplayCacheLineUpdates:
-            setDisplayCacheLineUpdates(value != 0);
-            break;
         case Registers::ConsoleFlush:
             Serial.flush();
             break;
