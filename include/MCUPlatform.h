@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DependentFalse.h"
 
 // comment this out to disable sram cache support
-#define ALLOW_SRAM_CACHE
+//#define ALLOW_SRAM_CACHE
 
 #ifdef ARDUINO_AVR_ATmega1284
 #define PACKED_ATTRIBUTE
