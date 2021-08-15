@@ -66,7 +66,6 @@ public:
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
     ~CoreChipsetFeatures() override = default;
 public:
-    [[nodiscard]] constexpr bool debuggingActive() const noexcept { return AllowDebuggingStatements; }
     Address makeAddressRelative(Address input) const noexcept override;
     bool respondsTo(Address address) const noexcept override;
     uint16_t read(Address address, LoadStoreStyle style) noexcept override;
