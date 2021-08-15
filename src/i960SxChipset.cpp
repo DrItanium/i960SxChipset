@@ -734,27 +734,55 @@ MemoryThing* memoryMapping[256] {
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, nullptr, &fallback,
 };
+MemoryThing* ioSpaceSimpleMapping[256] {
+        // 512 megabytes (map the first 64 megabytes and nothing else until we get to the upper most area)
+        &chipsetFunctions, &fallback, &displayCommandSet, &fs, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megs
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megs
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megs
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megabytes
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megabytes
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megabytes
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megabytes
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+    };
+
 MemoryThing*
 getThing(Address address) noexcept {
     SplitWord32 decomposedAddress(address);
     if (auto mapping = memoryMapping[decomposedAddress.bytes[3]]; mapping == nullptr) {
-        // okay we know we are in io space, now we just need to do a log search to figure out which device
-        // for now just waste space until we need to map new items into io space (so don't check bytes[2])
-
-        // currently all devices are in the first 64k of memory with each device being allocated 256 bytes so just force map them
-        // over and over for now
-        switch (decomposedAddress.bytes[1]) {
-            case 0x00:
-                return &chipsetFunctions;
-            case 0x01:
-                return &fallback;
-            case 0x02:
-                return &displayCommandSet;
-            case 0x03:
-                return &fs;
-            default:
-                return &fallback;
-        }
+        // ignore byte 2 for now so we map these 256 devices over and over into the memory space
+        return ioSpaceSimpleMapping[decomposedAddress.bytes[1]];
     } else {
         return mapping;
     }
