@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ARDUINO_IOEXPANDERS_H
 #include <Arduino.h>
 #include "Pinout.h"
+#include "MemoryThing.h"
 
 class ProcessorInterface {
 public:
@@ -102,7 +103,7 @@ public:
     [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept { return cacheOffsetEntry_; }
 public:
 
-    void newDataCycle() noexcept;
+    MemoryThing* newDataCycle() noexcept;
     void burstNext() noexcept;
 
 private:

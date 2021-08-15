@@ -510,8 +510,7 @@ void setup() {
     // first set of 16-byte request from memory
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
 
-    processorInterface.newDataCycle();
-    auto rom = getThing(processorInterface.getAddress());
+    auto rom = processorInterface.newDataCycle();
     // we know that this will always get mapped to rom so no need to look this up constantly
     if (rom->bypassesCache()) {
         // we also know that this will be a read operation at this point
@@ -538,8 +537,7 @@ void setup() {
     }
     // then do the second 16-byte request
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-    processorInterface.newDataCycle();
-    rom = getThing(processorInterface.getAddress());
+    rom = processorInterface.newDataCycle();
     // we know that this will always get mapped to rom so no need to look this up constantly
     if (rom->bypassesCache()) {
         // we also know that this will be a read operation at this point
@@ -611,8 +609,8 @@ void loop() {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    processorInterface.newDataCycle();
-    if (auto theThing = getThing(processorInterface.getAddress()); theThing->bypassesCache()) {
+    auto theThing = processorInterface.newDataCycle();
+    if (theThing->bypassesCache()) {
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.setDataBits(theThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
