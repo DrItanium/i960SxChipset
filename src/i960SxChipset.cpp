@@ -476,7 +476,7 @@ void setup() {
         } else {
             // okay we were successful in opening the file, now copy the image into psram
             Address size = theFile.size();
-            static constexpr auto CacheSize = 512;
+            static constexpr auto CacheSize = 1024;
             byte storage[CacheSize] = { 0 };
             Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
             for (Address addr = 0; addr < size; addr += CacheSize) {
