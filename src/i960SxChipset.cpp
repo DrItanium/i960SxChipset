@@ -56,7 +56,6 @@ ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 // Load/Store routines
 // ----------------------------------------------------------------
 
-CoreChipsetFeatures chipsetFunctions(0);
 
 
 
@@ -82,6 +81,7 @@ public:
     ~ROMDataSection() override = default;
 };
 
+CoreChipsetFeatures chipsetFunctions(0);
 DisplayThing displayCommandSet(0x200);
 constexpr Address RAMStart = 0x8000'0000;
 constexpr Address textSectionStart = 0x0000'0000;
@@ -722,10 +722,20 @@ MemoryThing&
 getThing(Address address, LoadStoreStyle style) noexcept {
     SplitWord32 decomposedAddress(address);
     if (auto mapping = memoryMapping[decomposedAddress.bytes[3]]; mapping == nullptr) {
-        // io space currently still will use the old school design for simplicity
-        for (auto* currentThing : ioSpaceThings) {
-            if (currentThing->respondsTo(address, style)) {
-                return *currentThing;
+        // okay we know we are in io space, now we just need to do a log search to figure out which device
+        if (decomposedAddress.bytes[2] == 0) {
+            // currently all devices are in the first 64k of memory with each device being allocated 256 bytes
+            switch (decomposedAddress.bytes[1]) {
+                case 0x00:
+                    return chipsetFunctions;
+                case 0x01:
+                    return fallback;
+                case 0x02:
+                    return displayCommandSet;
+                case 0x03:
+                    return fs;
+                default:
+                    return fallback;
             }
         }
         return fallback;
