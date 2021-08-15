@@ -458,3 +458,8 @@ SDCardFilesystemInterface::write8(Address address, uint8_t value) noexcept {
         result_.bytes[offset] = value;
     }
 }
+Address
+SDCardFilesystemInterface::makeAddressRelative(Address input) const noexcept {
+    // we only map a bytes worth of registers into this space
+    return SplitWord32(input).bytes[0];
+}

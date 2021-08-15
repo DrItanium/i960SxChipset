@@ -39,7 +39,7 @@ public:
 public:
     explicit SDCardFilesystemInterface(Address base) : IOSpaceThing(base, base + 0x100) { }
     void begin() noexcept override;
-    enum class Registers : uint16_t {
+    enum class Registers : uint8_t {
 #define X(name) name, name ## Upper
 #define Y(name) \
         X(name ## 0), \
@@ -91,6 +91,7 @@ public:
         Count = CountLower,
     };
     static_assert(static_cast<int>(Registers::Address) - static_cast<int>(Registers::PathEnd) == 2, "There should be a buffer following the path container");
+    static_assert(static_cast<int>(Registers::Count) < 0x100);
     static constexpr bool inResultArea(Registers value) noexcept {
         switch(value) {
 #define X(name) \
@@ -193,6 +194,7 @@ public:
     uint16_t invoke(uint16_t doorbellValue) noexcept;
     uint16_t read16(Address address) noexcept override;
     void write16(Address address, uint16_t value) noexcept override;
+    Address makeAddressRelative(Address input) const noexcept override;
 private:
     uint16_t getFileName() noexcept;
     uint16_t getFileBytesAvailable() noexcept;
