@@ -689,10 +689,10 @@ signalHaltState(const char* haltMsg) {
 }
 MemoryThing* memoryMapping[256] {
     // 512 megabytes
-   &ramBlock, &ramBlock, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &ramBlock, &ramBlock, &rom, &rom, &rom, &rom, &rom, &rom,
+   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
+   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
+   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
   // 512 megs
    &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
    &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
