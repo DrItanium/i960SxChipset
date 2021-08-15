@@ -67,6 +67,11 @@ public:
 public:
     explicit ROMTextSection(Address base) noexcept : Parent(base, base + Size, Size, "boot.rom", FILE_READ){ }
     ~ROMTextSection() override = default;
+    Address makeAddressRelative(Address input) const noexcept override {
+        SplitWord32 newAddr(input);
+        newAddr.bytes[3] &= 0b00011111; // We just need to factor out the offset
+        return newAddr.wholeValue_;
+    }
 };
 
 /// @todo add support for the boot data section that needs to be copied into ram by the i960 on bootup
@@ -79,6 +84,11 @@ public:
 public:
     explicit ROMDataSection(Address base) noexcept : Parent(base, base + Size, Size, "boot.dat", FILE_READ) { }
     ~ROMDataSection() override = default;
+    Address makeAddressRelative(Address input) const noexcept override {
+        SplitWord32 newAddr(input);
+        newAddr.bytes[3] &= 0b00011111; // We just need to factor out the offset
+        return newAddr.wholeValue_;
+    }
 };
 
 CoreChipsetFeatures chipsetFunctions(0);
