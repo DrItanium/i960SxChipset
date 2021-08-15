@@ -292,39 +292,51 @@ public:
         // because of that we can just do a write to the underlying device and find out how much is left over to continue from that point
         Address26 curr(address);
         Address26 end(address + capacity);
-        size_t bytesRemaining = capacity;
-        size_t bytesWritten = 0;
-        auto currentAddress = address;
-        auto* theBuf = buf;
-        // just keep spanning the whole area as we go along
-        for (byte i = curr.getIndex(); i <= end.getIndex(); ++i) {
-            setChipId(i);
-            auto numWritten = backingChips[i].write(currentAddress, theBuf, bytesRemaining);
-            bytesWritten += numWritten;
-            bytesRemaining -= numWritten;
-            theBuf += numWritten;
-            currentAddress += numWritten;
+        if (curr.getIndex() == end.getIndex()) {
+            setChipId(curr.getIndex());
+            return backingChips[curr.getIndex()].write(address, buf, capacity);
+        } else {
+            // only track information if we span multiple psram chips
+            size_t bytesRemaining = capacity;
+            size_t bytesWritten = 0;
+            auto currentAddress = address;
+            auto* theBuf = buf;
+            // just keep spanning the whole area as we go along
+            for (byte i = curr.getIndex(); i <= end.getIndex(); ++i) {
+                setChipId(i);
+                auto numWritten = backingChips[i].write(currentAddress, theBuf, bytesRemaining);
+                bytesWritten += numWritten;
+                bytesRemaining -= numWritten;
+                theBuf += numWritten;
+                currentAddress += numWritten;
+            }
+            return bytesWritten;
         }
-        return bytesWritten;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // just like blockWrite, we can span multiple devices and thus we just need to keep populating the buffer as we go along
         Address26 curr(address);
         Address26 end(address + capacity);
-        size_t bytesRemaining = capacity;
-        size_t bytesRead = 0;
-        auto* theBuf = buf;
-        auto currentAddress = address;
-        // just keep spanning the whole area as we go along
-        for (byte i = curr.getIndex(); i <= end.getIndex(); ++i) {
-            setChipId(i);
-            auto numRead = backingChips[i].read(currentAddress, theBuf, bytesRemaining);
-            bytesRead += numRead;
-            bytesRemaining -= numRead;
-            theBuf += numRead;
-            currentAddress += numRead;
+        if (curr.getIndex() == end.getIndex()) {
+            setChipId(curr.getIndex());
+            // okay we are in a single chip so just call read
+            return backingChips[curr.getIndex()].read(address, buf, capacity);
+        } else {
+            size_t bytesRemaining = capacity;
+            size_t bytesRead = 0;
+            auto* theBuf = buf;
+            auto currentAddress = address;
+            // just keep spanning the whole area as we go along
+            for (byte i = curr.getIndex(); i <= end.getIndex(); ++i) {
+                setChipId(i);
+                auto numRead = backingChips[i].read(currentAddress, theBuf, bytesRemaining);
+                bytesRead += numRead;
+                bytesRemaining -= numRead;
+                theBuf += numRead;
+                currentAddress += numRead;
+            }
+            return bytesRead;
         }
-        return bytesRead;
     }
     uint8_t read8(Address address) noexcept override {
         Address26 curr(address);
