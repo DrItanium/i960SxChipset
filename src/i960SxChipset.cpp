@@ -679,15 +679,62 @@ signalHaltState(const char* haltMsg) {
     }
 
 }
-
-MemoryThing&
+MemoryThing* memoryMapping[256] {
+    // 512 megabytes
+   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
+   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
+   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
+   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
+  // 512 megs
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+        // 512 megs
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+        // 512 megs
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   // 512 megabytes
+   &ramBlock, &ramBlock, &ramBlock, &ramBlock, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megabytes
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megabytes
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+        // 512 megabytes
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &ioSpace,
+   nullptr,
+};
+MemoryThing*
 getThing(Address address, LoadStoreStyle style) noexcept {
+    SplitWord32 decomposedAddress(address);
+    return memoryMapping[decomposedAddress.bytes[3]];
+#if 0
     for (auto* currentThing : things) {
         if (currentThing->respondsTo(address, style)) {
             return *currentThing;
         }
     }
     return fallback;
+#endif
 }
 SdFat SD;
 /// @todo Eliminate after MightyCore update
