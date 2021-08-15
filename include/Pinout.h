@@ -89,22 +89,14 @@ constexpr auto attachedToIOExpander(i960Pinout pinout) noexcept {
     return attachedToIOExpander<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pinout));
 }
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
-    if (isValidPin(ip)) {
-        digitalWrite(static_cast<int>(ip), value);
-    }
+    digitalWrite(static_cast<int>(ip), value);
 }
 
 inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
-    if (isValidPin(ip)) {
-        pinMode(static_cast<int>(ip), value);
-    }
+    pinMode(static_cast<int>(ip), value);
 }
 inline auto digitalRead(i960Pinout ip) {
-    if (isValidPin(ip)) {
-        return digitalRead(static_cast<int>(ip));
-    } else {
-        return LOW;
-    }
+    return digitalRead(static_cast<int>(ip));
 }
 template<i960Pinout pin>
 constexpr auto isValidPin960_v = isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>;
