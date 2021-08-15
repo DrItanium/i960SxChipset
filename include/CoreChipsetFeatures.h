@@ -80,6 +80,7 @@ public:
     [[nodiscard]] constexpr bool debuggingActive() const noexcept { return AllowDebuggingStatements; }
     void begin() noexcept override;
     Address makeAddressRelative(Address input) const noexcept override;
+    bool respondsTo(Address address) const noexcept override;
 private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;

@@ -195,6 +195,7 @@ public:
     uint16_t read16(Address address) noexcept override;
     void write16(Address address, uint16_t value) noexcept override;
     Address makeAddressRelative(Address input) const noexcept override;
+    bool respondsTo(Address address) const noexcept override;
 private:
     uint16_t getFileName() noexcept;
     uint16_t getFileBytesAvailable() noexcept;

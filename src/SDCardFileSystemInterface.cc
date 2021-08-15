@@ -445,3 +445,11 @@ SDCardFilesystemInterface::makeAddressRelative(Address input) const noexcept {
     // we only map a bytes worth of registers into this space
     return SplitWord32(input).bytes[0];
 }
+bool
+SDCardFilesystemInterface::respondsTo(Address address) const noexcept {
+    SplitWord32 theAddr(address);
+    SplitWord32 theBase(getBaseAddress());
+    return (theAddr.bytes[3] == theBase.bytes[3]) && // okay we are in io space
+           (theAddr.bytes[2] == theBase.bytes[2]) && // okay we are in the proper sub section of io space
+           (theAddr.bytes[1] == theBase.bytes[1]);   // and the proper sub subsection of io space
+}

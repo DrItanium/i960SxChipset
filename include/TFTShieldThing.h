@@ -349,6 +349,13 @@ public:
         // just like other io space devices these entries are mapped into a single 256 byte section
         return SplitWord32(input).bytes[0];
     }
+    bool respondsTo(Address address) const noexcept override {
+        SplitWord32 theAddr(address);
+        SplitWord32 theBase(getBaseAddress());
+        return (theAddr.bytes[3] == theBase.bytes[3]) && // okay we are in io space
+               (theAddr.bytes[2] == theBase.bytes[2]) && // okay we are in the proper sub section of io space
+               (theAddr.bytes[1] == theBase.bytes[1]);   // and the proper sub subsection of io space
+    }
 private:
     Opcodes command_ = Opcodes::None;
     int16_t x_ = 0;
