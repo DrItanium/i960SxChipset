@@ -76,14 +76,15 @@ namespace
         SPI.endTransaction();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
-        uint8_t buffer[4] = {
-                generateReadOpcode(addr),
-                static_cast<byte>(opcode),
-                0x00,
-                0x00,
-        };
-        doSPI(buffer, 4);
-        return SplitWord16(buffer[2], buffer[3]).wholeValue_;
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPI.transfer(generateReadOpcode(addr));
+        SPI.transfer(static_cast<byte>(opcode));
+        auto lower = SPI.transfer(0);
+        auto upper = SPI.transfer(0);
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        SPI.endTransaction();
+        return SplitWord16(lower, upper).wholeValue_;
     }
     uint8_t read8(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[3] = {
