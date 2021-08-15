@@ -329,25 +329,25 @@ void purgeSRAMCache() noexcept {
         for (uint32_t i = 0; i < max; i += 32) {
             SplitWord32 translation(i);
             byte pagePurgeInstruction[36]{
-                0x02,
-                translation.bytes[2],
-                translation.bytes[1],
-                translation.bytes[0],
-                0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-                };
+                    0x02,
+                    translation.bytes[2],
+                    translation.bytes[1],
+                    translation.bytes[0],
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+                    0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+            };
             byte pageReadInstruction[36]{
-                0x03,
-                translation.bytes[2],
-                translation.bytes[1],
-                translation.bytes[0],
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                };
+                    0x03,
+                    translation.bytes[2],
+                    translation.bytes[1],
+                    translation.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+            };
             digitalWrite<i960Pinout::CACHE_EN_, LOW>();
             SPI.transfer(pagePurgeInstruction, 36);
             digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
@@ -367,25 +367,25 @@ void purgeSRAMCache() noexcept {
         for (uint32_t i = 0; i < max; i+= 32) {
             SplitWord32 translation(i);
             byte pagePurgeInstruction[36] {
-                0x02,
-                translation.bytes[2],
-                translation.bytes[1],
-                translation.bytes[0],
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                };
+                    0x02,
+                    translation.bytes[2],
+                    translation.bytes[1],
+                    translation.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+            };
             byte pageReadInstruction[36]{
-                0x03,
-                translation.bytes[2],
-                translation.bytes[1],
-                translation.bytes[0],
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                };
+                    0x03,
+                    translation.bytes[2],
+                    translation.bytes[1],
+                    translation.bytes[0],
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+            };
             digitalWrite<i960Pinout::CACHE_EN_, LOW>();
             SPI.transfer(pagePurgeInstruction, 36);
             digitalWrite<i960Pinout::CACHE_EN_, HIGH>();
@@ -593,18 +593,16 @@ void setup() {
 
 // NOTE: Tw may turn out to be synthetic
 void loop() {
-        // wait until AS goes from low to high
-        // then wait until the DEN state is asserted
-        while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-        // keep processing data requests until we
-        // when we do the transition, record the information we need
-        processorInterface.newDataCycle();
-        if (auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); theThing.bypassesCache()) {
-            auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
-                    [](MemoryThing& theThing) { processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle())); } :
-                    [](MemoryThing& theThing) {theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle()); };
+    // wait until AS goes from low to high
+    // then wait until the DEN state is asserted
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    // keep processing data requests until we
+    // when we do the transition, record the information we need
+    processorInterface.newDataCycle();
+    if (auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); theThing.bypassesCache()) {
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
-                fn(theThing);
+                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
@@ -613,17 +611,8 @@ void loop() {
                 processorInterface.burstNext();
             } while (true);
         } else {
-            auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
-                    [](CacheEntry& theEntry) {
-                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-            } : [](CacheEntry& theEntry) {
-                theEntry.set(processorInterface.getCacheOffsetEntry(),
-                             processorInterface.getStyle(),
-                             SplitWord16{processorInterface.getDataBits()});
-            } ;
-            auto& theEntry = getLine(theThing);
             do {
-                fn(theEntry);
+                theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
@@ -632,6 +621,32 @@ void loop() {
                 processorInterface.burstNext();
             } while (true);
         }
+    } else {
+        auto& theEntry = getLine(theThing);
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            do {
+                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            do {
+                theEntry.set(processorInterface.getCacheOffsetEntry(),
+                             processorInterface.getStyle(),
+                             SplitWord16{processorInterface.getDataBits()});
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
+    }
 }
 
 [[noreturn]]
