@@ -52,51 +52,6 @@ CoreChipsetFeatures::setDisplayCacheLineUpdates(bool value) noexcept {
 }
 CoreChipsetFeatures::CoreChipsetFeatures(Address offsetFromIOBase) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) {
 }
-uint8_t
-CoreChipsetFeatures::read8(Address address) noexcept {
-    switch (static_cast<Registers>(address)) {
-        case Registers::DisplayMemoryReadsAndWrites: return displayMemoryReadsAndWrites();
-        case Registers::DisplayCacheLineUpdates: return displayCacheLineUpdates();
-        default:
-            return 0;
-    }
-}
-uint16_t
-CoreChipsetFeatures::read16(Address address) noexcept {
-    switch (static_cast<Registers>(address)) {
-        case Registers::ConsoleIO: return Serial.read();
-        case Registers::ConsoleAvailable: return Serial.available();
-        case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
-        default: return 0;
-    }
-}
-void
-CoreChipsetFeatures::write16(Address address, uint16_t value) noexcept {
-    switch (static_cast<Registers>(address)) {
-        case Registers::ConsoleFlush:
-            Serial.flush();
-            break;
-        case Registers::ConsoleIO:
-            Serial.write(static_cast<char>(value));
-            break;
-        default:
-            break;
-    }
-}
-
-void
-CoreChipsetFeatures::write8(Address address, uint8_t value) noexcept {
-    switch (static_cast<Registers>(address)) {
-        case Registers::DisplayMemoryReadsAndWrites:
-            setDisplayMemoryReadsAndWrites(value != 0);
-            break;
-        case Registers::DisplayCacheLineUpdates:
-            setDisplayCacheLineUpdates(value != 0);
-            break;
-        default:
-            break;
-    }
-}
 
 
 void
@@ -116,6 +71,38 @@ CoreChipsetFeatures::respondsTo(Address address) const noexcept {
     SplitWord32 theAddr(address);
     SplitWord32 theBase(getBaseAddress());
     return (theAddr.bytes[3] == theBase.bytes[3]) && // okay we are in io space
-           (theAddr.bytes[2] == theBase.bytes[2]) && // okay we are in the proper sub section of io space
            (theAddr.bytes[1] == theBase.bytes[1]);   // and the proper sub subsection of io space
+}
+uint16_t
+CoreChipsetFeatures::read(Address address, LoadStoreStyle) noexcept {
+    // force override the default implementation
+    SplitWord32 addr(address);
+    switch (static_cast<Registers>(addr.bytes[0])) {
+        case Registers::DisplayMemoryReadsAndWrites: return displayMemoryReadsAndWrites();
+        case Registers::DisplayCacheLineUpdates: return displayCacheLineUpdates();
+        case Registers::ConsoleIO: return Serial.read();
+        case Registers::ConsoleAvailable: return Serial.available();
+        case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
+        default: return 0;
+    }
+}
+void
+CoreChipsetFeatures::write(Address address, uint16_t value, LoadStoreStyle) noexcept {
+    SplitWord32 addr(address);
+    switch (static_cast<Registers>(addr.bytes[0])) {
+        case Registers::DisplayMemoryReadsAndWrites:
+            setDisplayMemoryReadsAndWrites(value != 0);
+            break;
+        case Registers::DisplayCacheLineUpdates:
+            setDisplayCacheLineUpdates(value != 0);
+            break;
+        case Registers::ConsoleFlush:
+            Serial.flush();
+            break;
+        case Registers::ConsoleIO:
+            Serial.write(static_cast<char>(value));
+            break;
+        default:
+            break;
+    }
 }

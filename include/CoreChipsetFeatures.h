@@ -69,10 +69,6 @@ public:
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
     ~CoreChipsetFeatures() override = default;
 public:
-    [[nodiscard]] uint8_t read8(Address address) noexcept override;
-    [[nodiscard]] uint16_t read16(Address address) noexcept override;
-    void write16(Address address, uint16_t value) noexcept override;
-    void write8(Address address, uint8_t value) noexcept override;
     [[nodiscard]] constexpr bool displayMemoryReadsAndWrites() const noexcept { return AllowDebuggingStatements && displayMemoryReadsAndWrites_; }
     [[nodiscard]] constexpr bool displayCacheLineUpdates() const noexcept { return AllowDebuggingStatements && displayCacheLineUpdates_; }
     void setDisplayMemoryReadsAndWrites(bool value) noexcept;
@@ -81,6 +77,8 @@ public:
     void begin() noexcept override;
     Address makeAddressRelative(Address input) const noexcept override;
     bool respondsTo(Address address) const noexcept override;
+    uint16_t read(Address address, LoadStoreStyle style) noexcept override;
+    void write(Address address, uint16_t value, LoadStoreStyle style) noexcept override;
 private:
     static void writeLed(uint8_t value) noexcept;
     static uint8_t readLed() noexcept;
