@@ -593,45 +593,45 @@ void setup() {
 
 // NOTE: Tw may turn out to be synthetic
 void loop() {
-    // wait until AS goes from low to high
-    // then wait until the DEN state is asserted
-    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-    // keep processing data requests until we
-    // when we do the transition, record the information we need
-    processorInterface.newDataCycle();
-    if (auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); theThing.bypassesCache()) {
-        auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
-                  [](MemoryThing& theThing) { processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle())); } :
-                  [](MemoryThing& theThing) {theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle()); };
-        do {
-            fn(theThing);
-            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isBurstLast) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
-    } else {
-        auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
-                  [](CacheEntry& theEntry) {
-                      processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-                  } : [](CacheEntry& theEntry) {
-                    theEntry.set(processorInterface.getCacheOffsetEntry(),
-                                 processorInterface.getStyle(),
-                                 SplitWord16{processorInterface.getDataBits()});
-                } ;
-        auto& theEntry = getLine(theThing);
-        do {
-            fn(theEntry);
-            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isBurstLast) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
-    }
+        // wait until AS goes from low to high
+        // then wait until the DEN state is asserted
+        while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+        // keep processing data requests until we
+        // when we do the transition, record the information we need
+        processorInterface.newDataCycle();
+        if (auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); theThing.bypassesCache()) {
+            auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
+                    [](MemoryThing& theThing) { processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle())); } :
+                    [](MemoryThing& theThing) {theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle()); };
+            do {
+                fn(theThing);
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            auto fn = DigitalPin<i960Pinout::W_R_>::isAsserted() ?
+                    [](CacheEntry& theEntry) {
+                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+            } : [](CacheEntry& theEntry) {
+                theEntry.set(processorInterface.getCacheOffsetEntry(),
+                             processorInterface.getStyle(),
+                             SplitWord16{processorInterface.getDataBits()});
+            } ;
+            auto& theEntry = getLine(theThing);
+            do {
+                fn(theEntry);
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
 }
 
 [[noreturn]]
@@ -662,6 +662,7 @@ signalHaltState(const char* haltMsg) {
     while(true) {
         delay(1000);
     }
+
 }
 
 MemoryThing&
