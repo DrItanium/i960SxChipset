@@ -466,7 +466,29 @@ void setup() {
         displayReady = true;
         ramBlock.begin();
         // okay now we need to actually open boot.system and copy it into the ramBlock
-
+        if (!SD.exists(const_cast<char*>("boot.sys"))) {
+            // delete the file and start a new
+            signalHaltState(F("Could not find file \"boot.sys\"!"));
+        }
+        if (auto theFile = SD.open("boot.sys", FILE_READ); !theFile) {
+            signalHaltState(F("Could not open \"boot.sys\"! SD CARD may be corrupt?")) ;
+        } else {
+            // okay we were successful in opening the file, now copy the image into psram
+            Serial.println(F("Transferring boot.sys to the onboard psram prior to booting!"));
+            Address size = theFile.size();
+            byte storage[512] = { 0 };
+            Address numBytesTransferred = 0;
+            for (Address addr = 0; addr < size; addr += 512) {
+                auto numRead = theFile.read(storage, 512);
+                numBytesTransferred += ramBlock.write(addr, storage, numRead);
+                Serial.print(F("TRANSFERED "));
+                Serial.print(numBytesTransferred);
+                Serial.print(F(" / "));
+                Serial.print(size);
+                Serial.println(F("BYTES!"));
+            }
+            Serial.println(F("Transfer complete!"));
+        }
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
