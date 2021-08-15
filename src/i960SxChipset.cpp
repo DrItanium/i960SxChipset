@@ -85,6 +85,7 @@ public:
     explicit ROMDataSection(Address base) noexcept : Parent(base, base + Size, Size, "boot.dat", FILE_READ) { }
     ~ROMDataSection() override = default;
     Address makeAddressRelative(Address input) const noexcept override {
+        /// @todo test the assumption that we can just return the input address since this will only fire if we invoke the proper mapped thing
         SplitWord32 newAddr(input);
         newAddr.bytes[3] &= 0b00011111; // We just need to factor out the offset
         return newAddr.wholeValue_;
@@ -398,8 +399,6 @@ void purgeSRAMCache() noexcept {
         Serial.println(F("DONE PURGING SRAM CACHE!"));
     }
 }
-bool enteredDataState = false;
-bool enteredAddressState = false;
 // the setup routine runs once when you press reset:
 void setup() {
     setupClockSource();
@@ -596,10 +595,10 @@ void loop() {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     processorInterface.newDataCycle();
-    if (auto& theThing = getThing(processorInterface.getAddress(), LoadStoreStyle::Full16); theThing.bypassesCache()) {
+    if (auto* theThing = getThing(processorInterface.getAddress()); theThing->bypassesCache()) {
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
-                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle()));
+                processorInterface.setDataBits(theThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
@@ -609,7 +608,7 @@ void loop() {
             } while (true);
         } else {
             do {
-                theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
+                theThing->write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
@@ -619,7 +618,7 @@ void loop() {
             } while (true);
         }
     } else {
-        auto& theEntry = getLine(theThing);
+        auto& theEntry = getLine(*theThing);
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
@@ -718,8 +717,8 @@ MemoryThing* memoryMapping[256] {
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, nullptr, &fallback,
 };
-MemoryThing&
-getThing(Address address, LoadStoreStyle style) noexcept {
+MemoryThing*
+getThing(Address address) noexcept {
     SplitWord32 decomposedAddress(address);
     if (auto mapping = memoryMapping[decomposedAddress.bytes[3]]; mapping == nullptr) {
         // okay we know we are in io space, now we just need to do a log search to figure out which device
@@ -727,20 +726,20 @@ getThing(Address address, LoadStoreStyle style) noexcept {
             // currently all devices are in the first 64k of memory with each device being allocated 256 bytes
             switch (decomposedAddress.bytes[1]) {
                 case 0x00:
-                    return chipsetFunctions;
+                    return &chipsetFunctions;
                 case 0x01:
-                    return fallback;
+                    return &fallback;
                 case 0x02:
-                    return displayCommandSet;
+                    return &displayCommandSet;
                 case 0x03:
-                    return fs;
+                    return &fs;
                 default:
-                    return fallback;
+                    return &fallback;
             }
         }
-        return fallback;
+        return &fallback;
     } else {
-        return *mapping;
+        return mapping;
     }
 }
 SdFat SD;

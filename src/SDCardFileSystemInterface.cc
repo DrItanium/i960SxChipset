@@ -358,7 +358,7 @@ SDCardFilesystemInterface::readFile() noexcept {
     } else {
         Address baseAddress = address_.wholeValue_;
         Address count = count_.wholeValue_;
-        if (auto& thing = getThing(baseAddress, LoadStoreStyle::Lower8); &thing == &FallbackMemoryThing::getFallback()) {
+        if (auto* thing = getThing(baseAddress); thing == &FallbackMemoryThing::getFallback()) {
             errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
             return -1;
         } else {
@@ -371,7 +371,7 @@ SDCardFilesystemInterface::readFile() noexcept {
                 // we can keep the cache on at this point in time now
                 if (count > 0 && count <= TransferBufferSize) {
                     bytesRead = theFile.read(transferBuffer_, count);
-                    thing.write(baseAddress, transferBuffer_, bytesRead);
+                    thing->write(baseAddress, transferBuffer_, bytesRead);
                     result_.words[0] = bytesRead;
                     return 0;
                 } else {
@@ -380,13 +380,13 @@ SDCardFilesystemInterface::readFile() noexcept {
                     Address a = baseAddress;
                     for (Address i = 0; i < times; ++i, a += TransferBufferSize) {
                         uint32_t actualBytesRead = theFile.read(transferBuffer_, TransferBufferSize);
-                        (void) thing.write(a, transferBuffer_, actualBytesRead);
+                        (void) thing->write(a, transferBuffer_, actualBytesRead);
                         bytesRead += actualBytesRead;
                     }
                     result_.words[0] = bytesRead;
                     if (spillOver > 0) {
                         uint32_t leftOverBytesRead = theFile.read(transferBuffer_, spillOver);
-                        result_.words[0] += thing.write(a, transferBuffer_, leftOverBytesRead);
+                        result_.words[0] += thing->write(a, transferBuffer_, leftOverBytesRead);
                     }
                     return 0;
                 }

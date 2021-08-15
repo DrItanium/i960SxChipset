@@ -241,10 +241,9 @@ public:
 /**
  * @brief Does a lookup in the global thing collection to try and find a thing that will respond to the given address
  * @param address the address to check for a response to
- * @param style the width of the request
  * @return The thing that will respond to the given address
  */
-MemoryThing& getThing(Address address, LoadStoreStyle style) noexcept;
+MemoryThing* getThing(Address address) noexcept;
 
 
 #endif //I960SXCHIPSET_MEMORYTHING_H
