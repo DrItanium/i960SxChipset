@@ -13,35 +13,36 @@
 #include "MemoryThing.h"
 class TFTShieldThing : public IOSpaceThing {
 public:
-    enum class Registers : uint32_t {
-        Flush = 0,
-        IO,
-        Available,
-        AvailableForWrite,
-        Command,
-        X,
-        Y,
-        W,
-        H,
-        Radius,
-        Color,
-        BGColor,
-        X0,
-        Y0,
-        X1,
-        Y1,
-        X2,
-        Y2,
-        R,
-        G,
-        B,
-        Doorbell,
-        Backlight,
-        BacklightFrequency,
-        ButtonsLower,
-        ButtonsUpper,
-        ButtonsQuery,
-
+    enum class Registers : uint8_t {
+#define X(name) name, name ## Upper
+        X(Flush),
+        X(IO),
+        X(Available),
+        X(AvailableForWrite),
+        X(Command),
+        X(X),
+        X(Y),
+        X(W),
+        X(H),
+        X(Radius),
+        X(Color),
+        X(BGColor),
+        X(X0),
+        X(Y0),
+        X(X1),
+        X(Y1),
+        X(X2),
+        X(Y2),
+        X(Red),
+        X(Green),
+        X(Blue),
+        X(Doorbell),
+        X(Backlight),
+        X(BacklightFrequency),
+        X(ButtonsLower),
+        X(ButtonsUpper),
+        X(ButtonsQuery),
+#undef X
     };
     enum class Opcodes : uint16_t {
         None = 0,
@@ -216,8 +217,8 @@ public:
     }
     uint16_t read16(Address address) noexcept override {
         if constexpr (DisplayActive_v) {
-            switch (address) {
-#define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
+            switch (static_cast<Registers>(address)) {
+#define X(title) case Registers:: title
                 X(Available) : return available();
                 X(AvailableForWrite) : return availableForWriting();
                 X(Command) : return static_cast<uint16_t>(getCommand());
@@ -234,9 +235,9 @@ public:
                 X(Y1) : return getY1();
                 X(X2) : return getX2();
                 X(Y2) : return getY2();
-                X(R) : return getRed();
-                X(G) : return getGreen();
-                X(B) : return getBlue();
+                X(Red) : return getRed();
+                X(Green) : return getGreen();
+                X(Blue) : return getBlue();
                 X(Doorbell) : return invoke(0);
                 X(Backlight) : return backlightStatus_;
                 X(BacklightFrequency) : return backlightFrequency_;
@@ -251,8 +252,8 @@ public:
     }
     void write16(Address address, uint16_t value) noexcept override {
         if constexpr (DisplayActive_v) {
-            switch (address) {
-#define X(title) case (static_cast<Address>(Registers:: title) * sizeof(uint16_t))
+            switch (static_cast<Registers>(address)) {
+#define X(title) case Registers:: title
                 X(Command) :
                 setCommand(static_cast<Opcodes>(value));
                 break;
@@ -269,9 +270,9 @@ public:
                 X(Y1) : setY1(static_cast<int16_t>(value)); break;
                 X(X2) : setX2(static_cast<int16_t>(value)); break;
                 X(Y2) : setY2(static_cast<int16_t>(value)); break;
-                X(R) : setR(static_cast<int16_t>(value)); break;
-                X(G) : setG(static_cast<int16_t>(value)); break;
-                X(B) : setB(static_cast<int16_t>(value)); break;
+                X(Red) : setR(static_cast<int16_t>(value)); break;
+                X(Green) : setG(static_cast<int16_t>(value)); break;
+                X(Blue) : setB(static_cast<int16_t>(value)); break;
                 X(Doorbell) :
                 resultLower_ = invoke(value);
                 break;

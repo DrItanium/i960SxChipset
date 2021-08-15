@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class CoreChipsetFeatures : public IOSpaceThing {
 public:
     static constexpr auto AllowDebuggingStatements = true;
-    enum class Registers : uint32_t {
+    enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
         TwoByteEntry(Prefix ## 0), \
