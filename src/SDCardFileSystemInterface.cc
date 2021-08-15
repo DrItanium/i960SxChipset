@@ -123,7 +123,7 @@ SDCardFilesystemInterface::invoke(uint16_t doorbellValue) noexcept {
 uint16_t
 SDCardFilesystemInterface::read16(Address address) noexcept {
     if (auto theReg = static_cast<Registers>(address); inResultArea(theReg)) {
-        auto offset = (address - static_cast<Address>(Registers::Result)) / sizeof(uint16_t);
+        auto offset = (SplitWord32(address).bytes[0] - static_cast<byte>(Registers::Result)) / sizeof(uint16_t) ;
         return result_.shorts[offset];
     }  else {
         switch (theReg) {
@@ -166,7 +166,7 @@ SDCardFilesystemInterface::read16(Address address) noexcept {
 void
 SDCardFilesystemInterface::write16(Address address, uint16_t value) noexcept {
     if (auto theReg = static_cast<Registers>(address); inResultArea(theReg)) {
-        auto offset = (address - static_cast<Address>(Registers::Result)) / sizeof(uint16_t) ;
+        auto offset = (SplitWord32(address).bytes[0] - static_cast<byte>(Registers::Result)) / sizeof(uint16_t) ;
         result_.shorts[offset] = value;
     } else {
         switch (theReg) {
@@ -358,13 +358,6 @@ SDCardFilesystemInterface::readFile() noexcept {
     } else {
         Address baseAddress = address_.wholeValue_;
         Address count = count_.wholeValue_;
-#if 0
-        Serial.print(F("readFile: [0x"));
-        Serial.print(baseAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(count, HEX);
-        Serial.println(F("]"));
-#endif
         if (auto& thing = getThing(baseAddress, LoadStoreStyle::Lower8); &thing == &FallbackMemoryThing::getFallback()) {
             errorCode_ = ErrorCodes::AttemptToReadFromUnmappedMemory;
             return -1;
@@ -375,7 +368,6 @@ SDCardFilesystemInterface::readFile() noexcept {
                 return 0;
             } else {
                 invalidateGlobalCache();
-                //TemporarilyDisableThingCache cacheOff(thing);
                 // we can keep the cache on at this point in time now
                 if (count > 0 && count <= TransferBufferSize) {
                     bytesRead = theFile.read(transferBuffer_, count);
@@ -385,23 +377,12 @@ SDCardFilesystemInterface::readFile() noexcept {
                 } else {
                     auto times = count / TransferBufferSize;
                     auto spillOver = count % TransferBufferSize;
-#if 0
-                    Serial.print(F("[TIMES, SPILLOVER]: [0x"));
-                    Serial.print(times, HEX);
-                    Serial.print(F(", 0x"));
-                    Serial.print(spillOver, HEX);
-                    Serial.println(F("]"));
-#endif
                     Address a = baseAddress;
                     for (Address i = 0; i < times; ++i, a += TransferBufferSize) {
                         uint32_t actualBytesRead = theFile.read(transferBuffer_, TransferBufferSize);
                         (void) thing.write(a, transferBuffer_, actualBytesRead);
                         bytesRead += actualBytesRead;
                     }
-#if 0
-                    Serial.print(F("SPILL OVER TO 0x"));
-                    Serial.println(a, HEX);
-#endif
                     result_.words[0] = bytesRead;
                     if (spillOver > 0) {
                         uint32_t leftOverBytesRead = theFile.read(transferBuffer_, spillOver);
@@ -438,10 +419,10 @@ SDCardFilesystemInterface::begin() noexcept {
 uint8_t
 SDCardFilesystemInterface::read8(Address address) noexcept {
     if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
-        auto offset = address - static_cast<Address>(Registers::Path);
+        auto offset = SplitWord32(address).bytes[0] - static_cast<byte>(Registers::Path);
         return static_cast<uint8_t>(path_[offset]);
     } else if (inResultArea(reg)) {
-        auto offset = address - static_cast<Address>(Registers::Result);
+        auto offset = SplitWord32(address).bytes[0] - static_cast<Address>(Registers::Result);
         return result_.bytes[offset];
     }
     return 0;
@@ -450,11 +431,12 @@ SDCardFilesystemInterface::read8(Address address) noexcept {
 void
 SDCardFilesystemInterface::write8(Address address, uint8_t value) noexcept {
     if (auto reg = static_cast<Registers>(address); inPathArea(reg)) {
-        auto offset = address - static_cast<Address>(Registers::Path);
+        // since we know this will be a byte there is no reason not to just use the least significant byte
+        auto offset = SplitWord32(address).bytes[0] - static_cast<uint8_t>(Registers::Path);
         path_[offset] = static_cast<char>(value);
 
     } else if (inResultArea(reg)) {
-        auto offset = address - static_cast<Address>(Registers::Result);
+        auto offset = SplitWord32(address).bytes[0] - static_cast<uint8_t>(Registers::Result);
         result_.bytes[offset] = value;
     }
 }
