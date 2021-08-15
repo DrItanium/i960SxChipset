@@ -43,14 +43,14 @@ private:
     ProcessorInterface() = default;
 public:
     enum class IOExpanderAddress : byte {
-        DataLines = 0b000,
-        Lower16Lines,
-        Upper16Lines,
-        MemoryCommitExtras,
-        OtherDevice0,
-        OtherDevice1,
-        OtherDevice2,
-        OtherDevice3,
+        DataLines = 0b0000,
+        Lower16Lines = 0b0010,
+        Upper16Lines = 0b0100,
+        MemoryCommitExtras = 0b0110,
+        OtherDevice0 = 0b1000,
+        OtherDevice1 = 0b1010,
+        OtherDevice2 = 0b1100,
+        OtherDevice3 = 0b1110,
     };
 // layout of the extra memory commit expander
 // PA0 - BurstAddress1 - input

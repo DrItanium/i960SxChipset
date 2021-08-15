@@ -63,21 +63,17 @@ namespace
         IPOL = IPOLA,
     };
     constexpr byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
-        return 0b0100'0000 | ((static_cast<uint8_t>(address) & 0b111) << 1) | 1;
+        return 0b0100'0001 | static_cast<uint8_t>(address);
     }
     constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
-        return 0b0100'0000 | ((static_cast<byte>(address) & 0b111) << 1);
+        return 0b0100'0000 | static_cast<uint8_t>(address);
     }
     inline void doSPI(uint8_t* buffer, size_t count) {
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        }
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(buffer, count);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        if constexpr (!TargetBoard::onAtmega1284p()) {
-            SPI.endTransaction();
-        }
+        SPI.endTransaction();
     }
     uint16_t read16(ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode) {
         uint8_t buffer[4] = {
@@ -135,7 +131,8 @@ ProcessorInterface::getDataBits() noexcept {
         dataLinesDirection_ = 0xFFFF;
         writeDirection(ProcessorInterface::IOExpanderAddress::DataLines, dataLinesDirection_);
     }
-    return readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
+    auto result = readGPIO16(ProcessorInterface::IOExpanderAddress::DataLines);
+    return result;
 }
 
 void
@@ -236,9 +233,11 @@ void ProcessorInterface::burstNext() noexcept {
     auto bits = PINA;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
 #else
+    SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
     address_.wholeValue_ += 2;
     auto bits = read16(IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::GPIOA);
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
+    SPI.endTransaction();
 #endif
     ++cacheOffsetEntry_;
 }
