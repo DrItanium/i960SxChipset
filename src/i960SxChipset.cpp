@@ -105,22 +105,17 @@ public:
 
 CoreChipsetFeatures chipsetFunctions(0);
 DisplayThing displayCommandSet(0x200);
-constexpr Address RAMStart = 0x8000'0000;
-constexpr Address textSectionStart = 0x0000'0000;
-constexpr Address dataSectionStart = 0x2000'0000;
+//constexpr Address RAMStart = 0x8000'0000;
+//constexpr Address textSectionStart = 0x0000'0000;
+//constexpr Address dataSectionStart = 0x2000'0000;
 constexpr auto PerformPSRAMSanityCheck = !TargetBoard::onAtmega1284p();
 constexpr auto PerformClearOnBootup = true;
 using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMSanityCheck>;
-OnboardMemoryBlock ramBlock(RAMStart);
+OnboardMemoryBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
-#ifdef ARDUINO_ARCH_RP2040
-ReadOnlyOnChipMemoryThing rom(textSectionStart, getBootRomLength(), getBootRom());
-ReadOnlyOnChipMemoryThing dataRom(dataSectionStart, getBootDataLength(), getBootData());
-#else
-ROMTextSection rom(textSectionStart);
-ROMDataSection dataRom(dataSectionStart);
+//ROMTextSection rom(textSectionStart);
+//ROMDataSection dataRom(dataSectionStart);
 SDCardFilesystemInterface fs(0x300);
-#endif
 
 
 
@@ -508,11 +503,12 @@ void setup() {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
 
     processorInterface.newDataCycle();
+    auto rom = getThing(processorInterface.getAddress());
     // we know that this will always get mapped to rom so no need to look this up constantly
-    if (rom.bypassesCache()) {
+    if (rom->bypassesCache()) {
         // we also know that this will be a read operation at this point
         do {
-            processorInterface.setDataBits(rom.read(processorInterface.getAddress(), processorInterface.getStyle()));
+            processorInterface.setDataBits(rom->read(processorInterface.getAddress(), processorInterface.getStyle()));
             auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isBurstLast) {
@@ -521,7 +517,7 @@ void setup() {
             processorInterface.burstNext();
         } while (true);
     } else {
-        auto& theEntry = getLine(rom);
+        auto& theEntry = getLine(*rom);
         do {
             processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
             auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -535,11 +531,12 @@ void setup() {
     // then do the second 16-byte request
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     processorInterface.newDataCycle();
+    rom = getThing(processorInterface.getAddress());
     // we know that this will always get mapped to rom so no need to look this up constantly
-    if (rom.bypassesCache()) {
+    if (rom->bypassesCache()) {
         // we also know that this will be a read operation at this point
         do {
-            processorInterface.setDataBits(rom.read(processorInterface.getAddress(), processorInterface.getStyle()));
+            processorInterface.setDataBits(rom->read(processorInterface.getAddress(), processorInterface.getStyle()));
             auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isBurstLast) {
@@ -548,7 +545,7 @@ void setup() {
             processorInterface.burstNext();
         } while (true);
     } else {
-        auto& theEntry = getLine(rom);
+        auto& theEntry = getLine(*rom);
         do {
             processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
             auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -688,28 +685,28 @@ signalHaltState(const char* haltMsg) {
 
 }
 MemoryThing* memoryMapping[256] {
-    // 512 megabytes
-   &ramBlock, &ramBlock, &rom, &rom, &rom, &rom, &rom, &rom,
-   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
-   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
-   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
+    // 512 megabytes (map the first 64 megabytes and nothing else until we get to the upper most area)
+   &ramBlock, &ramBlock, &ramBlock, &ramBlock, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
   // 512 megs
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         // 512 megs
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         // 512 megs
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
-   &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    // 512 megabytes
-   &ramBlock, &ramBlock, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
