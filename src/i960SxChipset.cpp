@@ -481,11 +481,11 @@ void setup() {
             for (Address addr = 0; addr < size; addr += 512) {
                 auto numRead = theFile.read(storage, 512);
                 numBytesTransferred += ramBlock.write(addr, storage, numRead);
-                Serial.print(F("TRANSFERED "));
+                Serial.print(F("BYTES TRANSFERED "));
                 Serial.print(numBytesTransferred);
                 Serial.print(F(" / "));
                 Serial.print(size);
-                Serial.println(F("BYTES!"));
+                Serial.println(F(" BYTES!"));
             }
             Serial.println(F("Transfer complete!"));
         }
