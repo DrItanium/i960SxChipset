@@ -72,6 +72,12 @@ public:
         newAddr.bytes[3] &= 0b00011111; // We just need to factor out the offset
         return newAddr.wholeValue_;
     }
+    bool
+    respondsTo(Address address) const noexcept override {
+        // we just need to make sure that the upper most byte has the following pattern set
+        // if the upper most byte is less than 0b0010'0000 then we have a match
+        return SplitWord32(address).bytes[3] < 0b0010'0000;
+    }
 };
 
 /// @todo add support for the boot data section that needs to be copied into ram by the i960 on bootup
@@ -89,6 +95,11 @@ public:
         SplitWord32 newAddr(input);
         newAddr.bytes[3] &= 0b00011111; // We just need to factor out the offset
         return newAddr.wholeValue_;
+    }
+    bool
+    respondsTo(Address address) const noexcept override {
+        auto targetByte = (SplitWord32(address).bytes[3]);
+        return (targetByte < 0b0100'0000) && (targetByte >= 0b0010'0000);
     }
 };
 
