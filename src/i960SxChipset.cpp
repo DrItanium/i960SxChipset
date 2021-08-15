@@ -738,42 +738,34 @@ MemoryThing* memoryMapping[256] {
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, nullptr, &fallback,
 };
 MemoryThing* ioSpaceSimpleMapping[256] {
-        // 512 megabytes (map the first 64 megabytes and nothing else until we get to the upper most area)
         &chipsetFunctions, &fallback, &displayCommandSet, &fs, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megs
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megs
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megs
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megabytes
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megabytes
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megabytes
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megabytes
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
