@@ -739,22 +739,22 @@ getThing(Address address) noexcept {
     SplitWord32 decomposedAddress(address);
     if (auto mapping = memoryMapping[decomposedAddress.bytes[3]]; mapping == nullptr) {
         // okay we know we are in io space, now we just need to do a log search to figure out which device
-        if (decomposedAddress.bytes[2] == 0) {
-            // currently all devices are in the first 64k of memory with each device being allocated 256 bytes
-            switch (decomposedAddress.bytes[1]) {
-                case 0x00:
-                    return &chipsetFunctions;
-                case 0x01:
-                    return &fallback;
-                case 0x02:
-                    return &displayCommandSet;
-                case 0x03:
-                    return &fs;
-                default:
-                    return &fallback;
-            }
+        // for now just waste space until we need to map new items into io space (so don't check bytes[2])
+
+        // currently all devices are in the first 64k of memory with each device being allocated 256 bytes so just force map them
+        // over and over for now
+        switch (decomposedAddress.bytes[1]) {
+            case 0x00:
+                return &chipsetFunctions;
+            case 0x01:
+                return &fallback;
+            case 0x02:
+                return &displayCommandSet;
+            case 0x03:
+                return &fs;
+            default:
+                return &fallback;
         }
-        return &fallback;
     } else {
         return mapping;
     }
