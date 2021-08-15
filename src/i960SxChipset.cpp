@@ -106,15 +106,11 @@ public:
 CoreChipsetFeatures chipsetFunctions(0);
 DisplayThing displayCommandSet(0x200);
 //constexpr Address RAMStart = 0x8000'0000;
-//constexpr Address textSectionStart = 0x0000'0000;
-//constexpr Address dataSectionStart = 0x2000'0000;
 constexpr auto PerformPSRAMSanityCheck = !TargetBoard::onAtmega1284p();
-constexpr auto PerformClearOnBootup = true;
+constexpr auto PerformClearOnBootup = true; // clear it out first and then later on we will copy into it
 using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMSanityCheck>;
 OnboardMemoryBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
-//ROMTextSection rom(textSectionStart);
-//ROMDataSection dataRom(dataSectionStart);
 SDCardFilesystemInterface fs(0x300);
 
 
@@ -309,15 +305,6 @@ auto& getLine(MemoryThing& theThing) noexcept {
     }
     return theEntry;
 }
-void setupPeripherals() {
-    Serial.println(F("Setting up peripherals..."));
-    displayCommandSet.begin();
-    displayReady = true;
-    ramBlock.begin();
-    rom.begin();
-    dataRom.begin();
-    Serial.println(F("Done setting up peripherals..."));
-}
 
 /**
  * @brief Just in case, purge the sram of data
@@ -470,14 +457,16 @@ void setup() {
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
         purgeSRAMCache();
-#ifndef ARDUINO_ARCH_RP2040
-        fs.begin();
-#endif
-        chipsetFunctions.begin();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
+        fs.begin();
+        chipsetFunctions.begin();
         processorInterface.begin();
-        setupPeripherals();
+        displayCommandSet.begin();
+        displayReady = true;
+        ramBlock.begin();
+        // okay now we need to actually open boot.system and copy it into the ramBlock
+
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
