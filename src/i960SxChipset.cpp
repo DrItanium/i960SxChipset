@@ -689,10 +689,10 @@ signalHaltState(const char* haltMsg) {
 }
 MemoryThing* memoryMapping[256] {
     // 512 megabytes
-   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
-   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
-   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
-   &rom, &rom, &rom, &rom, &rom, &rom, &rom, &rom,
+   &ramBlock, &ramBlock, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
   // 512 megs
    &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
    &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
@@ -709,7 +709,7 @@ MemoryThing* memoryMapping[256] {
    &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
    &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom, &dataRom,
    // 512 megabytes
-   &ramBlock, &ramBlock, &ramBlock, &ramBlock, &fallback, &fallback, &fallback, &fallback,
+   &ramBlock, &ramBlock, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
