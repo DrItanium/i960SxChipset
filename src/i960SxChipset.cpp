@@ -109,15 +109,6 @@ ROMTextSection rom(textSectionStart);
 ROMDataSection dataRom(dataSectionStart);
 SDCardFilesystemInterface fs(0x300);
 #endif
-// list of io memory devices to walk through
-MemoryThing* ioSpaceThings[] {
-        &chipsetFunctions,
-        &displayCommandSet,
-#ifndef ARDUINO_ARCH_RP2040
-        &fs,
-#endif
-
-};
 
 
 
@@ -201,7 +192,6 @@ private:
     void commitToSRAM() noexcept {
         if constexpr (CacheActive_v) {
             SplitWord32 translation(computeL2TagIndex(tag));
-            translation.bytes[3] = 0x02;
             digitalWrite<i960Pinout::CACHE_EN_, LOW>();
             SPI.transfer(0x02);
             SPI.transfer(translation.bytes[2]);
