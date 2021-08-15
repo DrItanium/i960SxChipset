@@ -100,10 +100,7 @@ ROMDataSection dataRom(dataSectionStart);
 SDCardFilesystemInterface fs(0x300);
 #endif
 // list of io memory devices to walk through
-MemoryThing* things[] {
-        &ramBlock,
-        &rom,
-        &dataRom,
+MemoryThing* ioSpaceThings[] {
         &chipsetFunctions,
         &displayCommandSet,
 #ifndef ARDUINO_ARCH_RP2040
@@ -719,22 +716,22 @@ MemoryThing* memoryMapping[256] {
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
    &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &ioSpace,
-   nullptr,
+   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, nullptr, &fallback,
 };
-MemoryThing*
+MemoryThing&
 getThing(Address address, LoadStoreStyle style) noexcept {
     SplitWord32 decomposedAddress(address);
-    return memoryMapping[decomposedAddress.bytes[3]];
-#if 0
-    for (auto* currentThing : things) {
-        if (currentThing->respondsTo(address, style)) {
-            return *currentThing;
+    if (auto mapping = memoryMapping[decomposedAddress.bytes[3]]; mapping == nullptr) {
+        // io space currently still will use the old school design for simplicity
+        for (auto* currentThing : ioSpaceThings) {
+            if (currentThing->respondsTo(address, style)) {
+                return *currentThing;
+            }
         }
+        return fallback;
+    } else {
+        return *mapping;
     }
-    return fallback;
-#endif
 }
 SdFat SD;
 /// @todo Eliminate after MightyCore update
