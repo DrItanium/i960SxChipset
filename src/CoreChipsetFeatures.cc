@@ -27,28 +27,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 #include "CoreChipsetFeatures.h"
 
-void
-CoreChipsetFeatures::writeLed(uint8_t value) noexcept {
-    // disabled for the current board since the led is bound to the ready pin
-    //digitalWrite(i960Pinout::CACHE_A0, value > 0 ? HIGH : LOW);
-}
-uint8_t
-CoreChipsetFeatures::readLed() noexcept {
-    // disabled for the current board since the led is bound to the ready pin
-    return 0;
-    //return static_cast<uint8_t>(digitalRead(i960Pinout::CACHE_A0));
-}
-CoreChipsetFeatures::CoreChipsetFeatures(Address offsetFromIOBase) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) {
-}
+CoreChipsetFeatures::CoreChipsetFeatures(Address offsetFromIOBase) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) { }
 
 
-void
-CoreChipsetFeatures::begin() noexcept {
-    if constexpr (false) {
-        Serial.print(F("ADDRESS OF LED: 0x"));
-        Serial.println(static_cast<uint32_t>(Registers::Led) + 0xFE00'0000, HEX);
-    }
-}
 Address
 CoreChipsetFeatures::makeAddressRelative(Address input) const noexcept {
     // we already know that this address is exactly one byte wide so just return the lowest byte as it's own thing

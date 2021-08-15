@@ -51,7 +51,6 @@ public:
         TwoByteEntry(ConsoleAvailable),
         TwoByteEntry(ConsoleAvailableForWrite),
         TwoByteEntry(ConsoleIO),
-        TwoByteEntry(Led),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -62,20 +61,15 @@ public:
         ConsoleAvailable = ConsoleAvailable0,
         ConsoleAvailableForWrite = ConsoleAvailableForWrite0,
         ConsoleIO = ConsoleIO0,
-        Led = Led0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
     explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
     ~CoreChipsetFeatures() override = default;
 public:
     [[nodiscard]] constexpr bool debuggingActive() const noexcept { return AllowDebuggingStatements; }
-    void begin() noexcept override;
     Address makeAddressRelative(Address input) const noexcept override;
     bool respondsTo(Address address) const noexcept override;
     uint16_t read(Address address, LoadStoreStyle style) noexcept override;
     void write(Address address, uint16_t value, LoadStoreStyle style) noexcept override;
-private:
-    static void writeLed(uint8_t value) noexcept;
-    static uint8_t readLed() noexcept;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
