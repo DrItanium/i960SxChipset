@@ -485,6 +485,8 @@ void setup() {
                 (void)ramBlock.write(addr, storage, numRead);
             }
             Serial.println(F("Transfer complete!"));
+            // make sure we close the file before destruction
+            theFile.close();
         }
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
