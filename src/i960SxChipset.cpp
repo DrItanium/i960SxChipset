@@ -483,6 +483,8 @@ void setup() {
                 // do a linear read from the start to the end of storage
                 auto numRead = theFile.read(storage, CacheSize);
                 (void)ramBlock.write(addr, storage, numRead);
+                // wait around to make sure we don't run afoul of the sdcard itself
+                while (theFile.isBusy());
             }
             Serial.println(F("Transfer complete!"));
             // make sure we close the file before destruction
