@@ -788,19 +788,4 @@ getThing(Address address) noexcept {
     }
 }
 SdFat SD;
-/// @todo Eliminate after MightyCore update
-#if __cplusplus >= 201402L
-#ifdef ARDUINO_AVR_ATmega1284
-
-void operator delete(void * ptr, size_t)
-{
-    ::operator delete(ptr);
-}
-
-
-void operator delete[](void * ptr, size_t)
-{
-    ::operator delete(ptr);
-}
-#endif
 #endif // end language is C++14 or greater
