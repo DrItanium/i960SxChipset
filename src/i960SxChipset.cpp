@@ -788,4 +788,3 @@ getThing(Address address) noexcept {
     }
 }
 SdFat SD;
-#endif // end language is C++14 or greater
