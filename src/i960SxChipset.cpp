@@ -484,6 +484,10 @@ void setup() {
                 // do a linear read from the start to the end of storage
                 while (theFile.isBusy());
                 auto numRead = theFile.read(storage, CacheSize);
+                if (numRead < 0) {
+                    // something wen't wrong so halt at this point
+                    SD.errorHalt();
+                }
                 (void)ramBlock.write(addr, storage, numRead);
                 // wait around to make sure we don't run afoul of the sdcard itself
             }
