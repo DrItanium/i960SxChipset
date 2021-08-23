@@ -202,7 +202,7 @@ ProcessorInterface::begin() noexcept {
     }
 }
 
-MemoryThing*
+MemoryThing&
 ProcessorInterface::newDataCycle() noexcept {
     address_.upperHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines>();
     address_.lowerHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>();
@@ -218,7 +218,7 @@ ProcessorInterface::newDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
-    return getThing(address_.wholeValue_);
+    return *getThing(address_.wholeValue_);
 }
 
 void ProcessorInterface::burstNext() noexcept {

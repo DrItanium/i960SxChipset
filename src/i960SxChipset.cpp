@@ -538,12 +538,12 @@ void setup() {
     // first set of 16-byte request from memory
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
 
-    auto rom = processorInterface.newDataCycle();
+    auto& rom = processorInterface.newDataCycle();
     // we know that this will always get mapped to rom so no need to look this up constantly
-    if (rom->bypassesCache()) {
+    if (rom.bypassesCache()) {
         // we also know that this will be a read operation at this point
         do {
-            processorInterface.setDataBits(rom->read(processorInterface.getAddress(), processorInterface.getStyle()));
+            processorInterface.setDataBits(rom.read(processorInterface.getAddress(), processorInterface.getStyle()));
             auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isBurstLast) {
@@ -552,7 +552,7 @@ void setup() {
             processorInterface.burstNext();
         } while (true);
     } else {
-        auto& theEntry = getLine(*rom);
+        auto& theEntry = getLine(rom);
         do {
             processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
             auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -567,10 +567,10 @@ void setup() {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     rom = processorInterface.newDataCycle();
     // we know that this will always get mapped to rom so no need to look this up constantly
-    if (rom->bypassesCache()) {
+    if (rom.bypassesCache()) {
         // we also know that this will be a read operation at this point
         do {
-            processorInterface.setDataBits(rom->read(processorInterface.getAddress(), processorInterface.getStyle()));
+            processorInterface.setDataBits(rom.read(processorInterface.getAddress(), processorInterface.getStyle()));
             auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isBurstLast) {
@@ -579,7 +579,7 @@ void setup() {
             processorInterface.burstNext();
         } while (true);
     } else {
-        auto& theEntry = getLine(*rom);
+        auto& theEntry = getLine(rom);
         do {
             processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
             auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -637,10 +637,10 @@ void loop() {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    if (auto theThing = processorInterface.newDataCycle(); theThing->bypassesCache()) {
+    if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
-                processorInterface.setDataBits(theThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
+                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
@@ -650,7 +650,7 @@ void loop() {
             } while (true);
         } else {
             do {
-                theThing->write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
+                theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
@@ -660,7 +660,7 @@ void loop() {
             } while (true);
         }
     } else {
-        if (auto& theEntry = getLine(*theThing); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (auto& theEntry = getLine(theThing); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
