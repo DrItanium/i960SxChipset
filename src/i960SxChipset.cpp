@@ -241,6 +241,18 @@ public:
             //unused = 0; // make sure that this is correctly purged
         }
     }
+    /**
+     * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
+     */
+    void clear() noexcept {
+        valid_ = false;
+        dirty_ = false;
+        tag = 0;
+        backingThing = nullptr;
+        for (auto& a : data) {
+            a.wholeValue_ = 0;
+        }
+    }
     [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & OffsetMask]; }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
@@ -477,8 +489,9 @@ void setup() {
         } else {
             // okay we were successful in opening the file, now copy the image into psram
             Address size = theFile.size();
-            static constexpr auto CacheSize = 1024;
-            byte storage[CacheSize] = { 0 };
+            static constexpr auto CacheSize = TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines();
+            // use the cache as a buffer since it won't be in use at this point in time
+            auto* storage = reinterpret_cast<byte*>(entries);
             Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
             for (Address addr = 0; addr < size; addr += CacheSize) {
                 // do a linear read from the start to the end of storage
@@ -489,11 +502,17 @@ void setup() {
                     SD.errorHalt();
                 }
                 (void)ramBlock.write(addr, storage, numRead);
+                Serial.print(F("."));
                 // wait around to make sure we don't run afoul of the sdcard itself
             }
             Serial.println(F("Transfer complete!"));
             // make sure we close the file before destruction
             theFile.close();
+            Serial.println(F("CLEARING CACHE"));
+            for (auto& entry : entries) {
+                // the cache will be filled with transfer garbage so just clear it out without caring what it's contents are
+                entry.clear();
+            }
         }
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
