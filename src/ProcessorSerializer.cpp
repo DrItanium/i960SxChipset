@@ -218,6 +218,13 @@ ProcessorInterface::newDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
+    isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
+    auto newDirection = isReadOperation_ ? 0xFFFF : 0;
+    if (newDirection != dataLinesDirection_) {
+        // only spend the time to setup the input lines on initial setup
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(newDirection);
+        dataLinesDirection_ = newDirection;
+    }
     return getThing(address_.wholeValue_);
 }
 

@@ -638,7 +638,7 @@ void loop() {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     if (auto theThing = processorInterface.newDataCycle(); theThing->bypassesCache()) {
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (processorInterface.isReadOperation()) {
             do {
                 processorInterface.setDataBits(theThing->read(processorInterface.getAddress(), processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -660,7 +660,7 @@ void loop() {
             } while (true);
         }
     } else {
-        if (auto& theEntry = getLine(*theThing); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (auto& theEntry = getLine(*theThing); processorInterface.isReadOperation()) {
             do {
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
