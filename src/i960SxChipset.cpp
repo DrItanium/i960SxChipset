@@ -275,6 +275,7 @@ private:
     };
 };
 static_assert(sizeof(CacheEntry) == CacheEntry::ActualCacheEntrySize);
+
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 void invalidateGlobalCache() noexcept {
@@ -481,10 +482,10 @@ void setup() {
             Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
             for (Address addr = 0; addr < size; addr += CacheSize) {
                 // do a linear read from the start to the end of storage
+                while (theFile.isBusy());
                 auto numRead = theFile.read(storage, CacheSize);
                 (void)ramBlock.write(addr, storage, numRead);
                 // wait around to make sure we don't run afoul of the sdcard itself
-                while (theFile.isBusy());
             }
             Serial.println(F("Transfer complete!"));
             // make sure we close the file before destruction
