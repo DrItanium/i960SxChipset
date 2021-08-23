@@ -101,7 +101,6 @@ public:
         return copy.wholeValue_;
     }
     [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept { return cacheOffsetEntry_; }
-    [[nodiscard]] constexpr auto isReadOperation() const noexcept { return isReadOperation_; }
 public:
     MemoryThing* newDataCycle() noexcept;
     void burstNext() noexcept;
@@ -117,7 +116,6 @@ private:
     bool lockValue_ = true;
     bool holdValue_ = false;
     byte cacheOffsetEntry_ = 0;
-    bool isReadOperation_ = false;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved

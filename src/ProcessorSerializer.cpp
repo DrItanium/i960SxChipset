@@ -68,81 +68,102 @@ namespace
     constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
-    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
+    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, bool independentTransaction = true>
     uint16_t read16() noexcept {
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        if constexpr (independentTransaction) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto lower = SPI.transfer(0);
         auto upper = SPI.transfer(0);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
+        if constexpr (independentTransaction) {
+            SPI.endTransaction();
+        }
         return SplitWord16(lower, upper).wholeValue_;
     }
-    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
+    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, bool independentTransaction = true>
     uint8_t read8() {
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        if constexpr (independentTransaction) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto lower = SPI.transfer(0);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
+        if constexpr (independentTransaction) {
+            SPI.endTransaction();
+        }
         return lower;
     }
-    template<ProcessorInterface::IOExpanderAddress addr>
+    template<ProcessorInterface::IOExpanderAddress addr, bool independentTransaction = true>
     inline uint16_t readGPIO16() {
-        return read16<addr, MCP23x17Registers::GPIO>();
+        return read16<addr, MCP23x17Registers::GPIO, independentTransaction>();
     }
 
-    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
+    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, bool independentTransaction = true>
     void write16(uint16_t value) {
         SplitWord16 valueDiv(value);
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        if constexpr (independentTransaction) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateWriteOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(valueDiv.bytes[0]);
         SPI.transfer(valueDiv.bytes[1]);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
+        if constexpr (independentTransaction) {
+            SPI.endTransaction();
+        }
     }
-    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
+    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, bool independentTransaction = true>
     void write8(uint8_t value) {
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        if constexpr (independentTransaction) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateWriteOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(value);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
+        if constexpr (independentTransaction) {
+            SPI.endTransaction();
+        }
     }
-    template<ProcessorInterface::IOExpanderAddress addr>
+    template<ProcessorInterface::IOExpanderAddress addr, bool independentTransaction = true>
     inline void writeGPIO16(uint16_t value) {
-        write16<addr, MCP23x17Registers::GPIO>(value);
+        write16<addr, MCP23x17Registers::GPIO, independentTransaction>(value);
     }
-    template<ProcessorInterface::IOExpanderAddress addr>
+    template<ProcessorInterface::IOExpanderAddress addr, bool independentTransaction = true>
     inline void writeDirection(uint16_t value) {
-        write16<addr, MCP23x17Registers::IODIR>(value);
+        write16<addr, MCP23x17Registers::IODIR, independentTransaction>(value);
     }
 }
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
+    SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
     if (dataLinesDirection_ != 0xFFFF) {
         dataLinesDirection_ = 0xFFFF;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines, false>(dataLinesDirection_);
     }
-    return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
+    auto result = readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines, false>();
+    SPI.endTransaction();
+    return result;
 }
 
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
+    SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
     if (dataLinesDirection_ != 0) {
         dataLinesDirection_ = 0;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines, false>(dataLinesDirection_);
     }
-    writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
+    writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines, false>(value);
+    SPI.endTransaction();
 }
 
 
@@ -188,24 +209,25 @@ ProcessorInterface::begin() noexcept {
         // should receive it.
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
-        auto iocon = read8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON>();
-        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON>(iocon | 0b0000'1000);
+        auto iocon = read8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>();
+        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(iocon | 0b0000'1000);
         // now all devices tied to this ~CS pin have separate addresses
         // make each of these inputs
-        writeDirection<IOExpanderAddress::Lower16Lines>(0xFFFF);
-        writeDirection<IOExpanderAddress::Upper16Lines>(0xFFFF);
-        writeDirection<IOExpanderAddress::DataLines>(dataLinesDirection_);
-        writeDirection<IOExpanderAddress::MemoryCommitExtras>(0x005F);
+        writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
+        writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
+        writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_);
+        writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0x005F);
         // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
-        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(0b1000'0000);
+        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
         SPI.endTransaction();
     }
 }
 
 MemoryThing*
 ProcessorInterface::newDataCycle() noexcept {
-    address_.upperHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines>();
-    address_.lowerHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>();
+    SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+    address_.upperHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines, false>();
+    address_.lowerHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines, false>();
     upperMaskedAddress_ = address_;
     upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
 #ifdef ARDUINO_AVR_ATmega1284
@@ -218,13 +240,7 @@ ProcessorInterface::newDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
-    isReadOperation_ = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    auto newDirection = isReadOperation_ ? 0xFFFF : 0;
-    if (newDirection != dataLinesDirection_) {
-        // only spend the time to setup the input lines on initial setup
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(newDirection);
-        dataLinesDirection_ = newDirection;
-    }
+    SPI.endTransaction();
     return getThing(address_.wholeValue_);
 }
 
