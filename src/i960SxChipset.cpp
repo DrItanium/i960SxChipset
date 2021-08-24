@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
-#include "ClockGeneration.h"
 #include "PSRAMChip.h"
 constexpr bool EnableDebuggingCompileTime = false;
 
@@ -361,7 +360,6 @@ void purgeSRAMCache() noexcept {
 }
 // the setup routine runs once when you press reset:
 void setup() {
-    setupClockSource();
     Serial.begin(115200);
     while(!Serial) {
         delay(10);
