@@ -68,63 +68,79 @@ namespace
     constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
-    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
+    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     uint16_t read16() noexcept {
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        if constexpr (standalone) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto lower = SPI.transfer(0);
         auto upper = SPI.transfer(0);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
+        if constexpr (standalone) {
+            SPI.endTransaction();
+        }
         return SplitWord16(lower, upper).wholeValue_;
     }
-    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
+    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     uint8_t read8() {
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        if constexpr (standalone) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto lower = SPI.transfer(0);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
+        if constexpr (standalone) {
+            SPI.endTransaction();
+        }
         return lower;
     }
-    template<ProcessorInterface::IOExpanderAddress addr>
-    inline uint16_t readGPIO16() {
-        return read16<addr, MCP23x17Registers::GPIO>();
-    }
 
-    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
+    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     void write16(uint16_t value) {
         SplitWord16 valueDiv(value);
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        if constexpr (standalone) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateWriteOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(valueDiv.bytes[0]);
         SPI.transfer(valueDiv.bytes[1]);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
+        if constexpr (standalone) {
+            SPI.endTransaction();
+        }
     }
-    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
+    template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     void write8(uint8_t value) {
+        if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateWriteOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(value);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if constexpr (standalone) {
             SPI.endTransaction();
+        }
     }
-    template<ProcessorInterface::IOExpanderAddress addr>
+    template<ProcessorInterface::IOExpanderAddress addr, bool standalone = true>
+    inline uint16_t readGPIO16() {
+        return read16<addr, MCP23x17Registers::GPIO, standalone>();
+    }
+    template<ProcessorInterface::IOExpanderAddress addr, bool standalone = true>
     inline void writeGPIO16(uint16_t value) {
-        write16<addr, MCP23x17Registers::GPIO>(value);
+        write16<addr, MCP23x17Registers::GPIO, standalone>(value);
     }
-    template<ProcessorInterface::IOExpanderAddress addr>
+    template<ProcessorInterface::IOExpanderAddress addr, bool standalone = true>
     inline void writeDirection(uint16_t value) {
-        write16<addr, MCP23x17Registers::IODIR>(value);
+        write16<addr, MCP23x17Registers::IODIR, standalone>(value);
     }
 }
 uint16_t
@@ -212,8 +228,10 @@ ProcessorInterface::begin() noexcept {
 
 MemoryThing&
 ProcessorInterface::newDataCycle() noexcept {
-    address_.upperHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines>();
-    address_.lowerHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines>();
+
+    SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+    address_.upperHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Upper16Lines, false>();
+    address_.lowerHalf_ = readGPIO16<ProcessorInterface::IOExpanderAddress::Lower16Lines, false>();
     upperMaskedAddress_ = address_;
     upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
 #ifdef ARDUINO_AVR_ATmega1284
@@ -226,6 +244,7 @@ ProcessorInterface::newDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
+    SPI.endTransaction();
     return *getThing(address_.wholeValue_);
 }
 
