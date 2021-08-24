@@ -131,13 +131,13 @@ uint16_t
 ProcessorInterface::getDataBits() noexcept {
     if (dataLinesDirection_ != 0xFFFF) {
         dataLinesDirection_ = 0xFFFF;
-        auto oldoutput = read16<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::OLAT>();
+        //auto oldoutput = read16<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::OLAT>();
         writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
-        auto newOutput = read16<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::OLAT>();
-        Serial.print(F("old output 0x"));
-        Serial.print(oldoutput, HEX);
-        Serial.print(F(" -> new output 0x"));
-        Serial.println(newOutput, HEX);
+        //auto newOutput = read16<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::OLAT>();
+        //Serial.print(F("old output 0x"));
+        //Serial.print(oldoutput, HEX);
+        //Serial.print(F(" -> new output 0x"));
+        //Serial.println(newOutput, HEX);
     }
     return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
 }
@@ -147,16 +147,13 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
     if (dataLinesDirection_ != 0) {
         dataLinesDirection_ = 0;
         writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
-        // we need to setup the latch anew
+    }
+    // the latch is preserved in between data line changes
+    // okay we are still pointing as output values
+    // check the latch and see if the output value is the same as what is latched
+    if (latchedDataOutput != value) {
         writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
         latchedDataOutput = value;
-    } else {
-        // okay we are still pointing as output values
-        // check the latch and see if the output value is the same as what is latched
-        if (latchedDataOutput != value) {
-            writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
-            latchedDataOutput = value;
-        }
     }
 }
 
@@ -213,6 +210,8 @@ ProcessorInterface::begin() noexcept {
         writeDirection<IOExpanderAddress::MemoryCommitExtras>(0x005F);
         // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
         write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(0b1000'0000);
+        // write the default value out to the latch to start with
+        write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT>(latchedDataOutput);
         SPI.endTransaction();
     }
 }
