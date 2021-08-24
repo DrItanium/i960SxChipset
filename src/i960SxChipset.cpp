@@ -794,12 +794,12 @@ MemoryThing* ioSpaceSimpleMapping[256] {
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
     };
 
-MemoryThing*
+inline MemoryThing*
 getPrimaryDevice(byte index) noexcept {
     return memoryMapping[index];
 }
 
-MemoryThing*
+inline MemoryThing*
 getIODevice(byte index) noexcept {
     return ioSpaceSimpleMapping[index];
 }

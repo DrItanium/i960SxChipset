@@ -244,8 +244,6 @@ public:
  * @return The thing that will respond to the given address
  */
 MemoryThing* getThing(Address address) noexcept;
-MemoryThing* getPrimaryDevice(byte offset) noexcept;
-MemoryThing* getIODevice(byte offset) noexcept;
 
 
 #endif //I960SXCHIPSET_MEMORYTHING_H

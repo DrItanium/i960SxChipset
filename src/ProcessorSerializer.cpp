@@ -233,25 +233,16 @@ ProcessorInterface::newDataCycle() noexcept {
     digitalWrite<i960Pinout::GPIOSelect, LOW>();
     SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines));
     SPI.transfer(static_cast<byte>(MCP23x17Registers::GPIO));
-    auto lowest = SPI.transfer(0);
-    auto lower = SPI.transfer(0);
+    address_.bytes[0] = SPI.transfer(0);
+    address_.bytes[1] = SPI.transfer(0);
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     digitalWrite<i960Pinout::GPIOSelect, LOW>();
     SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines));
     SPI.transfer(static_cast<byte>(MCP23x17Registers::GPIO));
-    auto higher = SPI.transfer(0);
-    auto highest = SPI.transfer(0);
+    address_.bytes[2] = SPI.transfer(0);
+    address_.bytes[3] = SPI.transfer(0);
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     SPI.endTransaction();
-    address_.bytes[0] = lowest;
-    address_.bytes[1] = lower;
-    address_.bytes[2] = higher;
-    address_.bytes[3] = highest;
-    auto* primaryThing = getPrimaryDevice(highest);
-    if (!primaryThing) {
-        /// @todo expand to support better mappings
-        primaryThing = getIODevice(lower);
-    }
     upperMaskedAddress_ = address_;
     upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
 #ifdef ARDUINO_AVR_ATmega1284
@@ -264,7 +255,7 @@ ProcessorInterface::newDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
-    return *primaryThing;
+    return *getThing(address_.wholeValue_);
 }
 
 void ProcessorInterface::burstNext() noexcept {
