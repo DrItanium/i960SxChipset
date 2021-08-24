@@ -74,11 +74,11 @@ namespace
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
-        SplitWord16 thingy(SPI.transfer(0),
-                           SPI.transfer(0));
+        auto lower = SPI.transfer(0);
+        auto upper = SPI.transfer(0);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
-        return thingy.wholeValue_;
+        return SplitWord16(lower, upper).wholeValue_;
     }
     template<ProcessorInterface::IOExpanderAddress addr, MCP23x17Registers opcode>
     uint8_t read8() {
