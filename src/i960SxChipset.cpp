@@ -794,20 +794,20 @@ MemoryThing* ioSpaceSimpleMapping[256] {
         &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
     };
 
-inline MemoryThing*
-getThingFromMSB(byte index) noexcept {
+MemoryThing*
+getPrimaryDevice(byte index) noexcept {
     return memoryMapping[index];
 }
 
-inline MemoryThing*
-getIOSpaceDevice(byte index) noexcept {
+MemoryThing*
+getIODevice(byte index) noexcept {
     return ioSpaceSimpleMapping[index];
 }
 MemoryThing*
 getThing(Address address) noexcept {
     SplitWord32 decomposedAddress(address);
-    if (auto mapping = getThingFromMSB(decomposedAddress.bytes[3]); mapping == nullptr) {
-        return getIOSpaceDevice(decomposedAddress.bytes[1]);
+    if (auto mapping = getPrimaryDevice(decomposedAddress.bytes[3]); mapping == nullptr) {
+        return getIODevice(decomposedAddress.bytes[1]);
     } else {
         return mapping;
     }

@@ -247,6 +247,11 @@ ProcessorInterface::newDataCycle() noexcept {
     address_.bytes[1] = lower;
     address_.bytes[2] = higher;
     address_.bytes[3] = highest;
+    auto* primaryThing = getPrimaryDevice(highest);
+    if (!primaryThing) {
+        /// @todo expand to support better mappings
+        primaryThing = getIODevice(lower);
+    }
     upperMaskedAddress_ = address_;
     upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
 #ifdef ARDUINO_AVR_ATmega1284
@@ -259,7 +264,7 @@ ProcessorInterface::newDataCycle() noexcept {
     lss_ = static_cast<LoadStoreStyle>(static_cast<byte>((bits & 0b11000) << 1));
 #endif
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
-    return *getThing(address_.wholeValue_);
+    return *primaryThing;
 }
 
 void ProcessorInterface::burstNext() noexcept {
