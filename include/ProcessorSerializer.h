@@ -96,7 +96,7 @@ public:
     void setLOCKPin(bool value) noexcept;
     [[nodiscard]] constexpr auto getAlignedAddress() const noexcept {
         // a copy should actually be faster
-        auto copy = upperMaskedAddress_;
+        auto copy = address_;
         copy.bytes[0] &= 0xE0;
         return copy.wholeValue_;
     }
@@ -109,7 +109,6 @@ private:
     void updateOutputLatch() noexcept;
 private:
     uint16_t dataLinesDirection_ = 0xFFFF;
-    SplitWord32 upperMaskedAddress_;
     SplitWord32 address_;
     LoadStoreStyle lss_ = LoadStoreStyle::None;
     bool initialized_ = false;
