@@ -41,11 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TFTShieldThing.h"
 #include "ClockGeneration.h"
 #include "PSRAMChip.h"
-#ifdef ARDUINO_ARCH_RP2040
-#include "hitagimon.h"
-#include "OnChipMemoryThing.h"
-#endif
-constexpr bool EnableDebuggingCompileTime = TargetBoard::onRaspberryPiPico();
+constexpr bool EnableDebuggingCompileTime = false;
 
 bool displayReady = false;
 /**
@@ -412,9 +408,6 @@ void setup() {
     Serial.begin(115200);
     while(!Serial) {
         delay(10);
-    }
-    if constexpr (TargetBoard::onRaspberryPiPico()) {
-        delay(2000);
     }
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire

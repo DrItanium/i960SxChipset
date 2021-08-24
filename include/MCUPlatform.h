@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
 #define PACKED_ATTRIBUTE __attribute__((packed))
 #endif
+
 #ifdef ARDUINO_AVR_ATmega1284
 #ifndef PIN_SERIAL_RX
 #define PIN_SERIAL_RX 8
@@ -171,71 +172,6 @@ enum class Pinout1284p : int {
     BLAST_ = PORT_A6,
     FAIL960 = PORT_A7,
 };
-enum class PinoutRaspberryPiPico : int {
-    GPIO0 = 0,
-    GPIO1,
-    GPIO2,
-    GPIO3,
-    GPIO4,
-    GPIO5,
-    GPIO6,
-    GPIO7,
-    GPIO8,
-    GPIO9,
-    GPIO10,
-    GPIO11,
-    GPIO12,
-    GPIO13,
-    GPIO14,
-    GPIO15,
-    GPIO16,
-    GPIO17,
-    GPIO18,
-    GPIO19,
-    GPIO20,
-    GPIO21,
-    GPIO22,
-    GPIO23,
-    GPIO24,
-    GPIO25,
-    GPIO26,
-    GPIO27,
-    GPIO28,
-    GPIO29,
-    DEFINE_PINOUT_REQUIREMENTS,
-    RX0 = PIN_SERIAL_RX,
-    TX0 = PIN_SERIAL_TX,
-    MISO = PIN_SPI_MISO,
-    MOSI = PIN_SPI_MOSI,
-    SCK = PIN_SPI_SCK,
-    CS = PIN_SPI_SS,
-    SCL = PIN_WIRE_SCL,
-    SDA = PIN_WIRE_SDA,
-    SD_EN_ = GPIO8,
-    SPI_OFFSET0 = GPIO9,
-    SPI_OFFSET1 = GPIO10,
-    SPI_OFFSET2 = GPIO11,
-    PSRAM_EN_ = GPIO12,
-    AS_ = GPIO13,
-    // GPIO13 Unused
-    FAIL960 = GPIO14,
-    BLAST_ = GPIO15,
-    RESET960_ = GPIO16,
-    W_R_ = GPIO17,
-    Int0_ = GPIO18,
-    READY_ = GPIO19,
-    DEN_ = GPIO20,
-    CLKO = GPIO21,
-    BA1 = IOEXPANDER_PA0,
-    BA2 = IOEXPANDER_PA1,
-    BA3 = IOEXPANDER_PA2,
-    BE0_ = IOEXPANDER_PA3,
-    BE1_ = IOEXPANDER_PA4,
-    LED = GPIO25,
-    DISPLAY_EN_ = NODISPLAY,
-    DC = NODC,
-    CACHE_EN_ = NOCACHE_EN_,
-};
 template<typename E>
 constexpr bool attachedToIOExpander(E value) noexcept {
     switch (value) {
@@ -260,7 +196,6 @@ constexpr bool attachedToIOExpander(E value) noexcept {
             return false;
     }
 }
-static_assert(static_cast<int>(PinoutRaspberryPiPico::Count) == 30, "Raspberry Pi Pico Has 30 GPIO");
 template<typename E>
 constexpr bool isValidPin(E pin) noexcept {
     return static_cast<int>(pin) < static_cast<int>(E::Count) &&
@@ -275,25 +210,13 @@ constexpr unsigned long long int operator "" _MHz(unsigned long long int value) 
 static_assert(2_KHz == 2'000);
 static_assert(2_MHz == 2'000'000);
 static_assert(20_MHz == 20'000'000);
-#ifdef ARDUINO_SAMD_FEATHER_M0
-#define ADAFRUIT_FEATHER_M0
-#ifdef HAS_BUILTIN_SDCARD
-#define ADAFRUIT_FEATHER_M0_ADALOGGER
-#else /* !defined(HAS_BUILTIN_SDCARD) */
-#define ADAFRUIT_FEATHER_M0_BASIC
-#endif
-#endif
 
-#if defined(ARDUINO_SAMD_FEATHER_M0)
-#define ADAFRUIT_FEATHER
-#endif
 
 #ifndef NUM_ANALOG_OUTPUTS
 #define NUM_ANALOG_OUTPUTS 0
 #endif
 enum class TargetMCU {
     ATmega1284p,
-    RaspberryPiPico,
     Unknown,
 };
 template<typename T>
@@ -384,16 +307,6 @@ constexpr MCUConfiguration<Pinout1284p> BoardDescription<TargetMCU::ATmega1284p>
         false,
         true
 };
-template<>
-constexpr MCUConfiguration<PinoutRaspberryPiPico> BoardDescription<TargetMCU::RaspberryPiPico> = {
-        264_KB,
-        256, 32, // 256, 32 element lines
-        64,
-        10_MHz,
-        8_MHz,
-        false,
-        false,
-};
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
     return true;
@@ -425,14 +338,11 @@ public:
     [[nodiscard]] static constexpr TargetMCU getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
         return TargetMCU::ATmega1284p;
-#elif defined(ARDUINO_RASPBERRY_PI_PICO)
-        return TargetMCU::RaspberryPiPico;
 #else
     return TargetMCU::Unknown;
 #endif
     }
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
-    [[nodiscard]] static constexpr auto onRaspberryPiPico() noexcept { return getMCUTarget() == TargetMCU::RaspberryPiPico; }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
 /**
  * @brief Is there an onboard sdcard slot?

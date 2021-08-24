@@ -38,8 +38,6 @@ namespace {
             if constexpr (TargetBoard::getCPUFrequency() != 20_MHz) {
                 ERR_STATE("Expecting the 1248p to run at 20MHz");
             }
-        } else if constexpr (TargetBoard::onRaspberryPiPico()) {
-
         }
 #undef ERR_STATE
     return true;

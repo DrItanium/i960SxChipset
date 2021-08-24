@@ -100,7 +100,6 @@ inline auto digitalRead(i960Pinout ip) {
 }
 template<i960Pinout pin>
 constexpr auto isValidPin960_v = isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>;
-#ifdef ARDUINO_AVR_ATmega1284
 //static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
@@ -177,10 +176,8 @@ template<i960Pinout pin>
     }
 }
 
-#endif
 template<i960Pinout pin>
 inline void pulse(decltype(HIGH) from = HIGH, decltype(LOW) to = LOW) noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
     // save registers and do the pulse
     uint8_t theSREG = SREG;
     cli();
@@ -188,36 +185,10 @@ inline void pulse(decltype(HIGH) from = HIGH, decltype(LOW) to = LOW) noexcept {
     thePort ^= getPinMask<pin>();
     thePort ^= getPinMask<pin>();
     SREG = theSREG;
-#else
-    // make sure that we stay at the high signal for long enough to matter
-    digitalWrite(pin, from);
-#ifdef ARDUINO_ARCH_RP2040
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-#endif
-    digitalWrite(pin, to);
-#ifdef ARDUINO_ARCH_RP2040
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-#endif
-    // then come back up after four cycles or so (tweak this as needed)
-    digitalWrite(pin, from);
-#ifdef ARDUINO_ARCH_RP2040
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-#endif
-#endif
 }
 
 template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() {
-#ifdef ARDUINO_AVR_ATmega1284
     uint8_t theSREG = SREG;
     cli();
     auto& thePort = getAssociatedOutputPort<pin>();
@@ -227,13 +198,9 @@ inline void digitalWrite() {
         thePort |= getPinMask<pin>();
     }
     SREG = theSREG;
-#else
-    digitalWrite(pin, value);
-#endif
 }
 template<i960Pinout pin>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
     uint8_t theSREG = SREG;
     cli();
     auto& thePort = getAssociatedOutputPort<pin>();
@@ -243,18 +210,11 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
         thePort |= getPinMask<pin>();
     }
     SREG = theSREG;
-#else
-    digitalWrite(pin, value);
-#endif
 }
 
 template<i960Pinout pin>
 inline auto digitalRead() noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
     return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
-#else
-    return digitalRead(pin);
-#endif
 }
 
 template<i960Pinout pin>
