@@ -242,8 +242,6 @@ ProcessorInterface::newDataCycle() noexcept {
     address_.bytes[3] = SPI.transfer(0);
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     SPI.endTransaction();
-    upperMaskedAddress_ = address_;
-    upperMaskedAddress_.bytes[0] &= 0xF0; // clear out the lowest four bits
 #ifdef ARDUINO_AVR_ATmega1284
     // no need to re-read the burst address bits
     auto bits = PINA;
