@@ -131,7 +131,13 @@ uint16_t
 ProcessorInterface::getDataBits() noexcept {
     if (dataLinesDirection_ != 0xFFFF) {
         dataLinesDirection_ = 0xFFFF;
+        auto oldoutput = read16<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::OLAT>();
         writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        auto newOutput = read16<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::OLAT>();
+        Serial.print(F("old output 0x"));
+        Serial.print(oldoutput, HEX);
+        Serial.print(F(" -> new output 0x"));
+        Serial.println(newOutput, HEX);
     }
     return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
 }
@@ -141,8 +147,17 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
     if (dataLinesDirection_ != 0) {
         dataLinesDirection_ = 0;
         writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        // we need to setup the latch anew
+        writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
+        latchedDataOutput = value;
+    } else {
+        // okay we are still pointing as output values
+        // check the latch and see if the output value is the same as what is latched
+        if (latchedDataOutput != value) {
+            writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
+            latchedDataOutput = value;
+        }
     }
-    writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
 }
 
 

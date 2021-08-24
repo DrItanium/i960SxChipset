@@ -116,6 +116,7 @@ private:
     bool lockValue_ = true;
     bool holdValue_ = false;
     byte cacheOffsetEntry_ = 0;
+    uint16_t latchedDataOutput = 0;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
