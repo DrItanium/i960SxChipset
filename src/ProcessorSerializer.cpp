@@ -235,8 +235,7 @@ ProcessorInterface::newDataCycle() noexcept {
     SPI.transfer(static_cast<byte>(MCP23x17Registers::GPIO));
     address_.bytes[0] = SPI.transfer(0);
     address_.bytes[1] = SPI.transfer(0);
-    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-    digitalWrite<i960Pinout::GPIOSelect, LOW>();
+    DigitalPin<i960Pinout::GPIOSelect>::pulse(); // go high then low again without having to capture the interrupt state multiple times
     SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines));
     SPI.transfer(static_cast<byte>(MCP23x17Registers::GPIO));
     address_.bytes[2] = SPI.transfer(0);
