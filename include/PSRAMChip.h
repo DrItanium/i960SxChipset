@@ -282,7 +282,7 @@ public:
         Address base : 26;
         struct {
             Address offset : 23;
-            Address index : 3;
+            byte index : 3;
         };
     };
 
