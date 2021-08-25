@@ -412,6 +412,8 @@ void setup() {
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
                   i960Pinout::FAIL);
+        pinMode(i960Pinout::InspectionPin, OUTPUT);
+        digitalWrite<i960Pinout::InspectionPin>(HIGH);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
         purgeSRAMCache();
@@ -584,7 +586,9 @@ inline void invocationBody() noexcept {
     if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
         if (isReadOperation) {
             do {
+                DigitalPin<i960Pinout::InspectionPin>::assertPin();
                 processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle()));
+                DigitalPin<i960Pinout::InspectionPin>::deassertPin();
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
