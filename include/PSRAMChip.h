@@ -260,19 +260,7 @@ public:
     static_assert(Size == 64_MB, "PSRAMBlock8 needs to be 1 megabyte in size");
     static_assert(Mask == 0x03FF'FFFF, "PSRAMBlock8 mask is wrong!");
 public:
-    explicit PSRAMBlock8(Address base) : MemoryThing(base, base + Size),
-                                         backingChips{
-                                                 SingleChip (base + (0 * SingleChipSize)),
-                                                 SingleChip (base + (1 * SingleChipSize)),
-                                                 SingleChip (base + (2 * SingleChipSize)),
-                                                 SingleChip (base + (3 * SingleChipSize)),
-                                                 SingleChip (base + (4 * SingleChipSize)),
-                                                 SingleChip (base + (5 * SingleChipSize)),
-                                                 SingleChip (base + (6 * SingleChipSize)),
-                                                 SingleChip (base + (7 * SingleChipSize)),
-                                         } {
-
-    }
+    explicit PSRAMBlock8(Address base) : MemoryThing(base, base + Size), currentIndex_(0xFF) { }
     ~PSRAMBlock8() override = default;
     union Address26 {
         constexpr explicit Address26(Address value = 0) : base(value) { }
@@ -364,9 +352,6 @@ private:
             bool s2 : 1;
         };
     };
-    inline void setChipId(const Address26& address) noexcept {
-        setChipId(address.getIndex());
-    }
     void setChipId(byte index) noexcept {
         if (Decomposition dec(index); dec.getIndex() != currentIndex_.getIndex()) {
             digitalWrite<Select0>(dec.s0 ? HIGH : LOW);
@@ -384,27 +369,25 @@ public:
             setChipId(0);
             for (int i = 0; i < 8; ++i) {
                 setChipId(i);
-                backingChips[i].begin();
-                if (!backingChips[i].isAvailable()) {
-                    available_ = false;
-                    break;
-                }
+                delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
+                SPI.beginTransaction(SingleChip::getSettings());
+                digitalWrite<enablePin, LOW>();
+                SPI.transfer(0x66);
+                digitalWrite<enablePin, HIGH>();
+                asm volatile ("nop");
+                asm volatile ("nop");
+                asm volatile ("nop");
+                asm volatile ("nop");
+                digitalWrite<enablePin, LOW>();
+                SPI.transfer(0x99);
+                digitalWrite<enablePin, HIGH>();
             }
-            if (available_) {
-                Serial.println(F("Done bringing up psram memory blocks!"));
-            } else {
-                Serial.println(F("DISABLING ONBOARD PSRAM ACCESS"));
-            }
+            Serial.println(F("Done bringing up psram memory blocks!"));
         }
     }
-    bool respondsTo(Address address) const noexcept override {
-        return available_ && MemoryThing::respondsTo(address);
-    }
 private:
-    bool available_ = true;
     bool initialized_ = false;
     Decomposition currentIndex_;
-    SingleChip backingChips[NumChips];
 };
 
 template<bool clearOnBegin, bool performSanityCheck>
