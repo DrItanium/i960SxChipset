@@ -318,7 +318,6 @@ public:
             SPI.transfer(buf, numBytesToFirstChip);
             digitalWrite<enablePin, HIGH>();
             // start writing at the start of the next chip the remaining number of bytes
-            SingleChip& next = backingChips[end.getIndex()];
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
             digitalWrite<enablePin, LOW>();
