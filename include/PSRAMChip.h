@@ -238,19 +238,14 @@ private:
  * @tparam sel1 The middle pin used to select the target device
  * @tparam sel2 The upper pin used to select the target device
  */
-template<i960Pinout enablePin,
-        bool performSanityCheck = true,
-        bool clearOnBegin = true,
-        i960Pinout sel0 = i960Pinout::SPI_OFFSET0,
-        i960Pinout sel1 = i960Pinout::SPI_OFFSET1,
-        i960Pinout sel2 = i960Pinout::SPI_OFFSET2>
+template<i960Pinout enablePin>
 class PSRAMBlock8 : public MemoryThing {
 public:
     static constexpr auto EnablePin = enablePin;
-    static constexpr auto Select0 = sel0;
-    static constexpr auto Select1 = sel1;
-    static constexpr auto Select2 = sel2;
-    using SingleChip = PSRAMChip<EnablePin, performSanityCheck, clearOnBegin>;
+    static constexpr auto Select0 = i960Pinout::SPI_OFFSET0;
+    static constexpr auto Select1 = i960Pinout::SPI_OFFSET1;
+    static constexpr auto Select2 = i960Pinout::SPI_OFFSET2;
+    using SingleChip = PSRAMChip<EnablePin, false, false>;
     static constexpr auto NumChips = 8;
     static constexpr auto Size = NumChips * SingleChip::Size;
     static constexpr auto Mask = Size - 1;
@@ -267,39 +262,40 @@ public:
         constexpr auto getAddress() const noexcept { return base; }
         constexpr auto getOffset() const noexcept { return offset; }
         constexpr auto getIndex() const noexcept { return index; }
-        Address base : 26;
+        Address base;
         struct {
             Address offset : 23;
             byte index : 3;
         };
+        byte bytes_[4];
     };
 private:
     template<byte opcode>
     inline size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         Address26 curr(address);
         Address26 end(address + capacity);
-        SplitWord32 theAddress(curr.getOffset());
+        //SplitWord32 theAddress(curr.getOffset());
+        auto numBytesToSecondChip = end.getOffset();
+        auto numBytesToFirstChip = capacity - numBytesToSecondChip;
         SPI.beginTransaction(SingleChip::getSettings());
         if ((curr.getIndex() == end.getIndex()) || (end.getOffset() == 0)) {
             setChipId(curr.getIndex());
             digitalWrite<enablePin, LOW>();
             SPI.transfer(opcode);
-            SPI.transfer(theAddress.bytes[2]);
-            SPI.transfer(theAddress.bytes[1]);
-            SPI.transfer(theAddress.bytes[0]);
+            SPI.transfer(curr.bytes_[2]);
+            SPI.transfer(curr.bytes_[1]);
+            SPI.transfer(curr.bytes_[0]);
             SPI.transfer(buf, capacity);
             digitalWrite<enablePin, HIGH>();
         } else {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
-            auto numBytesToSecondChip = end.getOffset();
-            auto numBytesToFirstChip = capacity - numBytesToSecondChip;
             setChipId(curr.getIndex());
             digitalWrite<enablePin, LOW>();
             SPI.transfer(opcode);
-            SPI.transfer(theAddress.bytes[2]);
-            SPI.transfer(theAddress.bytes[1]);
-            SPI.transfer(theAddress.bytes[0]);
+            SPI.transfer(curr.bytes_[2]);
+            SPI.transfer(curr.bytes_[1]);
+            SPI.transfer(curr.bytes_[0]);
             SPI.transfer(buf, numBytesToFirstChip);
             digitalWrite<enablePin, HIGH>();
             // start writing at the start of the next chip the remaining number of bytes
@@ -390,6 +386,5 @@ private:
 
 template<bool clearOnBegin, bool performSanityCheck>
 using OnboardPSRAM = PSRAMChip<i960Pinout::PSRAM_EN, performSanityCheck, clearOnBegin>;
-template<bool clearOnBegin, bool performSanityCheck>
-using OnboardPSRAMBlock = PSRAMBlock8<i960Pinout::PSRAM_EN, performSanityCheck, clearOnBegin>;
+using OnboardPSRAMBlock = PSRAMBlock8<i960Pinout::PSRAM_EN>;
 #endif //I960SXCHIPSET_PSRAMCHIP_H

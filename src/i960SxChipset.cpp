@@ -57,11 +57,7 @@ ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 
 CoreChipsetFeatures chipsetFunctions(0);
 DisplayThing displayCommandSet(0x200);
-//constexpr Address RAMStart = 0x8000'0000;
-constexpr auto PerformPSRAMSanityCheck = !TargetBoard::onAtmega1284p();
-// the boot.sys image must be 64 megs in size
-constexpr auto PerformClearOnBootup = false; // clear it out first and then later on we will copy into it
-using OnboardMemoryBlock = OnboardPSRAMBlock<PerformClearOnBootup, PerformPSRAMSanityCheck>;
+using OnboardMemoryBlock = OnboardPSRAMBlock;
 OnboardMemoryBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
 SDCardFilesystemInterface fs(0x300);
