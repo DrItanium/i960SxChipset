@@ -277,9 +277,9 @@ private:
         //SplitWord32 theAddress(curr.getOffset());
         auto numBytesToSecondChip = end.getOffset();
         auto numBytesToFirstChip = capacity - numBytesToSecondChip;
+        setChipId(curr.getIndex());
         SPI.beginTransaction(SingleChip::getSettings());
         if ((curr.getIndex() == end.getIndex()) || (end.getOffset() == 0)) {
-            setChipId(curr.getIndex());
             digitalWrite<enablePin, LOW>();
             SPI.transfer(opcode);
             SPI.transfer(curr.bytes_[2]);
@@ -290,7 +290,6 @@ private:
         } else {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
-            setChipId(curr.getIndex());
             digitalWrite<enablePin, LOW>();
             SPI.transfer(opcode);
             SPI.transfer(curr.bytes_[2]);
