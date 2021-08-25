@@ -279,7 +279,7 @@ public:
         constexpr auto getAddress() const noexcept { return base; }
         constexpr auto getOffset() const noexcept { return offset; }
         constexpr auto getIndex() const noexcept { return index; }
-        Address base : 26; // 1 megabyte always
+        Address base : 26;
         struct {
             Address offset : 23;
             Address index : 3;
@@ -287,30 +287,23 @@ public:
     };
 
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        // okay figure out which device to start the write into, since size_t is 16 bits on AVR we can exploit this for our purposes.
-        // There is no way to go beyond a 64k buffer (which to be honest would be crazy anyway since this chip doesn't have that much sram)
-        // because of that we can just do a write to the underlying device and find out how much is left over to continue from that point
         Address26 curr(address);
         Address26 end(address + capacity);
         if (curr.getIndex() == end.getIndex()) {
             setChipId(curr.getIndex());
             return backingChips[curr.getIndex()].write(address, buf, capacity);
         } else {
-            // only track information if we span multiple psram chips
-            size_t bytesRemaining = capacity;
-            size_t bytesWritten = 0;
-            auto currentAddress = address;
-            auto* theBuf = buf;
-            // just keep spanning the whole area as we go along
-            for (byte i = curr.getIndex(); i <= end.getIndex(); ++i) {
-                setChipId(i);
-                auto numWritten = backingChips[i].write(currentAddress, theBuf, bytesRemaining);
-                bytesWritten += numWritten;
-                bytesRemaining -= numWritten;
-                theBuf += numWritten;
-                currentAddress += numWritten;
-            }
-            return bytesWritten;
+            // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
+            // thus we can actually convert this work into two separate spi transactions
+            auto numBytesToSecondChip = end.getOffset();
+            auto numBytesToFirstChip = capacity - numBytesToSecondChip;
+            setChipId(curr.getIndex());
+            backingChips[curr.getIndex()].write(address, buf, numBytesToFirstChip);
+            // start writing at the start of the next chip the remaining number of bytes
+            setChipId(end.getIndex());
+            SingleChip& next = backingChips[end.getIndex()];
+            next.write(next.getBaseAddress(), buf + numBytesToFirstChip, numBytesToSecondChip);
+            return capacity;
         }
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
@@ -322,43 +315,32 @@ public:
             // okay we are in a single chip so just call read
             return backingChips[curr.getIndex()].read(address, buf, capacity);
         } else {
-            size_t bytesRemaining = capacity;
-            size_t bytesRead = 0;
-            auto* theBuf = buf;
-            auto currentAddress = address;
-            // just keep spanning the whole area as we go along
-            for (byte i = curr.getIndex(); i <= end.getIndex(); ++i) {
-                setChipId(i);
-                auto numRead = backingChips[i].read(currentAddress, theBuf, bytesRemaining);
-                bytesRead += numRead;
-                bytesRemaining -= numRead;
-                theBuf += numRead;
-                currentAddress += numRead;
-            }
-            return bytesRead;
+            auto numBytesFromSecondChip = end.getOffset();
+            auto numBytesFromFirstChip = capacity - numBytesFromSecondChip;
+            setChipId(curr.getIndex());
+            backingChips[curr.getIndex()].read(address, buf, numBytesFromFirstChip);
+            // start reading from the start of the next chip
+            setChipId(end.getIndex());
+            SingleChip& next = backingChips[end.getIndex()];
+            next.read(next.getBaseAddress(), buf + numBytesFromFirstChip, numBytesFromSecondChip);
+            return capacity;
         }
     }
     uint8_t read8(Address address) noexcept override {
-        Address26 curr(address);
-        setChipId(curr);
-        // it will always be lower8 because the read method which called this method already added 1. Thus we can just write a byte with the address we currently have
-        return static_cast<uint8_t>(backingChips[curr.getIndex()].read(address, LoadStoreStyle::Lower8));
+        uint8_t value = 0;
+        (void)blockRead(address, &value, 1);
+        return value;
     }
     uint16_t read16(Address address) noexcept override {
-        Address26 curr(address);
-        setChipId(curr);
-        return backingChips[curr.getIndex()].read(address, LoadStoreStyle::Full16);
+        uint16_t value = 0;
+        (void)blockRead(address, reinterpret_cast<byte*>(&value), sizeof(value));
+        return value;
     }
     void write8(Address address, uint8_t value) noexcept override {
-        Address26 curr(address);
-        setChipId(curr);
-        backingChips[curr.getIndex()].write(curr.getOffset(), value, LoadStoreStyle::Lower8);
+        blockWrite(address, &value, 1);
     }
     void write16(Address address, uint16_t value) noexcept override {
-        Address26 curr(address);
-        setChipId(curr);
-        backingChips[curr.getIndex()].write(curr.getOffset(), value, LoadStoreStyle::Full16);
-        MemoryThing::write16(address, value);
+        blockWrite(address, reinterpret_cast<byte*>(&value), sizeof(value));
     }
 private:
     union Decomposition {
