@@ -34,7 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 class MemoryThing {
 public:
-    MemoryThing(Address baseAddress, Address endAddress) : base_(baseAddress), end_(endAddress) {
+    MemoryThing(Address baseAddress, Address endAddress, bool bypassesCache = false) : base_(baseAddress), end_(endAddress), bypassesCache_(bypassesCache) {
         if (endAddress < baseAddress) {
             signalHaltState(F("End address comes before base address"));
         }
@@ -49,7 +49,7 @@ public:
      * @brief Construct a memory thing that is only concerned with a single address
      * @param baseAddress
      */
-    explicit MemoryThing(Address baseAddress) : MemoryThing(baseAddress, baseAddress + 16) { }
+    explicit MemoryThing(Address baseAddress, bool bypassesCache = false) : MemoryThing(baseAddress, baseAddress + 16, bypassesCache) { }
     virtual ~MemoryThing() = default;
     virtual size_t blockWrite(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
     virtual size_t blockRead(Address address, uint8_t* buf, size_t capacity) noexcept { return 0; }
@@ -164,32 +164,15 @@ public:
      */
     virtual void enableCache() noexcept { }
 
-    [[nodiscard]] virtual bool bypassesCache() const noexcept { return false; }
+    [[nodiscard]] constexpr bool bypassesCache() const noexcept { return bypassesCache_; }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
     virtual void signalHaltState(const char* thing) noexcept { ::signalHaltState(thing); }
 private:
     Address base_;
     Address end_;
+    bool bypassesCache_ = false;
 };
 
-/**
- * @brief Turn cache enable and disable actions into RAII
- */
-struct TemporarilyDisableThingCache final {
-public:
-    explicit TemporarilyDisableThingCache(MemoryThing* theThing) : thing_(theThing) {
-        if (thing_) {
-            thing_->disableCache();
-        }
-    }
-    ~TemporarilyDisableThingCache() {
-        if (thing_) {
-            thing_->enableCache();
-        }
-    }
-private:
-    MemoryThing* thing_;
-};
 
 
 /**
@@ -199,10 +182,9 @@ class IOSpaceThing : public MemoryThing {
 public:
     static constexpr Address SpaceBaseAddress = 0xFE00'0000;
 public:
-    IOSpaceThing(Address base, Address end) : MemoryThing(base + SpaceBaseAddress, end + SpaceBaseAddress) { }
-    explicit IOSpaceThing(Address base) : MemoryThing(base + SpaceBaseAddress) { }
+    IOSpaceThing(Address base, Address end) : MemoryThing(base + SpaceBaseAddress, end + SpaceBaseAddress, true) { }
+    explicit IOSpaceThing(Address base) : MemoryThing(base + SpaceBaseAddress, true) { }
     ~IOSpaceThing() override = default;
-    [[nodiscard]] bool bypassesCache() const noexcept override { return true; }
 };
 
 /**
@@ -216,11 +198,10 @@ public:
         return theThing;
     }
 private:
-    FallbackMemoryThing() noexcept : MemoryThing(0, 0xFFFF'FFFF) { }
+    FallbackMemoryThing() noexcept : MemoryThing(0, 0xFFFF'FFFF, true) { }
     ~FallbackMemoryThing() override = default;
 
 public:
-    [[nodiscard]] bool bypassesCache() const noexcept override { return true; }
     [[nodiscard]] bool respondsTo(Address) const noexcept override { return true; }
     uint16_t read(Address, LoadStoreStyle) noexcept override {
         return 0;
