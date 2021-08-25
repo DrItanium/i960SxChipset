@@ -286,7 +286,7 @@ public:
         };
     };
 
-    size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
+    size_t write(uint32_t address, byte *buf, size_t capacity) noexcept override {
         Address26 curr(address);
         Address26 end(address + capacity);
         SplitWord32 theAddress(curr.getOffset());
