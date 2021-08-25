@@ -292,6 +292,7 @@ private:
             SPI.transfer(buf, capacity);
             digitalWrite<enablePin, HIGH>();
         } else {
+            Serial.println(F("OP SPANS!"));
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             auto numBytesToSecondChip = end.getOffset();
