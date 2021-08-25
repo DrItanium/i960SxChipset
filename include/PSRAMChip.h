@@ -280,10 +280,8 @@ private:
         Address26 end(address + capacity);
         SplitWord32 theAddress(curr.getOffset());
         SPI.beginTransaction(SingleChip::getSettings());
-        /// @todo implement direct block writes instead of calling the underlying psram classes
-        if (curr.getIndex() == end.getIndex()) {
+        if ((curr.getIndex() == end.getIndex()) || (end.getOffset() == 0)) {
             setChipId(curr.getIndex());
-            SplitWord32 theAddress(address);
             digitalWrite<enablePin, LOW>();
             SPI.transfer(opcode);
             SPI.transfer(theAddress.bytes[2]);
@@ -292,7 +290,6 @@ private:
             SPI.transfer(buf, capacity);
             digitalWrite<enablePin, HIGH>();
         } else {
-            Serial.println(F("OP SPANS!"));
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             auto numBytesToSecondChip = end.getOffset();

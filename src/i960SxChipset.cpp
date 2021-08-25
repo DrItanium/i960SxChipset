@@ -437,7 +437,7 @@ void setup() {
         } else {
             // okay we were successful in opening the file, now copy the image into psram
             Address size = theFile.size();
-            static constexpr auto CacheSize = 8_KB;
+            static constexpr auto CacheSize = sizeof(entries);
             //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
             // use the cache as a buffer since it won't be in use at this point in time
             auto* storage = reinterpret_cast<byte*>(entries);
