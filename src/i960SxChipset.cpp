@@ -749,15 +749,16 @@ getPrimaryDevice(byte index) noexcept {
     return memoryMapping[index];
 }
 
-inline MemoryThing*
-getIODevice(byte index) noexcept {
-    return ioSpaceSimpleMapping[index];
-}
 MemoryThing*
 getThing(Address address) noexcept {
     SplitWord32 decomposedAddress(address);
     if (auto mapping = getPrimaryDevice(decomposedAddress.bytes[3]); mapping == nullptr) {
-        return getIODevice(decomposedAddress.bytes[1]);
+        switch (decomposedAddress.bytes[1]) {
+            case 0: return &chipsetFunctions;
+            case 2: return &displayCommandSet;
+            case 3: return &fs;
+            default: return &fallback;
+        }
     } else {
         return mapping;
     }
