@@ -667,100 +667,27 @@ signalHaltState(const char* haltMsg) {
     }
 
 }
-MemoryThing* memoryMapping[256] {
-    // 512 megabytes (map the first 64 megabytes and nothing else until we get to the upper most area)
-   &ramBlock, &ramBlock, &ramBlock, &ramBlock, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-  // 512 megs
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megs
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megs
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   // 512 megabytes
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megabytes
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megabytes
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        // 512 megabytes
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-   &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, nullptr, &fallback,
-};
-MemoryThing* ioSpaceSimpleMapping[256] {
-        &chipsetFunctions, &fallback, &displayCommandSet, &fs, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-        &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback, &fallback,
-    };
 
-inline MemoryThing*
-getPrimaryDevice(byte index) noexcept {
-    return memoryMapping[index];
-}
 
 MemoryThing*
 getThing(Address address) noexcept {
     SplitWord32 decomposedAddress(address);
-    if (auto mapping = getPrimaryDevice(decomposedAddress.bytes[3]); mapping == nullptr) {
-        switch (decomposedAddress.bytes[1]) {
-            case 0: return &chipsetFunctions;
-            case 2: return &displayCommandSet;
-            case 3: return &fs;
-            default: return &fallback;
-        }
-    } else {
-        return mapping;
+    switch (decomposedAddress.bytes[3]) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            return &ramBlock;
+        case 0xFE:
+            switch (decomposedAddress.bytes[1]) {
+                case 0: return &chipsetFunctions;
+                case 2: return &displayCommandSet;
+                case 3: return &fs;
+                default: return &fallback;
+            }
+            break;
+        default:
+            return &fallback;
     }
 }
 SdFat SD;
