@@ -289,6 +289,7 @@ public:
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         Address26 curr(address);
         Address26 end(address + capacity);
+        /// @todo implement direct block writes instead of calling the underlying psram classes
         if (curr.getIndex() == end.getIndex()) {
             setChipId(curr.getIndex());
             return backingChips[curr.getIndex()].write(address, buf, capacity);
@@ -310,6 +311,7 @@ public:
         // just like blockWrite, we can span multiple devices and thus we just need to keep populating the buffer as we go along
         Address26 curr(address);
         Address26 end(address + capacity);
+        /// @todo implement direct block reads instead of calling the underlying psram classes
         if (curr.getIndex() == end.getIndex()) {
             setChipId(curr.getIndex());
             // okay we are in a single chip so just call read
