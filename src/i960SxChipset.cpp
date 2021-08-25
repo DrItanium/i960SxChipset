@@ -587,8 +587,10 @@ inline void invocationBody() noexcept {
         if (isReadOperation) {
             do {
                 DigitalPin<i960Pinout::InspectionPin>::assertPin();
-                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle()));
+                auto result = theThing.read(processorInterface.getAddress(),
+                                            processorInterface.getStyle());
                 DigitalPin<i960Pinout::InspectionPin>::deassertPin();
+                processorInterface.setDataBits(result);
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
