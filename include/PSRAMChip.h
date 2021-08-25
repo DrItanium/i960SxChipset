@@ -290,10 +290,10 @@ public:
         Address26 curr(address);
         Address26 end(address + capacity);
         SplitWord32 theAddress(curr.getOffset());
+        SPI.beginTransaction(SingleChip::getSettings());
         /// @todo implement direct block writes instead of calling the underlying psram classes
         if (curr.getIndex() == end.getIndex()) {
             setChipId(curr.getIndex());
-            SPI.beginTransaction(SingleChip::getSettings());
             SplitWord32 theAddress(address);
             digitalWrite<enablePin, LOW>();
             SPI.transfer(0x02);
@@ -302,14 +302,12 @@ public:
             SPI.transfer(theAddress.bytes[0]);
             SPI.transfer(buf, capacity);
             digitalWrite<enablePin, HIGH>();
-            SPI.endTransaction();
         } else {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             auto numBytesToSecondChip = end.getOffset();
             auto numBytesToFirstChip = capacity - numBytesToSecondChip;
             setChipId(curr.getIndex());
-            SPI.beginTransaction(SingleChip::getSettings());
             digitalWrite<enablePin, LOW>();
             SPI.transfer(0x02);
             SPI.transfer(theAddress.bytes[2]);
@@ -327,8 +325,8 @@ public:
             SPI.transfer(0);
             SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
             digitalWrite<enablePin, HIGH>();
-            SPI.endTransaction();
         }
+        SPI.endTransaction();
         return capacity;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
