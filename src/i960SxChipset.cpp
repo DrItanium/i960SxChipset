@@ -580,8 +580,9 @@ inline void invocationBody() noexcept {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
+    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (isReadOperation) {
             do {
                 processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -603,7 +604,7 @@ inline void invocationBody() noexcept {
             } while (true);
         }
     } else {
-        if (auto& theEntry = getLine(theThing); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (auto& theEntry = getLine(theThing); isReadOperation) {
             do {
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -683,7 +684,6 @@ getThing(Address address) noexcept {
                 case 3: return &fs;
                 default: return &fallback;
             }
-            break;
         default:
             return &fallback;
     }
