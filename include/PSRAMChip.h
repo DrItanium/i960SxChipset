@@ -279,24 +279,16 @@ private:
         auto numBytesToFirstChip = capacity - numBytesToSecondChip;
         setChipId(curr.getIndex());
         SPI.beginTransaction(SingleChip::getSettings());
-        if ((curr.getIndex() == end.getIndex()) || (end.getOffset() == 0)) {
-            digitalWrite<enablePin, LOW>();
-            SPI.transfer(opcode);
-            SPI.transfer(curr.bytes_[2]);
-            SPI.transfer(curr.bytes_[1]);
-            SPI.transfer(curr.bytes_[0]);
-            SPI.transfer(buf, capacity);
-            digitalWrite<enablePin, HIGH>();
-        } else {
+        digitalWrite<enablePin, LOW>();
+        SPI.transfer(opcode);
+        SPI.transfer(curr.bytes_[2]);
+        SPI.transfer(curr.bytes_[1]);
+        SPI.transfer(curr.bytes_[0]);
+        SPI.transfer(buf, numBytesToFirstChip);
+        digitalWrite<enablePin, HIGH>();
+        if (numBytesToSecondChip > 0) {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
-            digitalWrite<enablePin, LOW>();
-            SPI.transfer(opcode);
-            SPI.transfer(curr.bytes_[2]);
-            SPI.transfer(curr.bytes_[1]);
-            SPI.transfer(curr.bytes_[0]);
-            SPI.transfer(buf, numBytesToFirstChip);
-            digitalWrite<enablePin, HIGH>();
             // start writing at the start of the next chip the remaining number of bytes
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
