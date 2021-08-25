@@ -276,7 +276,8 @@ private:
         Address26 end(address + capacity);
         //SplitWord32 theAddress(curr.getOffset());
         auto numBytesToSecondChip = end.getOffset();
-        auto numBytesToFirstChip = capacity - numBytesToSecondChip;
+        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SingleChip::getSettings());
         digitalWrite<enablePin, LOW>();
@@ -286,7 +287,7 @@ private:
         SPI.transfer(curr.bytes_[0]);
         SPI.transfer(buf, numBytesToFirstChip);
         digitalWrite<enablePin, HIGH>();
-        if (numBytesToSecondChip > 0) {
+        if ((!localToASingleChip) && (numBytesToSecondChip > 0)) {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             // start writing at the start of the next chip the remaining number of bytes
