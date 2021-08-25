@@ -285,8 +285,9 @@ public:
             byte index : 3;
         };
     };
-
-    size_t write(uint32_t address, byte *buf, size_t capacity) noexcept override {
+private:
+    template<byte opcode>
+    inline size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         Address26 curr(address);
         Address26 end(address + capacity);
         SplitWord32 theAddress(curr.getOffset());
@@ -296,7 +297,7 @@ public:
             setChipId(curr.getIndex());
             SplitWord32 theAddress(address);
             digitalWrite<enablePin, LOW>();
-            SPI.transfer(0x02);
+            SPI.transfer(opcode);
             SPI.transfer(theAddress.bytes[2]);
             SPI.transfer(theAddress.bytes[1]);
             SPI.transfer(theAddress.bytes[0]);
@@ -309,7 +310,7 @@ public:
             auto numBytesToFirstChip = capacity - numBytesToSecondChip;
             setChipId(curr.getIndex());
             digitalWrite<enablePin, LOW>();
-            SPI.transfer(0x02);
+            SPI.transfer(opcode);
             SPI.transfer(theAddress.bytes[2]);
             SPI.transfer(theAddress.bytes[1]);
             SPI.transfer(theAddress.bytes[0]);
@@ -319,7 +320,7 @@ public:
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
             digitalWrite<enablePin, LOW>();
-            SPI.transfer(0x02);
+            SPI.transfer(opcode);
             SPI.transfer(0);
             SPI.transfer(0);
             SPI.transfer(0);
@@ -329,42 +330,28 @@ public:
         SPI.endTransaction();
         return capacity;
     }
-    size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
-        // just like blockWrite, we can span multiple devices and thus we just need to keep populating the buffer as we go along
-        Address26 curr(address);
-        Address26 end(address + capacity);
-        /// @todo implement direct block reads instead of calling the underlying psram classes
-        if (curr.getIndex() == end.getIndex()) {
-            setChipId(curr.getIndex());
-            // okay we are in a single chip so just call read
-            return backingChips[curr.getIndex()].read(address, buf, capacity);
-        } else {
-            auto numBytesFromSecondChip = end.getOffset();
-            auto numBytesFromFirstChip = capacity - numBytesFromSecondChip;
-            setChipId(curr.getIndex());
-            backingChips[curr.getIndex()].read(address, buf, numBytesFromFirstChip);
-            // start reading from the start of the next chip
-            setChipId(end.getIndex());
-            SingleChip& next = backingChips[end.getIndex()];
-            next.read(next.getBaseAddress(), buf + numBytesFromFirstChip, numBytesFromSecondChip);
-        }
-        return capacity;
+public:
+    size_t write(uint32_t address, byte *buf, size_t capacity) noexcept override {
+        return genericReadWriteOperation<0x02>(address, buf, capacity);
+    }
+    size_t read(uint32_t address, byte *buf, size_t capacity) noexcept override {
+        return genericReadWriteOperation<0x03>(address, buf, capacity);
     }
     uint8_t read8(Address address) noexcept override {
         uint8_t value = 0;
-        (void)blockRead(address, &value, 1);
+        (void)read(address, &value, 1);
         return value;
     }
     uint16_t read16(Address address) noexcept override {
         uint16_t value = 0;
-        (void)blockRead(address, reinterpret_cast<byte*>(&value), sizeof(value));
+        (void)read(address, reinterpret_cast<byte*>(&value), sizeof(value));
         return value;
     }
     void write8(Address address, uint8_t value) noexcept override {
-        blockWrite(address, &value, 1);
+        write(address, &value, 1);
     }
     void write16(Address address, uint16_t value) noexcept override {
-        blockWrite(address, reinterpret_cast<byte*>(&value), sizeof(value));
+        write(address, reinterpret_cast<byte*>(&value), sizeof(value));
     }
 private:
     union Decomposition {
