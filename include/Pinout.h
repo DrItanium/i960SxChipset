@@ -58,7 +58,6 @@ enum class i960Pinout : int {
     SCK = TargetBoard::getSckPin(),          // reserved
     DEN_ = TargetBoard::getDenPin(),      // AVR Interrupt INT0
     CACHE_EN_ = TargetBoard::getCacheEnPin(),
-    InspectionPin = static_cast<int>(UnderlyingPinoutType::PORT_D7),
     // PD4 is not used by simple management card
     Reset960= TargetBoard::getReset960Pin(),
     Int0_ = TargetBoard::getInt0Pin(),
@@ -284,7 +283,6 @@ DefSPICSPin(i960Pinout::GPIOSelect);
 #ifdef ALLOW_SRAM_CACHE
 DefSPICSPin(i960Pinout::CACHE_EN_);
 #endif
-DefSPICSPin(i960Pinout::InspectionPin);
 DefSPICSPin(i960Pinout::SD_EN);
 DefSPICSPin(i960Pinout::PSRAM_EN);
 DefSPICSPin(i960Pinout::DISPLAY_EN);
