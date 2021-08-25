@@ -584,9 +584,8 @@ inline void invocationBody() noexcept {
     if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
         if (isReadOperation) {
             do {
-                auto result = theThing.read(processorInterface.getAddress(),
-                                            processorInterface.getStyle());
-                processorInterface.setDataBits(result);
+                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(),
+                                                             processorInterface.getStyle()));
                 auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isBurstLast) {
