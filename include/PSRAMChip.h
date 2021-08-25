@@ -289,23 +289,48 @@ public:
     size_t blockWrite(Address address, uint8_t *buf, size_t capacity) noexcept override {
         Address26 curr(address);
         Address26 end(address + capacity);
+        SplitWord32 theAddress(curr.getOffset());
         /// @todo implement direct block writes instead of calling the underlying psram classes
         if (curr.getIndex() == end.getIndex()) {
             setChipId(curr.getIndex());
-            return backingChips[curr.getIndex()].write(address, buf, capacity);
+            SPI.beginTransaction(SingleChip::getSettings());
+            SplitWord32 theAddress(address);
+            digitalWrite<enablePin, LOW>();
+            SPI.transfer(0x02);
+            SPI.transfer(theAddress.bytes[2]);
+            SPI.transfer(theAddress.bytes[1]);
+            SPI.transfer(theAddress.bytes[0]);
+            SPI.transfer(buf, capacity);
+            digitalWrite<enablePin, HIGH>();
+            SPI.endTransaction();
         } else {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             auto numBytesToSecondChip = end.getOffset();
             auto numBytesToFirstChip = capacity - numBytesToSecondChip;
             setChipId(curr.getIndex());
-            backingChips[curr.getIndex()].write(address, buf, numBytesToFirstChip);
+            SPI.beginTransaction(SingleChip::getSettings());
+            digitalWrite<enablePin, LOW>();
+            SPI.transfer(0x02);
+            SPI.transfer(theAddress.bytes[2]);
+            SPI.transfer(theAddress.bytes[1]);
+            SPI.transfer(theAddress.bytes[0]);
+            SPI.transfer(buf, numBytesToFirstChip);
+            digitalWrite<enablePin, HIGH>();
             // start writing at the start of the next chip the remaining number of bytes
-            setChipId(end.getIndex());
             SingleChip& next = backingChips[end.getIndex()];
-            next.write(next.getBaseAddress(), buf + numBytesToFirstChip, numBytesToSecondChip);
-            return capacity;
+            setChipId(end.getIndex());
+            // we start at address zero on this new chip always
+            digitalWrite<enablePin, LOW>();
+            SPI.transfer(0x02);
+            SPI.transfer(0);
+            SPI.transfer(0);
+            SPI.transfer(0);
+            SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
+            digitalWrite<enablePin, HIGH>();
+            SPI.endTransaction();
         }
+        return capacity;
     }
     size_t blockRead(Address address, uint8_t *buf, size_t capacity) noexcept override {
         // just like blockWrite, we can span multiple devices and thus we just need to keep populating the buffer as we go along
@@ -325,8 +350,8 @@ public:
             setChipId(end.getIndex());
             SingleChip& next = backingChips[end.getIndex()];
             next.read(next.getBaseAddress(), buf + numBytesFromFirstChip, numBytesFromSecondChip);
-            return capacity;
         }
+        return capacity;
     }
     uint8_t read8(Address address) noexcept override {
         uint8_t value = 0;
