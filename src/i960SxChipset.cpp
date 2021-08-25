@@ -574,62 +574,64 @@ void setup() {
 // Td -> Td after signaling ready and burst (blast high)
 // Ti -> TChecksumFailure if FAIL is asserted
 // NOTE: Tw may turn out to be synthetic
-
+inline void invocationBody() noexcept {
+    // wait until AS goes from low to high
+    // then wait until the DEN state is asserted
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    // keep processing data requests until we
+    // when we do the transition, record the information we need
+    if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            do {
+                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle()));
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            do {
+                theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
+    } else {
+        if (auto& theEntry = getLine(theThing); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            do {
+                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            do {
+                theEntry.set(processorInterface.getCacheOffsetEntry(),
+                             processorInterface.getStyle(),
+                             SplitWord16{processorInterface.getDataBits()});
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
+    }
+}
 
 void loop() {
     do {
-        // wait until AS goes from low to high
-        // then wait until the DEN state is asserted
-        while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-        // keep processing data requests until we
-        // when we do the transition, record the information we need
-        if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
-            if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-                do {
-                    processorInterface.setDataBits(theThing.read(processorInterface.getAddress(), processorInterface.getStyle()));
-                    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    if (isBurstLast) {
-                        break;
-                    }
-                    processorInterface.burstNext();
-                } while (true);
-            } else {
-                do {
-                    theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
-                    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    if (isBurstLast) {
-                        break;
-                    }
-                    processorInterface.burstNext();
-                } while (true);
-            }
-        } else {
-            if (auto& theEntry = getLine(theThing); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-                do {
-                    processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-                    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    if (isBurstLast) {
-                        break;
-                    }
-                    processorInterface.burstNext();
-                } while (true);
-            } else {
-                do {
-                    theEntry.set(processorInterface.getCacheOffsetEntry(),
-                                 processorInterface.getStyle(),
-                                 SplitWord16{processorInterface.getDataBits()});
-                    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                    DigitalPin<i960Pinout::Ready>::pulse();
-                    if (isBurstLast) {
-                        break;
-                    }
-                    processorInterface.burstNext();
-                } while (true);
-            }
-        }
+        invocationBody();
     } while (true);
 }
 
