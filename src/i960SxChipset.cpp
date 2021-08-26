@@ -40,7 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "TFTShieldThing.h"
 #include "PSRAMChip.h"
-constexpr bool EnableDebuggingCompileTime = false;
 
 bool displayReady = false;
 /**
@@ -247,23 +246,10 @@ void invalidateGlobalCache() noexcept {
     CacheEntry::invalidateAllEntries();
 }
 auto& getLine(MemoryThing& theThing) noexcept {
-    if constexpr (EnableDebuggingCompileTime) {
-        Serial.println(F("getLine() {"));
-    }
     auto address = processorInterface.getAlignedAddress();
-    auto tagIndex = CacheEntry::computeTagIndex(address);
-    if constexpr (EnableDebuggingCompileTime) {
-        Serial.print(F("ADDRESS: 0x"));
-        Serial.println(address, HEX);
-        Serial.print(F("TAG INDEX: 0x"));
-        Serial.println(tagIndex, HEX);
-    }
-    auto& theEntry = entries[tagIndex];
+    auto& theEntry = entries[CacheEntry::computeTagIndex(address)];
     if (!theEntry.matches(address)) {
         theEntry.reset(address, theThing);
-    }
-    if constexpr (EnableDebuggingCompileTime) {
-        Serial.println(F("}"));
     }
     return theEntry;
 }
