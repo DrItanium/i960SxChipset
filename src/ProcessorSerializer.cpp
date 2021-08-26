@@ -246,7 +246,7 @@ ProcessorInterface::newDataCycle() noexcept {
     auto bits = PINA;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
-    return *getThing(address_.wholeValue_);
+    return *getThing(address_.bytes[3]);
 }
 
 void ProcessorInterface::burstNext() noexcept {

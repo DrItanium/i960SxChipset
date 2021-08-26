@@ -401,9 +401,8 @@ signalHaltState(const char* haltMsg) {
 
 
 MemoryThing*
-getThing(Address address) noexcept {
-    SplitWord32 decomposedAddress(address);
-    switch (decomposedAddress.bytes[3]) {
+getThing(byte offset) noexcept {
+    switch (offset) {
         case 0:
         case 1:
         case 2:

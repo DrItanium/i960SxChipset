@@ -215,7 +215,7 @@ public:
  * @param address the address to check for a response to
  * @return The thing that will respond to the given address
  */
-MemoryThing* getThing(Address address) noexcept;
+MemoryThing* getThing(byte offset) noexcept;
 
 
 #endif //I960SXCHIPSET_MEMORYTHING_H
