@@ -39,33 +39,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
 
-bool displayReady = false;
-/**
- * @brief Describes a single cache line which associates an address with 16 bytes of storage
- */
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
-// ----------------------------------------------------------------
-// Load/Store routines
-// ----------------------------------------------------------------
-
-
-
-
-
+// the core devices
 CoreChipsetFeatures chipsetFunctions(0);
-//DisplayThing displayCommandSet(0x200);
-using OnboardMemoryBlock = OnboardPSRAMBlock;
-OnboardMemoryBlock ramBlock(0);
+OnboardPSRAMBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
 
-
-
-
-// ----------------------------------------------------------------
-// setup routines
-// ----------------------------------------------------------------
-
-// we only have a single 128kb cache chip
+/**
+ * @brief Describes a single cache line which associates an address with 32 bytes of storage
+ */
 class CacheEntry {
 public:
     static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
@@ -297,8 +279,6 @@ void setup() {
         Serial.println(F("SD CARD UP!"));
         chipsetFunctions.begin();
         processorInterface.begin();
-        //displayCommandSet.begin();
-        //displayReady = true;
         ramBlock.begin();
         // okay now we need to actually open boot.system and copy it into the ramBlock
         if (!SD.exists(const_cast<char*>("boot.sys"))) {
@@ -412,14 +392,6 @@ void loop() {
 [[noreturn]]
 void
 signalHaltState(const __FlashStringHelper* haltMsg) {
-#if 0
-    if (displayReady) {
-        displayCommandSet.clearScreen();
-        displayCommandSet.setCursor(0, 0);
-        displayCommandSet.setTextSize(2);
-        displayCommandSet.println(haltMsg);
-    }
-#endif
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
@@ -429,14 +401,6 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
 [[noreturn]]
 void
 signalHaltState(const char* haltMsg) {
-#if 0
-    if (displayReady) {
-        displayCommandSet.clearScreen();
-        displayCommandSet.setCursor(0, 0);
-        displayCommandSet.setTextSize(2);
-        displayCommandSet.println(haltMsg);
-    }
-#endif
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
