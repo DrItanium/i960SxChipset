@@ -225,11 +225,11 @@ private:
         // (we have to make the entries 64-bytes in size for simple alignment)
         byte backingStorage[ActualCacheEntrySize] = { 0 };
         struct {
+            SplitWord16 data[NumWordsCached]; // 32 bytes
+            Address tag; // 4 bytes
+            MemoryThing* backingThing; // 2 bytes
             bool valid_;
             bool dirty_;
-            MemoryThing* backingThing; // 2 bytes
-            Address tag; // 4 bytes
-            SplitWord16 data[NumWordsCached]; // 32 bytes
         } PACKED_ATTRIBUTE ;
     };
 };
