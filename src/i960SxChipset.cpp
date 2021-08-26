@@ -354,7 +354,12 @@ void purgeSRAMCache() noexcept {
         Serial.println(F("DONE PURGING SRAM CACHE!"));
     }
 }
-
+inline bool informCPU() noexcept {
+    // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
+    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    DigitalPin<i960Pinout::Ready>::pulse();
+    return isBurstLast;
+}
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
@@ -367,9 +372,7 @@ inline void invocationBody() noexcept {
             do {
                 processorInterface.setDataBits(theThing.read(processorInterface.getAddress(),
                                                              processorInterface.getStyle()));
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
+                if (informCPU()) {
                     break;
                 }
                 processorInterface.burstNext();
@@ -377,9 +380,7 @@ inline void invocationBody() noexcept {
         } else {
             do {
                 theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
+                if (informCPU()) {
                     break;
                 }
                 processorInterface.burstNext();
@@ -389,9 +390,7 @@ inline void invocationBody() noexcept {
         if (auto& theEntry = getLine(theThing); isReadOperation) {
             do {
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
+                if (informCPU()) {
                     break;
                 }
                 processorInterface.burstNext();
@@ -401,9 +400,7 @@ inline void invocationBody() noexcept {
                 theEntry.set(processorInterface.getCacheOffsetEntry(),
                              processorInterface.getStyle(),
                              SplitWord16{processorInterface.getDataBits()});
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
+                if (informCPU()) {
                     break;
                 }
                 processorInterface.burstNext();
