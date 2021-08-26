@@ -354,6 +354,64 @@ void purgeSRAMCache() noexcept {
         Serial.println(F("DONE PURGING SRAM CACHE!"));
     }
 }
+
+inline void invocationBody() noexcept {
+    // wait until AS goes from low to high
+    // then wait until the DEN state is asserted
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    // keep processing data requests until we
+    // when we do the transition, record the information we need
+    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
+    if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
+        if (isReadOperation) {
+            do {
+                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(),
+                                                             processorInterface.getStyle()));
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            do {
+                theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
+    } else {
+        if (auto& theEntry = getLine(theThing); isReadOperation) {
+            do {
+                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            do {
+                theEntry.set(processorInterface.getCacheOffsetEntry(),
+                             processorInterface.getStyle(),
+                             SplitWord16{processorInterface.getDataBits()});
+                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isBurstLast) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
+    }
+}
+
 // the setup routine runs once when you press reset:
 void setup() {
     Serial.begin(115200);
@@ -440,6 +498,7 @@ void setup() {
             Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
             for (Address addr = 0; addr < size; addr += CacheSize) {
                 // do a linear read from the start to the end of storage
+                // wait around to make sure we don't run afoul of the sdcard itself
                 while (theFile.isBusy());
                 auto numRead = theFile.read(storage, CacheSize);
                 if (numRead < 0) {
@@ -447,8 +506,7 @@ void setup() {
                     SD.errorHalt();
                 }
                 (void)ramBlock.write(addr, storage, numRead);
-                Serial.print(F("."));
-                // wait around to make sure we don't run afoul of the sdcard itself
+                //Serial.print(F("."));
             }
             Serial.println(F("Transfer complete!"));
             // make sure we close the file before destruction
@@ -481,60 +539,8 @@ void setup() {
     // at this point, the i960 will request 32-bytes to perform a boot check sum on.
     // If the checksum is successful then execution will continue as normal
     // first set of 16-byte request from memory
-    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-
-    auto& rom = processorInterface.newDataCycle();
-    // we know that this will always get mapped to rom so no need to look this up constantly
-    if (rom.bypassesCache()) {
-        // we also know that this will be a read operation at this point
-        do {
-            processorInterface.setDataBits(rom.read(processorInterface.getAddress(), processorInterface.getStyle()));
-            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isBurstLast) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
-    } else {
-        auto& theEntry = getLine(rom);
-        do {
-            processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isBurstLast) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
-    }
-    // then do the second 16-byte request
-    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-    rom = processorInterface.newDataCycle();
-    // we know that this will always get mapped to rom so no need to look this up constantly
-    if (rom.bypassesCache()) {
-        // we also know that this will be a read operation at this point
-        do {
-            processorInterface.setDataBits(rom.read(processorInterface.getAddress(), processorInterface.getStyle()));
-            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isBurstLast) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
-    } else {
-        auto& theEntry = getLine(rom);
-        do {
-            processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isBurstLast) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
-    }
+    invocationBody();
+    invocationBody();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
@@ -574,65 +580,12 @@ void setup() {
 // Td -> Td after signaling ready and burst (blast high)
 // Ti -> TChecksumFailure if FAIL is asserted
 // NOTE: Tw may turn out to be synthetic
-inline void invocationBody() noexcept {
-    // wait until AS goes from low to high
-    // then wait until the DEN state is asserted
-    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
-    // keep processing data requests until we
-    // when we do the transition, record the information we need
-    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
-        if (isReadOperation) {
-            do {
-                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(),
-                                                             processorInterface.getStyle()));
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        } else {
-            do {
-                theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        }
-    } else {
-        if (auto& theEntry = getLine(theThing); isReadOperation) {
-            do {
-                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        } else {
-            do {
-                theEntry.set(processorInterface.getCacheOffsetEntry(),
-                             processorInterface.getStyle(),
-                             SplitWord16{processorInterface.getDataBits()});
-                auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isBurstLast) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        }
-    }
-}
 
 void loop() {
     do {
+        invocationBody();
+        invocationBody();
+        invocationBody();
         invocationBody();
     } while (true);
 }
