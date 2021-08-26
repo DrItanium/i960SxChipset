@@ -31,7 +31,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DependentFalse.h"
 
 // comment this out to disable sram cache support
-//#define ALLOW_SRAM_CACHE
 
 #ifdef ARDUINO_AVR_ATmega1284
 #define PACKED_ATTRIBUTE
@@ -65,10 +64,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    IOEXPANDER_PB4,                 \
    IOEXPANDER_PB5,                 \
    IOEXPANDER_PB6,                 \
-   IOEXPANDER_PB7,                 \
-   NODISPLAY,                      \
-   NODC,                           \
-   NOCACHE_EN_
+   IOEXPANDER_PB7
 
 
 enum class UndefinedPinout : int {
@@ -83,7 +79,6 @@ enum class UndefinedPinout : int {
     READY_,
     DEN_,
     PSRAM_EN_,
-    CACHE_EN_,
     RESET960_,
     Int0_,
     SPI_OFFSET0,
@@ -98,8 +93,6 @@ enum class UndefinedPinout : int {
     BE1_,
     BLAST_,
     FAIL960,
-    DISPLAY_EN_,
-    DC,
 };
 enum class Pinout1284p : int {
     // this is described in digial pin order!
@@ -150,18 +143,11 @@ enum class Pinout1284p : int {
     AS_ = PORT_B2,
     PSRAM_EN_ = PORT_B3,
     DEN_ = PORT_D2,
-#ifdef ALLOW_SRAM_CACHE
-    CACHE_EN_ = PORT_D3,
-#else
-    CACHE_EN_ = NOCACHE_EN_, // disable cache for experiment purposes
-#endif
     RESET960_ = PORT_D5,
     Int0_ = PORT_D6,
     SPI_OFFSET0 = PORT_C2,
     SPI_OFFSET1 = PORT_C3,
     SPI_OFFSET2 = PORT_C4,
-    DISPLAY_EN_ = PORT_C5,
-    DC = PORT_C6,
     SD_EN_ = PORT_C7,
     W_R_ = PORT_A0,
     BA1 = PORT_A1,
@@ -256,7 +242,6 @@ public:
     [[nodiscard]] constexpr auto getMosiPin() const noexcept { return static_cast<int>(T::MOSI); }
     [[nodiscard]] constexpr auto getSckPin() const noexcept { return static_cast<int>(T::SCK); }
     [[nodiscard]] constexpr auto getDenPin() const noexcept { return static_cast<int>(T::DEN_); }
-    [[nodiscard]] constexpr auto getCacheEnPin() const noexcept { return static_cast<int>(T::CACHE_EN_); }
     [[nodiscard]] constexpr auto getReset960Pin() const noexcept { return static_cast<int>(T::RESET960_); }
     [[nodiscard]] constexpr auto getInt0Pin() const noexcept { return static_cast<int>(T::Int0_); }
     [[nodiscard]] constexpr auto getSclPin() const noexcept { return static_cast<int>(T::SCL); }
@@ -264,8 +249,6 @@ public:
     [[nodiscard]] constexpr auto getSpiOffset0Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET0); }
     [[nodiscard]] constexpr auto getSpiOffset1Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET1); }
     [[nodiscard]] constexpr auto getSpiOffset2Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET2); }
-    [[nodiscard]] constexpr auto getDisplayEnPin() const noexcept { return static_cast<int>(T::DISPLAY_EN_); }
-    [[nodiscard]] constexpr auto getDcPin() const noexcept { return static_cast<int>(T::DC); }
     [[nodiscard]] constexpr auto getSdEnablePin() const noexcept { return static_cast<int>(T::SD_EN_); }
     [[nodiscard]] constexpr auto getWrPin() const noexcept { return static_cast<int>(T::W_R_); }
     [[nodiscard]] constexpr auto getBurstAddress1Pin() const noexcept { return static_cast<int>(T::BA1); }
@@ -366,7 +349,6 @@ public:
     [[nodiscard]] static constexpr auto getMosiPin() noexcept { return BoardDescription<getMCUTarget()>.getMosiPin(); }
     [[nodiscard]] static constexpr auto getSckPin() noexcept { return BoardDescription<getMCUTarget()>.getSckPin(); }
     [[nodiscard]] static constexpr auto getDenPin() noexcept { return BoardDescription<getMCUTarget()>.getDenPin(); }
-    [[nodiscard]] static constexpr auto getCacheEnPin() noexcept { return BoardDescription<getMCUTarget()>.getCacheEnPin(); }
     [[nodiscard]] static constexpr auto getReset960Pin() noexcept { return BoardDescription<getMCUTarget()>.getReset960Pin(); }
     [[nodiscard]] static constexpr auto getInt0Pin() noexcept { return BoardDescription<getMCUTarget()>.getInt0Pin(); }
     [[nodiscard]] static constexpr auto getSclPin() noexcept { return BoardDescription<getMCUTarget()>.getSclPin(); }
@@ -374,8 +356,6 @@ public:
     [[nodiscard]] static constexpr auto getSpiOffset0Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset0Pin(); }
     [[nodiscard]] static constexpr auto getSpiOffset1Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset1Pin(); }
     [[nodiscard]] static constexpr auto getSpiOffset2Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset2Pin(); }
-    [[nodiscard]] static constexpr auto getDisplayEnPin() noexcept { return BoardDescription<getMCUTarget()>.getDisplayEnPin(); }
-    [[nodiscard]] static constexpr auto getDcPin() noexcept { return BoardDescription<getMCUTarget()>.getDcPin(); }
     [[nodiscard]] static constexpr auto getSdEnablePin() noexcept { return BoardDescription<getMCUTarget()>.getSdEnablePin(); }
     [[nodiscard]] static constexpr auto getWrPin() noexcept { return BoardDescription<getMCUTarget()>.getWrPin(); }
     [[nodiscard]] static constexpr auto getBurstAddress1Pin() noexcept { return BoardDescription<getMCUTarget()>.getBurstAddress1Pin(); }

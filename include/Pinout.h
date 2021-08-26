@@ -57,7 +57,6 @@ enum class i960Pinout : int {
     MISO = TargetBoard::getMisoPin(),          // reserved
     SCK = TargetBoard::getSckPin(),          // reserved
     DEN_ = TargetBoard::getDenPin(),      // AVR Interrupt INT0
-    CACHE_EN_ = TargetBoard::getCacheEnPin(),
     // PD4 is not used by simple management card
     Reset960= TargetBoard::getReset960Pin(),
     Int0_ = TargetBoard::getInt0Pin(),
@@ -67,8 +66,6 @@ enum class i960Pinout : int {
     SPI_OFFSET0 = TargetBoard::getSpiOffset0Pin(),
     SPI_OFFSET1 = TargetBoard::getSpiOffset1Pin(),
     SPI_OFFSET2 = TargetBoard::getSpiOffset2Pin(),
-    DISPLAY_EN = TargetBoard::getDisplayEnPin(),
-    DC = TargetBoard::getDcPin(),     // output
     SD_EN = TargetBoard::getSdEnablePin(),      // output
     W_R_ = TargetBoard::getWrPin(),
     BA1 = TargetBoard::getBurstAddress1Pin(),
@@ -83,8 +80,6 @@ enum class i960Pinout : int {
 constexpr bool isValidPin(i960Pinout pin) noexcept {
     return isValidPin<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pin));
 }
-constexpr bool CacheActive_v = isValidPin(i960Pinout::CACHE_EN_);
-constexpr bool DisplayActive_v = isValidPin(i960Pinout::DISPLAY_EN);
 constexpr auto attachedToIOExpander(i960Pinout pinout) noexcept {
     return attachedToIOExpander<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pinout));
 }
@@ -280,12 +275,8 @@ struct DigitalPin {
 #define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
 
 DefSPICSPin(i960Pinout::GPIOSelect);
-#ifdef ALLOW_SRAM_CACHE
-DefSPICSPin(i960Pinout::CACHE_EN_);
-#endif
 DefSPICSPin(i960Pinout::SD_EN);
 DefSPICSPin(i960Pinout::PSRAM_EN);
-DefSPICSPin(i960Pinout::DISPLAY_EN);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);

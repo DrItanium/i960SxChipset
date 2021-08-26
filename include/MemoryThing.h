@@ -155,15 +155,6 @@ public:
         }
         return blockRead(makeAddressRelative(baseAddress), buffer, count);
     }
-    /**
-     * @brief Turn off any sort of caching that this memory thing has
-     */
-    virtual void disableCache() noexcept { }
-    /**
-     * @brief Reactivate any sort of caching this memory thing has
-     */
-    virtual void enableCache() noexcept { }
-
     [[nodiscard]] constexpr bool bypassesCache() const noexcept { return bypassesCache_; }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
     virtual void signalHaltState(const char* thing) noexcept { ::signalHaltState(thing); }
