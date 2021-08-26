@@ -55,7 +55,7 @@ ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 
 
 CoreChipsetFeatures chipsetFunctions(0);
-DisplayThing displayCommandSet(0x200);
+//DisplayThing displayCommandSet(0x200);
 using OnboardMemoryBlock = OnboardPSRAMBlock;
 OnboardMemoryBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
@@ -461,8 +461,8 @@ void setup() {
         fs.begin();
         chipsetFunctions.begin();
         processorInterface.begin();
-        displayCommandSet.begin();
-        displayReady = true;
+        //displayCommandSet.begin();
+        //displayReady = true;
         ramBlock.begin();
         // okay now we need to actually open boot.system and copy it into the ramBlock
         if (!SD.exists(const_cast<char*>("boot.sys"))) {
@@ -576,12 +576,14 @@ void loop() {
 [[noreturn]]
 void
 signalHaltState(const __FlashStringHelper* haltMsg) {
+#if 0
     if (displayReady) {
         displayCommandSet.clearScreen();
         displayCommandSet.setCursor(0, 0);
         displayCommandSet.setTextSize(2);
         displayCommandSet.println(haltMsg);
     }
+#endif
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
@@ -591,12 +593,14 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
 [[noreturn]]
 void
 signalHaltState(const char* haltMsg) {
+#if 0
     if (displayReady) {
         displayCommandSet.clearScreen();
         displayCommandSet.setCursor(0, 0);
         displayCommandSet.setTextSize(2);
         displayCommandSet.println(haltMsg);
     }
+#endif
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
@@ -617,7 +621,7 @@ getThing(Address address) noexcept {
         case 0xFE:
             switch (decomposedAddress.bytes[1]) {
                 case 0: return &chipsetFunctions;
-                case 2: return &displayCommandSet;
+                //case 2: return &displayCommandSet;
                 case 3: return &fs;
                 default: return &fallback;
             }
