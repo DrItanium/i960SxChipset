@@ -58,7 +58,6 @@ CoreChipsetFeatures chipsetFunctions(0);
 using OnboardMemoryBlock = OnboardPSRAMBlock;
 OnboardMemoryBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
-SDCardFilesystemInterface fs(0x300);
 
 
 
@@ -457,7 +456,11 @@ void setup() {
         purgeSRAMCache();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
-        fs.begin();
+        while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+            Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
+            delay(1000);
+        }
+        Serial.println(F("SD CARD UP!"));
         chipsetFunctions.begin();
         processorInterface.begin();
         //displayCommandSet.begin();
@@ -618,12 +621,7 @@ getThing(Address address) noexcept {
         case 3:
             return &ramBlock;
         case 0xFE:
-            switch (decomposedAddress.bytes[1]) {
-                case 0: return &chipsetFunctions;
-                //case 2: return &displayCommandSet;
-                case 3: return &fs;
-                default: return &fallback;
-            }
+            return &chipsetFunctions;
         default:
             return &fallback;
     }
