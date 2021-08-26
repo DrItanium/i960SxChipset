@@ -138,20 +138,12 @@ public:
         }
     }
 private:
-    union {
-        // align to 40-bytes, this does waste some space on l2 cache
-        // (we have to make the entries 64-bytes in size for simple alignment)
-        byte backingStorage[ActualCacheEntrySize] = { 0 };
-        struct {
-            SplitWord16 data[NumWordsCached]; // 32 bytes
-            Address tag; // 4 bytes
-            MemoryThing* backingThing; // 2 bytes
-            bool valid_;
-            bool dirty_;
-        } PACKED_ATTRIBUTE ;
-    };
+    SplitWord16 data[NumWordsCached]; // 32 bytes
+    Address tag; // 4 bytes
+    MemoryThing* backingThing; // 2 bytes
+    bool valid_;
+    bool dirty_;
 };
-static_assert(sizeof(CacheEntry) == CacheEntry::ActualCacheEntrySize);
 
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
