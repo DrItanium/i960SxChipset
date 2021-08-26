@@ -38,7 +38,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryMappedFileThing.h"
 #include "SDCardFileSystemInterface.h"
 #include "CoreChipsetFeatures.h"
-#include "TFTShieldThing.h"
 #include "PSRAMChip.h"
 
 bool displayReady = false;
