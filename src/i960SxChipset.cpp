@@ -170,6 +170,7 @@ inline bool informCPU() noexcept {
     DigitalPin<i960Pinout::Ready>::pulse();
     return isBurstLast;
 }
+
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
