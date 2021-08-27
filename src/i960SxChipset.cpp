@@ -177,45 +177,73 @@ inline void invocationBody() noexcept {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    if (auto& theThing = getThing(processorInterface.newDataCycle()); theThing.bypassesCache()) {
-        if (isReadOperation) {
-            do {
-                processorInterface.setDataBits(theThing.read(processorInterface.getAddress(),
-                                                             processorInterface.getStyle()));
-                if (informCPU()) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        } else {
-            do {
-                theThing.write(processorInterface.getAddress(), processorInterface.getDataBits(), processorInterface.getStyle());
-                if (informCPU()) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        }
-    } else {
-        if (auto& theEntry = getLine(theThing); isReadOperation) {
-            do {
+    if (auto targetDevice = processorInterface.newDataCycle(); targetDevice < 4) {
+        // okay we are dealing with the psram chips
+        auto& theEntry = getLine(ramBlock);
+        do {
+            if (isReadOperation) {
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-                if (informCPU()) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
-        } else {
-            do {
+            } else {
                 theEntry.set(processorInterface.getCacheOffsetEntry(),
                              processorInterface.getStyle(),
                              SplitWord16{processorInterface.getDataBits()});
-                if (informCPU()) {
-                    break;
+            }
+            if (informCPU()) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
+    } else if (targetDevice == 0xFE) {
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                // we don't want incorrect options
+                SplitWord32 divisor(processorInterface.getAddress());
+                if (divisor.bytes[0] == 0 && !isReadOperation) {
+                    // flush
+                    Serial.flush();
+                } else if (divisor.bytes[0] == 2 && isReadOperation) {
+                    processorInterface.setDataBits(Serial.available());
+                } else if (divisor.bytes[0] == 4 && isReadOperation) {
+                    processorInterface.setDataBits(Serial.availableForWrite()) ;
+                } else if (divisor.bytes[0] == 6) {
+                    if (isReadOperation) {
+                        processorInterface.setDataBits(Serial.read());
+                    } else {
+                        Serial.write(static_cast<byte>(processorInterface.getDataBits()));
+                    }
+                } else {
+                    if (isReadOperation) {
+                        processorInterface.setDataBits(0);
+                    }
                 }
-                processorInterface.burstNext();
-            } while (true);
-        }
+                DigitalPin<i960Pinout::Ready>::pulse();
+                return;
+            } else {
+                // generally we shouldn't see burst operations here but who knows!
+                do {
+                    if (isReadOperation) {
+                        processorInterface.setDataBits(chipsetFunctions.read(processorInterface.getAddress(),
+                                                                             processorInterface.getStyle()));
+                    } else {
+                        chipsetFunctions.write(processorInterface.getAddress(), processorInterface.getDataBits(),
+                                               processorInterface.getStyle());
+                    }
+                    if (informCPU()) {
+                        break;
+                    }
+                    processorInterface.burstNext();
+                } while (true);
+            }
+    } else {
+        // fallback case
+        do {
+            if (isReadOperation) {
+                processorInterface.setDataBits(0);
+            }
+            if (informCPU()) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
     }
 }
 
