@@ -170,7 +170,6 @@ inline bool informCPU() noexcept {
     DigitalPin<i960Pinout::Ready>::pulse();
     return isBurstLast;
 }
-
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
@@ -195,45 +194,20 @@ inline void invocationBody() noexcept {
             processorInterface.burstNext();
         } while (true);
     } else if (targetDevice == 0xFE) {
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                // we don't want incorrect options
-                SplitWord32 divisor(processorInterface.getAddress());
-                if (divisor.bytes[0] == 0 && !isReadOperation) {
-                    // flush
-                    Serial.flush();
-                } else if (divisor.bytes[0] == 2 && isReadOperation) {
-                    processorInterface.setDataBits(Serial.available());
-                } else if (divisor.bytes[0] == 4 && isReadOperation) {
-                    processorInterface.setDataBits(Serial.availableForWrite()) ;
-                } else if (divisor.bytes[0] == 6) {
-                    if (isReadOperation) {
-                        processorInterface.setDataBits(Serial.read());
-                    } else {
-                        Serial.write(static_cast<byte>(processorInterface.getDataBits()));
-                    }
-                } else {
-                    if (isReadOperation) {
-                        processorInterface.setDataBits(0);
-                    }
-                }
-                DigitalPin<i960Pinout::Ready>::pulse();
-                return;
+        // generally we shouldn't see burst operations here but who knows!
+        do {
+            if (isReadOperation) {
+                processorInterface.setDataBits(chipsetFunctions.read(processorInterface.getAddress(),
+                                                                     processorInterface.getStyle()));
             } else {
-                // generally we shouldn't see burst operations here but who knows!
-                do {
-                    if (isReadOperation) {
-                        processorInterface.setDataBits(chipsetFunctions.read(processorInterface.getAddress(),
-                                                                             processorInterface.getStyle()));
-                    } else {
-                        chipsetFunctions.write(processorInterface.getAddress(), processorInterface.getDataBits(),
-                                               processorInterface.getStyle());
-                    }
-                    if (informCPU()) {
-                        break;
-                    }
-                    processorInterface.burstNext();
-                } while (true);
+                chipsetFunctions.write(processorInterface.getAddress(), processorInterface.getDataBits(),
+                                       processorInterface.getStyle());
             }
+            if (informCPU()) {
+                break;
+            }
+            processorInterface.burstNext();
+        } while (true);
     } else {
         // fallback case
         do {
