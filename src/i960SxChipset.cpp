@@ -45,6 +45,15 @@ CoreChipsetFeatures chipsetFunctions(0);
 OnboardPSRAMBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
 
+inline MemoryThing& getThing(byte offset) noexcept {
+    if (offset < 4) {
+        return ramBlock;
+    } else if (offset == 0xFE) {
+        return chipsetFunctions;
+    } else {
+        return fallback;
+    }
+}
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
@@ -168,7 +177,7 @@ inline void invocationBody() noexcept {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    if (auto& theThing = processorInterface.newDataCycle(); theThing.bypassesCache()) {
+    if (auto& theThing = getThing(processorInterface.newDataCycle()); theThing.bypassesCache()) {
         if (isReadOperation) {
             do {
                 processorInterface.setDataBits(theThing.read(processorInterface.getAddress(),
@@ -400,18 +409,4 @@ signalHaltState(const char* haltMsg) {
 }
 
 
-MemoryThing*
-getThing(byte offset) noexcept {
-    switch (offset) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-            return &ramBlock;
-        case 0xFE:
-            return &chipsetFunctions;
-        default:
-            return &fallback;
-    }
-}
 SdFat SD;

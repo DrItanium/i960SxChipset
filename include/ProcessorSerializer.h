@@ -102,7 +102,7 @@ public:
     }
     [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept { return cacheOffsetEntry_; }
 public:
-    MemoryThing& newDataCycle() noexcept;
+    byte newDataCycle() noexcept;
     void burstNext() noexcept;
 
 private:

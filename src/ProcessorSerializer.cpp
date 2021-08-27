@@ -226,7 +226,7 @@ ProcessorInterface::begin() noexcept {
     }
 }
 
-MemoryThing&
+byte
 ProcessorInterface::newDataCycle() noexcept {
 
     SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
@@ -246,7 +246,7 @@ ProcessorInterface::newDataCycle() noexcept {
     auto bits = PINA;
     lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
-    return *getThing(address_.bytes[3]);
+    return address_.bytes[3];
 }
 
 void ProcessorInterface::burstNext() noexcept {
