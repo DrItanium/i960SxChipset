@@ -86,7 +86,6 @@ public:
         return TaggedAddress(address).getTagIndex();
     }
 public:
-    CacheEntry() noexcept { };
     [[nodiscard]] constexpr bool valid() const noexcept { return valid_; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_; }
 public:
@@ -103,16 +102,6 @@ public:
         backingThing = &thing;
         // this is a _very_ expensive operation
         thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
-    }
-    void invalidate() noexcept {
-        if (valid() && isDirty()) {
-            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
-            valid_ = false;
-            dirty_ = false;
-            tag = 0;
-            backingThing = nullptr;
-            //unused = 0; // make sure that this is correctly purged
-        }
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
@@ -142,7 +131,6 @@ public:
                 break;
             default:
                 signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
-                break;
         }
     }
 private:
