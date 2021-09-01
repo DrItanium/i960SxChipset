@@ -64,7 +64,56 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    IOEXPANDER_PB4,                 \
    IOEXPANDER_PB5,                 \
    IOEXPANDER_PB6,                 \
-   IOEXPANDER_PB7
+   IOEXPANDER_PB7,                 \
+   IOEXPANDER_PC0,                 \
+   IOEXPANDER_PC1,                 \
+   IOEXPANDER_PC2,                 \
+   IOEXPANDER_PC3,                 \
+   IOEXPANDER_PC4,                 \
+   IOEXPANDER_PC5,                 \
+   IOEXPANDER_PC6,                 \
+   IOEXPANDER_PC7,                 \
+   IOEXPANDER_PD0,                 \
+   IOEXPANDER_PD1,                 \
+   IOEXPANDER_PD2,                 \
+   IOEXPANDER_PD3,                 \
+   IOEXPANDER_PD4,                 \
+   IOEXPANDER_PD5,                 \
+   IOEXPANDER_PD6,                 \
+   IOEXPANDER_PD7,                 \
+   IOEXPANDER_PE0,                 \
+   IOEXPANDER_PE1,                 \
+   IOEXPANDER_PE2,                 \
+   IOEXPANDER_PE3,                 \
+   IOEXPANDER_PE4,                 \
+   IOEXPANDER_PE5,                 \
+   IOEXPANDER_PE6,                 \
+   IOEXPANDER_PE7,                 \
+   IOEXPANDER_PF0,                 \
+   IOEXPANDER_PF1,                 \
+   IOEXPANDER_PF2,                 \
+   IOEXPANDER_PF3,                 \
+   IOEXPANDER_PF4,                 \
+   IOEXPANDER_PF5,                 \
+   IOEXPANDER_PF6,                 \
+   IOEXPANDER_PF7,                 \
+   IOEXPANDER_PG0,                 \
+   IOEXPANDER_PG1,                 \
+   IOEXPANDER_PG2,                 \
+   IOEXPANDER_PG3,                 \
+   IOEXPANDER_PG4,                 \
+   IOEXPANDER_PG5,                 \
+   IOEXPANDER_PG6,                 \
+   IOEXPANDER_PG7,                 \
+   IOEXPANDER_PH0,                 \
+   IOEXPANDER_PH1,                 \
+   IOEXPANDER_PH2,                 \
+   IOEXPANDER_PH3,                 \
+   IOEXPANDER_PH4,                 \
+   IOEXPANDER_PH5,                 \
+   IOEXPANDER_PH6,                 \
+   IOEXPANDER_PH7
+
 
 
 enum class UndefinedPinout : int {
@@ -177,11 +226,61 @@ constexpr bool attachedToIOExpander(E value) noexcept {
         case E::IOEXPANDER_PB5:
         case E::IOEXPANDER_PB6:
         case E::IOEXPANDER_PB7:
+        case E::IOEXPANDER_PC0:
+        case E::IOEXPANDER_PC1:
+        case E::IOEXPANDER_PC2:
+        case E::IOEXPANDER_PC3:
+        case E::IOEXPANDER_PC4:
+        case E::IOEXPANDER_PC5:
+        case E::IOEXPANDER_PC6:
+        case E::IOEXPANDER_PC7:
+        case E::IOEXPANDER_PD0:
+        case E::IOEXPANDER_PD1:
+        case E::IOEXPANDER_PD2:
+        case E::IOEXPANDER_PD3:
+        case E::IOEXPANDER_PD4:
+        case E::IOEXPANDER_PD5:
+        case E::IOEXPANDER_PD6:
+        case E::IOEXPANDER_PD7:
+        case E::IOEXPANDER_PE0:
+        case E::IOEXPANDER_PE1:
+        case E::IOEXPANDER_PE2:
+        case E::IOEXPANDER_PE3:
+        case E::IOEXPANDER_PE4:
+        case E::IOEXPANDER_PE5:
+        case E::IOEXPANDER_PE6:
+        case E::IOEXPANDER_PE7:
+        case E::IOEXPANDER_PF0:
+        case E::IOEXPANDER_PF1:
+        case E::IOEXPANDER_PF2:
+        case E::IOEXPANDER_PF3:
+        case E::IOEXPANDER_PF4:
+        case E::IOEXPANDER_PF5:
+        case E::IOEXPANDER_PF6:
+        case E::IOEXPANDER_PF7:
+        case E::IOEXPANDER_PG0:
+        case E::IOEXPANDER_PG1:
+        case E::IOEXPANDER_PG2:
+        case E::IOEXPANDER_PG3:
+        case E::IOEXPANDER_PG4:
+        case E::IOEXPANDER_PG5:
+        case E::IOEXPANDER_PG6:
+        case E::IOEXPANDER_PG7:
+        case E::IOEXPANDER_PH0:
+        case E::IOEXPANDER_PH1:
+        case E::IOEXPANDER_PH2:
+        case E::IOEXPANDER_PH3:
+        case E::IOEXPANDER_PH4:
+        case E::IOEXPANDER_PH5:
+        case E::IOEXPANDER_PH6:
+        case E::IOEXPANDER_PH7:
             return true;
         default:
             return false;
     }
 }
+template<auto value>
+constexpr auto attachedToIOExpander_v = attachedToIOExpander<decltype(value)>(value);
 template<typename E>
 constexpr bool isValidPin(E pin) noexcept {
     return static_cast<int>(pin) < static_cast<int>(E::Count) &&
@@ -289,7 +388,7 @@ constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega
         10_MHz,
         8_MHz, // due to the current design, we have to run the psram at 5 Mhz
         false,
-        true
+        false
 };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
 #if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
