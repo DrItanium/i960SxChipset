@@ -228,16 +228,18 @@ ProcessorInterface::begin() noexcept {
 
 byte
 ProcessorInterface::newDataCycle() noexcept {
-
+    constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+    constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
+    constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
     SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
     digitalWrite<i960Pinout::GPIOSelect, LOW>();
-    SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines));
-    SPI.transfer(static_cast<byte>(MCP23x17Registers::GPIO));
+    SPI.transfer(Lower16Opcode);
+    SPI.transfer(GPIOOpcode);
     address_.bytes[0] = SPI.transfer(0);
     address_.bytes[1] = SPI.transfer(0);
     DigitalPin<i960Pinout::GPIOSelect>::pulse(); // go high then low again without having to capture the interrupt state multiple times
-    SPI.transfer(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines));
-    SPI.transfer(static_cast<byte>(MCP23x17Registers::GPIO));
+    SPI.transfer(Upper16Opcode);
+    SPI.transfer(GPIOOpcode);
     address_.bytes[2] = SPI.transfer(0);
     address_.bytes[3] = SPI.transfer(0);
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
