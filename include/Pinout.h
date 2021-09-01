@@ -61,8 +61,6 @@ enum class i960Pinout : int {
     Reset960= TargetBoard::getReset960Pin(),
     Int0_ = TargetBoard::getInt0Pin(),
     // PD7 is not used by simple management card
-    SCL = TargetBoard::getSclPin(),
-    SDA = TargetBoard::getSdaPin(),
     SPI_OFFSET0 = TargetBoard::getSpiOffset0Pin(),
     SPI_OFFSET1 = TargetBoard::getSpiOffset1Pin(),
     SPI_OFFSET2 = TargetBoard::getSpiOffset2Pin(),

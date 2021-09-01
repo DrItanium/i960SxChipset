@@ -122,8 +122,6 @@ enum class UndefinedPinout : int {
     MOSI,
     SCK,
     CS,
-    SCL,
-    SDA,
     CLKO,
     READY_,
     DEN_,
@@ -185,8 +183,6 @@ enum class Pinout1284p_Type1 : int {
     SCK = PIN_SPI_SCK,
     MOSI = PIN_SPI_MOSI,
     MISO = PIN_SPI_MISO,
-    SCL = PIN_WIRE_SCL,
-    SDA = PIN_WIRE_SDA,
     CLKO = PORT_B1,
     READY_ = PORT_B0,
     AS_ = PORT_B2,
@@ -313,23 +309,20 @@ public:
                                uint32_t maxOpenFiles,
                                uint32_t ioExpanderSpeedCap,
                                uint32_t psramSpeedCap,
-                               bool hasBuiltinSDCard,
-                               bool usesDisplayShield
+                               bool hasBuiltinSDCard
     ) noexcept : sramAmount_(sramSize),
                  cacheLineCount_(cacheLineCount),
                  cacheLineSize_(cacheLineSize),
                  maximumNumberOfOpenFiles_(maxOpenFiles),
                  ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
                  psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap),
-                 builtinSDCard_(hasBuiltinSDCard),
-                 usesDisplayShield_(usesDisplayShield) { }
+                 builtinSDCard_(hasBuiltinSDCard) { }
 
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
     [[nodiscard]] constexpr uint32_t getCacheLineCount() const noexcept { return cacheLineCount_; }
     [[nodiscard]] constexpr uint32_t getCacheLineSize() const noexcept { return cacheLineSize_; }
     [[nodiscard]] constexpr uint32_t getMaximumNumberOfOpenFiles() const noexcept { return maximumNumberOfOpenFiles_; }
     [[nodiscard]] constexpr auto hasBuiltinSDCard() const noexcept { return builtinSDCard_; }
-    [[nodiscard]] constexpr auto usesDisplayShield() const noexcept { return usesDisplayShield_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
     [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
     [[nodiscard]] constexpr auto getReadyPin() const noexcept { return static_cast<int>(T::READY_); }
@@ -342,8 +335,6 @@ public:
     [[nodiscard]] constexpr auto getDenPin() const noexcept { return static_cast<int>(T::DEN_); }
     [[nodiscard]] constexpr auto getReset960Pin() const noexcept { return static_cast<int>(T::RESET960_); }
     [[nodiscard]] constexpr auto getInt0Pin() const noexcept { return static_cast<int>(T::Int0_); }
-    [[nodiscard]] constexpr auto getSclPin() const noexcept { return static_cast<int>(T::SCL); }
-    [[nodiscard]] constexpr auto getSdaPin() const noexcept { return static_cast<int>(T::SDA); }
     [[nodiscard]] constexpr auto getSpiOffset0Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET0); }
     [[nodiscard]] constexpr auto getSpiOffset1Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET1); }
     [[nodiscard]] constexpr auto getSpiOffset2Pin() const noexcept { return static_cast<int>(T::SPI_OFFSET2); }
@@ -366,7 +357,6 @@ private:
     uint32_t ioExpanderPeripheralSpeed_;
     uint32_t psramSpeedCap_;
     bool builtinSDCard_;
-    bool usesDisplayShield_;
 };
 template<TargetMCU mcu>
 constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
@@ -375,7 +365,6 @@ constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
         32,
         10_MHz,
         8_MHz,
-        false,
         false
 };
 template<>
@@ -385,7 +374,6 @@ constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega
         32,
         10_MHz,
         8_MHz, // due to the current design, we have to run the psram at 5 Mhz
-        false,
         false
 };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
@@ -436,7 +424,6 @@ public:
  * @return True if defined via the command line
  */
     [[nodiscard]] static constexpr auto hasBuiltinSDCard() noexcept { return BoardDescription<getMCUTarget()>.hasBuiltinSDCard(); }
-    [[nodiscard]] static constexpr auto usesDisplayShield() noexcept { return BoardDescription<getMCUTarget()>.usesDisplayShield(); }
     [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept { return BoardDescription<getMCUTarget()>.getSramAmount(); }
     [[nodiscard]] static constexpr auto numberOfCacheLines() noexcept { return BoardDescription<getMCUTarget()>.getCacheLineCount(); }
     [[nodiscard]] static constexpr auto cacheLineSize() noexcept { return BoardDescription<getMCUTarget()>.getCacheLineSize(); }
@@ -452,8 +439,6 @@ public:
     [[nodiscard]] static constexpr auto getDenPin() noexcept { return BoardDescription<getMCUTarget()>.getDenPin(); }
     [[nodiscard]] static constexpr auto getReset960Pin() noexcept { return BoardDescription<getMCUTarget()>.getReset960Pin(); }
     [[nodiscard]] static constexpr auto getInt0Pin() noexcept { return BoardDescription<getMCUTarget()>.getInt0Pin(); }
-    [[nodiscard]] static constexpr auto getSclPin() noexcept { return BoardDescription<getMCUTarget()>.getSclPin(); }
-    [[nodiscard]] static constexpr auto getSdaPin() noexcept { return BoardDescription<getMCUTarget()>.getSdaPin(); }
     [[nodiscard]] static constexpr auto getSpiOffset0Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset0Pin(); }
     [[nodiscard]] static constexpr auto getSpiOffset1Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset1Pin(); }
     [[nodiscard]] static constexpr auto getSpiOffset2Pin() noexcept { return BoardDescription<getMCUTarget()>.getSpiOffset2Pin(); }
