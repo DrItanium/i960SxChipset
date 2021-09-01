@@ -372,15 +372,4 @@ void loop() {
     invocationBody();
 }
 
-[[noreturn]]
-void
-signalHaltState(const __FlashStringHelper* haltMsg) {
-    Serial.println(haltMsg);
-    while(true) {
-        delay(1000);
-    }
-}
-
-
-
 SdFat SD;
