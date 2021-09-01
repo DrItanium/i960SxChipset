@@ -157,7 +157,6 @@ public:
     }
     [[nodiscard]] constexpr bool bypassesCache() const noexcept { return bypassesCache_; }
     virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
-    virtual void signalHaltState(const char* thing) noexcept { ::signalHaltState(thing); }
 private:
     Address base_;
     Address end_;
