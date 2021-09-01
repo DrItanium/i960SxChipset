@@ -279,8 +279,6 @@ constexpr bool attachedToIOExpander(E value) noexcept {
             return false;
     }
 }
-template<auto value>
-constexpr auto attachedToIOExpander_v = attachedToIOExpander<decltype(value)>(value);
 template<typename E>
 constexpr bool isValidPin(E pin) noexcept {
     return static_cast<int>(pin) < static_cast<int>(E::Count) &&

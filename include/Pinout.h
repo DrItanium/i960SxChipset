@@ -82,6 +82,8 @@ constexpr bool isValidPin(i960Pinout pin) noexcept {
 constexpr auto attachedToIOExpander(i960Pinout pinout) noexcept {
     return attachedToIOExpander<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pinout));
 }
+template<i960Pinout pin>
+constexpr bool attachedToIOExpander_v = attachedToIOExpander(pin);
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);
 }
