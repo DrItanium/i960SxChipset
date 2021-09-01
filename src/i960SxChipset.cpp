@@ -198,10 +198,14 @@ inline void invocationBody() noexcept {
         } while (true);
     } else {
         // fallback case
+        // do it once at the beginning and never again
+        if (isReadOperation) {
+            processorInterface.setDataBits(0);
+        }
         do {
-            if (isReadOperation) {
-                processorInterface.setDataBits(0);
-            }
+            // on writes we do nothing but throw the value on
+            // on reads we just keep the latch at 0 so we don't change a thing
+            // after the first operation
             if (informCPU()) {
                 break;
             }
