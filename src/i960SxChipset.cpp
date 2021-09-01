@@ -96,7 +96,8 @@ public:
      */
     void clear() noexcept {
         // clear all flags
-        flags_ = 0;
+        valid_ = false;
+        dirty_ = false;
         tag = 0;
         backingThing = nullptr;
         for (auto& a : data) {
@@ -125,13 +126,8 @@ private:
     SplitWord16 data[NumWordsCached]; // 32 bytes
     Address tag = 0; // 4 bytes
     MemoryThing* backingThing = nullptr; // 2 bytes
-    union {
-        // save precious sram by smashing flags into a single byte
-        byte flags_ = 0;
-        bool valid_ : 1;
-        bool dirty_ : 1;
-        // remaining 6 bits unused
-    };
+    bool valid_ = false;
+    bool dirty_ = false;
 };
 
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
