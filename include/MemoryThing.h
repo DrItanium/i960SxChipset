@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_MEMORYTHING_H
 #include <Arduino.h>
 #include "Pinout.h"
+[[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
 /**
  * @brief Describes the interface between a component and a memory request, it introduces some latency with the trade off being easier maintenance
  */
@@ -154,10 +155,7 @@ public:
         return blockRead(makeAddressRelative(baseAddress), buffer, count);
     }
     [[nodiscard]] constexpr bool bypassesCache() const noexcept { return bypassesCache_; }
-    [[noreturn]] virtual void signalHaltState(const __FlashStringHelper* msg) noexcept {
-        Serial.println(msg);
-        while (true) { delay(1000); }
-    }
+    [[noreturn]] virtual void signalHaltState(const __FlashStringHelper* thing) noexcept { ::signalHaltState(thing); }
 private:
     Address base_;
     Address end_;
