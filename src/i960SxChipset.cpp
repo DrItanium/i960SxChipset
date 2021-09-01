@@ -45,15 +45,6 @@ CoreChipsetFeatures chipsetFunctions(0);
 OnboardPSRAMBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
 
-inline MemoryThing& getThing(byte offset) noexcept {
-    if (offset < 4) {
-        return ramBlock;
-    } else if (offset == 0xFE) {
-        return chipsetFunctions;
-    } else {
-        return fallback;
-    }
-}
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
@@ -107,8 +98,8 @@ public:
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
      */
     void clear() noexcept {
-        valid_ = false;
-        dirty_ = false;
+        // clear all flags
+        flagsRaw_ = 0;
         tag = 0;
         backingThing = nullptr;
         for (auto& a : data) {
@@ -137,8 +128,13 @@ private:
     SplitWord16 data[NumWordsCached]; // 32 bytes
     Address tag; // 4 bytes
     MemoryThing* backingThing; // 2 bytes
-    bool valid_;
-    bool dirty_;
+    union {
+        // save precious sram by smashing flags into a single byte
+        byte flagsRaw_ = 0;
+        bool valid_ : 1;
+        bool dirty_ : 1;
+        // remaining 6 bits unused
+    };
 };
 
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
