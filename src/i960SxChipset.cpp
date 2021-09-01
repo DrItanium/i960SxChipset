@@ -96,7 +96,7 @@ public:
      */
     void clear() noexcept {
         // clear all flags
-        flagsRaw_ = 0;
+        flags_ = 0;
         tag = 0;
         backingThing = nullptr;
         for (auto& a : data) {
@@ -123,11 +123,11 @@ public:
     }
 private:
     SplitWord16 data[NumWordsCached]; // 32 bytes
-    Address tag; // 4 bytes
-    MemoryThing* backingThing; // 2 bytes
+    Address tag = 0; // 4 bytes
+    MemoryThing* backingThing = nullptr; // 2 bytes
     union {
         // save precious sram by smashing flags into a single byte
-        byte flagsRaw_ = 0;
+        byte flags_ = 0;
         bool valid_ : 1;
         bool dirty_ : 1;
         // remaining 6 bits unused
