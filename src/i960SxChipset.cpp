@@ -77,12 +77,9 @@ public:
         return TaggedAddress(address).getTagIndex();
     }
 public:
-    [[nodiscard]] constexpr bool valid() const noexcept { return valid_; }
-    [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_; }
-public:
     void reset(Address newTag, MemoryThing& thing) noexcept {
         // no match so pull the data in from main memory
-        if (valid() && isDirty()) {
+        if (valid_ && dirty_) {
             // just do the write out to disk to save time
             // still an expensive operation
             backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
@@ -106,7 +103,7 @@ public:
             a.wholeValue_ = 0;
         }
     }
-    [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid() && (tag == addr); }
+    [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid_ && (tag == addr); }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & OffsetMask]; }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         dirty_ = true;
