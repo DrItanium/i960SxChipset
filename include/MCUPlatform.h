@@ -94,7 +94,7 @@ enum class UndefinedPinout : int {
     BLAST_,
     FAIL960,
 };
-enum class Pinout1284p : int {
+enum class Pinout1284p_Type1 : int {
     // this is described in digial pin order!
     // leave this one alone
     PORT_B0 = 0,
@@ -202,7 +202,8 @@ static_assert(20_MHz == 20'000'000);
 #define NUM_ANALOG_OUTPUTS 0
 #endif
 enum class TargetMCU {
-    ATmega1284p,
+    ATmega1284p_Type1,
+    ATmega1284p_Type2,
     Unknown,
 };
 template<typename T>
@@ -281,7 +282,7 @@ constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
         false
 };
 template<>
-constexpr MCUConfiguration<Pinout1284p> BoardDescription<TargetMCU::ATmega1284p> = {
+constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         16_KB,
         256, 32,
         32,
@@ -320,12 +321,18 @@ public:
     [[nodiscard]] static constexpr auto getAnalogOutputCount() noexcept { return NUM_ANALOG_OUTPUTS; }
     [[nodiscard]] static constexpr TargetMCU getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
-        return TargetMCU::ATmega1284p;
+#ifdef CHIPSET_TYPE1
+        return TargetMCU::ATmega1284p_Type1;
+#elif defined(CHIPSET_TYPE2)
+        return TargetMCU::ATmega1284p_Type2;
+#else
+        return TargetMCU::Unknown;
+#endif
 #else
     return TargetMCU::Unknown;
 #endif
     }
-    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p; }
+    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type1 || getMCUTarget() == TargetMCU::ATmega1284p_Type2; }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
 /**
  * @brief Is there an onboard sdcard slot?
