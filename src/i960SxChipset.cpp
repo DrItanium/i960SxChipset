@@ -178,15 +178,23 @@ inline void invocationBody() noexcept {
     } else if (targetDevice == 0xFE) {
         // generally we shouldn't see burst operations here but who knows!
         if (isReadOperation) {
-            do {
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+                // not a burst transaction
                 processorInterface.setDataBits(
                         chipsetFunctions.read(processorInterface.getAddress(),
                                               processorInterface.getStyle()));
-                if (informCPU()) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
+                DigitalPin<i960Pinout::Ready>::pulse();
+            } else {
+                do {
+                    processorInterface.setDataBits(
+                            chipsetFunctions.read(processorInterface.getAddress(),
+                                                  processorInterface.getStyle()));
+                    if (informCPU()) {
+                        break;
+                    }
+                    processorInterface.burstNext();
+                } while (true);
+            }
         } else {
             do {
                 chipsetFunctions.write(processorInterface.getAddress(),
