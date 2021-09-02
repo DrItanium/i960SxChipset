@@ -48,7 +48,7 @@ FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
-class CacheEntry {
+class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
@@ -64,10 +64,15 @@ public:
 
     union TaggedAddress {
         constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
+        static TaggedAddress makeAlignedVersion(Address base) noexcept {
+            TaggedAddress theAddress(base);
+            theAddress.lowest = 0; // clear out the lowest bits
+            return theAddress;
+        }
         [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
-        //[[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
-        //[[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
-        //[[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
+        [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
+        [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
+        [[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
     private:
         Address base;
         struct {
@@ -136,10 +141,10 @@ private:
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 auto& getLine(MemoryThing& theThing) noexcept {
-    auto address = processorInterface.getAlignedAddress();
-    auto& theEntry = entries[CacheEntry::computeTagIndex(address)];
-    if (!theEntry.matches(address)) {
-        theEntry.reset(address, theThing);
+    auto theAddress = CacheEntry::TaggedAddress::makeAlignedVersion(processorInterface.getAddress());
+    auto& theEntry = entries[theAddress.getTagIndex()];
+    if (!theEntry.matches(theAddress.getAddress())) {
+        theEntry.reset(theAddress.getAddress(), theThing);
     }
     return theEntry;
 }

@@ -94,12 +94,6 @@ public:
     //[[nodiscard]] bool isWriteOperation() const noexcept;
     void setHOLDPin(bool value) noexcept;
     void setLOCKPin(bool value) noexcept;
-    [[nodiscard]] constexpr auto getAlignedAddress() const noexcept {
-        // a copy should actually be faster
-        auto copy = address_;
-        copy.bytes[0] &= 0xE0;
-        return copy.wholeValue_;
-    }
     [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept { return cacheOffsetEntry_; }
 public:
     byte newDataCycle() noexcept;
