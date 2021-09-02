@@ -58,18 +58,21 @@ public:
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
     static constexpr byte OffsetMask = static_cast<byte>(~TagMask) >> 1;  // remember that this 16-bit aligned
+    // sanity checks for optimization purposes
+    static_assert(LowestBitCount <= 8, "Offset must fit within a byte!");
+    static_assert(TagIndexSize <= 8, "Tag size index is too large for a single byte");
 
     union TaggedAddress {
-        constexpr explicit TaggedAddress(Address value = 0)  noexcept : base(value) { }
+        constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
         [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
-        [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
-        [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
-        [[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
+        //[[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
+        //[[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
+        //[[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
     private:
         Address base;
         struct {
             Address lowest : LowestBitCount;
-            Address tagIndex : TagIndexSize;
+            byte tagIndex : TagIndexSize;
             Address rest : UpperBitCount;
         };
     };
