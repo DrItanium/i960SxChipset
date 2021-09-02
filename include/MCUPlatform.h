@@ -507,7 +507,7 @@ constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega
         256, 32,
         32,
         10_MHz,
-        8_MHz, // due to the current design, we have to run the psram at 5 Mhz
+        5_MHz, // due to the current design, we have to run the psram at 5 Mhz
         false
 };
 [[nodiscard]] constexpr auto inDebugMode() noexcept {
