@@ -171,7 +171,7 @@ template<i960Pinout pin>
 }
 
 template<i960Pinout pin>
-inline void pulse(decltype(HIGH) from = HIGH, decltype(LOW) to = LOW) noexcept {
+inline void pulse() noexcept {
     // save registers and do the pulse
     uint8_t theSREG = SREG;
     cli();
