@@ -76,7 +76,7 @@ public:
     private:
         Address base;
         struct {
-            Address lowest : LowestBitCount;
+            byte lowest : LowestBitCount;
             byte tagIndex : TagIndexSize;
             Address rest : UpperBitCount;
         };
