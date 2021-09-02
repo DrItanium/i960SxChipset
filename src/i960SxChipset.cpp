@@ -81,9 +81,6 @@ public:
             Address rest : UpperBitCount;
         };
     };
-    static constexpr auto computeTagIndex(Address address) noexcept {
-        return TaggedAddress(address).getTagIndex();
-    }
 public:
     void reset(Address newTag, MemoryThing& thing) noexcept {
         // no match so pull the data in from main memory
