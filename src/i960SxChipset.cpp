@@ -177,19 +177,27 @@ inline void invocationBody() noexcept {
         } while (true);
     } else if (targetDevice == 0xFE) {
         // generally we shouldn't see burst operations here but who knows!
-        do {
-            if (isReadOperation) {
-                processorInterface.setDataBits(chipsetFunctions.read(processorInterface.getAddress(),
-                                                                     processorInterface.getStyle()));
-            } else {
-                chipsetFunctions.write(processorInterface.getAddress(), processorInterface.getDataBits(),
+        if (isReadOperation) {
+            do {
+                processorInterface.setDataBits(
+                        chipsetFunctions.read(processorInterface.getAddress(),
+                                              processorInterface.getStyle()));
+                if (informCPU()) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            do {
+                chipsetFunctions.write(processorInterface.getAddress(),
+                                       processorInterface.getDataBits(),
                                        processorInterface.getStyle());
-            }
-            if (informCPU()) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
+                if (informCPU()) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
     } else {
         // fallback case
         // do it once at the beginning and never again
