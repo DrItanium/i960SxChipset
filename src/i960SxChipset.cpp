@@ -182,19 +182,24 @@ inline void invocationBody() noexcept {
         }
     } else if (targetDevice == 0xFE) {
         // generally we shouldn't see burst operations here but who knows!
-        do {
-
-            if (auto address = processorInterface.getAddress(); isReadOperation) {
-
-                processorInterface.setDataBits(CoreChipsetFeatures::read(address));
-            } else {
-                CoreChipsetFeatures::write(address, processorInterface.getDataBits());
-            }
-            if (informCPU()) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
+        if (isReadOperation) {
+            do {
+                processorInterface.setDataBits(CoreChipsetFeatures::read(processorInterface.getAddress()));
+                if (informCPU()) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            do {
+                CoreChipsetFeatures::write(processorInterface.getAddress(),
+                                           processorInterface.getDataBits());
+                if (informCPU()) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
     } else {
         // fallback case
         // do it once at the beginning and never again
