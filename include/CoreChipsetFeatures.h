@@ -64,7 +64,30 @@ public:
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
     void begin() noexcept { }
-    uint16_t read(Address address, LoadStoreStyle style) noexcept;
-    void write(Address address, uint16_t value, LoadStoreStyle style) noexcept;
+    uint16_t
+    read(Address address) noexcept {
+        // force override the default implementation
+        SplitWord32 addr(address);
+        switch (static_cast<Registers>(addr.bytes[0])) {
+            case Registers::ConsoleIO: return Serial.read();
+            case Registers::ConsoleAvailable: return Serial.available();
+            case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
+            default: return 0;
+        }
+    }
+    void
+    write(Address address, uint16_t value) noexcept {
+        SplitWord32 addr(address);
+        switch (static_cast<Registers>(addr.bytes[0])) {
+            case Registers::ConsoleFlush:
+                Serial.flush();
+                break;
+            case Registers::ConsoleIO:
+                Serial.write(static_cast<char>(value));
+                break;
+            default:
+                break;
+        }
+    }
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

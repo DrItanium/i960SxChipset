@@ -186,15 +186,11 @@ inline void invocationBody() noexcept {
         if (isReadOperation) {
             if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
                 // not a burst transaction
-                processorInterface.setDataBits(
-                        chipsetFunctions.read(processorInterface.getAddress(),
-                                              processorInterface.getStyle()));
+                processorInterface.setDataBits(chipsetFunctions.read(processorInterface.getAddress()));
                 DigitalPin<i960Pinout::Ready>::pulse();
             } else {
                 do {
-                    processorInterface.setDataBits(
-                            chipsetFunctions.read(processorInterface.getAddress(),
-                                                  processorInterface.getStyle()));
+                    processorInterface.setDataBits(chipsetFunctions.read(processorInterface.getAddress()));
                     if (informCPU()) {
                         break;
                     }
@@ -204,14 +200,12 @@ inline void invocationBody() noexcept {
         } else {
             if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
                 chipsetFunctions.write(processorInterface.getAddress(),
-                                       processorInterface.getDataBits(),
-                                       processorInterface.getStyle());
+                                       processorInterface.getDataBits());
                 DigitalPin<i960Pinout::Ready>::pulse();
             } else {
                 do {
                     chipsetFunctions.write(processorInterface.getAddress(),
-                                           processorInterface.getDataBits(),
-                                           processorInterface.getStyle());
+                                           processorInterface.getDataBits());
                     if (informCPU()) {
                         break;
                     }

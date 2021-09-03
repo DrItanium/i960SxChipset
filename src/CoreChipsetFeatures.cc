@@ -27,28 +27,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 #include "CoreChipsetFeatures.h"
 
-uint16_t
-CoreChipsetFeatures::read(Address address, LoadStoreStyle) noexcept {
-    // force override the default implementation
-    SplitWord32 addr(address);
-    switch (static_cast<Registers>(addr.bytes[0])) {
-        case Registers::ConsoleIO: return Serial.read();
-        case Registers::ConsoleAvailable: return Serial.available();
-        case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
-        default: return 0;
-    }
-}
-void
-CoreChipsetFeatures::write(Address address, uint16_t value, LoadStoreStyle) noexcept {
-    SplitWord32 addr(address);
-    switch (static_cast<Registers>(addr.bytes[0])) {
-        case Registers::ConsoleFlush:
-            Serial.flush();
-            break;
-        case Registers::ConsoleIO:
-            Serial.write(static_cast<char>(value));
-            break;
-        default:
-            break;
-    }
-}
