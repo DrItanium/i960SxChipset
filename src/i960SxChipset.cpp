@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 // the core devices
-CoreChipsetFeatures chipsetFunctions(0);
+CoreChipsetFeatures chipsetFunctions;
 OnboardPSRAMBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
 
@@ -185,24 +185,10 @@ inline void invocationBody() noexcept {
         // generally we shouldn't see burst operations here but who knows!
         if (isReadOperation) {
             if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                SplitWord32 address{processorInterface.getAddress()};
                 // not a burst transaction
-                switch (address.bytes[0]) {
-                    case 2:
-                        processorInterface.setDataBits(Serial.available());
-                    case 4:
-                        processorInterface.setDataBits(Serial.availableForWrite());
-                        break;
-                    case 6:
-                        processorInterface.setDataBits(Serial.read());
-                        break;
-                    case 0:
-                        Serial.flush();
-                        // exploit fallthrough
-                    default:
-                        processorInterface.setDataBits(0);
-                        break;
-                }
+                processorInterface.setDataBits(
+                        chipsetFunctions.read(processorInterface.getAddress(),
+                                              processorInterface.getStyle()));
                 DigitalPin<i960Pinout::Ready>::pulse();
             } else {
                 do {

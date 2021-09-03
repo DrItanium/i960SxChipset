@@ -30,9 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_CORECHIPSETFEATURES_H
 #include "MemoryThing.h"
 #include "ProcessorSerializer.h"
-class CoreChipsetFeatures : public IOSpaceThing {
+class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
-    static constexpr auto AllowDebuggingStatements = true;
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -63,12 +62,9 @@ public:
         ConsoleIO = ConsoleIO0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
-    explicit CoreChipsetFeatures(Address offsetFromIOBase = 0);
-    ~CoreChipsetFeatures() override = default;
 public:
-    Address makeAddressRelative(Address input) const noexcept override;
-    bool respondsTo(Address address) const noexcept override;
-    uint16_t read(Address address, LoadStoreStyle style) noexcept override;
-    void write(Address address, uint16_t value, LoadStoreStyle style) noexcept override;
+    void begin() noexcept { }
+    uint16_t read(Address address, LoadStoreStyle style) noexcept;
+    void write(Address address, uint16_t value, LoadStoreStyle style) noexcept;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

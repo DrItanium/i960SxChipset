@@ -27,21 +27,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 #include "CoreChipsetFeatures.h"
 
-CoreChipsetFeatures::CoreChipsetFeatures(Address offsetFromIOBase) : IOSpaceThing(offsetFromIOBase, offsetFromIOBase + 0x100) { }
-
-
-Address
-CoreChipsetFeatures::makeAddressRelative(Address input) const noexcept {
-    // we already know that this address is exactly one byte wide so just return the lowest byte as it's own thing
-    return SplitWord32(input).bytes[0];
-}
-bool
-CoreChipsetFeatures::respondsTo(Address address) const noexcept {
-    SplitWord32 theAddr(address);
-    SplitWord32 theBase(getBaseAddress());
-    return (theAddr.bytes[3] == theBase.bytes[3]) && // okay we are in io space
-           (theAddr.bytes[1] == theBase.bytes[1]);   // and the proper sub subsection of io space
-}
 uint16_t
 CoreChipsetFeatures::read(Address address, LoadStoreStyle) noexcept {
     // force override the default implementation
