@@ -211,18 +211,18 @@ ProcessorInterface::begin() noexcept {
         // should receive it.
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
-        auto iocon = read8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON>();
-        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON>(iocon | 0b0000'1000);
+        auto iocon = read8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>();
+        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(iocon | 0b0000'1000);
         // now all devices tied to this ~CS pin have separate addresses
         // make each of these inputs
-        writeDirection<IOExpanderAddress::Lower16Lines>(0xFFFF);
-        writeDirection<IOExpanderAddress::Upper16Lines>(0xFFFF);
-        writeDirection<IOExpanderAddress::DataLines>(dataLinesDirection_);
-        writeDirection<IOExpanderAddress::MemoryCommitExtras>(0x005F);
+        writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
+        writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
+        writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_);
+        writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0x005F);
         // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
-        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(0b1000'0000);
+        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
         // write the default value out to the latch to start with
-        write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT>(latchedDataOutput);
+        write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput);
         SPI.endTransaction();
     }
 }
@@ -246,8 +246,7 @@ ProcessorInterface::newDataCycle() noexcept {
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     SPI.endTransaction();
     // no need to re-read the burst address bits
-    auto bits = PINA;
-    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
+    lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
     return address_.bytes[3];
 }
@@ -258,7 +257,6 @@ ProcessorInterface::burstNext() noexcept {
     // next 16-bit word
     // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
     address_.bytes[0] += 2;
-    auto bits = PINA;
-    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
+    lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
     ++cacheOffsetEntry_;
 }
