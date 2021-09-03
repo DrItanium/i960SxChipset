@@ -354,6 +354,9 @@ public:
             Serial.println(F("Done bringing up psram memory blocks!"));
         }
     }
+    static constexpr bool respondsTo(byte index) noexcept {
+        return index < 4;
+    }
 private:
     static inline Decomposition currentIndex_ { 0xFF };
 };
