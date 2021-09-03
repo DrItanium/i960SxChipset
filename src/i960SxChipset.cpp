@@ -79,19 +79,18 @@ public:
         };
     };
 public:
-    void reset(Address newTag, MemoryThing& thing) noexcept {
+    void reset(Address newTag) noexcept {
         // no match so pull the data in from main memory
         if (valid_ && dirty_) {
             // just do the write out to disk to save time
             // still an expensive operation
-            backingThing->write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+            ramBlock.write(tag, reinterpret_cast<byte*>(data), sizeof(data));
         }
         valid_ = true; // always set this
         dirty_ = false;
         tag = newTag;
-        backingThing = &thing;
         // this is a _very_ expensive operation
-        thing.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+        ramBlock.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
@@ -101,7 +100,6 @@ public:
         valid_ = false;
         dirty_ = false;
         tag = 0;
-        backingThing = nullptr;
         for (auto& a : data) {
             a.wholeValue_ = 0;
         }
@@ -127,18 +125,17 @@ public:
 private:
     SplitWord16 data[NumWordsCached]; // 32 bytes
     Address tag = 0; // 4 bytes
-    MemoryThing* backingThing = nullptr; // 2 bytes
     bool valid_ = false;
     bool dirty_ = false;
 };
 
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
-auto& getLine(MemoryThing& theThing) noexcept {
+auto& getLine() noexcept {
     auto theAddress = CacheEntry::TaggedAddress::makeAlignedVersion(ProcessorInterface::getAddress());
     auto& theEntry = entries[theAddress.getTagIndex()];
     if (!theEntry.matches(theAddress.getAddress())) {
-        theEntry.reset(theAddress.getAddress(), theThing);
+        theEntry.reset(theAddress.getAddress());
     }
     return theEntry;
 }
@@ -158,7 +155,7 @@ inline void invocationBody() noexcept {
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (auto targetDevice = ProcessorInterface::newDataCycle(); targetDevice < 4) {
         // okay we are dealing with the psram chips
-        auto& theEntry = getLine(ramBlock);
+        auto& theEntry = getLine();
         if (isReadOperation) {
             do {
                 ProcessorInterface::setDataBits(theEntry.get(ProcessorInterface::getCacheOffsetEntry()).getWholeValue());
