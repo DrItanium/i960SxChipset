@@ -261,5 +261,6 @@ ProcessorInterface::burstNext() noexcept {
     // next 16-bit word
     // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
     address_.bytes[0] += 2;
+    // make sure that we always have an up to date copy of the cache offset entry
     computeInitialCacheOffset();
 }
