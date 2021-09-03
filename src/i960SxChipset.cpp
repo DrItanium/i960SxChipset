@@ -39,8 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
 
-// the core devices
-OnboardPSRAMBlock ramBlock;
 
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
@@ -84,13 +82,13 @@ public:
         if (valid_ && dirty_) {
             // just do the write out to disk to save time
             // still an expensive operation
-            ramBlock.write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+            OnboardPSRAMBlock::write(tag, reinterpret_cast<byte*>(data), sizeof(data));
         }
         valid_ = true; // always set this
         dirty_ = false;
         tag = newTag;
         // this is a _very_ expensive operation
-        ramBlock.read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+        OnboardPSRAMBlock::read(tag, reinterpret_cast<byte*>(data), sizeof (data));
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
@@ -273,7 +271,7 @@ void setup() {
         Serial.println(F("SD CARD UP!"));
         CoreChipsetFeatures::begin();
         ProcessorInterface::begin();
-        ramBlock.begin();
+        OnboardPSRAMBlock::begin();
         // okay now we need to actually open boot.system and copy it into the ramBlock
         if (!SD.exists(const_cast<char*>("boot.sys"))) {
             // delete the file and start a new
@@ -298,7 +296,7 @@ void setup() {
                     // something wen't wrong so halt at this point
                     SD.errorHalt();
                 }
-                (void)ramBlock.write(addr, storage, numRead);
+                (void)OnboardPSRAMBlock::write(addr, storage, numRead);
                 //Serial.print(F("."));
             }
             Serial.println(F("Transfer complete!"));

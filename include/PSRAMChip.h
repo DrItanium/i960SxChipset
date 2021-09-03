@@ -255,7 +255,9 @@ public:
     static_assert(Size == 64_MB, "PSRAMBlock8 needs to be 1 megabyte in size");
     static_assert(Mask == 0x03FF'FFFF, "PSRAMBlock8 mask is wrong!");
 public:
-    explicit PSRAMBlock8() : currentIndex_(0xFF) { }
+    //explicit PSRAMBlock8() : currentIndex_(0xFF) { }
+    PSRAMBlock8() = delete;
+    ~PSRAMBlock8() = delete;
     union PSRAMBlockAddress {
         constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
         constexpr auto getAddress() const noexcept { return base; }
@@ -270,7 +272,7 @@ public:
     };
 private:
     template<byte opcode>
-    inline size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
+    inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         PSRAMBlockAddress curr(address);
         PSRAMBlockAddress end(address + capacity);
         //SplitWord32 theAddress(curr.getOffset());
@@ -304,10 +306,10 @@ private:
         return capacity;
     }
 public:
-    size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02>(address, buf, capacity);
     }
-    size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x03>(address, buf, capacity);
     }
 private:
@@ -321,7 +323,7 @@ private:
             bool s2 : 1;
         };
     };
-    void setChipId(byte index) noexcept {
+    static void setChipId(byte index) noexcept {
         if (Decomposition dec(index); dec.getIndex() != currentIndex_.getIndex()) {
             digitalWrite<Select0>(dec.s0 ? HIGH : LOW);
             digitalWrite<Select1>(dec.s1 ? HIGH : LOW);
@@ -330,7 +332,8 @@ private:
         }
     }
 public:
-    void begin() noexcept {
+    static void begin() noexcept {
+        static bool initialized_ = false;
         if (!initialized_) {
             Serial.println(F("BRINGING UP PSRAM MEMORY BLOCK"));
             initialized_ = true;
@@ -355,8 +358,7 @@ public:
         }
     }
 private:
-    bool initialized_ = false;
-    Decomposition currentIndex_;
+    static inline Decomposition currentIndex_ { 0xFF };
 };
 
 template<bool clearOnBegin, bool performSanityCheck>
