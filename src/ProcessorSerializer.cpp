@@ -251,3 +251,14 @@ ProcessorInterface::newDataCycle() noexcept {
     cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
     return address_.bytes[3];
 }
+
+void
+ProcessorInterface::burstNext() noexcept {
+    // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
+    // next 16-bit word
+    // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
+    address_.bytes[0] += 2;
+    auto bits = PINA;
+    lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
+    ++cacheOffsetEntry_;
+}
