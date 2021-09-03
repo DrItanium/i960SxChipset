@@ -24,10 +24,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ProcessorSerializer.h"
-#include <SPI.h>
-namespace
-{
-}
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
     if (dataLinesDirection_ != 0xFFFF) {
@@ -55,33 +51,6 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
 
 
 
-void
-ProcessorInterface::updateOutputLatch() noexcept {
-    // construct the bit pattern as needed
-    byte latchValue = 0;
-    if (holdValue_ && lockValue_) {
-        latchValue = 0b1010'0000;
-    } else if (holdValue_ && !lockValue_) {
-        latchValue = 0b0010'0000;
-    } else if (!holdValue_ && lockValue_) {
-       latchValue = 0b1000'0000;
-    }
-    write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(latchValue);
-}
-void
-ProcessorInterface::setHOLDPin(bool value) noexcept {
-    if (value != holdValue_) {
-        holdValue_ = value;
-        updateOutputLatch();
-    }
-}
-void
-ProcessorInterface::setLOCKPin(bool value) noexcept {
-    if (value != lockValue_) {
-        lockValue_ = value;
-        updateOutputLatch();
-    }
-}
 
 void
 ProcessorInterface::begin() noexcept {

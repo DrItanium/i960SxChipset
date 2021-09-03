@@ -201,9 +201,32 @@ public:
     [[nodiscard]] static uint16_t getDataBits() noexcept;
     static void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>(lss_); }
-    static void setHOLDPin(bool value) noexcept;
-    static void setLOCKPin(bool value) noexcept;
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
+    static void setHOLDPin(bool value) noexcept {
+        if (value != holdValue_) {
+            holdValue_ = value;
+            updateOutputLatch();
+        }
+    }
+    static void setLOCKPin(bool value) noexcept {
+        if (value != lockValue_) {
+            lockValue_ = value;
+            updateOutputLatch();
+        }
+    }
+private:
+    static void updateOutputLatch() noexcept {
+        // construct the bit pattern as needed
+        byte latchValue = 0;
+        if (holdValue_ && lockValue_) {
+            latchValue = 0b1010'0000;
+        } else if (holdValue_ && !lockValue_) {
+            latchValue = 0b0010'0000;
+        } else if (!holdValue_ && lockValue_) {
+            latchValue = 0b1000'0000;
+        }
+        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(latchValue);
+    }
 public:
     static byte newDataCycle() noexcept;
     static void burstNext() noexcept {
@@ -218,8 +241,6 @@ public:
         lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
         cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
     }
-private:
-    static void updateOutputLatch() noexcept;
 private:
     static inline uint16_t dataLinesDirection_ = 0xFFFF;
     static inline SplitWord32 address_{0};
