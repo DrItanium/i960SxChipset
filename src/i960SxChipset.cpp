@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "PSRAMChip.h"
 
 // the core devices
-OnboardPSRAMBlock ramBlock(0);
+OnboardPSRAMBlock ramBlock;
 
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage

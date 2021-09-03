@@ -239,7 +239,7 @@ private:
  * @tparam sel2 The upper pin used to select the target device
  */
 template<i960Pinout enablePin>
-class PSRAMBlock8 : public MemoryThing {
+class PSRAMBlock8 {
 public:
     static constexpr auto EnablePin = enablePin;
     static constexpr auto Select0 = i960Pinout::SPI_OFFSET0;
@@ -255,10 +255,9 @@ public:
     static_assert(Size == 64_MB, "PSRAMBlock8 needs to be 1 megabyte in size");
     static_assert(Mask == 0x03FF'FFFF, "PSRAMBlock8 mask is wrong!");
 public:
-    explicit PSRAMBlock8(Address base) : MemoryThing(base, base + Size), currentIndex_(0xFF) { }
-    ~PSRAMBlock8() override = default;
-    union Address26 {
-        constexpr explicit Address26(Address value = 0) : base(value) { }
+    explicit PSRAMBlock8() : currentIndex_(0xFF) { }
+    union PSRAMBlockAddress {
+        constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
         constexpr auto getAddress() const noexcept { return base; }
         constexpr auto getOffset() const noexcept { return offset; }
         constexpr auto getIndex() const noexcept { return index; }
@@ -272,8 +271,8 @@ public:
 private:
     template<byte opcode>
     inline size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
-        Address26 curr(address);
-        Address26 end(address + capacity);
+        PSRAMBlockAddress curr(address);
+        PSRAMBlockAddress end(address + capacity);
         //SplitWord32 theAddress(curr.getOffset());
         auto numBytesToSecondChip = end.getOffset();
         auto localToASingleChip = curr.getIndex() == end.getIndex();
@@ -305,27 +304,11 @@ private:
         return capacity;
     }
 public:
-    size_t write(uint32_t address, byte *buf, size_t capacity) noexcept override {
+    size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02>(address, buf, capacity);
     }
-    size_t read(uint32_t address, byte *buf, size_t capacity) noexcept override {
+    size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x03>(address, buf, capacity);
-    }
-    uint8_t read8(Address address) noexcept override {
-        uint8_t value = 0;
-        (void)read(address, &value, 1);
-        return value;
-    }
-    uint16_t read16(Address address) noexcept override {
-        uint16_t value = 0;
-        (void)read(address, reinterpret_cast<byte*>(&value), sizeof(value));
-        return value;
-    }
-    void write8(Address address, uint8_t value) noexcept override {
-        write(address, &value, 1);
-    }
-    void write16(Address address, uint16_t value) noexcept override {
-        write(address, reinterpret_cast<byte*>(&value), sizeof(value));
     }
 private:
     union Decomposition {
@@ -347,7 +330,7 @@ private:
         }
     }
 public:
-    void begin() noexcept override  {
+    void begin() noexcept {
         if (!initialized_) {
             Serial.println(F("BRINGING UP PSRAM MEMORY BLOCK"));
             initialized_ = true;
