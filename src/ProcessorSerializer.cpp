@@ -261,6 +261,5 @@ ProcessorInterface::burstNext() noexcept {
     // next 16-bit word
     // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
     address_.bytes[0] += 2;
-    lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
-    ++cacheOffsetEntry_;
+    computeInitialCacheOffset();
 }
