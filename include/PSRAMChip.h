@@ -232,14 +232,14 @@ private:
     bool available_ = true;
 };
 /**
- * @brief Wraps eight different SPI sram chips into a single object
+ * @brief Interface to the memory connected to the chipset
  * @tparam enablePin The pin that is used to signal chip usage
  * @tparam sel0 The lowest pin used to select the target device
  * @tparam sel1 The middle pin used to select the target device
  * @tparam sel2 The upper pin used to select the target device
  */
 template<i960Pinout enablePin>
-class PSRAMBlock8 {
+class MemoryBlock {
 public:
     static constexpr auto EnablePin = enablePin;
     static constexpr auto Select0 = i960Pinout::SPI_OFFSET0;
@@ -249,15 +249,12 @@ public:
     static constexpr auto NumChips = 8;
     static constexpr auto Size = NumChips * SingleChip::Size;
     static constexpr auto Mask = Size - 1;
-    static constexpr auto SingleChipSize = SingleChip::Size;
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
-    static_assert(Size == 64_MB, "PSRAMBlock8 needs to be 1 megabyte in size");
-    static_assert(Mask == 0x03FF'FFFF, "PSRAMBlock8 mask is wrong!");
 public:
-    //explicit PSRAMBlock8() : currentIndex_(0xFF) { }
-    PSRAMBlock8() = delete;
-    ~PSRAMBlock8() = delete;
+    //explicit MemoryBlock() : currentIndex_(0xFF) { }
+    MemoryBlock() = delete;
+    ~MemoryBlock() = delete;
     union PSRAMBlockAddress {
         constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
         constexpr auto getAddress() const noexcept { return base; }
@@ -363,5 +360,5 @@ private:
 
 template<bool clearOnBegin, bool performSanityCheck>
 using OnboardPSRAM = PSRAMChip<i960Pinout::PSRAM_EN, performSanityCheck, clearOnBegin>;
-using OnboardPSRAMBlock = PSRAMBlock8<i960Pinout::PSRAM_EN>;
+using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
 #endif //I960SXCHIPSET_PSRAMCHIP_H
