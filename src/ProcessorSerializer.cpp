@@ -32,7 +32,6 @@ ProcessorInterface::getDataBits() noexcept {
     }
     return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
 }
-
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
     if (dataLinesDirection_ != 0) {
@@ -43,8 +42,8 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
     // okay we are still pointing as output values
     // check the latch and see if the output value is the same as what is latched
     if (latchedDataOutput != value) {
-        writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
         latchedDataOutput = value;
+        writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
     }
 }
 
