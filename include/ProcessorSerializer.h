@@ -31,17 +31,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class ProcessorInterface {
 public:
-    static ProcessorInterface&
-    getInterface() noexcept {
-        static ProcessorInterface theInterface;
-        return theInterface;
-    }
+    ProcessorInterface() = delete;
+    ~ProcessorInterface() = delete;
     ProcessorInterface(const ProcessorInterface&) = delete;
     ProcessorInterface(ProcessorInterface&&) = delete;
     ProcessorInterface& operator=(const ProcessorInterface&) = delete;
     ProcessorInterface& operator=(ProcessorInterface&&) = delete;
-private:
-    ProcessorInterface() = default;
 public:
     enum class IOExpanderAddress : byte {
         DataLines = 0b0000,
@@ -86,30 +81,29 @@ public:
     };
     static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 public:
-    void begin() noexcept;
-    [[nodiscard]] constexpr Address getAddress() const noexcept { return address_.wholeValue_; }
-    [[nodiscard]] uint16_t getDataBits() noexcept;
-    void setDataBits(uint16_t value) noexcept;
-    [[nodiscard]] constexpr auto getStyle() const noexcept { return static_cast<LoadStoreStyle>(lss_); }
-    //[[nodiscard]] bool isWriteOperation() const noexcept;
-    void setHOLDPin(bool value) noexcept;
-    void setLOCKPin(bool value) noexcept;
-    [[nodiscard]] constexpr auto getCacheOffsetEntry() const noexcept { return cacheOffsetEntry_; }
+    static void begin() noexcept;
+    [[nodiscard]] static Address getAddress() noexcept { return address_.wholeValue_; }
+    [[nodiscard]] static uint16_t getDataBits() noexcept;
+    static void setDataBits(uint16_t value) noexcept;
+    [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>(lss_); }
+    static void setHOLDPin(bool value) noexcept;
+    static void setLOCKPin(bool value) noexcept;
+    [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
 public:
-    byte newDataCycle() noexcept;
-    void burstNext() noexcept;
+    static byte newDataCycle() noexcept;
+    static void burstNext() noexcept;
 
 private:
-    void updateOutputLatch() noexcept;
+    static void updateOutputLatch() noexcept;
 private:
-    uint16_t dataLinesDirection_ = 0xFFFF;
-    SplitWord32 address_;
-    LoadStoreStyle lss_ = LoadStoreStyle::None;
-    bool initialized_ = false;
-    bool lockValue_ = true;
-    bool holdValue_ = false;
-    byte cacheOffsetEntry_ = 0;
-    uint16_t latchedDataOutput = 0;
+    static inline uint16_t dataLinesDirection_ = 0xFFFF;
+    static inline SplitWord32 address_{0};
+    static inline LoadStoreStyle lss_ = LoadStoreStyle::None;
+    static inline bool initialized_ = false;
+    static inline bool lockValue_ = true;
+    static inline bool holdValue_ = false;
+    static inline byte cacheOffsetEntry_ = 0;
+    static inline uint16_t latchedDataOutput = 0;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved

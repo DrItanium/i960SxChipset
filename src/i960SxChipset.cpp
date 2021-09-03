@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
 
-ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 // the core devices
 OnboardPSRAMBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
@@ -137,7 +136,7 @@ private:
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 auto& getLine(MemoryThing& theThing) noexcept {
-    auto theAddress = CacheEntry::TaggedAddress::makeAlignedVersion(processorInterface.getAddress());
+    auto theAddress = CacheEntry::TaggedAddress::makeAlignedVersion(ProcessorInterface::getAddress());
     auto& theEntry = entries[theAddress.getTagIndex()];
     if (!theEntry.matches(theAddress.getAddress())) {
         theEntry.reset(theAddress.getAddress(), theThing);
@@ -158,53 +157,53 @@ inline void invocationBody() noexcept {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    if (auto targetDevice = processorInterface.newDataCycle(); targetDevice < 4) {
+    if (auto targetDevice = ProcessorInterface::newDataCycle(); targetDevice < 4) {
         // okay we are dealing with the psram chips
         auto& theEntry = getLine(ramBlock);
         if (isReadOperation) {
             do {
-                processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
+                ProcessorInterface::setDataBits(theEntry.get(ProcessorInterface::getCacheOffsetEntry()).getWholeValue());
                 if (informCPU()) {
                     break;
                 }
-                processorInterface.burstNext();
+                ProcessorInterface::burstNext();
             } while (true);
         } else {
             do {
-                theEntry.set(processorInterface.getCacheOffsetEntry(),
-                             processorInterface.getStyle(),
-                             SplitWord16{processorInterface.getDataBits()});
+                theEntry.set(ProcessorInterface::getCacheOffsetEntry(),
+                             ProcessorInterface::getStyle(),
+                             SplitWord16{ProcessorInterface::getDataBits()});
                 if (informCPU()) {
                     break;
                 }
-                processorInterface.burstNext();
+                ProcessorInterface::burstNext();
             } while (true);
         }
     } else if (targetDevice == 0xFE) {
         // generally we shouldn't see burst operations here but who knows!
         if (isReadOperation) {
             do {
-                processorInterface.setDataBits(CoreChipsetFeatures::read(processorInterface.getAddress()));
+                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
                 if (informCPU()) {
                     break;
                 }
-                processorInterface.burstNext();
+                ProcessorInterface::burstNext();
             } while (true);
         } else {
             do {
-                CoreChipsetFeatures::write(processorInterface.getAddress(),
-                                           processorInterface.getDataBits());
+                CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
+                                           ProcessorInterface::getDataBits());
                 if (informCPU()) {
                     break;
                 }
-                processorInterface.burstNext();
+                ProcessorInterface::burstNext();
             } while (true);
         }
     } else {
         // fallback case
         // do it once at the beginning and never again
         if (isReadOperation) {
-            processorInterface.setDataBits(0);
+            ProcessorInterface::setDataBits(0);
         }
         do {
             // on writes we do nothing but throw the value on
@@ -213,7 +212,7 @@ inline void invocationBody() noexcept {
             if (informCPU()) {
                 break;
             }
-            processorInterface.burstNext();
+            ProcessorInterface::burstNext();
         } while (true);
     }
 }
@@ -277,7 +276,7 @@ void setup() {
         }
         Serial.println(F("SD CARD UP!"));
         CoreChipsetFeatures::begin();
-        processorInterface.begin();
+        ProcessorInterface::begin();
         ramBlock.begin();
         // okay now we need to actually open boot.system and copy it into the ramBlock
         if (!SD.exists(const_cast<char*>("boot.sys"))) {
