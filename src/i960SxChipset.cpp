@@ -162,19 +162,25 @@ inline void invocationBody() noexcept {
     if (auto targetDevice = processorInterface.newDataCycle(); targetDevice < 4) {
         // okay we are dealing with the psram chips
         auto& theEntry = getLine(ramBlock);
-        do {
-            if (isReadOperation) {
+        if (isReadOperation) {
+            do {
                 processorInterface.setDataBits(theEntry.get(processorInterface.getCacheOffsetEntry()).getWholeValue());
-            } else {
+                if (informCPU()) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        } else {
+            do {
                 theEntry.set(processorInterface.getCacheOffsetEntry(),
                              processorInterface.getStyle(),
                              SplitWord16{processorInterface.getDataBits()});
-            }
-            if (informCPU()) {
-                break;
-            }
-            processorInterface.burstNext();
-        } while (true);
+                if (informCPU()) {
+                    break;
+                }
+                processorInterface.burstNext();
+            } while (true);
+        }
     } else if (targetDevice == 0xFE) {
         // generally we shouldn't see burst operations here but who knows!
         if (isReadOperation) {
@@ -196,15 +202,22 @@ inline void invocationBody() noexcept {
                 } while (true);
             }
         } else {
-            do {
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
                 chipsetFunctions.write(processorInterface.getAddress(),
                                        processorInterface.getDataBits(),
                                        processorInterface.getStyle());
-                if (informCPU()) {
-                    break;
-                }
-                processorInterface.burstNext();
-            } while (true);
+                DigitalPin<i960Pinout::Ready>::pulse();
+            } else {
+                do {
+                    chipsetFunctions.write(processorInterface.getAddress(),
+                                           processorInterface.getDataBits(),
+                                           processorInterface.getStyle());
+                    if (informCPU()) {
+                        break;
+                    }
+                    processorInterface.burstNext();
+                } while (true);
+            }
         }
     } else {
         // fallback case
