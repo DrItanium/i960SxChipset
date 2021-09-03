@@ -252,7 +252,7 @@ ProcessorInterface::newDataCycle() noexcept {
 void
 ProcessorInterface::computeInitialCacheOffset() noexcept {
     lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
-    cacheOffsetEntry_ = address_.bytes[0] / 2; // we want to make this quick to increment
+    cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
 }
 
 void
