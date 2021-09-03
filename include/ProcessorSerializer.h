@@ -82,7 +82,7 @@ public:
     static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
 public:
     static void begin() noexcept;
-    [[nodiscard]] static Address getAddress() noexcept { return address_.wholeValue_; }
+    [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
     [[nodiscard]] static uint16_t getDataBits() noexcept;
     static void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>(lss_); }
