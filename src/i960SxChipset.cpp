@@ -151,8 +151,7 @@ inline void invocationBody() noexcept {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    auto targetDevice = ProcessorInterface::newDataCycle();
-    if (CoreChipsetFeatures::respondsTo(targetDevice)) {
+    if (auto targetDevice = ProcessorInterface::newDataCycle(); CoreChipsetFeatures::respondsTo(targetDevice)) {
         // generally we shouldn't see burst operations here but who knows!
         if (isReadOperation) {
             do {
