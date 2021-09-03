@@ -91,7 +91,18 @@ public:
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
 public:
     static byte newDataCycle() noexcept;
-    static void burstNext() noexcept;
+    template<bool readLoadStoreStyle = true>
+    static void burstNext() noexcept {
+        // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
+        // next 16-bit word
+        // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
+        address_.bytes[0] += 2;
+        ++cacheOffsetEntry_;
+        if constexpr (readLoadStoreStyle) {
+            auto bits = PINA;
+            lss_ = static_cast<LoadStoreStyle>((bits & 0b110000));
+        }
+    }
 
 private:
     static void updateOutputLatch() noexcept;
