@@ -91,8 +91,18 @@ public:
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
 public:
     static byte newDataCycle() noexcept;
-    static void burstNext() noexcept;
-    static void computeInitialCacheOffset() noexcept;
+    static void burstNext() noexcept {
+        // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
+        // next 16-bit word
+        // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
+        address_.bytes[0] += 2;
+        // make sure that we always have an up to date copy of the cache offset entry
+        computeInitialCacheOffset();
+    }
+    static void computeInitialCacheOffset() noexcept {
+        lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
+        cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
+    }
 private:
     static void updateOutputLatch() noexcept;
 private:
