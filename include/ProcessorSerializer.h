@@ -99,7 +99,6 @@ private:
     static inline uint16_t dataLinesDirection_ = 0xFFFF;
     static inline SplitWord32 address_{0};
     static inline LoadStoreStyle lss_ = LoadStoreStyle::None;
-    static inline bool initialized_ = false;
     static inline bool lockValue_ = true;
     static inline bool holdValue_ = false;
     static inline byte cacheOffsetEntry_ = 0;
