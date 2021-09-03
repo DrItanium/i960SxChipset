@@ -183,36 +183,18 @@ inline void invocationBody() noexcept {
         }
     } else if (targetDevice == 0xFE) {
         // generally we shouldn't see burst operations here but who knows!
-        if (isReadOperation) {
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                // not a burst transaction
-                processorInterface.setDataBits(chipsetFunctions.read(processorInterface.getAddress()));
-                DigitalPin<i960Pinout::Ready>::pulse();
+        do {
+
+            if (auto address = processorInterface.getAddress(); isReadOperation) {
+                processorInterface.setDataBits(chipsetFunctions.read(address));
             } else {
-                do {
-                    processorInterface.setDataBits(chipsetFunctions.read(processorInterface.getAddress()));
-                    if (informCPU()) {
-                        break;
-                    }
-                    processorInterface.burstNext();
-                } while (true);
+                chipsetFunctions.write(address, processorInterface.getDataBits());
             }
-        } else {
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                chipsetFunctions.write(processorInterface.getAddress(),
-                                       processorInterface.getDataBits());
-                DigitalPin<i960Pinout::Ready>::pulse();
-            } else {
-                do {
-                    chipsetFunctions.write(processorInterface.getAddress(),
-                                           processorInterface.getDataBits());
-                    if (informCPU()) {
-                        break;
-                    }
-                    processorInterface.burstNext();
-                } while (true);
+            if (informCPU()) {
+                break;
             }
-        }
+            processorInterface.burstNext();
+        } while (true);
     } else {
         // fallback case
         // do it once at the beginning and never again
