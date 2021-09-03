@@ -41,7 +41,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ProcessorInterface& processorInterface = ProcessorInterface::getInterface();
 // the core devices
-CoreChipsetFeatures chipsetFunctions;
 OnboardPSRAMBlock ramBlock(0);
 FallbackMemoryThing& fallback = FallbackMemoryThing::getFallback();
 
@@ -186,9 +185,10 @@ inline void invocationBody() noexcept {
         do {
 
             if (auto address = processorInterface.getAddress(); isReadOperation) {
-                processorInterface.setDataBits(chipsetFunctions.read(address));
+
+                processorInterface.setDataBits(CoreChipsetFeatures::read(address));
             } else {
-                chipsetFunctions.write(address, processorInterface.getDataBits());
+                CoreChipsetFeatures::write(address, processorInterface.getDataBits());
             }
             if (informCPU()) {
                 break;
@@ -271,7 +271,7 @@ void setup() {
             delay(1000);
         }
         Serial.println(F("SD CARD UP!"));
-        chipsetFunctions.begin();
+        CoreChipsetFeatures::begin();
         processorInterface.begin();
         ramBlock.begin();
         // okay now we need to actually open boot.system and copy it into the ramBlock

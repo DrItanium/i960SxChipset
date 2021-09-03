@@ -63,9 +63,10 @@ public:
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
-    void begin() noexcept { }
-    uint16_t
-    read(Address address) noexcept {
+    CoreChipsetFeatures() = delete;
+    ~CoreChipsetFeatures() = delete;
+    static void begin() noexcept { }
+    static uint16_t read(Address address) noexcept {
         // force override the default implementation
         SplitWord32 addr(address);
         switch (static_cast<Registers>(addr.bytes[0])) {
@@ -75,8 +76,7 @@ public:
             default: return 0;
         }
     }
-    void
-    write(Address address, uint16_t value) noexcept {
+    static void write(Address address, uint16_t value) noexcept {
         SplitWord32 addr(address);
         switch (static_cast<Registers>(addr.bytes[0])) {
             case Registers::ConsoleFlush:
