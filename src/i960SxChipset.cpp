@@ -151,7 +151,28 @@ inline void invocationBody() noexcept {
     // keep processing data requests until we
     // when we do the transition, record the information we need
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    if (auto targetDevice = ProcessorInterface::newDataCycle(); OnboardPSRAMBlock::respondsTo(targetDevice)) {
+    auto targetDevice = ProcessorInterface::newDataCycle();
+    if (CoreChipsetFeatures::respondsTo(targetDevice)) {
+        // generally we shouldn't see burst operations here but who knows!
+        if (isReadOperation) {
+            do {
+                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
+                if (informCPU()) {
+                    break;
+                }
+                ProcessorInterface::burstNext();
+            } while (true);
+        } else {
+            do {
+                CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
+                                           ProcessorInterface::getDataBits());
+                if (informCPU()) {
+                    break;
+                }
+                ProcessorInterface::burstNext();
+            } while (true);
+        }
+    } else if (OnboardPSRAMBlock::respondsTo(targetDevice)) {
         // okay we are dealing with the psram chips
         // now take the time to compute the cache offset entries
         ProcessorInterface::computeInitialCacheOffset();
@@ -169,26 +190,6 @@ inline void invocationBody() noexcept {
                 theEntry.set(ProcessorInterface::getCacheOffsetEntry(),
                              ProcessorInterface::getStyle(),
                              SplitWord16{ProcessorInterface::getDataBits()});
-                if (informCPU()) {
-                    break;
-                }
-                ProcessorInterface::burstNext();
-            } while (true);
-        }
-    } else if (CoreChipsetFeatures::respondsTo(targetDevice)) {
-        // generally we shouldn't see burst operations here but who knows!
-        if (isReadOperation) {
-            do {
-                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
-                if (informCPU()) {
-                    break;
-                }
-                ProcessorInterface::burstNext();
-            } while (true);
-        } else {
-            do {
-                CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
-                                           ProcessorInterface::getDataBits());
                 if (informCPU()) {
                     break;
                 }
