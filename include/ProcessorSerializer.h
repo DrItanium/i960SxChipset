@@ -198,8 +198,26 @@ public:
 public:
     static void begin() noexcept;
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
-    [[nodiscard]] static uint16_t getDataBits() noexcept;
-    static void setDataBits(uint16_t value) noexcept;
+    [[nodiscard]] static uint16_t getDataBits() noexcept {
+        if (dataLinesDirection_ != 0xFFFF) {
+            dataLinesDirection_ = 0xFFFF;
+            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        }
+        return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
+    }
+    static void setDataBits(uint16_t value) noexcept {
+        if (dataLinesDirection_ != 0) {
+            dataLinesDirection_ = 0;
+            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        }
+        // the latch is preserved in between data line changes
+        // okay we are still pointing as output values
+        // check the latch and see if the output value is the same as what is latched
+        if (latchedDataOutput != value) {
+            writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(value);
+            latchedDataOutput = value;
+        }
+    }
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>(lss_); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
     static void setHOLDPin(bool value) noexcept {
