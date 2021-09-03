@@ -92,6 +92,7 @@ public:
 public:
     static byte newDataCycle() noexcept;
     static void burstNext() noexcept;
+    static void computeInitialCacheOffset() noexcept;
 private:
     static void updateOutputLatch() noexcept;
 private:

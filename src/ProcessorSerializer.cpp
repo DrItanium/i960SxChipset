@@ -246,9 +246,13 @@ ProcessorInterface::newDataCycle() noexcept {
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     SPI.endTransaction();
     // no need to re-read the burst address bits
+    return address_.bytes[3];
+}
+
+void
+ProcessorInterface::computeInitialCacheOffset() noexcept {
     lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
     cacheOffsetEntry_ = address_.bytes[0] / 2; // we want to make this quick to increment
-    return address_.bytes[3];
 }
 
 void

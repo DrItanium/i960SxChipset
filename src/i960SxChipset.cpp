@@ -153,6 +153,8 @@ inline void invocationBody() noexcept {
     auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (auto targetDevice = ProcessorInterface::newDataCycle(); targetDevice < 4) {
         // okay we are dealing with the psram chips
+        // now take the time to compute the cache offset entries
+        ProcessorInterface::computeInitialCacheOffset();
         auto& theEntry = getLine();
         if (isReadOperation) {
             do {
