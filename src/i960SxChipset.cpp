@@ -186,9 +186,23 @@ inline void invocationBody() noexcept {
         if (isReadOperation) {
             if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
                 // not a burst transaction
-                processorInterface.setDataBits(
-                        chipsetFunctions.read(processorInterface.getAddress(),
-                                              processorInterface.getStyle()));
+                SplitWord32 address{processorInterface.getAddress()};
+                switch (address.bytes[3]) {
+                    case 2:
+                        processorInterface.setDataBits(Serial.available());
+                    case 4:
+                        processorInterface.setDataBits(Serial.availableForWrite());
+                        break;
+                    case 6:
+                        processorInterface.setDataBits(Serial.read());
+                        break;
+                    case 0:
+                        Serial.flush();
+                        // exploit fallthrough
+                    default:
+                        processorInterface.setDataBits(0);
+                        break;
+                }
                 DigitalPin<i960Pinout::Ready>::pulse();
             } else {
                 do {
