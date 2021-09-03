@@ -185,9 +185,9 @@ inline void invocationBody() noexcept {
         // generally we shouldn't see burst operations here but who knows!
         if (isReadOperation) {
             if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
-                // not a burst transaction
                 SplitWord32 address{processorInterface.getAddress()};
-                switch (address.bytes[3]) {
+                // not a burst transaction
+                switch (address.bytes[0]) {
                     case 2:
                         processorInterface.setDataBits(Serial.available());
                     case 4:
