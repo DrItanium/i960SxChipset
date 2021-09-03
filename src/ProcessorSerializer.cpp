@@ -82,23 +82,15 @@ ProcessorInterface::begin() noexcept {
 }
 byte
 ProcessorInterface::newDataCycle() noexcept {
-    static constexpr SplitWord32 Lower16TransactionTemplate(
-            ProcessorInterface::generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines),
-            static_cast<byte>(MCP23x17Registers::GPIO),
-            0,
-            0
-    );
     constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
     constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
     constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-    SplitWord32 tempLower = Lower16TransactionTemplate;
     //SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
     digitalWrite<i960Pinout::GPIOSelect, LOW>();
-    SPI.transfer(tempLower.bytes, sizeof(tempLower));
-    //SPI.transfer(Lower16Opcode);
-    //SPI.transfer(GPIOOpcode);
-    //address_.bytes[0] = SPI.transfer(0);
-    //address_.bytes[1] = SPI.transfer(0);
+    SPI.transfer(Lower16Opcode);
+    SPI.transfer(GPIOOpcode);
+    address_.bytes[0] = SPI.transfer(0);
+    address_.bytes[1] = SPI.transfer(0);
     DigitalPin<i960Pinout::GPIOSelect>::pulse(); // go high then low again without having to capture the interrupt state multiple times
     SPI.transfer(Upper16Opcode);
     SPI.transfer(GPIOOpcode);
@@ -106,8 +98,6 @@ ProcessorInterface::newDataCycle() noexcept {
     address_.bytes[3] = SPI.transfer(0);
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     //SPI.endTransaction();
-    address_.bytes[0] = tempLower.bytes[2];
-    address_.bytes[1] = tempLower.bytes[3];
     // no need to re-read the burst address bits
     return address_.bytes[3];
 }
