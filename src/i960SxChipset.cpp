@@ -64,6 +64,7 @@ public:
             theAddress.lowest = 0; // clear out the lowest bits
             return theAddress;
         }
+        void clear() noexcept { base = 0; }
         [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
         [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
         [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
@@ -77,18 +78,18 @@ public:
         };
     };
 public:
-    void reset(Address newTag) noexcept {
+    void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
         if (valid_ && dirty_) {
             // just do the write out to disk to save time
             // still an expensive operation
-            OnboardPSRAMBlock::write(tag, reinterpret_cast<byte*>(data), sizeof(data));
+            OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
         }
         valid_ = true; // always set this
         dirty_ = false;
         tag = newTag;
         // this is a _very_ expensive operation
-        OnboardPSRAMBlock::read(tag, reinterpret_cast<byte*>(data), sizeof (data));
+        OnboardPSRAMBlock::read(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof (data));
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
@@ -97,12 +98,12 @@ public:
         // clear all flags
         valid_ = false;
         dirty_ = false;
-        tag = 0;
+        tag.clear();
         for (auto& a : data) {
             a.wholeValue_ = 0;
         }
     }
-    [[nodiscard]] constexpr bool matches(Address addr) const noexcept { return valid_ && (tag == addr); }
+    [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return valid_ && (tag.getRest() == addr.getRest()); }
     [[nodiscard]] const SplitWord16& get(byte offset) const noexcept { return data[offset & OffsetMask]; }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         dirty_ = true;
@@ -122,7 +123,7 @@ public:
     }
 private:
     SplitWord16 data[NumWordsCached]; // 32 bytes
-    Address tag = 0; // 4 bytes
+    TaggedAddress tag { 0}; // 4 bytes
     bool valid_ = false;
     bool dirty_ = false;
 };
@@ -132,8 +133,8 @@ CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holdin
 auto& getLine() noexcept {
     auto theAddress = CacheEntry::TaggedAddress::makeAlignedVersion(ProcessorInterface::getAddress());
     auto& theEntry = entries[theAddress.getTagIndex()];
-    if (!theEntry.matches(theAddress.getAddress())) {
-        theEntry.reset(theAddress.getAddress());
+    if (!theEntry.matches(theAddress)) {
+        theEntry.reset(theAddress);
     }
     return theEntry;
 }
