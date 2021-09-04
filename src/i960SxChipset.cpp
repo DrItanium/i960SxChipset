@@ -267,15 +267,13 @@ void setup() {
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
-        digitalWriteBlock(HIGH,
-                          i960Pinout::PSRAM_EN,
-                          i960Pinout::SD_EN,
-                          i960Pinout::Ready,
-                          i960Pinout::GPIOSelect);
-        digitalWriteBlock(LOW,
-                          i960Pinout::SPI_OFFSET0,
-                          i960Pinout::SPI_OFFSET1,
-                          i960Pinout::SPI_OFFSET2);
+        digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+        digitalWrite<i960Pinout::SD_EN, HIGH>();
+        digitalWrite<i960Pinout::Ready, HIGH>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
+        digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
+        digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
         // setup the pins that could be attached to an io expander separately
         if constexpr (!attachedToIOExpander_v<i960Pinout::BA1>) { pinMode(i960Pinout::BA1, INPUT); }
         if constexpr (!attachedToIOExpander_v<i960Pinout::BA2>) { pinMode(i960Pinout::BA2, INPUT); }
