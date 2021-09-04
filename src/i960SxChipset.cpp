@@ -87,6 +87,7 @@ public:
         }
         valid_ = true; // always set this
         dirty_ = false;
+        // since we have called reset, now align the new address internally
         tag = TaggedAddress::makeAlignedVersion(newTag.getAddress());
         // this is a _very_ expensive operation
         OnboardPSRAMBlock::read<false>(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof (data));
