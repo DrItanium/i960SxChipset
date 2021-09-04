@@ -154,13 +154,14 @@ inline void invocationBody() noexcept {
     //auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (auto targetDevice = ProcessorInterface::newDataCycle(); CoreChipsetFeatures::respondsTo(targetDevice)) {
         // generally we shouldn't see burst operations here but who knows!
+        // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
                 if (informCPU()) {
                     break;
                 }
-                ProcessorInterface::burstNext();
+                ProcessorInterface::burstNext<false>();
             } while (true);
         } else {
             do {
@@ -169,7 +170,7 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
-                ProcessorInterface::burstNext();
+                ProcessorInterface::burstNext<false>();
             } while (true);
         }
     } else if (OnboardPSRAMBlock::respondsTo(targetDevice)) {
@@ -182,7 +183,8 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
-                ProcessorInterface::burstNext();
+                // don't read lss when dealing with the memory interface we don't need it since the processor only pulls in the bits needed
+                ProcessorInterface::burstNext<false>();
             } while (true);
         } else {
             do {
@@ -192,6 +194,8 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
+                // this is the only place where we actually need to continually update BE0, BE1 to know what kind of operation
+                // to perform
                 ProcessorInterface::burstNext();
             } while (true);
         }
@@ -208,7 +212,7 @@ inline void invocationBody() noexcept {
             if (informCPU()) {
                 break;
             }
-            ProcessorInterface::burstNext();
+            ProcessorInterface::burstNext<false>();
         } while (true);
     }
 }
