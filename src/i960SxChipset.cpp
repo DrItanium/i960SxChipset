@@ -87,7 +87,7 @@ public:
         }
         valid_ = true; // always set this
         dirty_ = false;
-        tag = newTag;
+        tag = TaggedAddress::makeAlignedVersion(newTag.getAddress());
         // this is a _very_ expensive operation
         OnboardPSRAMBlock::read<false>(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof (data));
     }
@@ -148,7 +148,8 @@ private:
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 auto& getLine() noexcept {
-    auto theAddress = CacheEntry::TaggedAddress::makeAlignedVersion(ProcessorInterface::getAddress());
+    // only align if we need to reset the chip
+    CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
     auto& theEntry = entries[theAddress.getTagIndex()];
     if (!theEntry.matches(theAddress)) {
         theEntry.reset(theAddress);
