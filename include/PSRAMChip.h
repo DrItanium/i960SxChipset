@@ -268,7 +268,7 @@ public:
         byte bytes_[4];
     };
 private:
-    template<byte opcode>
+    template<byte opcode, bool disableInterrupts = true>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         PSRAMBlockAddress curr(address);
         PSRAMBlockAddress end(address + capacity);
@@ -278,36 +278,38 @@ private:
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SingleChip::getSettings());
-        digitalWrite<enablePin, LOW>();
+        digitalWrite<enablePin, LOW, disableInterrupts>();
         SPI.transfer(opcode);
         SPI.transfer(curr.bytes_[2]);
         SPI.transfer(curr.bytes_[1]);
         SPI.transfer(curr.bytes_[0]);
         SPI.transfer(buf, numBytesToFirstChip);
-        digitalWrite<enablePin, HIGH>();
+        digitalWrite<enablePin, HIGH, disableInterrupts>();
         if ((!localToASingleChip) && (numBytesToSecondChip > 0)) {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             // start writing at the start of the next chip the remaining number of bytes
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
-            digitalWrite<enablePin, LOW>();
+            digitalWrite<enablePin, LOW, disableInterrupts>();
             SPI.transfer(opcode);
             SPI.transfer(0);
             SPI.transfer(0);
             SPI.transfer(0);
             SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
-            digitalWrite<enablePin, HIGH>();
+            digitalWrite<enablePin, HIGH, disableInterrupts>();
         }
         SPI.endTransaction();
         return capacity;
     }
 public:
+    template<bool disableInterrupts = true>
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x02>(address, buf, capacity);
+        return genericReadWriteOperation<0x02, disableInterrupts>(address, buf, capacity);
     }
+    template<bool disableInterrupts = true>
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x03>(address, buf, capacity);
+        return genericReadWriteOperation<0x03, disableInterrupts>(address, buf, capacity);
     }
 private:
     union Decomposition {
