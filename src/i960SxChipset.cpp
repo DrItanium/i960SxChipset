@@ -151,10 +151,10 @@ inline void invocationBody() noexcept {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
+    //auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (auto targetDevice = ProcessorInterface::newDataCycle(); CoreChipsetFeatures::respondsTo(targetDevice)) {
         // generally we shouldn't see burst operations here but who knows!
-        if (isReadOperation) {
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
                 if (informCPU()) {
@@ -177,7 +177,7 @@ inline void invocationBody() noexcept {
         // now take the time to compute the cache offset entries
         ProcessorInterface::computeInitialCacheOffset();
         auto& theEntry = getLine();
-        if (isReadOperation) {
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 ProcessorInterface::setDataBits(theEntry.get(ProcessorInterface::getCacheOffsetEntry()).getWholeValue());
                 if (informCPU()) {
@@ -199,7 +199,7 @@ inline void invocationBody() noexcept {
     } else {
         // fallback case
         // do it once at the beginning and never again
-        if (isReadOperation) {
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             ProcessorInterface::setDataBits(0);
         }
         do {
