@@ -89,7 +89,9 @@ ProcessorInterface::newDataCycle() noexcept {
     SPI.transfer(GPIOOpcode);
     address_.bytes[0] = SPI.transfer(0);
     address_.bytes[1] = SPI.transfer(0);
-    DigitalPin<i960Pinout::GPIOSelect>::pulse<false>(); // go high then low again without having to capture the interrupt state multiple times
+    digitalWrite<i960Pinout::GPIOSelect, HIGH, false>();
+    digitalWrite<i960Pinout::GPIOSelect, LOW, false>();
+    //DigitalPin<i960Pinout::GPIOSelect>::pulse<false>(); // go high then low again without having to capture the interrupt state multiple times
     SPI.transfer(Upper16Opcode);
     SPI.transfer(GPIOOpcode);
     address_.bytes[2] = SPI.transfer(0);
