@@ -245,10 +245,7 @@ public:
     static constexpr auto Select0 = i960Pinout::SPI_OFFSET0;
     static constexpr auto Select1 = i960Pinout::SPI_OFFSET1;
     static constexpr auto Select2 = i960Pinout::SPI_OFFSET2;
-    using SingleChip = PSRAMChip<EnablePin, false, false>;
     static constexpr auto NumChips = 8;
-    static constexpr auto Size = NumChips * SingleChip::Size;
-    static constexpr auto Mask = Size - 1;
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
 public:
@@ -277,7 +274,7 @@ private:
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         setChipId(curr.getIndex());
-        SPI.beginTransaction(SingleChip::getSettings());
+        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<enablePin, LOW, disableInterrupts>();
         SPI.transfer(opcode);
         SPI.transfer(curr.bytes_[2]);
@@ -342,7 +339,7 @@ public:
             for (int i = 0; i < 8; ++i) {
                 setChipId(i);
                 delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-                SPI.beginTransaction(SingleChip::getSettings());
+                SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
                 digitalWrite<enablePin, LOW>();
                 SPI.transfer(0x66);
                 digitalWrite<enablePin, HIGH>();
