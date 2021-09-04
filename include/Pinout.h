@@ -202,11 +202,11 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
     }
 }
 
-template<i960Pinout pin, decltype(HIGH) switchTo = LOW, decltype(HIGH) revertTo = HIGH>
+template<i960Pinout pin, decltype(HIGH) switchTo = LOW>
 inline void pulse() noexcept {
-    // save registers and do the pulse
+    // use the switch to value to compute what to revert to
     digitalWrite<pin, switchTo>();
-    digitalWrite<pin, revertTo>();
+    digitalWrite<pin, ((switchTo == LOW) ? HIGH : LOW)>();
 }
 
 template<i960Pinout pin>
