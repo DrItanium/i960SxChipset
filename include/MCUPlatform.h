@@ -504,7 +504,7 @@ constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
 template<>
 constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         16_KB,
-        16, 16,
+        2, 128,
         32,
         10_MHz,
         5_MHz, // due to the current design, we have to run the psram at 5 Mhz
