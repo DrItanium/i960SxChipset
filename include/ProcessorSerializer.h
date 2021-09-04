@@ -97,63 +97,63 @@ class ProcessorInterface {
         }
         return SplitWord16(lower, upper).wholeValue_;
     }
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
+    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true, bool disableInterrupts = true>
     static uint8_t read8() noexcept {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        digitalWrite<i960Pinout::GPIOSelect, LOW, disableInterrupts>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto lower = SPI.transfer(0);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH, disableInterrupts>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
         return lower;
     }
 
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
+    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true, bool disableInterrupts = true>
     static void write16(uint16_t value) noexcept {
         SplitWord16 valueDiv(value);
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        digitalWrite<i960Pinout::GPIOSelect, LOW, disableInterrupts>();
         SPI.transfer(generateWriteOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(valueDiv.bytes[0]);
         SPI.transfer(valueDiv.bytes[1]);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH, disableInterrupts>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
     }
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
+    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true, bool disableInterrupts = true>
     static void write8(uint8_t value) noexcept {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        digitalWrite<i960Pinout::GPIOSelect, LOW, disableInterrupts>();
         SPI.transfer(generateWriteOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(value);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH, disableInterrupts>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
     }
-    template<IOExpanderAddress addr, bool standalone = true>
+    template<IOExpanderAddress addr, bool standalone = true, bool disableInterrupts = true>
     static inline uint16_t readGPIO16() noexcept {
-        return read16<addr, MCP23x17Registers::GPIO, standalone>();
+        return read16<addr, MCP23x17Registers::GPIO, standalone, disableInterrupts>();
     }
-    template<IOExpanderAddress addr, bool standalone = true>
+    template<IOExpanderAddress addr, bool standalone = true, bool disableInterrupts = true>
     static inline void writeGPIO16(uint16_t value) noexcept {
-        write16<addr, MCP23x17Registers::GPIO, standalone>(value);
+        write16<addr, MCP23x17Registers::GPIO, standalone, disableInterrupts>(value);
     }
-    template<IOExpanderAddress addr, bool standalone = true>
+    template<IOExpanderAddress addr, bool standalone = true, bool disableInterrupts = true>
     static inline void writeDirection(uint16_t value) noexcept {
-        write16<addr, MCP23x17Registers::IODIR, standalone>(value);
+        write16<addr, MCP23x17Registers::IODIR, standalone, disableInterrupts>(value);
     }
 public:
     ProcessorInterface() = delete;
