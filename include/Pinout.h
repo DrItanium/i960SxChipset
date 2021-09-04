@@ -183,13 +183,6 @@ private:
     uint8_t storage_ = 0;
 };
 
-template<i960Pinout pin>
-inline void pulse() noexcept {
-    // save registers and do the pulse
-    auto& thePort = getAssociatedOutputPort<pin>();
-    thePort ^= getPinMask<pin>();
-    thePort ^= getPinMask<pin>();
-}
 
 template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() noexcept {
@@ -207,6 +200,13 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
     } else {
         thePort |= getPinMask<pin>();
     }
+}
+
+template<i960Pinout pin, decltype(HIGH) switchTo = LOW, decltype(HIGH) revertTo = HIGH>
+inline void pulse() noexcept {
+    // save registers and do the pulse
+    digitalWrite<pin, switchTo>();
+    digitalWrite<pin, revertTo>();
 }
 
 template<i960Pinout pin>
