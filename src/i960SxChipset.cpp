@@ -142,7 +142,7 @@ auto& getLine() noexcept {
 inline bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-    DigitalPin<i960Pinout::Ready>::pulse();
+    DigitalPin<i960Pinout::Ready>::pulse<false>();
     return isBurstLast;
 }
 inline void invocationBody() noexcept {
