@@ -81,17 +81,17 @@ class ProcessorInterface {
     static constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
+    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true, bool disableInterrupts = true>
     static uint16_t read16() noexcept {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        digitalWrite<i960Pinout::GPIOSelect, LOW, disableInterrupts>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto lower = SPI.transfer(0);
         auto upper = SPI.transfer(0);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH, disableInterrupts>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
