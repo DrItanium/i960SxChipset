@@ -85,7 +85,7 @@ ProcessorInterface::newDataCycle() noexcept {
     constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
     constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
     //SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-    digitalWrite<i960Pinout::GPIOSelect, LOW>();
+    digitalWrite<i960Pinout::GPIOSelect, LOW, false>();
     SPI.transfer(Lower16Opcode);
     SPI.transfer(GPIOOpcode);
     address_.bytes[0] = SPI.transfer(0);
@@ -95,7 +95,7 @@ ProcessorInterface::newDataCycle() noexcept {
     SPI.transfer(GPIOOpcode);
     address_.bytes[2] = SPI.transfer(0);
     address_.bytes[3] = SPI.transfer(0);
-    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+    digitalWrite<i960Pinout::GPIOSelect, HIGH, false>();
     //SPI.endTransaction();
     // no need to re-read the burst address bits
     return address_.bytes[3];
