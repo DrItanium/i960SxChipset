@@ -170,40 +170,50 @@ template<i960Pinout pin>
     }
 }
 
-template<i960Pinout pin>
+template<bool disableInterrupts>
+class InterruptDisabler final {
+public:
+    InterruptDisabler() noexcept {
+        if constexpr (disableInterrupts) {
+            storage_ = SREG;
+            cli();
+        }
+    }
+    ~InterruptDisabler() noexcept {
+        if constexpr (disableInterrupts) {
+            SREG = storage_;
+        }
+    }
+private:
+    uint8_t storage_ = 0;
+};
+
+template<i960Pinout pin, bool disableInterrupts = true>
 inline void pulse() noexcept {
     // save registers and do the pulse
-    uint8_t theSREG = SREG;
-    cli();
+    InterruptDisabler<disableInterrupts> disableTheInterrupts;
     auto& thePort = getAssociatedOutputPort<pin>();
     thePort ^= getPinMask<pin>();
     thePort ^= getPinMask<pin>();
-    SREG = theSREG;
 }
 
-template<i960Pinout pin, decltype(HIGH) value>
-inline void digitalWrite() {
-    uint8_t theSREG = SREG;
-    cli();
-    auto& thePort = getAssociatedOutputPort<pin>();
-    if constexpr (value == LOW) {
+template<i960Pinout pin, decltype(HIGH) value, bool disableInterrupts = true>
+inline void digitalWrite() noexcept {
+    InterruptDisabler<disableInterrupts> disableTheInterrupts;
+    if constexpr (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
     } else {
         thePort |= getPinMask<pin>();
     }
-    SREG = theSREG;
 }
-template<i960Pinout pin>
+template<i960Pinout pin, bool disableInterrupts = true>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
-    uint8_t theSREG = SREG;
-    cli();
-    auto& thePort = getAssociatedOutputPort<pin>();
-    if (value == LOW) {
+    InterruptDisabler<disableInterrupts> disableTheInterrupts;
+    if (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
     } else {
         thePort |= getPinMask<pin>();
     }
-    SREG = theSREG;
 }
 
 template<i960Pinout pin>
