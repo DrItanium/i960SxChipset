@@ -202,19 +202,22 @@ public:
     static void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>(lss_); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
+    template<bool disableInterrupts = true>
     static void setHOLDPin(bool value) noexcept {
         if (value != holdValue_) {
             holdValue_ = value;
-            updateOutputLatch();
+            updateOutputLatch<disableInterrupts>();
         }
     }
+    template<bool disableInterrupts = true>
     static void setLOCKPin(bool value) noexcept {
         if (value != lockValue_) {
             lockValue_ = value;
-            updateOutputLatch();
+            updateOutputLatch<disableInterrupts>();
         }
     }
 private:
+    template<bool disableInterrupts = true>
     static void updateOutputLatch() noexcept {
         // construct the bit pattern as needed
         byte latchValue = 0;
@@ -225,7 +228,7 @@ private:
         } else if (!holdValue_ && lockValue_) {
             latchValue = 0b1000'0000;
         }
-        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(latchValue);
+        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, true, disableInterrupts>(latchValue);
     }
 public:
     static byte newDataCycle() noexcept;
