@@ -249,8 +249,9 @@ struct DigitalPin {
         inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
         inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
         static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }          \
+        template<decltype(LOW) switchTo = LOW>  \
         inline static void pulse() noexcept {   \
-            ::pulse<pin>();  \
+            ::pulse<pin, switchTo>();           \
         }                                       \
     }
 #define DefInputPin(pin, asserted, deasserted) \
