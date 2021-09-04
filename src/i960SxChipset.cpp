@@ -105,10 +105,11 @@ public:
     }
     [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return valid_ && (tag.getRest() == addr.getRest()); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset & OffsetMask].getWholeValue(); }
+    template<bool terminateEarlyOnMatch = false>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         auto& target = data[offset & OffsetMask];
         auto oldValue = target.getWholeValue();
-        if constexpr (false) {
+        if constexpr (terminateEarlyOnMatch) {
             if (oldValue == value.getWholeValue()) {
                 // Check and see if the oldValue equals the new value and return early if it is true
                 // this does add some overhead overall but if we aren't actually making a change then there is no point in writing
