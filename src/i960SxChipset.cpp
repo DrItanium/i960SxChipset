@@ -104,7 +104,7 @@ public:
         }
     }
     [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return valid_ && (tag.getRest() == addr.getRest()); }
-    [[nodiscard]] auto get(byte offset) const noexcept { return data[offset & OffsetMask].getWholeValue(); }
+    [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset & OffsetMask].getWholeValue(); }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         dirty_ = true;
         switch (auto& target = data[offset & OffsetMask]; style) {
@@ -176,8 +176,7 @@ inline void invocationBody() noexcept {
         // okay we are dealing with the psram chips
         // now take the time to compute the cache offset entries
         ProcessorInterface::computeInitialCacheOffset();
-        auto& theEntry = getLine();
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
                 ProcessorInterface::setDataBits(theEntry.get(ProcessorInterface::getCacheOffsetEntry()));
                 if (informCPU()) {
