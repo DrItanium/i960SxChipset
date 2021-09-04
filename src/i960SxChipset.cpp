@@ -135,9 +135,13 @@ public:
         // the idea is that if the values don't change don't mark the cache line as dirty again
         // it may already be dirty but don't force the matter on any write
         // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
+        // we want to or the result not assign to prevent a true flag from being affected (t | f) => t
+        dirty_ |= (oldValue != target.getWholeValue());
+#if 0
         if (oldValue != target.getWholeValue()) {
             dirty_ = true;
         }
+#endif
     }
 private:
     SplitWord16 data[NumWordsCached]; // 32 bytes
