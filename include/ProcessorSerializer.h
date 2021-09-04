@@ -250,6 +250,7 @@ private:
     static inline LoadStoreStyle lss_ = LoadStoreStyle::None;
     static inline bool lockValue_ = true;
     static inline bool holdValue_ = false;
+    static inline bool initialized_ = false;
     static inline byte cacheOffsetEntry_ = 0;
     static inline uint16_t latchedDataOutput = 0;
 };

@@ -53,7 +53,6 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
 
 void
 ProcessorInterface::begin() noexcept {
-    static bool initialized_ = false;
     if (!initialized_) {
         initialized_ = true;
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
