@@ -251,13 +251,17 @@ struct DigitalPin {
         static constexpr auto getPin() noexcept { return pin; } \
         static constexpr auto getDirection() noexcept { return OUTPUT; } \
         static constexpr auto getAssertionState() noexcept { return asserted; } \
-        static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-        inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState()>(); } \
-        inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
-        inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
-        static constexpr auto valid() noexcept { return isValidPin960_v<pin>; } \
+        static constexpr auto getDeassertionState() noexcept { return deasserted; }      \
+        template<bool disableInterrupts = true>                                         \
+        inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState(), disableInterrupts>(); } \
+        template<bool disableInterrupts = true>                                         \
+        inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState(), disableInterrupts>(); } \
+        template<bool disableInterrupts = true>                                         \
+        inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin, disableInterrupts>(value); } \
+        static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }          \
+        template<bool disableInterrupts = true> \
         inline static void pulse() noexcept {   \
-            ::pulse<pin>();                                     \
+            ::pulse<pin, disableInterrupts>();  \
         }                                       \
     }
 #define DefInputPin(pin, asserted, deasserted) \
