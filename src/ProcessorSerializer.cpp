@@ -28,22 +28,22 @@ uint16_t
 ProcessorInterface::getDataBits() noexcept {
     if (dataLinesDirection_ != 0xFFFF) {
         dataLinesDirection_ = 0xFFFF;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines, true, false>(dataLinesDirection_);
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     }
-    return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines, true, false>();
+    return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
     if (dataLinesDirection_ != 0) {
         dataLinesDirection_ = 0;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines, true, false>(dataLinesDirection_);
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     }
     // the latch is preserved in between data line changes
     // okay we are still pointing as output values
     // check the latch and see if the output value is the same as what is latched
     if (latchedDataOutput != value) {
         latchedDataOutput = value;
-        writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines, true, false>(latchedDataOutput);
+        writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
     }
 }
 
@@ -83,18 +83,18 @@ ProcessorInterface::newDataCycle() noexcept {
     constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
     constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
     constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-    digitalWrite<i960Pinout::GPIOSelect, LOW, false>();
+    digitalWrite<i960Pinout::GPIOSelect, LOW>();
     SPI.transfer(Lower16Opcode);
     SPI.transfer(GPIOOpcode);
     address_.bytes[0] = SPI.transfer(0);
     address_.bytes[1] = SPI.transfer(0);
-    digitalWrite<i960Pinout::GPIOSelect, HIGH, false>();
-    digitalWrite<i960Pinout::GPIOSelect, LOW, false>();
+    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+    digitalWrite<i960Pinout::GPIOSelect, LOW>();
     SPI.transfer(Upper16Opcode);
     SPI.transfer(GPIOOpcode);
     address_.bytes[2] = SPI.transfer(0);
     address_.bytes[3] = SPI.transfer(0);
-    digitalWrite<i960Pinout::GPIOSelect, HIGH, false>();
+    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     // no need to re-read the burst address bits
     return address_.bytes[3];
 }

@@ -170,45 +170,38 @@ template<i960Pinout pin>
     }
 }
 
-template<bool disableInterrupts>
 class InterruptDisabler final {
 public:
     InterruptDisabler() noexcept {
-        if constexpr (disableInterrupts) {
-            storage_ = SREG;
-            cli();
-        }
+        storage_ = SREG;
+        cli();
     }
     ~InterruptDisabler() noexcept {
-        if constexpr (disableInterrupts) {
-            SREG = storage_;
-        }
+        SREG = storage_;
     }
 private:
     uint8_t storage_ = 0;
 };
 
-template<i960Pinout pin, bool disableInterrupts = true>
+template<i960Pinout pin>
 inline void pulse() noexcept {
     // save registers and do the pulse
-    InterruptDisabler<disableInterrupts> disableTheInterrupts;
     auto& thePort = getAssociatedOutputPort<pin>();
     thePort ^= getPinMask<pin>();
     thePort ^= getPinMask<pin>();
 }
 
-template<i960Pinout pin, decltype(HIGH) value, bool disableInterrupts = true>
+template<i960Pinout pin, decltype(HIGH) value>
 inline void digitalWrite() noexcept {
-    InterruptDisabler<disableInterrupts> disableTheInterrupts;
     if constexpr (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
     } else {
         thePort |= getPinMask<pin>();
     }
 }
-template<i960Pinout pin, bool disableInterrupts = true>
+template<i960Pinout pin>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
-    InterruptDisabler<disableInterrupts> disableTheInterrupts;
+    // don't disable interrupts, that should be done outside this method
     if (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
     } else {
@@ -252,16 +245,12 @@ struct DigitalPin {
         static constexpr auto getDirection() noexcept { return OUTPUT; } \
         static constexpr auto getAssertionState() noexcept { return asserted; } \
         static constexpr auto getDeassertionState() noexcept { return deasserted; }      \
-        template<bool disableInterrupts = true>                                         \
-        inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState(), disableInterrupts>(); } \
-        template<bool disableInterrupts = true>                                         \
-        inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState(), disableInterrupts>(); } \
-        template<bool disableInterrupts = true>                                         \
-        inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin, disableInterrupts>(value); } \
+        inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState()>(); } \
+        inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
+        inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
         static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }          \
-        template<bool disableInterrupts = true> \
         inline static void pulse() noexcept {   \
-            ::pulse<pin, disableInterrupts>();  \
+            ::pulse<pin>();  \
         }                                       \
     }
 #define DefInputPin(pin, asserted, deasserted) \

@@ -83,14 +83,14 @@ public:
         if (valid_ && dirty_) {
             // just do the write out to disk to save time
             // still an expensive operation
-            OnboardPSRAMBlock::write<false>(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
+            OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
         }
         valid_ = true; // always set this
         dirty_ = false;
         // since we have called reset, now align the new address internally
         tag = TaggedAddress::makeAlignedVersion(newTag.getAddress());
         // this is a _very_ expensive operation
-        OnboardPSRAMBlock::read<false>(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof (data));
+        OnboardPSRAMBlock::read(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof (data));
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
@@ -162,7 +162,7 @@ auto& getLine() noexcept {
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-    DigitalPin<i960Pinout::Ready>::pulse<false>();
+    DigitalPin<i960Pinout::Ready>::pulse();
     return isBurstLast;
 }
 inline void invocationBody() noexcept {

@@ -81,79 +81,79 @@ class ProcessorInterface {
     static constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true, bool disableInterrupts = true>
+    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static uint16_t read16() noexcept {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW, disableInterrupts>();
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto lower = SPI.transfer(0);
         auto upper = SPI.transfer(0);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH, disableInterrupts>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
         return SplitWord16(lower, upper).wholeValue_;
     }
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true, bool disableInterrupts = true>
+    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static uint8_t read8() noexcept {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW, disableInterrupts>();
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto lower = SPI.transfer(0);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH, disableInterrupts>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
         return lower;
     }
 
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true, bool disableInterrupts = true>
+    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static void write16(uint16_t value) noexcept {
         SplitWord16 valueDiv(value);
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW, disableInterrupts>();
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateWriteOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(valueDiv.bytes[0]);
         SPI.transfer(valueDiv.bytes[1]);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH, disableInterrupts>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
     }
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true, bool disableInterrupts = true>
+    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static void write8(uint8_t value) noexcept {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW, disableInterrupts>();
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPI.transfer(generateWriteOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(value);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH, disableInterrupts>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
     }
-    template<IOExpanderAddress addr, bool standalone = true, bool disableInterrupts = true>
+    template<IOExpanderAddress addr, bool standalone = true>
     static inline uint16_t readGPIO16() noexcept {
-        return read16<addr, MCP23x17Registers::GPIO, standalone, disableInterrupts>();
+        return read16<addr, MCP23x17Registers::GPIO, standalone>();
     }
-    template<IOExpanderAddress addr, bool standalone = true, bool disableInterrupts = true>
+    template<IOExpanderAddress addr, bool standalone = true>
     static inline void writeGPIO16(uint16_t value) noexcept {
-        write16<addr, MCP23x17Registers::GPIO, standalone, disableInterrupts>(value);
+        write16<addr, MCP23x17Registers::GPIO, standalone>(value);
     }
-    template<IOExpanderAddress addr, bool standalone = true, bool disableInterrupts = true>
+    template<IOExpanderAddress addr, bool standalone = true>
     static inline void writeDirection(uint16_t value) noexcept {
-        write16<addr, MCP23x17Registers::IODIR, standalone, disableInterrupts>(value);
+        write16<addr, MCP23x17Registers::IODIR, standalone>(value);
     }
 public:
     ProcessorInterface() = delete;
@@ -202,22 +202,19 @@ public:
     static void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>(lss_); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
-    template<bool disableInterrupts = true>
     static void setHOLDPin(bool value) noexcept {
         if (value != holdValue_) {
             holdValue_ = value;
-            updateOutputLatch<disableInterrupts>();
+            updateOutputLatch();
         }
     }
-    template<bool disableInterrupts = true>
     static void setLOCKPin(bool value) noexcept {
         if (value != lockValue_) {
             lockValue_ = value;
-            updateOutputLatch<disableInterrupts>();
+            updateOutputLatch();
         }
     }
 private:
-    template<bool disableInterrupts = true>
     static void updateOutputLatch() noexcept {
         // construct the bit pattern as needed
         byte latchValue = 0;
@@ -228,7 +225,7 @@ private:
         } else if (!holdValue_ && lockValue_) {
             latchValue = 0b1000'0000;
         }
-        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, true, disableInterrupts>(latchValue);
+        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(latchValue);
     }
 public:
     static byte newDataCycle() noexcept;
