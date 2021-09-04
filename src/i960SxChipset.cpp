@@ -108,11 +108,13 @@ public:
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         auto& target = data[offset & OffsetMask];
         auto oldValue = target.getWholeValue();
-        if (oldValue == value.getWholeValue()) {
-            // Check and see if the oldValue equals the new value and return early if it is true
-            // this does add some overhead overall but if we aren't actually making a change then there is no point in writing
-            // to the cache line
-            return;
+        if constexpr (false) {
+            if (oldValue == value.getWholeValue()) {
+                // Check and see if the oldValue equals the new value and return early if it is true
+                // this does add some overhead overall but if we aren't actually making a change then there is no point in writing
+                // to the cache line
+                return;
+            }
         }
         switch(style) {
             case LoadStoreStyle::Full16:
