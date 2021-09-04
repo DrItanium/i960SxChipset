@@ -28,22 +28,22 @@ uint16_t
 ProcessorInterface::getDataBits() noexcept {
     if (dataLinesDirection_ != 0xFFFF) {
         dataLinesDirection_ = 0xFFFF;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines, true, false>(dataLinesDirection_);
     }
-    return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
+    return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines, true, false>();
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
     if (dataLinesDirection_ != 0) {
         dataLinesDirection_ = 0;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines, true, false>(dataLinesDirection_);
     }
     // the latch is preserved in between data line changes
     // okay we are still pointing as output values
     // check the latch and see if the output value is the same as what is latched
     if (latchedDataOutput != value) {
         latchedDataOutput = value;
-        writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
+        writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines, true, false>(latchedDataOutput);
     }
 }
 
