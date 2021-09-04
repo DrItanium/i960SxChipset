@@ -166,8 +166,8 @@ template<bool usePulseRoutine = true>
     if constexpr (usePulseRoutine) {
         DigitalPin<i960Pinout::Ready>::pulse();
     } else {
+        // just pull the line low here we will pull it high when we actually need to
         digitalWrite<i960Pinout::Ready, LOW>();
-        digitalWrite<i960Pinout::Ready, HIGH>();
     }
     return isBurstLast;
 }
@@ -182,17 +182,19 @@ inline void invocationBody() noexcept {
         // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
+                digitalWrite<i960Pinout::Ready, HIGH>();
                 ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
-                if (informCPU()) {
+                if (informCPU<false>()) {
                     break;
                 }
                 ProcessorInterface::burstNext<false>();
             } while (true);
         } else {
             do {
+                digitalWrite<i960Pinout::Ready, HIGH>();
                 CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
                                            ProcessorInterface::getDataBits());
-                if (informCPU()) {
+                if (informCPU<false>()) {
                     break;
                 }
                 ProcessorInterface::burstNext<false>();
@@ -206,8 +208,9 @@ inline void invocationBody() noexcept {
         ProcessorInterface::computeInitialCacheOffset();
         if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
+                digitalWrite<i960Pinout::Ready, HIGH>();
                 ProcessorInterface::setDataBits(theEntry.get(ProcessorInterface::getCacheOffsetEntry()));
-                if (informCPU()) {
+                if (informCPU<false>()) {
                     break;
                 }
                 // don't read lss when dealing with the memory interface we don't need it since the processor only pulls in the bits needed
@@ -215,10 +218,11 @@ inline void invocationBody() noexcept {
             } while (true);
         } else {
             do {
+                digitalWrite<i960Pinout::Ready, HIGH>();
                 theEntry.set(ProcessorInterface::getCacheOffsetEntry(),
                              ProcessorInterface::getStyle(),
                              SplitWord16{ProcessorInterface::getDataBits()});
-                if (informCPU()) {
+                if (informCPU<false>()) {
                     break;
                 }
                 // this is the only place where we actually need to continually update BE0, BE1 to know what kind of operation
@@ -233,10 +237,11 @@ inline void invocationBody() noexcept {
             ProcessorInterface::setDataBits(0);
         }
         do {
+            digitalWrite<i960Pinout::Ready, HIGH>();
             // on writes we do nothing but throw the value on
             // on reads we just keep the latch at 0 so we don't change a thing
             // after the first operation
-            if (informCPU()) {
+            if (informCPU<false>()) {
                 break;
             }
             ProcessorInterface::burstNext<false>();
