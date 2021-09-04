@@ -118,7 +118,7 @@ public:
                 return;
             }
         }
-        switch(style) {
+        switch (style) {
             case LoadStoreStyle::Full16:
                 target.wholeValue_ = value.wholeValue_;
                 break;
