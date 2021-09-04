@@ -108,6 +108,12 @@ public:
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         auto& target = data[offset & OffsetMask];
         auto oldValue = target.getWholeValue();
+        if (oldValue == value.getWholeValue()) {
+            // Check and see if the oldValue equals the new value and return early if it is true
+            // this does add some overhead overall but if we aren't actually making a change then there is no point in writing
+            // to the cache line
+            return;
+        }
         switch(style) {
             case LoadStoreStyle::Full16:
                 target.wholeValue_ = value.wholeValue_;
@@ -123,7 +129,9 @@ public:
         }
         // do a comparison at the end to see if we actually changed anything
         // the idea is that if the values don't change don't mark the cache line as dirty again
-        if (oldValue != target.wholeValue_) {
+        // it may already be dirty but don't force the matter on any write
+        // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
+        if (oldValue != target.getWholeValue()) {
             dirty_ = true;
         }
     }
