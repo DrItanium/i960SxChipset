@@ -106,8 +106,9 @@ public:
     [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return valid_ && (tag.getRest() == addr.getRest()); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset & OffsetMask].getWholeValue(); }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
-        dirty_ = true;
-        switch (auto& target = data[offset & OffsetMask]; style) {
+        auto& target = data[offset & OffsetMask];
+        auto oldValue = target.getWholeValue();
+        switch(style) {
             case LoadStoreStyle::Full16:
                 target.wholeValue_ = value.wholeValue_;
                 break;
@@ -119,6 +120,11 @@ public:
                 break;
             default:
                 signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
+        }
+        // do a comparison at the end to see if we actually changed anything
+        // the idea is that if the values don't change don't mark the cache line as dirty again
+        if (oldValue != target.wholeValue_) {
+            dirty_ = true;
         }
     }
 private:
