@@ -176,6 +176,8 @@ inline void invocationBody() noexcept {
     } else if (OnboardPSRAMBlock::respondsTo(targetDevice)) {
         // okay we are dealing with the psram chips
         // now take the time to compute the cache offset entries
+        // this will waste some time querying porta when we don't need the result, but we do need the offset for the purposes of
+        // computing the cache offset
         ProcessorInterface::computeInitialCacheOffset();
         if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             do {
