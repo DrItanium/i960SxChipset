@@ -151,7 +151,6 @@ inline void invocationBody() noexcept {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    //auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
     if (auto targetDevice = ProcessorInterface::newDataCycle(); CoreChipsetFeatures::respondsTo(targetDevice)) {
         // generally we shouldn't see burst operations here but who knows!
         // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
