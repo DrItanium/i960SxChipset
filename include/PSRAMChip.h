@@ -324,9 +324,10 @@ private:
     };
     static void setChipId(byte index) noexcept {
         if (Decomposition dec(index); dec.getIndex() != currentIndex_.getIndex()) {
-            digitalWrite<Select0>(dec.s0 ? HIGH : LOW);
-            digitalWrite<Select1>(dec.s1 ? HIGH : LOW);
-            digitalWrite<Select2>(dec.s2 ? HIGH : LOW);
+            InterruptDisabler<true> disableInterruptsExtended;
+            digitalWrite<Select0, false>(dec.s0 ? HIGH : LOW);
+            digitalWrite<Select1, false>(dec.s1 ? HIGH : LOW);
+            digitalWrite<Select2, false>(dec.s2 ? HIGH : LOW);
             currentIndex_ = dec;
         }
     }
