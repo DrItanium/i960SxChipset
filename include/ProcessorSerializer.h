@@ -133,21 +133,9 @@ class ProcessorInterface {
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = static_cast<byte>(opcode);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = 0;
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         auto lower = SPDR;
