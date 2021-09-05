@@ -48,14 +48,14 @@ public:
     static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr size_t LowestBitCount = 4;
-    static constexpr size_t TagIndexSize = 7;
+    static constexpr size_t TagIndexSize = 9;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
     static constexpr byte OffsetMask = static_cast<byte>(~TagMask) >> 1;  // remember that this 16-bit aligned
     // sanity checks for optimization purposes
     static_assert(LowestBitCount <= 8, "Offset must fit within a byte!");
-    static_assert(TagIndexSize <= 8, "Tag size index is too large for a single byte");
+    //static_assert(TagIndexSize <= 8, "Tag size index is too large for a single byte");
 
     union TaggedAddress {
         constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
@@ -73,7 +73,7 @@ public:
         Address base;
         struct {
             byte lowest : LowestBitCount;
-            byte tagIndex : TagIndexSize;
+            uint16_t tagIndex : TagIndexSize;
             Address rest : UpperBitCount;
         };
     };
@@ -176,13 +176,18 @@ inline void invocationBody() noexcept {
         // generally we shouldn't see burst operations here but who knows!
         // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            do {
+            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
                 ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
-                if (informCPU()) {
-                    break;
-                }
-                ProcessorInterface::burstNext<false>();
-            } while (true);
+                DigitalPin<i960Pinout::Ready>::pulse();
+            } else {
+                do {
+                    ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
+                    if (informCPU()) {
+                        break;
+                    }
+                    ProcessorInterface::burstNext<false>();
+                } while (true);
+            }
         } else {
             do {
                 CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
