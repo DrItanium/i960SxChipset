@@ -91,16 +91,28 @@ ProcessorInterface::newDataCycle() noexcept {
     SPDR = 0;
     asm volatile("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
-    address_.bytes[0] = SPDR;
+    auto lowest = SPDR;
     SPDR = 0;
     asm volatile("nop");
+    {
+        // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
+        // put scope ticks to force the matter
+        cacheOffsetEntry_ = lowest >> 1; // we want to make this quick to increment
+    }
     while (!(SPSR & _BV(SPIF))) ; // wait
     address_.bytes[1] = SPDR;
     DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
     SPDR = Upper16Opcode;
     asm volatile("nop");
+    {
+        // interleave this operation in, can't get more complex than this
+        lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
+    }
     while (!(SPSR & _BV(SPIF))) ; // wait
     SPDR = GPIOOpcode;
+    {
+        address_.bytes[0] = lowest;
+    }
     asm volatile("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
     SPDR = 0;
