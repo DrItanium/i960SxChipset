@@ -91,13 +91,13 @@ ProcessorInterface::newDataCycle() noexcept {
     SPDR = 0;
     asm volatile("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
-    auto lowest = SPDR;
+    address_.bytes[0] = SPDR;
     SPDR = 0;
     asm volatile("nop");
     {
         // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
         // put scope ticks to force the matter
-        cacheOffsetEntry_ = lowest >> 1; // we want to make this quick to increment
+        cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
     }
     while (!(SPSR & _BV(SPIF))) ; // wait
     address_.bytes[1] = SPDR;
@@ -110,9 +110,6 @@ ProcessorInterface::newDataCycle() noexcept {
     }
     while (!(SPSR & _BV(SPIF))) ; // wait
     SPDR = GPIOOpcode;
-    {
-        address_.bytes[0] = lowest;
-    }
     asm volatile("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
     SPDR = 0;
