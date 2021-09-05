@@ -163,39 +163,6 @@ public:
     ProcessorInterface& operator=(const ProcessorInterface&) = delete;
     ProcessorInterface& operator=(ProcessorInterface&&) = delete;
 public:
-// layout of the extra memory commit expander
-// PA0 - BurstAddress1 - input
-// PA1 - BurstAddress2 - input
-// PA2 - BurstAddress3 - input
-// PA3 - BE0_ - input
-// PA4 - BE1_ - input
-// PA5 - HOLD  - output
-// PA6 - HLDA  - input
-// PA7 - _LOCK - output
-// PB0-PB7 - Unused
-
-    enum class ExtraGPIOExpanderPinout : decltype(A0) {
-        BurstAddress1,
-        BurstAddress2,
-        BurstAddress3,
-        ByteEnable0,
-        ByteEnable1,
-        HOLD,
-        HLDA,
-        LOCK_,
-        // add support for upto 256 spi devices
-        Unused0,
-        Unused1,
-        Unused2,
-        Unused3,
-        Unused4,
-        Unused5,
-        Unused6,
-        Unused7,
-        Count,
-    };
-    static_assert(static_cast<int>(ExtraGPIOExpanderPinout::Count) == 16);
-public:
     static void begin() noexcept;
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
     [[nodiscard]] static uint16_t getDataBits() noexcept;
