@@ -249,7 +249,6 @@ public:
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
 public:
-    //explicit MemoryBlock() : currentIndex_(0xFF) { }
     MemoryBlock() = delete;
     ~MemoryBlock() = delete;
     union PSRAMBlockAddress {
@@ -269,13 +268,12 @@ private:
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         PSRAMBlockAddress curr(address);
         PSRAMBlockAddress end(address + capacity);
-        //SplitWord32 theAddress(curr.getOffset());
         auto numBytesToSecondChip = end.getOffset();
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        digitalWrite<enablePin, LOW>();
+        digitalWrite<EnablePin, LOW>();
         SPDR = opcode;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
@@ -289,14 +287,14 @@ private:
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPI.transfer(buf, numBytesToFirstChip);
-        digitalWrite<enablePin, HIGH>();
-        if ((!localToASingleChip) && (numBytesToSecondChip > 0)) {
+        digitalWrite<EnablePin, HIGH>();
+        if (!localToASingleChip && (numBytesToSecondChip > 0)) {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             // start writing at the start of the next chip the remaining number of bytes
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
-            digitalWrite<enablePin, LOW>();
+            digitalWrite<EnablePin, LOW>();
             SPDR = opcode;
             asm volatile("nop");
             while (!(SPSR & _BV(SPIF))) ; // wait
@@ -310,7 +308,7 @@ private:
             asm volatile("nop");
             while (!(SPSR & _BV(SPIF))) ; // wait
             SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
-            digitalWrite<enablePin, HIGH>();
+            digitalWrite<EnablePin, HIGH>();
         }
         SPI.endTransaction();
         return capacity;
@@ -349,7 +347,7 @@ public:
             initialized_ = true;
             currentIndex_.index = 0;
             setChipId(0);
-            for (int i = 0; i < 8; ++i) {
+            for (int i = 0; i < NumChips; ++i) {
                 setChipId(i);
                 delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
                 SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
