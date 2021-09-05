@@ -89,20 +89,17 @@ ProcessorInterface::newDataCycle() noexcept {
     // no need to re-read the burst address bits
     return address_.bytes[3];
 }
-
 void
-ProcessorInterface::setupDataLines() noexcept {
-    if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-        if (dataLinesDirection_ != 0) {
-            dataLinesDirection_ = 0;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
-        }
-
-    } else {
-        if (dataLinesDirection_ != 0xFFFF) {
-            dataLinesDirection_ = 0xFFFF;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
-        }
-
+ProcessorInterface::setupDataLinesForWrite() noexcept {
+    if (dataLinesDirection_ != 0xFFFF) {
+        dataLinesDirection_ = 0xFFFF;
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+    }
+}
+void
+ProcessorInterface::setupDataLinesForRead() noexcept {
+    if (dataLinesDirection_ != 0) {
+        dataLinesDirection_ = 0;
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
     }
 }
