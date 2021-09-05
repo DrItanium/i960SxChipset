@@ -214,8 +214,7 @@ public:
             updateOutputLatch();
         }
     }
-    static void setupDataLinesForWrite() noexcept;
-    static void setupDataLinesForRead() noexcept;
+    static void setupDataLines() noexcept;
 private:
     static void updateOutputLatch() noexcept {
         // construct the bit pattern as needed

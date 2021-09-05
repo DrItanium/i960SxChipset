@@ -175,12 +175,7 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    auto isReadOperation = DigitalPin<i960Pinout::W_R_>::isAsserted();
-    if (isReadOperation) {
-        ProcessorInterface::setupDataLinesForRead();
-    } else {
-        ProcessorInterface::setupDataLinesForWrite();
-    }
+    ProcessorInterface::setupDataLines();
     if (auto targetDevice = ProcessorInterface::newDataCycle(); OnboardPSRAMBlock::respondsTo(targetDevice)) {
         // okay we are dealing with the psram chips
         // now take the time to compute the cache offset entries
