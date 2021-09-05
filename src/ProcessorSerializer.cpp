@@ -61,7 +61,7 @@ ProcessorInterface::begin() noexcept {
         // make each of these inputs
         writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
         writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
-        writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_);
+        writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
         writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0x005F);
         // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
         write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
@@ -92,14 +92,14 @@ ProcessorInterface::newDataCycle() noexcept {
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
     if (dataLinesDirection_ == 0) {
-        dataLinesDirection_ = 0xFFFF;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        dataLinesDirection_ = 0xFF;
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
     }
 }
 void
 ProcessorInterface::setupDataLinesForRead() noexcept {
     if (dataLinesDirection_ != 0) {
         dataLinesDirection_ = 0;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
+        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
     }
 }

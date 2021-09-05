@@ -249,7 +249,7 @@ public:
         cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
     }
 private:
-    static inline uint16_t dataLinesDirection_ = 0xFFFF;
+    static inline byte dataLinesDirection_ = 0xFF;
     static inline SplitWord32 address_{0};
     static inline LoadStoreStyle lss_ = LoadStoreStyle::None;
     static inline bool lockValue_ = true;
