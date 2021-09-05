@@ -247,7 +247,7 @@ private:
     }
 public:
     static byte newDataCycle() noexcept;
-    template<bool readLoadStoreStyle = true>
+    template<bool readLoadStoreStyle = true, bool usesCache = true>
     static void burstNext() noexcept {
         // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
         // next 16-bit word
@@ -261,7 +261,9 @@ public:
         // no seriously! the Sx processors cannot transfer more than 16-bytes at a time and because of how the burst transaction pins work,
         // you cannot span multiple 16-byte areas in a single transaction. It will be broken up into two or more operations. I cannot stress
         // this enough.
-        ++cacheOffsetEntry_;
+        if constexpr (usesCache) {
+            ++cacheOffsetEntry_;
+        }
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
