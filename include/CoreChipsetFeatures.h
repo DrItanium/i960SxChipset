@@ -46,10 +46,8 @@ public:
 #define SixteenByteEntry(Prefix) \
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
-        TwoByteEntry(ConsoleFlush),
-        TwoByteEntry(ConsoleAvailable),
-        TwoByteEntry(ConsoleAvailableForWrite),
         TwoByteEntry(ConsoleIO),
+        TwoByteEntry(ConsoleFlush),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
