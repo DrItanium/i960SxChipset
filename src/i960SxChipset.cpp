@@ -166,7 +166,7 @@ auto& getLine() noexcept {
     DigitalPin<i960Pinout::Ready>::pulse();
     return isBurstLast;
 }
-void invocationBody() noexcept {
+inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
