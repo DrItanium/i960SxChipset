@@ -48,7 +48,7 @@ public:
     static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr size_t LowestBitCount = 4;
-    static constexpr size_t TagIndexSize = 8;
+    static constexpr size_t TagIndexSize = 7;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
@@ -148,8 +148,8 @@ private:
     bool dirty_ = false;
 };
 
-constexpr auto NumberOfWays = 2;
-CacheEntry entries[TargetBoard::numberOfCacheLines()][2]; // we actually are holding more bytes in the cache than before
+constexpr auto NumberOfWays = 4;
+CacheEntry entries[TargetBoard::numberOfCacheLines()/2][NumberOfWays]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 auto& getLine() noexcept {
     // only align if we need to reset the chip
@@ -159,6 +159,10 @@ auto& getLine() noexcept {
         return theEntry;
     }  else if (auto& theEntry2 = theWay[1]; theEntry2.matches(theAddress)) {
         return theEntry2;
+    }  else if (auto& theEntry3 = theWay[2]; theEntry3.matches(theAddress)) {
+        return theEntry3;
+    }  else if (auto& theEntry4 = theWay[3]; theEntry4.matches(theAddress)) {
+        return theEntry4;
     } else {
         // neither matched so we need to choose one at random to eliminate
         if (!theEntry.isValid()) {
@@ -167,14 +171,27 @@ auto& getLine() noexcept {
         } else if(!theEntry2.isValid()) {
             theEntry2.reset(theAddress);
             return theEntry2;
+        } else if(!theEntry3.isValid()) {
+            theEntry3.reset(theAddress);
+            return theEntry3;
+        } else if(!theEntry4.isValid()) {
+            theEntry4.reset(theAddress);
+            return theEntry4;
         } else {
             // choose one from the way at random
-            if (random() & 1) {
-                theEntry.reset(theAddress);
-                return theEntry;
-            } else {
-                theEntry2.reset(theAddress);
-                return theEntry2;
+            switch(random() & 0b11) {
+                case 1:
+                    theEntry2.reset(theAddress);
+                    return theEntry2;
+                case 2:
+                    theEntry3.reset(theAddress);
+                    return theEntry3;
+                case 3:
+                    theEntry4.reset(theAddress);
+                    return theEntry4;
+                default:
+                    theEntry.reset(theAddress);
+                    return theEntry;
             }
         }
     }
