@@ -230,7 +230,7 @@ inline void invocationBody() noexcept {
 
 // the setup routine runs once when you press reset:
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(250'000);
     while(!Serial) {
         delay(10);
     }
