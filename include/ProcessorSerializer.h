@@ -123,9 +123,34 @@ class ProcessorInterface {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPI.transfer(generateReadOpcode(addr));
-        SPI.transfer(static_cast<byte>(opcode));
-        auto lower = SPI.transfer(0);
+        SPDR = generateReadOpcode(addr);
+        /*
+         * The following NOP introduces a small delay that can prevent the wait
+         * loop form iterating when running at the maximum speed. This gives
+         * about 10% more speed, even if it seems counter-intuitive. At lower
+         * speeds it is unnoticed.
+         */
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(opcode);
+        /*
+         * The following NOP introduces a small delay that can prevent the wait
+         * loop form iterating when running at the maximum speed. This gives
+         * about 10% more speed, even if it seems counter-intuitive. At lower
+         * speeds it is unnoticed.
+         */
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = 0;
+        /*
+         * The following NOP introduces a small delay that can prevent the wait
+         * loop form iterating when running at the maximum speed. This gives
+         * about 10% more speed, even if it seems counter-intuitive. At lower
+         * speeds it is unnoticed.
+         */
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        auto lower = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if constexpr (standalone) {
             SPI.endTransaction();
