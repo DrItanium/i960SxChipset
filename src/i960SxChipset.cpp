@@ -48,7 +48,7 @@ public:
     static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr size_t LowestBitCount = 4;
-    static constexpr size_t TagIndexSize = 7;
+    static constexpr size_t TagIndexSize = 5;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
@@ -148,7 +148,7 @@ private:
     bool dirty_ = false;
 };
 
-constexpr auto NumberOfWays = 4;
+constexpr auto NumberOfWays = 16;
 constexpr auto WaysMask = NumberOfWays - 1;
 constexpr auto EntryCount = TargetBoard::numberOfCacheLines() / (NumberOfWays >> 1);
 CacheEntry entries[EntryCount][NumberOfWays]; // we actually are holding more bytes in the cache than before
