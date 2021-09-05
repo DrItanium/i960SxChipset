@@ -151,7 +151,6 @@ private:
 };
 
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
-// we have a second level cache of 1 megabyte in sram over spi
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
