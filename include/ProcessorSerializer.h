@@ -105,10 +105,12 @@ class ProcessorInterface {
         SPDR = 0;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
-        output.bytes[0] = SPDR;
-
+        auto lower = SPDR;
         SPDR = 0;
         asm volatile("nop");
+        {
+            output.bytes[0] = lower;
+        }
         while (!(SPSR & _BV(SPIF))) ; // wait
         output.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
@@ -138,12 +140,11 @@ class ProcessorInterface {
         SPDR = 0;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
-        auto lower = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
-        return lower;
+        return SPDR;
     }
 
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
