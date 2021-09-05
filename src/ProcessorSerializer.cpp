@@ -92,14 +92,14 @@ ProcessorInterface::newDataCycle() noexcept {
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
     if (!dataLinesDirection_) {
-        dataLinesDirection_ = 0xFF;
+        dataLinesDirection_ = ~dataLinesDirection_;
         writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
     }
 }
 void
 ProcessorInterface::setupDataLinesForRead() noexcept {
     if (dataLinesDirection_) {
-        dataLinesDirection_ = 0;
+        dataLinesDirection_ = ~dataLinesDirection_;
         writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
     }
 }
