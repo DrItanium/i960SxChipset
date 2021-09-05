@@ -246,7 +246,7 @@ private:
         write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(latchValue);
     }
 public:
-    static bool newDataCycle() noexcept;
+    static byte newDataCycle() noexcept;
     template<bool readLoadStoreStyle = true>
     static void burstNext() noexcept {
         // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
