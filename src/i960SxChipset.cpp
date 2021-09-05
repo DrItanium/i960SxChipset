@@ -103,10 +103,14 @@ public:
         }
     }
     [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return isValid() && (tag.getRest() == addr.getRest()); }
-    [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset & OffsetMask].getWholeValue(); }
+    [[nodiscard]] constexpr auto get(byte offset) const noexcept {
+        // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
+        return data[offset].getWholeValue();
+    }
     template<bool terminateEarlyOnMatch = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
-        auto& target = data[offset & OffsetMask];
+        // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
+        auto& target = data[offset];
         auto oldValue = target.getWholeValue();
         if constexpr (terminateEarlyOnMatch) {
             if (oldValue == value.getWholeValue()) {
