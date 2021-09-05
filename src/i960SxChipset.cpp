@@ -148,29 +148,16 @@ private:
     bool dirty_ = false;
 };
 
-constexpr auto NumberOfWays = 4;
-constexpr auto WaysMask = NumberOfWays - 1;
-constexpr auto EntryCount = TargetBoard::numberOfCacheLines() / (NumberOfWays >> 1);
-CacheEntry entries[EntryCount][NumberOfWays]; // we actually are holding more bytes in the cache than before
+CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
-    CacheEntry* lastInvalid = nullptr;
-    for (auto& theEntry : entries[theAddress.getTagIndex()]) {
-        if (theEntry.matches(theAddress)) {
-            return theEntry;
-        } else if (!theEntry.isValid()) {
-            lastInvalid = &theEntry;
-        }
+    auto& theEntry = entries[theAddress.getTagIndex()];
+    if (!theEntry.matches(theAddress)) {
+        theEntry.reset(theAddress);
     }
-    if (!lastInvalid) {
-        // okay we got here so we need to clear something out but we didn't find an invalid entry
-        // instead assign one to last invalid and then call reset on it
-        lastInvalid = &entries[theAddress.getTagIndex()][random() & WaysMask];
-    }
-    lastInvalid->reset(theAddress);
-    return *lastInvalid;
+    return theEntry;
 }
 
 [[nodiscard]] bool informCPU() noexcept {
@@ -342,11 +329,9 @@ void setup() {
             // make sure we close the file before destruction
             theFile.close();
             Serial.println(F("CLEARING CACHE"));
-            for (auto& way : entries) {
-                for (auto& entry : way) {
-                    // the cache will be filled with transfer garbage so just clear it out without caring what it's contents are
-                    entry.clear();
-                }
+            for (auto& entry : entries) {
+                // the cache will be filled with transfer garbage so just clear it out without caring what it's contents are
+                entry.clear();
             }
         }
         delay(100);
