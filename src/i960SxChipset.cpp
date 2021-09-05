@@ -176,18 +176,13 @@ inline void invocationBody() noexcept {
         // generally we shouldn't see burst operations here but who knows!
         // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            if (DigitalPin<i960Pinout::BLAST_>::isAsserted()) {
+            do {
                 ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
-                DigitalPin<i960Pinout::Ready>::pulse();
-            } else {
-                do {
-                    ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
-                    if (informCPU()) {
-                        break;
-                    }
-                    ProcessorInterface::burstNext<false>();
-                } while (true);
-            }
+                if (informCPU()) {
+                    break;
+                }
+                ProcessorInterface::burstNext<false>();
+            } while (true);
         } else {
             do {
                 CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
