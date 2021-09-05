@@ -259,6 +259,11 @@ public:
         }
         cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
     }
+    /**
+     * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
+     * @return The LSB of the address
+     */
+    [[nodiscard]] static auto getLeastSignificantAddressByte() noexcept { return address_.bytes[0]; }
 private:
     static inline byte dataLinesDirection_ = 0xFF;
     static inline SplitWord32 address_{0};

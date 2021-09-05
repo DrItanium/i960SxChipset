@@ -68,8 +68,7 @@ public:
     static void begin() noexcept { }
     static uint16_t read() noexcept {
         // force override the default implementation
-        SplitWord32 addr(ProcessorInterface::getAddress());
-        switch (static_cast<Registers>(addr.bytes[0])) {
+        switch (static_cast<Registers>(ProcessorInterface::getLeastSignificantAddressByte())) {
             case Registers::ConsoleIO: return Serial.read();
             case Registers::ConsoleAvailable: return Serial.available();
             case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
@@ -77,8 +76,7 @@ public:
         }
     }
     static void write() noexcept {
-        SplitWord32 addr(ProcessorInterface::getAddress());
-        switch (static_cast<Registers>(addr.bytes[0])) {
+        switch (static_cast<Registers>(ProcessorInterface::getLeastSignificantAddressByte())) {
             case Registers::ConsoleFlush:
                 Serial.flush();
                 break;
