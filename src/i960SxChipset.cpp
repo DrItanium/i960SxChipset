@@ -140,6 +140,7 @@ public:
             dirty_ = true;
         }
     }
+    [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
 private:
     SplitWord16 data[NumWordsCached]; // 32 bytes
     TaggedAddress tag { 0}; // 4 bytes
@@ -147,16 +148,36 @@ private:
     bool dirty_ = false;
 };
 
-CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
+constexpr auto NumberOfWays = 2;
+CacheEntry entries[TargetBoard::numberOfCacheLines()][2]; // we actually are holding more bytes in the cache than before
 // we have a second level cache of 1 megabyte in sram over spi
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
-    auto& theEntry = entries[theAddress.getTagIndex()];
-    if (!theEntry.matches(theAddress)) {
-        theEntry.reset(theAddress);
+    auto* theWay = entries[theAddress.getTagIndex()];
+    if (auto& theEntry = theWay[0]; theEntry.matches(theAddress)) {
+        return theEntry;
+    }  else if (auto& theEntry2 = theWay[1]; theEntry2.matches(theAddress)) {
+        return theEntry2;
+    } else {
+        // neither matched so we need to choose one at random to eliminate
+        if (!theEntry.isValid()) {
+            theEntry.reset(theAddress);
+            return theEntry;
+        } else if(!theEntry2.isValid()) {
+            theEntry2.reset(theAddress);
+            return theEntry2;
+        } else {
+            // choose one from the way at random
+            if (random() & 1) {
+                theEntry.reset(theAddress);
+                return theEntry;
+            } else {
+                theEntry2.reset(theAddress);
+                return theEntry2;
+            }
+        }
     }
-    return theEntry;
 }
 
 [[nodiscard]] bool informCPU() noexcept {
