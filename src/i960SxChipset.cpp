@@ -213,7 +213,8 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
-                ProcessorInterface::burstNext<false>();
+                // we don't use the cache on this path so tell burstNext this.
+                ProcessorInterface::burstNext<false, false>();
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -223,7 +224,8 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
-                ProcessorInterface::burstNext<false>();
+                // we don't use the cache for this path so don't increment it at all
+                ProcessorInterface::burstNext<false, false>();
             } while (true);
         }
     }
