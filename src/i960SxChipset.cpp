@@ -47,8 +47,8 @@ class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
-    static constexpr size_t LowestBitCount = 4;
-    static constexpr size_t TagIndexSize = 9;
+    static constexpr size_t LowestBitCount = 5;
+    static constexpr size_t TagIndexSize = 8;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
@@ -166,7 +166,7 @@ auto& getLine() noexcept {
     DigitalPin<i960Pinout::Ready>::pulse();
     return isBurstLast;
 }
-inline void invocationBody() noexcept {
+void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
