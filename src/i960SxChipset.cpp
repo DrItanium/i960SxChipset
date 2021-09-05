@@ -168,6 +168,10 @@ auto& getLine() noexcept {
     return isBurstLast;
 }
 inline void invocationBody() noexcept {
+    static constexpr auto ReadLoadStoreStyle = true;
+    static constexpr auto IgnoreLoadStoreStyle = false;
+    static constexpr auto UpdateCacheOffset = true;
+    static constexpr auto IgnoreCacheOffset = false;
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
@@ -187,7 +191,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // don't read lss when dealing with the memory interface we don't need it since the processor only pulls in the bits needed
-                ProcessorInterface::burstNext<false>();
+                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, UpdateCacheOffset>();
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -200,7 +204,7 @@ inline void invocationBody() noexcept {
                 }
                 // this is the only place where we actually need to continually update BE0, BE1 to know what kind of operation
                 // to perform
-                ProcessorInterface::burstNext();
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, UpdateCacheOffset>();
             } while (true);
         }
     } else {
@@ -214,7 +218,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // we don't use the cache on this path so tell burstNext this.
-                ProcessorInterface::burstNext<false, false>();
+                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IgnoreCacheOffset>();
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -225,7 +229,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // we don't use the cache for this path so don't increment it at all
-                ProcessorInterface::burstNext<false, false>();
+                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IgnoreCacheOffset>();
             } while (true);
         }
     }
