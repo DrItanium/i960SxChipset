@@ -127,10 +127,11 @@ ProcessorInterface::newDataCycle() noexcept {
         address_.bytes[2] = higher;
     }
     while (!(SPSR & _BV(SPIF))) ; // wait
+    auto highest = SPDR;
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-    address_.bytes[3] = SPDR;
+    address_.bytes[3] = highest;
     // no need to re-read the burst address bits
-    return OnboardPSRAMBlock::respondsTo(SPDR);
+    return OnboardPSRAMBlock::respondsTo(highest);
 }
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
