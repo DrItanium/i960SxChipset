@@ -74,7 +74,7 @@ public:
         // force override the default implementation
         switch (static_cast<Registers>(ProcessorInterface::getLeastSignificantAddressByte())) {
             case Registers::ConsoleIO: return Serial.read();
-            case Registers::ConsoleAvailable: return Serial.peek() != -1 ? 1 : 0;
+            case Registers::ConsoleAvailable: return Serial.available();
             case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
             default: return 0;
         }
