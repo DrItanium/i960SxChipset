@@ -24,6 +24,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ProcessorSerializer.h"
+#include "PSRAMChip.h"
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
     return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
@@ -70,7 +71,7 @@ ProcessorInterface::begin() noexcept {
         SPI.endTransaction();
     }
 }
-byte
+bool
 ProcessorInterface::newDataCycle() noexcept {
     constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
     constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -129,7 +130,7 @@ ProcessorInterface::newDataCycle() noexcept {
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     address_.bytes[3] = SPDR;
     // no need to re-read the burst address bits
-    return address_.bytes[3];
+    return OnboardPSRAMBlock::respondsTo(SPDR);
 }
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
