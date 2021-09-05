@@ -47,7 +47,7 @@ class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
-    static constexpr size_t LowestBitCount = 5;
+    static constexpr size_t LowestBitCount = 4;
     static constexpr size_t TagIndexSize = 8;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
