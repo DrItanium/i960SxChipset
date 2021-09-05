@@ -276,10 +276,18 @@ private:
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<enablePin, LOW>();
-        SPI.transfer(opcode);
-        SPI.transfer(curr.bytes_[2]);
-        SPI.transfer(curr.bytes_[1]);
-        SPI.transfer(curr.bytes_[0]);
+        SPDR = opcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[2];
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[1];
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[0];
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
         SPI.transfer(buf, numBytesToFirstChip);
         digitalWrite<enablePin, HIGH>();
         if ((!localToASingleChip) && (numBytesToSecondChip > 0)) {
@@ -289,10 +297,18 @@ private:
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
             digitalWrite<enablePin, LOW>();
-            SPI.transfer(opcode);
-            SPI.transfer(0);
-            SPI.transfer(0);
-            SPI.transfer(0);
+            SPDR = opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
             SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
             digitalWrite<enablePin, HIGH>();
         }
