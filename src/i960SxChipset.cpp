@@ -106,7 +106,7 @@ public:
     }
     [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return valid_ && (tag.getRest() == addr.getRest()); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset & OffsetMask].getWholeValue(); }
-    template<bool terminateEarlyOnMatch = false>
+    template<bool terminateEarlyOnMatch = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         auto& target = data[offset & OffsetMask];
         auto oldValue = target.getWholeValue();
