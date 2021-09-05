@@ -253,10 +253,6 @@ public:
         // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
         address_.bytes[0] += 2;
         // make sure that we always have an up to date copy of the cache offset entry
-        computeInitialCacheOffset<readLoadStoreStyle>();
-    }
-    template<bool readLoadStoreStyle = true>
-    static void computeInitialCacheOffset() noexcept {
         if constexpr (readLoadStoreStyle) {
             lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
         }
