@@ -86,16 +86,36 @@ class ProcessorInterface {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
+        SplitWord16 output(0);
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPI.transfer(generateReadOpcode(addr));
-        SPI.transfer(static_cast<byte>(opcode));
-        auto lower = SPI.transfer(0);
-        auto upper = SPI.transfer(0);
+        SPDR = generateReadOpcode(addr);
+        /*
+         * The following NOP introduces a small delay that can prevent the wait
+         * loop form iterating when running at the maximum speed. This gives
+         * about 10% more speed, even if it seems counter-intuitive. At lower
+         * speeds it is unnoticed.
+         */
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+
+        SPDR = static_cast<byte>(opcode) ;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        output.bytes[0] = SPDR;
+
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        output.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
-        return SplitWord16(lower, upper).wholeValue_;
+        return output.getWholeValue();
     }
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static uint8_t read8() noexcept {
