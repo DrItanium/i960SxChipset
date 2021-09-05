@@ -257,7 +257,11 @@ public:
         if constexpr (readLoadStoreStyle) {
             lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
         }
-        cacheOffsetEntry_ = address_.bytes[0] >> 1; // we want to make this quick to increment
+        // we only mask once and make the safe assumption that the Sx processors will never exceed 16-bytes in a burst transaction,
+        // no seriously! the Sx processors cannot transfer more than 16-bytes at a time and because of how the burst transaction pins work,
+        // you cannot span multiple 16-byte areas in a single transaction. It will be broken up into two or more operations. I cannot stress
+        // this enough.
+        ++cacheOffsetEntry_;
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
