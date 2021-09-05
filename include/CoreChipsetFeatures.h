@@ -66,9 +66,9 @@ public:
     CoreChipsetFeatures() = delete;
     ~CoreChipsetFeatures() = delete;
     static void begin() noexcept { }
-    static uint16_t read(Address address) noexcept {
+    static uint16_t read() noexcept {
         // force override the default implementation
-        SplitWord32 addr(address);
+        SplitWord32 addr(ProcessorInterface::getAddress());
         switch (static_cast<Registers>(addr.bytes[0])) {
             case Registers::ConsoleIO: return Serial.read();
             case Registers::ConsoleAvailable: return Serial.available();
@@ -76,14 +76,14 @@ public:
             default: return 0;
         }
     }
-    static void write(Address address, uint16_t value) noexcept {
-        SplitWord32 addr(address);
+    static void write() noexcept {
+        SplitWord32 addr(ProcessorInterface::getAddress());
         switch (static_cast<Registers>(addr.bytes[0])) {
             case Registers::ConsoleFlush:
                 Serial.flush();
                 break;
             case Registers::ConsoleIO:
-                Serial.write(static_cast<char>(value));
+                Serial.write(static_cast<char>(ProcessorInterface::getDataBits()));
                 break;
             default:
                 break;
