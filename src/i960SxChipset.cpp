@@ -349,9 +349,11 @@ void setup() {
             // make sure we close the file before destruction
             theFile.close();
             Serial.println(F("CLEARING CACHE"));
-            for (auto& entry : entries) {
-                // the cache will be filled with transfer garbage so just clear it out without caring what it's contents are
-                entry.clear();
+            for (auto& way : entries) {
+                for (auto& entry : way) {
+                    // the cache will be filled with transfer garbage so just clear it out without caring what it's contents are
+                    entry.clear();
+                }
             }
         }
         delay(100);
