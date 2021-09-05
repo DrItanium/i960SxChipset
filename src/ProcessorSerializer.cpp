@@ -76,15 +76,41 @@ ProcessorInterface::newDataCycle() noexcept {
     constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
     constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
     digitalWrite<i960Pinout::GPIOSelect, LOW>();
-    SPI.transfer(Lower16Opcode);
-    SPI.transfer(GPIOOpcode);
-    address_.bytes[0] = SPI.transfer(0);
-    address_.bytes[1] = SPI.transfer(0);
+    SPDR = Lower16Opcode;
+    /*
+     * The following NOP introduces a small delay that can prevent the wait
+     * loop form iterating when running at the maximum speed. This gives
+     * about 10% more speed, even if it seems counter-intuitive. At lower
+     * speeds it is unnoticed.
+     */
+    asm volatile("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    SPDR = GPIOOpcode;
+    asm volatile("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    SPDR = 0;
+    asm volatile("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    address_.bytes[0] = SPDR;
+    SPDR = 0;
+    asm volatile("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    address_.bytes[1] = SPDR;
     DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
-    SPI.transfer(Upper16Opcode);
-    SPI.transfer(GPIOOpcode);
-    address_.bytes[2] = SPI.transfer(0);
-    address_.bytes[3] = SPI.transfer(0);
+    SPDR = Upper16Opcode;
+    asm volatile("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    SPDR = GPIOOpcode;
+    asm volatile("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    SPDR = 0;
+    asm volatile("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    address_.bytes[2] = SPDR;
+    SPDR = 0;
+    asm volatile("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    address_.bytes[3] = SPDR;
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     // no need to re-read the burst address bits
     return address_.bytes[3];
