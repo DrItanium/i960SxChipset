@@ -175,7 +175,6 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    ProcessorInterface::setupDataLines();
     if (auto targetDevice = ProcessorInterface::newDataCycle(); OnboardPSRAMBlock::respondsTo(targetDevice)) {
         // okay we are dealing with the psram chips
         // now take the time to compute the cache offset entries
@@ -183,6 +182,7 @@ inline void invocationBody() noexcept {
         // computing the cache offset
         ProcessorInterface::computeInitialCacheOffset();
         if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            ProcessorInterface::setupDataLinesForRead();
             do {
                 ProcessorInterface::setDataBits(theEntry.get(ProcessorInterface::getCacheOffsetEntry()));
                 if (informCPU()) {
@@ -192,6 +192,7 @@ inline void invocationBody() noexcept {
                 ProcessorInterface::burstNext<false>();
             } while (true);
         } else {
+            ProcessorInterface::setupDataLinesForWrite();
             do {
                 theEntry.set(ProcessorInterface::getCacheOffsetEntry(),
                              ProcessorInterface::getStyle(),
@@ -208,6 +209,7 @@ inline void invocationBody() noexcept {
         // generally we shouldn't see burst operations here but who knows!
         // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            ProcessorInterface::setupDataLinesForRead();
             do {
                 ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
                 if (informCPU()) {
@@ -216,6 +218,7 @@ inline void invocationBody() noexcept {
                 ProcessorInterface::burstNext<false>();
             } while (true);
         } else {
+            ProcessorInterface::setupDataLinesForWrite();
             do {
                 CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
                                            ProcessorInterface::getDataBits());

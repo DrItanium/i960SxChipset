@@ -214,16 +214,10 @@ public:
             updateOutputLatch();
         }
     }
-    static void setupDataLines() noexcept {
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            setupDataLinesForRead();
-        } else {
-            setupDataLinesForWrite();
-        }
-    }
-private:
+public:
     static void setupDataLinesForWrite() noexcept;
     static void setupDataLinesForRead() noexcept;
+private:
     static void updateOutputLatch() noexcept {
         // construct the bit pattern as needed
         byte latchValue = 0;
