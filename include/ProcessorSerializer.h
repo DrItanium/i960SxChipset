@@ -214,18 +214,8 @@ public:
             updateOutputLatch();
         }
     }
-    static void setupDataLinesForWrite() noexcept {
-        if (dataLinesDirection_ != 0xFFFF) {
-            dataLinesDirection_ = 0xFFFF;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
-        }
-    }
-    static void setupDataLinesForRead() noexcept {
-        if (dataLinesDirection_ != 0) {
-            dataLinesDirection_ = 0;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(dataLinesDirection_);
-        }
-    }
+    static void setupDataLinesForWrite() noexcept;
+    static void setupDataLinesForRead() noexcept;
 private:
     static void updateOutputLatch() noexcept {
         // construct the bit pattern as needed
