@@ -172,28 +172,10 @@ inline void invocationBody() noexcept {
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
-    if (auto targetDevice = ProcessorInterface::newDataCycle(); CoreChipsetFeatures::respondsTo(targetDevice)) {
-        // generally we shouldn't see burst operations here but who knows!
-        // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            do {
-                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
-                if (informCPU()) {
-                    break;
-                }
-                ProcessorInterface::burstNext<false>();
-            } while (true);
-        } else {
-            do {
-                CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
-                                           ProcessorInterface::getDataBits());
-                if (informCPU()) {
-                    break;
-                }
-                ProcessorInterface::burstNext<false>();
-            } while (true);
-        }
-    } else if (OnboardPSRAMBlock::respondsTo(targetDevice)) {
+    // there are only two parts to this code, either we map into ram or chipset functions
+    // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
+    // and so we are actually continually mirroring the mapping for the sake of simplicity
+    if (auto targetDevice = ProcessorInterface::newDataCycle(); OnboardPSRAMBlock::respondsTo(targetDevice)) {
         // okay we are dealing with the psram chips
         // now take the time to compute the cache offset entries
         // this will waste some time querying porta when we don't need the result, but we do need the offset for the purposes of
@@ -222,20 +204,26 @@ inline void invocationBody() noexcept {
             } while (true);
         }
     } else {
-        // fallback case
-        // do it once at the beginning and never again
+        // generally we shouldn't see burst operations here but who knows!
+        // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            ProcessorInterface::setDataBits(0);
+            do {
+                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getAddress()));
+                if (informCPU()) {
+                    break;
+                }
+                ProcessorInterface::burstNext<false>();
+            } while (true);
+        } else {
+            do {
+                CoreChipsetFeatures::write(ProcessorInterface::getAddress(),
+                                           ProcessorInterface::getDataBits());
+                if (informCPU()) {
+                    break;
+                }
+                ProcessorInterface::burstNext<false>();
+            } while (true);
         }
-        do {
-            // on writes we do nothing but throw the value on
-            // on reads we just keep the latch at 0 so we don't change a thing
-            // after the first operation
-            if (informCPU()) {
-                break;
-            }
-            ProcessorInterface::burstNext<false>();
-        } while (true);
     }
 }
 
