@@ -140,7 +140,6 @@ class ProcessorInterface {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        (void)SPI.transfer(generateWriteOpcode(addr));
         SPDR = generateWriteOpcode(addr);
         /*
          * The following NOP introduces a small delay that can prevent the wait
