@@ -80,13 +80,12 @@ public:
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
-        if (valid_ && dirty_) {
+        if (isValid() && isDirty()) {
             // just do the write out to disk to save time
             // still an expensive operation
             OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
         }
-        valid_ = true; // always set this
-        dirty_ = false;
+        flags_ = IsClean | IsValid;
         // since we have called reset, now align the new address internally
         tag = TaggedAddress::makeAlignedVersion(newTag.getAddress());
         // this is a _very_ expensive operation
@@ -97,14 +96,13 @@ public:
      */
     void clear() noexcept {
         // clear all flags
-        valid_ = false;
-        dirty_ = false;
+        flags_ = IsClean | IsInvalid;
         tag.clear();
         for (auto& a : data) {
             a.wholeValue_ = 0;
         }
     }
-    [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return valid_ && (tag.getRest() == addr.getRest()); }
+    [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return isValid() && (tag.getRest() == addr.getRest()); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset & OffsetMask].getWholeValue(); }
     template<bool terminateEarlyOnMatch = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
@@ -137,15 +135,19 @@ public:
         // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
         if (oldValue != target.getWholeValue()) {
             // consumes more flash to do it this way but we only update ram when we have something to change
-            dirty_ = true;
+            flags_ |= IsDirty;
         }
     }
-    [[nodiscard]] constexpr auto isValid() const noexcept { return valid_; }
+    [[nodiscard]] constexpr bool isValid() const noexcept { return flags_ & IsValid ; }
+    [[nodiscard]] constexpr bool isDirty() const noexcept { return flags_ & IsDirty; }
 private:
+    static constexpr byte IsDirty = 0b10;
+    static constexpr byte IsValid = 0b01;
+    static constexpr byte IsClean = 0;
+    static constexpr byte IsInvalid = 0;
     SplitWord16 data[NumWordsCached]; // 32 bytes
     TaggedAddress tag { 0}; // 4 bytes
-    bool valid_ = false;
-    bool dirty_ = false;
+    byte flags_ = 0;
 };
 
 CacheEntry entries[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
