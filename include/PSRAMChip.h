@@ -356,8 +356,6 @@ public:
                 digitalWrite<enablePin, HIGH>();
                 asm volatile ("nop");
                 asm volatile ("nop");
-                asm volatile ("nop");
-                asm volatile ("nop");
                 digitalWrite<enablePin, LOW>();
                 SPI.transfer(0x99);
                 digitalWrite<enablePin, HIGH>();
