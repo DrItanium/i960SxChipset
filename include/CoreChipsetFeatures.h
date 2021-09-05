@@ -65,6 +65,10 @@ public:
 public:
     CoreChipsetFeatures() = delete;
     ~CoreChipsetFeatures() = delete;
+    CoreChipsetFeatures(const CoreChipsetFeatures&) = delete;
+    CoreChipsetFeatures(CoreChipsetFeatures&&) = delete;
+    CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
+    CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept { }
     static uint16_t read() noexcept {
         // force override the default implementation
