@@ -56,10 +56,8 @@ public:
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
-        ConsoleFlush = ConsoleFlush0,
-        ConsoleAvailable = ConsoleAvailable0,
-        ConsoleAvailableForWrite = ConsoleAvailableForWrite0,
         ConsoleIO = ConsoleIO0,
+        ConsoleFlush = ConsoleFlush0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -74,8 +72,6 @@ public:
         // force override the default implementation
         switch (static_cast<Registers>(ProcessorInterface::getLeastSignificantAddressByte())) {
             case Registers::ConsoleIO: return Serial.read();
-            case Registers::ConsoleAvailable: return Serial.available();
-            case Registers::ConsoleAvailableForWrite: return Serial.availableForWrite();
             default: return 0;
         }
     }
