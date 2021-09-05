@@ -387,7 +387,9 @@ void setup() {
 // NOTE: Tw may turn out to be synthetic
 
 void loop() {
-    invocationBody();
+    while (true) {
+        invocationBody();
+    }
 }
 
 [[noreturn]]
