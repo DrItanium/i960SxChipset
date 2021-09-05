@@ -101,7 +101,7 @@ ProcessorInterface::newDataCycle() noexcept {
     {
         // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
         // put scope ticks to force the matter
-        cacheOffsetEntry_ = (lowest >> 1) & 0x0F; // we want to make this quick to increment
+        cacheOffsetEntry_ = (lowest >> 1) & 0b0000'0111; // we want to make this quick to increment
         address_.bytes[0] = lowest;
     }
     while (!(SPSR & _BV(SPIF))) ; // wait
