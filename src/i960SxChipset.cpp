@@ -48,7 +48,7 @@ public:
     static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr size_t LowestBitCount = 4;
-    static constexpr size_t TagIndexSize = 5;
+    static constexpr size_t TagIndexSize = 8;
     static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
     static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
     static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
@@ -148,7 +148,7 @@ private:
     bool dirty_ = false;
 };
 
-constexpr auto NumberOfWays = 16;
+constexpr auto NumberOfWays = 2;
 constexpr auto WaysMask = NumberOfWays - 1;
 constexpr auto EntryCount = TargetBoard::numberOfCacheLines() / (NumberOfWays >> 1);
 CacheEntry entries[EntryCount][NumberOfWays]; // we actually are holding more bytes in the cache than before
@@ -156,21 +156,44 @@ CacheEntry entries[EntryCount][NumberOfWays]; // we actually are holding more by
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
-    CacheEntry* lastInvalid = nullptr;
-    for (auto& theEntry : entries[theAddress.getTagIndex()]) {
-        if (theEntry.matches(theAddress)) {
+    if constexpr (NumberOfWays == 2) {
+        if (auto& theEntry = entries[theAddress.getTagIndex()][0]; theEntry.matches(theAddress)) {
             return theEntry;
+        } else if (auto& theEntry2 = entries[theAddress.getTagIndex()][1]; theEntry2.matches(theAddress)) {
+            return theEntry2;
         } else if (!theEntry.isValid()) {
-            lastInvalid = &theEntry;
+            theEntry.reset(theAddress);
+            return theEntry;
+        } else if (!theEntry2.isValid()) {
+            theEntry2.reset(theAddress);
+            return theEntry2;
+        } else {
+            switch (random() & 1) {
+                case 1:
+                    theEntry2.reset(theAddress);
+                    return theEntry2;
+                default:
+                    theEntry.reset(theAddress);
+                    return theEntry;
+            }
         }
+    } else {
+        CacheEntry* lastInvalid = nullptr;
+        for (auto& theEntry : entries[theAddress.getTagIndex()]) {
+            if (theEntry.matches(theAddress)) {
+                return theEntry;
+            } else if (!theEntry.isValid()) {
+                lastInvalid = &theEntry;
+            }
+        }
+        if (!lastInvalid) {
+            // okay we got here so we need to clear something out but we didn't find an invalid entry
+            // instead assign one to last invalid and then call reset on it
+            lastInvalid = &entries[theAddress.getTagIndex()][random() & WaysMask];
+        }
+        lastInvalid->reset(theAddress);
+        return *lastInvalid;
     }
-    if (!lastInvalid) {
-        // okay we got here so we need to clear something out but we didn't find an invalid entry
-        // instead assign one to last invalid and then call reset on it
-        lastInvalid = &entries[theAddress.getTagIndex()][random() & WaysMask];
-    }
-    lastInvalid->reset(theAddress);
-    return *lastInvalid;
 }
 
 [[nodiscard]] bool informCPU() noexcept {
