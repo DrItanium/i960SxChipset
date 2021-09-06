@@ -153,18 +153,38 @@ private:
     TaggedAddress tag { 0}; // 4 bytes
     byte flags_ = 0;
 };
-
-CacheEntry way0[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
-CacheEntry way1[TargetBoard::numberOfCacheLines()]; // we actually are holding more bytes in the cache than before
+CacheEntry entries[TargetBoard::numberOfCacheLines()][2]; // we actually are holding more bytes in the cache than before
+bool mruEntries[TargetBoard::numberOfCacheLines()] = { false };
 
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
-    auto& theEntry = entries[theAddress.getTagIndex()];
-    if (!theEntry.matches(theAddress)) {
-        theEntry.reset(theAddress);
+    auto& theWay = entries[theAddress.getTagIndex()];
+    auto& mru = mruEntries[theAddress.getTagIndex()];
+    if (auto& way0 = theWay[0]; way0.matches(theAddress)) {
+        mru = false; // way0 was the last used
+        return way0;
+    } else if (auto& way1 = theWay[1]; way1.matches(theAddress)) {
+        mru = true; // way1 was the last used
+        return way1;
+    } else if (!way0.isValid()) {
+        way0.reset(theAddress);
+        mru = false;
+        return way0;
+    } else if (!way1.isValid()) {
+        way1.reset(theAddress);
+        mru = true;
+        return way1;
+    } else if (!mru) {
+        // way1 needs to be reset
+        way1.reset(theAddress);
+        mru = true;
+        return way1;
+    } else {
+        way0.reset(theAddress);
+        mru = false;
+        return way0;
     }
-    return theEntry;
 }
 
 [[nodiscard]] bool informCPU() noexcept {
@@ -331,9 +351,11 @@ void setup() {
             // make sure we close the file before destruction
             theFile.close();
             Serial.println(F("CLEARING CACHE"));
-            for (auto& entry : entries) {
-                // the cache will be filled with transfer garbage so just clear it out without caring what it's contents are
-                entry.clear();
+            for (auto& way : entries) {
+                for (auto& entry : way) {
+                    // the cache will be filled with transfer garbage so just clear it out without caring what it's contents are
+                    entry.clear();
+                }
             }
         }
         delay(100);
