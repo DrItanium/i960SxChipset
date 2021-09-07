@@ -157,7 +157,9 @@ private:
 class CacheWay {
 public:
     using TaggedAddress = CacheEntry::TaggedAddress;
+    static constexpr auto NumberOfWays = 2;
 public:
+    [[nodiscard]] constexpr auto getNumberOfWays() const noexcept { return NumberOfWays; }
     CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
         static constexpr bool Way0MostRecentlyUsed = false;
         static constexpr bool Way1MostRecentlyUsed = true;
@@ -194,55 +196,17 @@ public:
         mostRecentlyUsed_ = false;
     }
 private:
-    CacheEntry ways_[2];
+    CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
 
-static_assert((sizeof(CacheEntry) + sizeof(CacheEntry) + sizeof(bool)) == sizeof(CacheWay));
-//#define USE_OLD_SPLIT_METHOD
-#ifdef USE_OLD_SPLIT_METHOD
-CacheEntry entries[TargetBoard::numberOfCacheLines()][2]; // we actually are holding more bytes in the cache than before
-bool mruEntries[TargetBoard::numberOfCacheLines()] = { false };
-#else
 CacheWay entries[TargetBoard::numberOfCacheLines()];
-#endif
+// inlining actually causes a large amount of overhead
 auto& getLine() noexcept __attribute__((noinline));
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
-#ifdef USE_OLD_SPLIT_METHOD
-    auto& theWay = entries[theAddress.getTagIndex()];
-    auto& mru = mruEntries[theAddress.getTagIndex()];
-    static constexpr bool Way0MostRecentlyUsed = false;
-    static constexpr bool Way1MostRecentlyUsed = true;
-    if (auto& way0 = theWay[0]; way0.matches(theAddress)) {
-        mru = Way0MostRecentlyUsed; // way0 was the last used
-        return way0;
-    } else if (auto& way1 = theWay[1]; way1.matches(theAddress)) {
-        mru = Way1MostRecentlyUsed; // way1 was the last used
-        return way1;
-    } else if (!way0.isValid()) {
-        way0.reset(theAddress);
-        mru = Way0MostRecentlyUsed;
-        return way0;
-    } else if (!way1.isValid()) {
-        way1.reset(theAddress);
-        mru = Way1MostRecentlyUsed;
-        return way1;
-    } else if (!mru) {
-        // way1 needs to be reset
-        way1.reset(theAddress);
-        mru = Way1MostRecentlyUsed;
-        return way1;
-    } else {
-        // way0 was the
-        way0.reset(theAddress);
-        mru = Way0MostRecentlyUsed;
-        return way0;
-    }
-#else
     return entries[theAddress.getTagIndex()].getLine(theAddress);
-#endif
 }
 
 [[nodiscard]] bool informCPU() noexcept {
@@ -410,13 +374,7 @@ void setup() {
             theFile.close();
             Serial.println(F("CLEARING CACHE"));
             for (auto& way : entries) {
-#ifdef USE_OLD_SPLIT_METHOD
-                for (auto& entry : way) {
-                    entry.clear();
-                }
-#else
                 way.clear();
-#endif
             }
         }
         delay(100);
