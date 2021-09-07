@@ -78,7 +78,7 @@ public:
         };
     };
 public:
-    void reset(TaggedAddress newTag) noexcept {
+    void reset(const TaggedAddress& newTag) noexcept {
         // no match so pull the data in from main memory
         if (isValid() && isDirty()) {
             // just do the write out to disk to save time
