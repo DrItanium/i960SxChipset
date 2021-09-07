@@ -69,6 +69,7 @@ public:
             result.lowest = 0;
             return result;
         }
+        [[nodiscard]] bool restEqual(const TaggedAddress& other) const noexcept { return getRest() == other.getRest(); }
     private:
         Address base;
         struct {
@@ -102,7 +103,7 @@ public:
             a.wholeValue_ = 0;
         }
     }
-    [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return isValid() && (tag.getRest() == addr.getRest()); }
+    [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         return data[offset].getWholeValue();
