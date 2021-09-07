@@ -250,13 +250,15 @@ inline void invocationBody() noexcept {
             ProcessorInterface::setupDataLinesForWrite();
             // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
             // far as we can go with how the Sx works!
+
+            // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
             for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
                 theEntry.set(i, ProcessorInterface::getStyle(), SplitWord16{ProcessorInterface::getDataBits()});
                 if (informCPU()) {
                     break;
                 }
-                // this is the only place where we actually need to continually update BE0, BE1 to know what kind of operation
-                // to perform
+                // the manual doesn't state that the burst transaction will always have BE0 and BE1 pulled low and this is very true, you must
+                // check the pins because it will do unaligned burst transactions but even that will never span multiple 16-byte entries
                 ProcessorInterface::burstNext<ReadLoadStoreStyle, LeaveAddressAlone>();
             }
         }
