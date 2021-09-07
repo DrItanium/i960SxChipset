@@ -162,28 +162,31 @@ auto& getLine() noexcept {
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
     auto& theWay = entries[theAddress.getTagIndex()];
     auto& mru = mruEntries[theAddress.getTagIndex()];
+    static constexpr bool Way0MostRecentlyUsed = false;
+    static constexpr bool Way1MostRecentlyUsed = true;
     if (auto& way0 = theWay[0]; way0.matches(theAddress)) {
-        mru = false; // way0 was the last used
+        mru = Way0MostRecentlyUsed; // way0 was the last used
         return way0;
     } else if (auto& way1 = theWay[1]; way1.matches(theAddress)) {
-        mru = true; // way1 was the last used
+        mru = Way1MostRecentlyUsed; // way1 was the last used
         return way1;
     } else if (!way0.isValid()) {
         way0.reset(theAddress);
-        mru = false;
+        mru = Way0MostRecentlyUsed;
         return way0;
     } else if (!way1.isValid()) {
         way1.reset(theAddress);
-        mru = true;
+        mru = Way1MostRecentlyUsed;
         return way1;
     } else if (!mru) {
         // way1 needs to be reset
         way1.reset(theAddress);
-        mru = true;
+        mru = Way1MostRecentlyUsed;
         return way1;
     } else {
+        // way0 was the
         way0.reset(theAddress);
-        mru = false;
+        mru = Way0MostRecentlyUsed;
         return way0;
     }
 }
