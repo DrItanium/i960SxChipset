@@ -104,9 +104,21 @@ public:
         }
     }
     [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
-    [[nodiscard]] constexpr auto get(byte offset) const noexcept {
+    [[nodiscard]] uint16_t get(byte offset, LoadStoreStyle style) const noexcept {
+        SplitWord16 theOutput(data[offset]);
+        switch (style) {
+            case LoadStoreStyle::Full16: break;
+            case LoadStoreStyle::Lower8:
+                theOutput.bytes[1] = 0;
+                break;
+            case LoadStoreStyle::Upper8:
+                theOutput.bytes[0] = 0;
+                break;
+            default:
+                signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
+        }
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
-        return data[offset].getWholeValue();
+        return theOutput.getWholeValue();
     }
     template<bool terminateEarlyOnMatch = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
@@ -241,10 +253,11 @@ inline void invocationBody() noexcept {
             // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
             // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
             for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-                ProcessorInterface::setDataBits(theEntry.get(i));
+                ProcessorInterface::setDataBits(theEntry.get(i, ProcessorInterface::getStyle()));
                 if (informCPU()) {
                     break;
                 }
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, LeaveAddressAlone>();
             }
         } else {
             ProcessorInterface::setupDataLinesForWrite();
