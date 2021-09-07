@@ -132,8 +132,6 @@ ProcessorInterface::newDataCycle() noexcept {
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     address_.bytes[3] = highest;
     return highest;
-    // no need to re-read the burst address bits
-    //return OnboardPSRAMBlock::respondsTo(highest);
 }
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
