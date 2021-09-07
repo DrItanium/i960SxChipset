@@ -239,6 +239,15 @@ inline void invocationBody() noexcept {
         // now take the time to compute the cache offset entries
         if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             ProcessorInterface::setupDataLinesForRead();
+            // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
+            // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
+            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < 8; ++i) {
+                ProcessorInterface::setDataBits(theEntry.get(i));
+                if (informCPU()) {
+                    break;
+                }
+            }
+#if 0
             do {
                 ProcessorInterface::setDataBits(theEntry.get(ProcessorInterface::getCacheOffsetEntry()));
                 if (informCPU()) {
@@ -247,6 +256,7 @@ inline void invocationBody() noexcept {
                 // don't read lss when dealing with the memory interface we don't need it since the processor only pulls in the bits needed
                 ProcessorInterface::burstNext<IgnoreLoadStoreStyle, UpdateCacheOffset, LeaveAddressAlone>();
             } while (true);
+#endif
         } else {
             ProcessorInterface::setupDataLinesForWrite();
             do {
