@@ -161,53 +161,56 @@ public:
     CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
         static constexpr bool Way0MostRecentlyUsed = false;
         static constexpr bool Way1MostRecentlyUsed = true;
-        if (way0_.matches(theAddress)) {
+        if (ways_[0].matches(theAddress)) {
             mostRecentlyUsed_ = Way0MostRecentlyUsed; // way0 was the last used
-            return way0_;
-        } else if (way1_.matches(theAddress)) {
+            return ways_[0];
+        } else if (ways_[1].matches(theAddress)) {
             mostRecentlyUsed_ = Way1MostRecentlyUsed; // way1 was the last used
-            return way1_;
-        } else if (!way0_.isValid()) {
-            way0_.reset(theAddress);
+            return ways_[1];
+        } else if (!ways_[0].isValid()) {
+            ways_[0].reset(theAddress);
             mostRecentlyUsed_ = Way0MostRecentlyUsed;
-            return way0_;
-        } else if (!way1_.isValid()) {
-            way1_.reset(theAddress);
+            return ways_[0];
+        } else if (!ways_[1].isValid()) {
+            ways_[1].reset(theAddress);
             mostRecentlyUsed_ = Way1MostRecentlyUsed;
-            return way1_;
+            return ways_[1];
         } else if (!mostRecentlyUsed_) {
             // way1 needs to be reset
-            way1_.reset(theAddress);
+            ways_[1].reset(theAddress);
             mostRecentlyUsed_ = Way1MostRecentlyUsed;
-            return way1_;
+            return ways_[1];
         } else {
             // way0 was the
-            way0_.reset(theAddress);
+            ways_[0].reset(theAddress);
             mostRecentlyUsed_ = Way0MostRecentlyUsed;
-            return way0_;
+            return ways_[0];
         }
     }
     void clear() noexcept {
-        way0_.clear();
-        way1_.clear();
+        for (auto& way : ways_) {
+            way.clear();
+        }
         mostRecentlyUsed_ = false;
     }
 private:
-    CacheEntry way0_;
-    CacheEntry way1_;
+    CacheEntry ways_[2];
     bool mostRecentlyUsed_ = false;
-
 };
 
-//CacheEntry entries[TargetBoard::numberOfCacheLines()][2]; // we actually are holding more bytes in the cache than before
-//bool mruEntries[TargetBoard::numberOfCacheLines()] = { false };
-CacheWay ways[TargetBoard::numberOfCacheLines()];
-
+static_assert((sizeof(CacheEntry) + sizeof(CacheEntry) + sizeof(bool)) == sizeof(CacheWay));
+//#define USE_OLD_SPLIT_METHOD
+#ifdef USE_OLD_SPLIT_METHOD
+CacheEntry entries[TargetBoard::numberOfCacheLines()][2]; // we actually are holding more bytes in the cache than before
+bool mruEntries[TargetBoard::numberOfCacheLines()] = { false };
+#else
+CacheWay entries[TargetBoard::numberOfCacheLines()];
+#endif
+auto& getLine() noexcept __attribute__((noinline));
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
-    return ways[theAddress.getTagIndex()].getLine(theAddress);
-#if 0
+#ifdef USE_OLD_SPLIT_METHOD
     auto& theWay = entries[theAddress.getTagIndex()];
     auto& mru = mruEntries[theAddress.getTagIndex()];
     static constexpr bool Way0MostRecentlyUsed = false;
@@ -237,6 +240,8 @@ auto& getLine() noexcept {
         mru = Way0MostRecentlyUsed;
         return way0;
     }
+#else
+    return entries[theAddress.getTagIndex()].getLine(theAddress);
 #endif
 }
 
@@ -383,10 +388,10 @@ void setup() {
         } else {
             // okay we were successful in opening the file, now copy the image into psram
             Address size = theFile.size();
-            static constexpr auto CacheSize = sizeof(ways);
+            static constexpr auto CacheSize = sizeof(entries);
             //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
             // use the cache as a buffer since it won't be in use at this point in time
-            auto* storage = reinterpret_cast<byte*>(ways);
+            auto* storage = reinterpret_cast<byte*>(entries);
             Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
             for (Address addr = 0; addr < size; addr += CacheSize) {
                 // do a linear read from the start to the end of storage
@@ -404,8 +409,14 @@ void setup() {
             // make sure we close the file before destruction
             theFile.close();
             Serial.println(F("CLEARING CACHE"));
-            for (auto& way : ways) {
+            for (auto& way : entries) {
+#ifdef USE_OLD_SPLIT_METHOD
+                for (auto& entry : way) {
+                    entry.clear();
+                }
+#else
                 way.clear();
+#endif
             }
         }
         delay(100);
