@@ -247,7 +247,7 @@ private:
     }
 public:
     static byte newDataCycle() noexcept;
-    template<bool readLoadStoreStyle = true, bool usesCache = true, bool advanceAddress = true>
+    template<bool readLoadStoreStyle = true, bool advanceAddress = true>
     static void burstNext() noexcept {
         if constexpr (advanceAddress) {
             // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
@@ -258,13 +258,6 @@ public:
         // make sure that we always have an up to date copy of the cache offset entry
         if constexpr (readLoadStoreStyle) {
             lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
-        }
-        // we only mask once and make the safe assumption that the Sx processors will never exceed 16-bytes in a burst transaction,
-        // no seriously! the Sx processors cannot transfer more than 16-bytes at a time and because of how the burst transaction pins work,
-        // you cannot span multiple 16-byte areas in a single transaction. It will be broken up into two or more operations. I cannot stress
-        // this enough.
-        if constexpr (usesCache) {
-            ++cacheOffsetEntry_;
         }
     }
     /**

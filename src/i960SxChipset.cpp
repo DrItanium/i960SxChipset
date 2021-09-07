@@ -222,8 +222,6 @@ auto& getLine() noexcept {
 inline void invocationBody() noexcept {
     static constexpr auto ReadLoadStoreStyle = true;
     static constexpr auto IgnoreLoadStoreStyle = false;
-    static constexpr auto UpdateCacheOffset = true;
-    static constexpr auto IgnoreCacheOffset = false;
     static constexpr auto IncrementAddress = true;
     static constexpr auto LeaveAddressAlone = false;
     // wait until AS goes from low to high
@@ -258,7 +256,7 @@ inline void invocationBody() noexcept {
                 }
                 // this is the only place where we actually need to continually update BE0, BE1 to know what kind of operation
                 // to perform
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, IgnoreCacheOffset, LeaveAddressAlone>();
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, LeaveAddressAlone>();
             }
         }
     } else {
@@ -272,7 +270,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // we don't use the cache on this path so tell burstNext this.
-                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IgnoreCacheOffset, IncrementAddress>();
+                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IncrementAddress>();
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -283,7 +281,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // we don't use the cache for this path so don't increment it at all
-                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IgnoreCacheOffset, IncrementAddress>();
+                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IncrementAddress>();
             } while (true);
         }
     }
