@@ -247,29 +247,18 @@ inline void invocationBody() noexcept {
                     break;
                 }
             }
-#if 0
-            do {
-                ProcessorInterface::setDataBits(theEntry.get(ProcessorInterface::getCacheOffsetEntry()));
-                if (informCPU()) {
-                    break;
-                }
-                // don't read lss when dealing with the memory interface we don't need it since the processor only pulls in the bits needed
-                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, UpdateCacheOffset, LeaveAddressAlone>();
-            } while (true);
-#endif
         } else {
             ProcessorInterface::setupDataLinesForWrite();
-            do {
-                theEntry.set(ProcessorInterface::getCacheOffsetEntry(),
-                             ProcessorInterface::getStyle(),
-                             SplitWord16{ProcessorInterface::getDataBits()});
+            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < 8; ++i) {
+
+                theEntry.set(i, ProcessorInterface::getStyle(), SplitWord16{ProcessorInterface::getDataBits()});
                 if (informCPU()) {
                     break;
                 }
                 // this is the only place where we actually need to continually update BE0, BE1 to know what kind of operation
                 // to perform
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, UpdateCacheOffset, LeaveAddressAlone>();
-            } while (true);
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, IgnoreCacheOffset, LeaveAddressAlone>();
+            }
         }
     } else {
         // generally we shouldn't see burst operations here but who knows!
