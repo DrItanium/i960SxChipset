@@ -154,12 +154,60 @@ private:
     TaggedAddress tag { 0}; // 4 bytes
     byte flags_ = 0;
 };
-CacheEntry entries[TargetBoard::numberOfCacheLines()][2]; // we actually are holding more bytes in the cache than before
-bool mruEntries[TargetBoard::numberOfCacheLines()] = { false };
+class CacheWay {
+public:
+    using TaggedAddress = CacheEntry::TaggedAddress;
+public:
+    CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
+        static constexpr bool Way0MostRecentlyUsed = false;
+        static constexpr bool Way1MostRecentlyUsed = true;
+        if (way0_.matches(theAddress)) {
+            mostRecentlyUsed_ = Way0MostRecentlyUsed; // way0 was the last used
+            return way0_;
+        } else if (way1_.matches(theAddress)) {
+            mostRecentlyUsed_ = Way1MostRecentlyUsed; // way1 was the last used
+            return way1_;
+        } else if (!way0_.isValid()) {
+            way0_.reset(theAddress);
+            mostRecentlyUsed_ = Way0MostRecentlyUsed;
+            return way0_;
+        } else if (!way1_.isValid()) {
+            way1_.reset(theAddress);
+            mostRecentlyUsed_ = Way1MostRecentlyUsed;
+            return way1_;
+        } else if (!mostRecentlyUsed_) {
+            // way1 needs to be reset
+            way1_.reset(theAddress);
+            mostRecentlyUsed_ = Way1MostRecentlyUsed;
+            return way1_;
+        } else {
+            // way0 was the
+            way0_.reset(theAddress);
+            mostRecentlyUsed_ = Way0MostRecentlyUsed;
+            return way0_;
+        }
+    }
+    void clear() noexcept {
+        way0_.clear();
+        way1_.clear();
+        mostRecentlyUsed_ = false;
+    }
+private:
+    CacheEntry way0_;
+    CacheEntry way1_;
+    bool mostRecentlyUsed_ = false;
+
+};
+
+//CacheEntry entries[TargetBoard::numberOfCacheLines()][2]; // we actually are holding more bytes in the cache than before
+//bool mruEntries[TargetBoard::numberOfCacheLines()] = { false };
+CacheWay ways[TargetBoard::numberOfCacheLines()];
 
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
+    return ways[theAddress.getTagIndex()].getLine(theAddress);
+#if 0
     auto& theWay = entries[theAddress.getTagIndex()];
     auto& mru = mruEntries[theAddress.getTagIndex()];
     static constexpr bool Way0MostRecentlyUsed = false;
@@ -189,6 +237,7 @@ auto& getLine() noexcept {
         mru = Way0MostRecentlyUsed;
         return way0;
     }
+#endif
 }
 
 [[nodiscard]] bool informCPU() noexcept {
@@ -334,10 +383,10 @@ void setup() {
         } else {
             // okay we were successful in opening the file, now copy the image into psram
             Address size = theFile.size();
-            static constexpr auto CacheSize = sizeof(entries);
+            static constexpr auto CacheSize = sizeof(ways);
             //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
             // use the cache as a buffer since it won't be in use at this point in time
-            auto* storage = reinterpret_cast<byte*>(entries);
+            auto* storage = reinterpret_cast<byte*>(ways);
             Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
             for (Address addr = 0; addr < size; addr += CacheSize) {
                 // do a linear read from the start to the end of storage
@@ -355,11 +404,8 @@ void setup() {
             // make sure we close the file before destruction
             theFile.close();
             Serial.println(F("CLEARING CACHE"));
-            for (auto& way : entries) {
-                for (auto& entry : way) {
-                    // the cache will be filled with transfer garbage so just clear it out without caring what it's contents are
-                    entry.clear();
-                }
+            for (auto& way : ways) {
+                way.clear();
             }
         }
         delay(100);
