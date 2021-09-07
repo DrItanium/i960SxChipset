@@ -249,8 +249,9 @@ inline void invocationBody() noexcept {
             }
         } else {
             ProcessorInterface::setupDataLinesForWrite();
+            // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
+            // far as we can go with how the Sx works!
             for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < 8; ++i) {
-
                 theEntry.set(i, ProcessorInterface::getStyle(), SplitWord16{ProcessorInterface::getDataBits()});
                 if (informCPU()) {
                     break;
