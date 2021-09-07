@@ -224,6 +224,8 @@ inline void invocationBody() noexcept {
     static constexpr auto IgnoreLoadStoreStyle = false;
     static constexpr auto UpdateCacheOffset = true;
     static constexpr auto IgnoreCacheOffset = false;
+    static constexpr auto IncrementAddress = true;
+    static constexpr auto LeaveAddressAlone = false;
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
@@ -243,7 +245,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // don't read lss when dealing with the memory interface we don't need it since the processor only pulls in the bits needed
-                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, UpdateCacheOffset>();
+                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, UpdateCacheOffset, LeaveAddressAlone>();
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -256,7 +258,7 @@ inline void invocationBody() noexcept {
                 }
                 // this is the only place where we actually need to continually update BE0, BE1 to know what kind of operation
                 // to perform
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, UpdateCacheOffset>();
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, UpdateCacheOffset, LeaveAddressAlone>();
             } while (true);
         }
     } else {
@@ -270,7 +272,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // we don't use the cache on this path so tell burstNext this.
-                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IgnoreCacheOffset>();
+                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IgnoreCacheOffset, IncrementAddress>();
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -281,7 +283,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // we don't use the cache for this path so don't increment it at all
-                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IgnoreCacheOffset>();
+                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IgnoreCacheOffset, IncrementAddress>();
             } while (true);
         }
     }
