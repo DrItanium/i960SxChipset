@@ -159,36 +159,7 @@ public:
     using TaggedAddress = CacheEntry::TaggedAddress;
     static constexpr auto NumberOfWays = 2;
 public:
-    [[nodiscard]] constexpr auto getNumberOfWays() const noexcept { return NumberOfWays; }
-    CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
-        static constexpr bool Way0MostRecentlyUsed = false;
-        static constexpr bool Way1MostRecentlyUsed = true;
-        if (ways_[0].matches(theAddress)) {
-            mostRecentlyUsed_ = Way0MostRecentlyUsed; // way0 was the last used
-            return ways_[0];
-        } else if (ways_[1].matches(theAddress)) {
-            mostRecentlyUsed_ = Way1MostRecentlyUsed; // way1 was the last used
-            return ways_[1];
-        } else if (!ways_[0].isValid()) {
-            ways_[0].reset(theAddress);
-            mostRecentlyUsed_ = Way0MostRecentlyUsed;
-            return ways_[0];
-        } else if (!ways_[1].isValid()) {
-            ways_[1].reset(theAddress);
-            mostRecentlyUsed_ = Way1MostRecentlyUsed;
-            return ways_[1];
-        } else if (!mostRecentlyUsed_) {
-            // way1 needs to be reset
-            ways_[1].reset(theAddress);
-            mostRecentlyUsed_ = Way1MostRecentlyUsed;
-            return ways_[1];
-        } else {
-            // way0 was the
-            ways_[0].reset(theAddress);
-            mostRecentlyUsed_ = Way0MostRecentlyUsed;
-            return ways_[0];
-        }
-    }
+    CacheEntry& getLine(const TaggedAddress& theAddress) noexcept __attribute__((noinline));
     void clear() noexcept {
         for (auto& way : ways_) {
             way.clear();
@@ -199,10 +170,39 @@ private:
     CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
+CacheEntry&
+CacheWay::getLine(const TaggedAddress& theAddress) noexcept {
+    static constexpr bool Way0MostRecentlyUsed = false;
+    static constexpr bool Way1MostRecentlyUsed = true;
+    if (ways_[0].matches(theAddress)) {
+        mostRecentlyUsed_ = Way0MostRecentlyUsed; // way0 was the last used
+        return ways_[0];
+    } else if (ways_[1].matches(theAddress)) {
+        mostRecentlyUsed_ = Way1MostRecentlyUsed; // way1 was the last used
+        return ways_[1];
+    } else if (!ways_[0].isValid()) {
+        ways_[0].reset(theAddress);
+        mostRecentlyUsed_ = Way0MostRecentlyUsed;
+        return ways_[0];
+    } else if (!ways_[1].isValid()) {
+        ways_[1].reset(theAddress);
+        mostRecentlyUsed_ = Way1MostRecentlyUsed;
+        return ways_[1];
+    } else if (!mostRecentlyUsed_) {
+        // way1 needs to be reset
+        ways_[1].reset(theAddress);
+        mostRecentlyUsed_ = Way1MostRecentlyUsed;
+        return ways_[1];
+    } else {
+        // way0 was the
+        ways_[0].reset(theAddress);
+        mostRecentlyUsed_ = Way0MostRecentlyUsed;
+        return ways_[0];
+    }
+}
 
 CacheWay entries[TargetBoard::numberOfCacheLines()];
 // inlining actually causes a large amount of overhead
-auto& getLine() noexcept __attribute__((noinline));
 auto& getLine() noexcept {
     // only align if we need to reset the chip
     CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
