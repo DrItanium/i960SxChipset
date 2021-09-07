@@ -122,7 +122,6 @@ public:
         }
         switch (style) {
             case LoadStoreStyle::Full16:
-                //target.wholeValue_ = value.wholeValue_;
                 target.bytes[0] = value.bytes[0];
                 target.bytes[1] = value.bytes[1];
                 break;
