@@ -81,7 +81,7 @@ public:
 public:
     void reset(const TaggedAddress& newTag) noexcept {
         // no match so pull the data in from main memory
-        if (isValid() && isDirty()) {
+        if (needsFlushing()) {
             // just do the write out to disk to save time
             // still an expensive operation
             OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
@@ -146,6 +146,9 @@ public:
     }
     [[nodiscard]] constexpr bool isValid() const noexcept { return flags_ & IsValid ; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return flags_ & IsDirty; }
+    [[nodiscard]] constexpr bool needsFlushing() const noexcept {
+        return isValid() && isDirty();
+    }
 private:
     static constexpr byte IsDirty = 0b10;
     static constexpr byte IsValid = 0b01;
