@@ -224,6 +224,7 @@ inline void invocationBody() noexcept {
     static constexpr auto IgnoreLoadStoreStyle = false;
     static constexpr auto IncrementAddress = true;
     static constexpr auto LeaveAddressAlone = false;
+    static constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
@@ -239,7 +240,7 @@ inline void invocationBody() noexcept {
             ProcessorInterface::setupDataLinesForRead();
             // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
             // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
-            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < 8; ++i) {
+            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
                 ProcessorInterface::setDataBits(theEntry.get(i));
                 if (informCPU()) {
                     break;
@@ -249,7 +250,7 @@ inline void invocationBody() noexcept {
             ProcessorInterface::setupDataLinesForWrite();
             // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
             // far as we can go with how the Sx works!
-            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < 8; ++i) {
+            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
                 theEntry.set(i, ProcessorInterface::getStyle(), SplitWord16{ProcessorInterface::getDataBits()});
                 if (informCPU()) {
                     break;
@@ -270,7 +271,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // we don't use the cache on this path so tell burstNext this.
-                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IncrementAddress>();
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -281,7 +282,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // we don't use the cache for this path so don't increment it at all
-                ProcessorInterface::burstNext<IgnoreLoadStoreStyle, IncrementAddress>();
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
             } while (true);
         }
     }
