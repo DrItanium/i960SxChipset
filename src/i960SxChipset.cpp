@@ -59,16 +59,16 @@ public:
 
     union TaggedAddress {
         constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
-        static TaggedAddress makeAlignedVersion(Address base) noexcept {
-            TaggedAddress theAddress(base);
-            theAddress.lowest = 0; // clear out the lowest bits
-            return theAddress;
-        }
         void clear() noexcept { base = 0; }
         [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
         [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
         [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
         [[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
+        [[nodiscard]] TaggedAddress aligned() const noexcept {
+            TaggedAddress result(base);
+            result.lowest = 0;
+            return result;
+        }
     private:
         Address base;
         struct {
@@ -87,7 +87,7 @@ public:
         }
         flags_ = IsClean | IsValid;
         // since we have called reset, now align the new address internally
-        tag = TaggedAddress::makeAlignedVersion(newTag.getAddress());
+        tag = newTag.aligned();
         // this is a _very_ expensive operation
         OnboardPSRAMBlock::read(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof (data));
     }
