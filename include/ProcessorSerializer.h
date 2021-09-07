@@ -213,8 +213,8 @@ public:
 public:
     static void begin() noexcept;
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
-    [[nodiscard]] static uint16_t getDataBits() noexcept;
-    static void setDataBits(uint16_t value) noexcept;
+    [[nodiscard]] static uint16_t getDataBits() noexcept __attribute__((noinline));
+    static void setDataBits(uint16_t value) noexcept __attribute__((noinline));
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>(lss_); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
     static void setHOLDPin(bool value) noexcept {
