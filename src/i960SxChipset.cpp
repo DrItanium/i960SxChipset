@@ -376,7 +376,6 @@ void setup() {
             Serial.println(F("Transfer complete!"));
             // make sure we close the file before destruction
             theFile.close();
-            Serial.println(F("CLEARING CACHE"));
             for (auto& way : entries) {
                 way.clear();
             }
