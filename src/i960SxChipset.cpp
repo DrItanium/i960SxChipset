@@ -266,7 +266,7 @@ inline void invocationBody() noexcept {
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             ProcessorInterface::setupDataLinesForRead();
             do {
-                ProcessorInterface::setDataBits(CoreChipsetFeatures::read());
+                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getLeastSignificantAddressByte(), ProcessorInterface::getStyle()));
                 if (informCPU()) {
                     break;
                 }
@@ -278,7 +278,7 @@ inline void invocationBody() noexcept {
             ProcessorInterface::setupDataLinesForWrite();
             do {
                 // CoreChipsetFeatures will get it's information directly from the processor interface
-                CoreChipsetFeatures::write();
+                CoreChipsetFeatures::write(ProcessorInterface::getLeastSignificantAddressByte(), ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
                 if (informCPU()) {
                     break;
                 }

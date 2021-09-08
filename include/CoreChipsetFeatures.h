@@ -66,20 +66,20 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept { }
-    static uint16_t read() noexcept {
+    static uint16_t read(byte offset, LoadStoreStyle) noexcept {
         // force override the default implementation
-        switch (static_cast<Registers>(ProcessorInterface::getLeastSignificantAddressByte())) {
+        switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO: return Serial.read();
             default: return 0;
         }
     }
-    static void write() noexcept {
-        switch (static_cast<Registers>(ProcessorInterface::getLeastSignificantAddressByte())) {
+    static void write(byte offset, LoadStoreStyle, uint16_t value) noexcept {
+        switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleFlush:
                 Serial.flush();
                 break;
             case Registers::ConsoleIO:
-                Serial.write(static_cast<char>(ProcessorInterface::getDataBits()));
+                Serial.write(static_cast<char>(value));
                 break;
             default:
                 break;
