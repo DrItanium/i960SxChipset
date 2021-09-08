@@ -343,7 +343,6 @@ public:
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
-            Serial.println(F("BRINGING UP PSRAM MEMORY BLOCK"));
             initialized_ = true;
             currentIndex_.index = 0;
             setChipId(0);
@@ -360,7 +359,6 @@ public:
                 SPI.transfer(0x99);
                 digitalWrite<enablePin, HIGH>();
             }
-            Serial.println(F("Done bringing up psram memory blocks!"));
         }
     }
     static constexpr bool respondsTo(byte index) noexcept {
