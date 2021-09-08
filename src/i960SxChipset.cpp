@@ -219,7 +219,7 @@ auto& getLine() noexcept {
 constexpr auto IncrementAddress = true;
 constexpr auto LeaveAddressAlone = false;
 constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
-void fallbackBody() noexcept {
+inline void fallbackBody() noexcept {
     // fallback, be consistent to make sure we don't run faster than the i960
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
         ProcessorInterface::setupDataLinesForRead();
