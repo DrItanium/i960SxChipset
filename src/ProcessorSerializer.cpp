@@ -112,7 +112,7 @@ ProcessorInterface::newDataCycle() noexcept {
     {
         address_.bytes[1] = lower;
         // interleave this operation in, can't get more complex than this
-        lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
+    //    lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
     }
     while (!(SPSR & _BV(SPIF))) ; // wait
     SPDR = GPIOOpcode;

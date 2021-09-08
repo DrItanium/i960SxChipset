@@ -217,8 +217,6 @@ auto& getLine() noexcept {
     return isBurstLast;
 }
 inline void invocationBody() noexcept {
-    static constexpr auto ReadLoadStoreStyle = true;
-    static constexpr auto IgnoreLoadStoreStyle = false;
     static constexpr auto IncrementAddress = true;
     static constexpr auto LeaveAddressAlone = false;
     static constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
@@ -243,7 +241,7 @@ inline void invocationBody() noexcept {
                     break;
                 }
                 // so if I don't increment the address, I think we run too fast xD based on some experimentation
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, LeaveAddressAlone>();
+                ProcessorInterface::burstNext<LeaveAddressAlone>();
             }
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -259,7 +257,7 @@ inline void invocationBody() noexcept {
                 // the manual doesn't state that the burst transaction will always have BE0 and BE1 pulled low and this is very true, you must
                 // check the pins because it will do unaligned burst transactions but even that will never span multiple 16-byte entries
                 // so if I don't increment the address, I think we run too fast xD based on some experimentation
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, LeaveAddressAlone>();
+                ProcessorInterface::burstNext<LeaveAddressAlone>();
             }
         }
     } else {
@@ -274,7 +272,7 @@ inline void invocationBody() noexcept {
                 }
                 // so if I don't increment the address, I think we run too fast xD based on some experimentation
                 // we don't use the cache on this path so tell burstNext this.
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
+                ProcessorInterface::burstNext<IncrementAddress>();
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -286,7 +284,7 @@ inline void invocationBody() noexcept {
                 }
                 // so if I don't increment the address, I think we run too fast xD based on some experimentation
                 // we don't use the cache for this path so don't increment it at all
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
+                ProcessorInterface::burstNext<IncrementAddress>();
             } while (true);
         }
     }

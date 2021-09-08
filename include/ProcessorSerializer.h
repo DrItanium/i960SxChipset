@@ -215,7 +215,7 @@ public:
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
     [[nodiscard]] static uint16_t getDataBits() noexcept;
     static void setDataBits(uint16_t value) noexcept;
-    [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>(lss_); }
+    [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
     static void setHOLDPin(bool value) noexcept {
         if (value != holdValue_) {
@@ -247,17 +247,13 @@ private:
     }
 public:
     static byte newDataCycle() noexcept;
-    template<bool readLoadStoreStyle = true, bool advanceAddress = true>
+    template<bool advanceAddress = true>
     static void burstNext() noexcept {
         if constexpr (advanceAddress) {
             // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
             // next 16-bit word
             // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
             address_.bytes[0] += 2;
-        }
-        // make sure that we always have an up to date copy of the cache offset entry
-        if constexpr (readLoadStoreStyle) {
-            lss_ = static_cast<LoadStoreStyle>((PINA & 0b110000));
         }
     }
     /**
@@ -268,7 +264,7 @@ public:
 private:
     static inline byte dataLinesDirection_ = 0xFF;
     static inline SplitWord32 address_{0};
-    static inline LoadStoreStyle lss_ = LoadStoreStyle::None;
+    //static inline LoadStoreStyle lss_ = LoadStoreStyle::None;
     static inline bool lockValue_ = true;
     static inline bool holdValue_ = false;
     static inline bool initialized_ = false;
