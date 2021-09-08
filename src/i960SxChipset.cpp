@@ -247,6 +247,67 @@ inline void fallbackBody() noexcept {
         }
     }
 }
+
+inline void handleMemoryInterface() noexcept {
+    // okay we are dealing with the psram chips
+    // now take the time to compute the cache offset entries
+    if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        ProcessorInterface::setupDataLinesForRead();
+        // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
+        // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+            ProcessorInterface::setDataBits(theEntry.get(i));
+            if (informCPU()) {
+                break;
+            }
+            // so if I don't increment the address, I think we run too fast xD based on some experimentation
+            ProcessorInterface::burstNext<LeaveAddressAlone>();
+        }
+    } else {
+        ProcessorInterface::setupDataLinesForWrite();
+        // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
+        // far as we can go with how the Sx works!
+
+        // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+            theEntry.set(i, ProcessorInterface::getStyle(), SplitWord16{ProcessorInterface::getDataBits()});
+            if (informCPU()) {
+                break;
+            }
+            // the manual doesn't state that the burst transaction will always have BE0 and BE1 pulled low and this is very true, you must
+            // check the pins because it will do unaligned burst transactions but even that will never span multiple 16-byte entries
+            // so if I don't increment the address, I think we run too fast xD based on some experimentation
+            ProcessorInterface::burstNext<LeaveAddressAlone>();
+        }
+    }
+}
+inline void handleCoreChipsetLoop() noexcept {
+    // generally we shouldn't see burst operations here but who knows!
+    // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
+    if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        ProcessorInterface::setupDataLinesForRead();
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+            ProcessorInterface::setDataBits(CoreChipsetFeatures::read(i, ProcessorInterface::getStyle()));
+            if (informCPU()) {
+                break;
+            }
+            // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
+            // so you may still be reading the previous i960 cycle state!
+            ProcessorInterface::burstNext<LeaveAddressAlone>();
+        }
+    } else {
+        ProcessorInterface::setupDataLinesForWrite();
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+            CoreChipsetFeatures::write(i, ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
+            if (informCPU()) {
+                break;
+            }
+            // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
+            // so you may still be reading the previous i960 cycle state!
+            ProcessorInterface::burstNext<LeaveAddressAlone>();
+        }
+    }
+}
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
@@ -257,63 +318,9 @@ inline void invocationBody() noexcept {
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
     if (auto targetSection = ProcessorInterface::newDataCycle(); OnboardPSRAMBlock::respondsTo(targetSection)) {
-        // okay we are dealing with the psram chips
-        // now take the time to compute the cache offset entries
-        if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            ProcessorInterface::setupDataLinesForRead();
-            // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
-            // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
-            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-                ProcessorInterface::setDataBits(theEntry.get(i));
-                if (informCPU()) {
-                    break;
-                }
-                // so if I don't increment the address, I think we run too fast xD based on some experimentation
-                ProcessorInterface::burstNext<LeaveAddressAlone>();
-            }
-        } else {
-            ProcessorInterface::setupDataLinesForWrite();
-            // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
-            // far as we can go with how the Sx works!
-
-            // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
-            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-                theEntry.set(i, ProcessorInterface::getStyle(), SplitWord16{ProcessorInterface::getDataBits()});
-                if (informCPU()) {
-                    break;
-                }
-                // the manual doesn't state that the burst transaction will always have BE0 and BE1 pulled low and this is very true, you must
-                // check the pins because it will do unaligned burst transactions but even that will never span multiple 16-byte entries
-                // so if I don't increment the address, I think we run too fast xD based on some experimentation
-                ProcessorInterface::burstNext<LeaveAddressAlone>();
-            }
-        }
+        handleMemoryInterface();
     } else if (CoreChipsetFeatures::respondsTo(targetSection)) {
-        // generally we shouldn't see burst operations here but who knows!
-        // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            ProcessorInterface::setupDataLinesForRead();
-            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(i, ProcessorInterface::getStyle()));
-                if (informCPU()) {
-                    break;
-                }
-                // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
-                // so you may still be reading the previous i960 cycle state!
-                ProcessorInterface::burstNext<LeaveAddressAlone>();
-            }
-        } else {
-            ProcessorInterface::setupDataLinesForWrite();
-            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-                CoreChipsetFeatures::write(i, ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
-                if (informCPU()) {
-                    break;
-                }
-                // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
-                // so you may still be reading the previous i960 cycle state!
-                ProcessorInterface::burstNext<LeaveAddressAlone>();
-            }
-        }
+        handleCoreChipsetLoop();
     } else {
         fallbackBody();
     }
