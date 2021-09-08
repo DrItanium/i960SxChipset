@@ -85,8 +85,5 @@ public:
                 break;
         }
     }
-    static constexpr bool respondsTo(byte index) noexcept {
-        return index == 0xFE;
-    }
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
