@@ -496,6 +496,14 @@ constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega
         5_MHz // due to the current design, we have to run the psram at 5 Mhz
 };
 
+template<>
+constexpr MCUConfiguration<Pinout1284p_Type2> BoardDescription<TargetMCU::ATmega1284p_Type2> = {
+        16_KB,
+        256, 16,
+        10_MHz,
+        5_MHz // due to the current design, we have to run the psram at 5 Mhz
+};
+
 class TargetBoard {
 public:
     [[nodiscard]] static constexpr auto getCPUFrequency() noexcept { return F_CPU; }
