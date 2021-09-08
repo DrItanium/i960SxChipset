@@ -570,16 +570,9 @@ union SplitWord32 {
     // adding this dropped program size by over 500 bytes!
     explicit constexpr SplitWord32(uint32_t value = 0) noexcept : wholeValue_(value) { }
     constexpr SplitWord32(uint8_t lowest, uint8_t lower, uint8_t higher, uint8_t highest) noexcept : bytes{lowest, lower, higher, highest} {}
-    constexpr SplitWord32(uint16_t lower, uint16_t upper) noexcept : halves{lower, upper} { }
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     uint32_t wholeValue_ = 0;
-    int32_t signedWholeValue;
-    uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     byte bytes[sizeof(uint32_t)];
-    struct {
-        uint16_t lowerHalf_;
-        uint16_t upperHalf_;
-    };
 };
 using UnderlyingPinoutType = decltype(BoardDescription<TargetBoard::getMCUTarget()>.getNoneSpecifier());
 #endif //I960SXCHIPSET_MCUPLATFORM_H
