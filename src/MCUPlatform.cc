@@ -29,9 +29,6 @@ namespace {
     constexpr bool compileTimeSanityCheck() noexcept {
 #define ERR_STATE(msg) static_assert(false_v< T > , "Sanity check failed: " msg ); return false
         if constexpr(TargetBoard::onAtmega1284p()) {
-            if constexpr(TargetBoard::hasBuiltinSDCard()) {
-                ERR_STATE("The 1284p does not have a builtin SD Card slot");
-            }
             if constexpr (TargetBoard::getCPUFrequency() != 20_MHz) {
                 ERR_STATE("Expecting the 1248p to run at 20MHz");
             }

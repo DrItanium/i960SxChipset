@@ -425,9 +425,6 @@ static_assert(2_MHz == 2'000'000);
 static_assert(20_MHz == 20'000'000);
 
 
-#ifndef NUM_ANALOG_OUTPUTS
-#define NUM_ANALOG_OUTPUTS 0
-#endif
 enum class TargetMCU {
     ATmega1284p_Type1,
     ATmega1284p_Type2,
@@ -440,23 +437,17 @@ public:
     constexpr MCUConfiguration(uint32_t sramSize,
                                uint32_t cacheLineCount,
                                uint32_t cacheLineSize,
-                               uint32_t maxOpenFiles,
                                uint32_t ioExpanderSpeedCap,
-                               uint32_t psramSpeedCap,
-                               bool hasBuiltinSDCard
+                               uint32_t psramSpeedCap
     ) noexcept : sramAmount_(sramSize),
                  cacheLineCount_(cacheLineCount),
                  cacheLineSize_(cacheLineSize),
-                 maximumNumberOfOpenFiles_(maxOpenFiles),
                  ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
-                 psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap),
-                 builtinSDCard_(hasBuiltinSDCard) { }
+                 psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap) { }
 
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
     [[nodiscard]] constexpr uint32_t getCacheLineCount() const noexcept { return cacheLineCount_; }
     [[nodiscard]] constexpr uint32_t getCacheLineSize() const noexcept { return cacheLineSize_; }
-    [[nodiscard]] constexpr uint32_t getMaximumNumberOfOpenFiles() const noexcept { return maximumNumberOfOpenFiles_; }
-    [[nodiscard]] constexpr auto hasBuiltinSDCard() const noexcept { return builtinSDCard_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
     [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
     [[nodiscard]] constexpr auto getReadyPin() const noexcept { return static_cast<int>(T::READY_); }
@@ -487,57 +478,27 @@ private:
     uint32_t sramAmount_;
     uint32_t cacheLineCount_;
     uint32_t cacheLineSize_;
-    uint32_t maximumNumberOfOpenFiles_;
     uint32_t ioExpanderPeripheralSpeed_;
     uint32_t psramSpeedCap_;
-    bool builtinSDCard_;
 };
 template<TargetMCU mcu>
 constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
         0,
-        8, 512,
-        32,
+        256, 16,
         10_MHz,
-        8_MHz,
-        false
+        8_MHz
 };
 template<>
 constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         16_KB,
         256, 16,
-        32,
         10_MHz,
-        5_MHz, // due to the current design, we have to run the psram at 5 Mhz
-        false
+        5_MHz // due to the current design, we have to run the psram at 5 Mhz
 };
-[[nodiscard]] constexpr auto inDebugMode() noexcept {
-#if defined(__PLATFORMIO_BUILD_DEBUG__) || defined(DEBUG) || defined(__DEBUG__)
-    return true;
-#else
-    return false;
-#endif
-}
 
 class TargetBoard {
 public:
-    [[nodiscard]] static constexpr auto cpuIsARMArchitecture() noexcept {
-#ifdef __arm__
-        return true;
-#else
-        return false;
-#endif
-    }
-    [[nodiscard]] static constexpr auto cpuIsAVRArchitecture() noexcept {
-#if defined(__AVR) || defined(__AVR__)
-        return true;
-#else
-        return false;
-#endif
-    }
     [[nodiscard]] static constexpr auto getCPUFrequency() noexcept { return F_CPU; }
-    [[nodiscard]] static constexpr auto getDigitalPinCount() noexcept { return NUM_DIGITAL_PINS; }
-    [[nodiscard]] static constexpr auto getAnalogInputCount() noexcept { return NUM_ANALOG_INPUTS; }
-    [[nodiscard]] static constexpr auto getAnalogOutputCount() noexcept { return NUM_ANALOG_OUTPUTS; }
     [[nodiscard]] static constexpr TargetMCU getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
 #ifdef CHIPSET_TYPE1
@@ -551,15 +512,10 @@ public:
     return TargetMCU::Unknown;
 #endif
     }
-    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type1 || getMCUTarget() == TargetMCU::ATmega1284p_Type2; }
     [[nodiscard]] static constexpr auto onAtmega1284p_Type1() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type1; }
     [[nodiscard]] static constexpr auto onAtmega1284p_Type2() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type2; }
+    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return onAtmega1284p_Type1() || onAtmega1284p_Type2(); }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
-/**
- * @brief Is there an onboard sdcard slot?
- * @return True if defined via the command line
- */
-    [[nodiscard]] static constexpr auto hasBuiltinSDCard() noexcept { return BoardDescription<getMCUTarget()>.hasBuiltinSDCard(); }
     [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept { return BoardDescription<getMCUTarget()>.getSramAmount(); }
     [[nodiscard]] static constexpr auto numberOfCacheLines() noexcept { return BoardDescription<getMCUTarget()>.getCacheLineCount(); }
     [[nodiscard]] static constexpr auto cacheLineSize() noexcept { return BoardDescription<getMCUTarget()>.getCacheLineSize(); }
@@ -615,7 +571,7 @@ union SplitWord32 {
     explicit constexpr SplitWord32(uint32_t value = 0) noexcept : wholeValue_(value) { }
     constexpr SplitWord32(uint8_t lowest, uint8_t lower, uint8_t higher, uint8_t highest) noexcept : bytes{lowest, lower, higher, highest} {}
     constexpr SplitWord32(uint16_t lower, uint16_t upper) noexcept : halves{lower, upper} { }
-    constexpr auto getWholeValue() const noexcept { return wholeValue_; }
+    [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     uint32_t wholeValue_ = 0;
     int32_t signedWholeValue;
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
@@ -625,12 +581,5 @@ union SplitWord32 {
         uint16_t upperHalf_;
     };
 };
-union SplitWord128 {
-    uint8_t bytes[16] = { 0 };
-    uint16_t shorts[16/sizeof(uint16_t)];
-    uint32_t words[16/sizeof(uint32_t)];
-    uint64_t quads[16/sizeof(uint64_t)];
-};
-static_assert(TargetBoard::cpuIsAVRArchitecture() || TargetBoard::cpuIsARMArchitecture(), "ONLY AVR or ARM BASED MCUS ARE SUPPORTED!");
 using UnderlyingPinoutType = decltype(BoardDescription<TargetBoard::getMCUTarget()>.getNoneSpecifier());
 #endif //I960SXCHIPSET_MCUPLATFORM_H
