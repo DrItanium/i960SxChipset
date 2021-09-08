@@ -242,6 +242,7 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
+                // so if I don't increment the address, I think we run too fast xD based on some experimentation
                 ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
             }
         } else {
@@ -257,6 +258,7 @@ inline void invocationBody() noexcept {
                 }
                 // the manual doesn't state that the burst transaction will always have BE0 and BE1 pulled low and this is very true, you must
                 // check the pins because it will do unaligned burst transactions but even that will never span multiple 16-byte entries
+                // so if I don't increment the address, I think we run too fast xD based on some experimentation
                 ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
             }
         }
@@ -270,6 +272,7 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
+                // so if I don't increment the address, I think we run too fast xD based on some experimentation
                 // we don't use the cache on this path so tell burstNext this.
                 ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
             } while (true);
@@ -281,6 +284,7 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
+                // so if I don't increment the address, I think we run too fast xD based on some experimentation
                 // we don't use the cache for this path so don't increment it at all
                 ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
             } while (true);
