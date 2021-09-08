@@ -335,6 +335,11 @@ inline void setMuxUpperHalf(byte value) noexcept {
         PORTA = value;
     }
 }
-
+inline void setMuxDirection(decltype(INPUT) value) {
+    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        portMode(PORTC, value);
+        portMode(PORTA, value);
+    }
+}
 
 #endif //ARDUINO_PINOUT_H
