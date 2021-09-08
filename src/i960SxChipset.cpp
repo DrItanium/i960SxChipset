@@ -265,15 +265,15 @@ inline void invocationBody() noexcept {
         // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
             ProcessorInterface::setupDataLinesForRead();
-            do {
-                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getLeastSignificantAddressByte(), ProcessorInterface::getStyle()));
+            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+                ProcessorInterface::setDataBits(CoreChipsetFeatures::read(i, ProcessorInterface::getStyle()));
                 if (informCPU()) {
                     break;
                 }
-                // so if I don't increment the address, I think we run too fast xD based on some experimentation
-                // we don't use the cache on this path so tell burstNext this.
-                ProcessorInterface::burstNext<IncrementAddress>();
-            } while (true);
+                // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
+                // so you may still be reading the previous i960 cycle state!
+                ProcessorInterface::burstNext<LeaveAddressAlone>();
+            }
         } else {
             ProcessorInterface::setupDataLinesForWrite();
             for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
@@ -281,6 +281,8 @@ inline void invocationBody() noexcept {
                 if (informCPU()) {
                     break;
                 }
+                // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
+                // so you may still be reading the previous i960 cycle state!
                 ProcessorInterface::burstNext<LeaveAddressAlone>();
             }
         }
