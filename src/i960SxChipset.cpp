@@ -317,12 +317,19 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    if (auto targetSection = ProcessorInterface::newDataCycle(); OnboardPSRAMBlock::respondsTo(targetSection)) {
-        handleMemoryInterface();
-    } else if (CoreChipsetFeatures::respondsTo(targetSection)) {
-        handleCoreChipsetLoop();
-    } else {
-        fallbackBody();
+    switch (ProcessorInterface::newDataCycle()) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            handleMemoryInterface();
+            break;
+        case 0xFE:
+            handleCoreChipsetLoop();
+            break;
+        default:
+            fallbackBody();
+            break;
     }
 }
 
