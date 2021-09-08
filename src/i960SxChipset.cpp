@@ -228,7 +228,7 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    if (OnboardPSRAMBlock::respondsTo(ProcessorInterface::newDataCycle())) {
+    if (auto targetSection = ProcessorInterface::newDataCycle(); OnboardPSRAMBlock::respondsTo(targetSection)) {
         // okay we are dealing with the psram chips
         // now take the time to compute the cache offset entries
         if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
@@ -260,7 +260,7 @@ inline void invocationBody() noexcept {
                 ProcessorInterface::burstNext<LeaveAddressAlone>();
             }
         }
-    } else {
+    } else if (CoreChipsetFeatures::respondsTo(targetSection)) {
         // generally we shouldn't see burst operations here but who knows!
         // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
         if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
@@ -283,6 +283,33 @@ inline void invocationBody() noexcept {
                 }
                 // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
                 // so you may still be reading the previous i960 cycle state!
+                ProcessorInterface::burstNext<LeaveAddressAlone>();
+            }
+        }
+    } else {
+        // fallback, be consistent to make sure we don't run faster than the i960
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            ProcessorInterface::setupDataLinesForRead();
+            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+                // need to introduce some delay
+                ProcessorInterface::setDataBits(0);
+                if (informCPU()) {
+                    break;
+                }
+                ProcessorInterface::burstNext<LeaveAddressAlone>();
+            }
+        } else {
+            ProcessorInterface::setupDataLinesForWrite();
+            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+                // put four cycles worth of delay into this to make damn sure we are ready with the i960
+                asm volatile ("nop");
+                asm volatile ("nop");
+                asm volatile ("nop");
+                asm volatile ("nop");
+                // need to introduce some delay
+                if (informCPU()) {
+                    break;
+                }
                 ProcessorInterface::burstNext<LeaveAddressAlone>();
             }
         }
