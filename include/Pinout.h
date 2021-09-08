@@ -308,5 +308,33 @@ public:
     ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
 };
 
+inline byte readMuxLowerHalf() noexcept {
+    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        // Port C is the lower half
+        return PINC;
+    } else {
+        return 0;
+    }
+}
+
+inline byte readMuxUpperHalf() noexcept {
+    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        return PINA;
+    } else {
+        return 0;
+    }
+}
+
+inline void setMuxLowerHalf(byte value) noexcept {
+    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        PORTC = value;
+    }
+}
+inline void setMuxUpperHalf(byte value) noexcept {
+    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        PORTA = value;
+    }
+}
+
 
 #endif //ARDUINO_PINOUT_H
