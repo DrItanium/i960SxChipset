@@ -216,10 +216,38 @@ auto& getLine() noexcept {
     DigitalPin<i960Pinout::Ready>::pulse();
     return isBurstLast;
 }
+constexpr auto IncrementAddress = true;
+constexpr auto LeaveAddressAlone = false;
+constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
+void fallbackBody() noexcept {
+    // fallback, be consistent to make sure we don't run faster than the i960
+    if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        ProcessorInterface::setupDataLinesForRead();
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+            // need to introduce some delay
+            ProcessorInterface::setDataBits(0);
+            if (informCPU()) {
+                break;
+            }
+            ProcessorInterface::burstNext<LeaveAddressAlone>();
+        }
+    } else {
+        ProcessorInterface::setupDataLinesForWrite();
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+            // put four cycles worth of delay into this to make damn sure we are ready with the i960
+            asm volatile ("nop");
+            asm volatile ("nop");
+            asm volatile ("nop");
+            asm volatile ("nop");
+            // need to introduce some delay
+            if (informCPU()) {
+                break;
+            }
+            ProcessorInterface::burstNext<LeaveAddressAlone>();
+        }
+    }
+}
 inline void invocationBody() noexcept {
-    static constexpr auto IncrementAddress = true;
-    static constexpr auto LeaveAddressAlone = false;
-    static constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
@@ -287,32 +315,7 @@ inline void invocationBody() noexcept {
             }
         }
     } else {
-        // fallback, be consistent to make sure we don't run faster than the i960
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-            ProcessorInterface::setupDataLinesForRead();
-            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-                // need to introduce some delay
-                ProcessorInterface::setDataBits(0);
-                if (informCPU()) {
-                    break;
-                }
-                ProcessorInterface::burstNext<LeaveAddressAlone>();
-            }
-        } else {
-            ProcessorInterface::setupDataLinesForWrite();
-            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-                // put four cycles worth of delay into this to make damn sure we are ready with the i960
-                asm volatile ("nop");
-                asm volatile ("nop");
-                asm volatile ("nop");
-                asm volatile ("nop");
-                // need to introduce some delay
-                if (informCPU()) {
-                    break;
-                }
-                ProcessorInterface::burstNext<LeaveAddressAlone>();
-            }
-        }
+        fallbackBody();
     }
 }
 
