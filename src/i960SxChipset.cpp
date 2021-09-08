@@ -104,23 +104,8 @@ public:
         }
     }
     [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
-    [[nodiscard]] uint16_t get(byte offset, LoadStoreStyle style) const noexcept {
-        SplitWord16 theOutput(data[offset]);
-        switch (style) {
-            case LoadStoreStyle::Full16: break;
-            case LoadStoreStyle::Lower8:
-                theOutput.bytes[1] = 0;
-                break;
-            case LoadStoreStyle::Upper8:
-                theOutput.bytes[0] = 0;
-                break;
-            default:
-                signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
-        }
-        // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
-        return theOutput.getWholeValue();
-    }
-    template<bool terminateEarlyOnMatch = true>
+    [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
+    template<bool terminateEarlyOnMatch = false>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         auto& target = data[offset];
@@ -253,11 +238,11 @@ inline void invocationBody() noexcept {
             // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
             // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
             for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-                ProcessorInterface::setDataBits(theEntry.get(i, ProcessorInterface::getStyle()));
+                ProcessorInterface::setDataBits(theEntry.get(i));
                 if (informCPU()) {
                     break;
                 }
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, LeaveAddressAlone>();
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
             }
         } else {
             ProcessorInterface::setupDataLinesForWrite();
@@ -272,7 +257,7 @@ inline void invocationBody() noexcept {
                 }
                 // the manual doesn't state that the burst transaction will always have BE0 and BE1 pulled low and this is very true, you must
                 // check the pins because it will do unaligned burst transactions but even that will never span multiple 16-byte entries
-                ProcessorInterface::burstNext<ReadLoadStoreStyle, LeaveAddressAlone>();
+                ProcessorInterface::burstNext<ReadLoadStoreStyle, IncrementAddress>();
             }
         }
     } else {
