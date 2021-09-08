@@ -276,16 +276,13 @@ inline void invocationBody() noexcept {
             } while (true);
         } else {
             ProcessorInterface::setupDataLinesForWrite();
-            do {
-                // CoreChipsetFeatures will get it's information directly from the processor interface
-                CoreChipsetFeatures::write(ProcessorInterface::getLeastSignificantAddressByte(), ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
+            for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+                CoreChipsetFeatures::write(i, ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
                 if (informCPU()) {
                     break;
                 }
-                // so if I don't increment the address, I think we run too fast xD based on some experimentation
-                // we don't use the cache for this path so don't increment it at all
-                ProcessorInterface::burstNext<IncrementAddress>();
-            } while (true);
+                ProcessorInterface::burstNext<LeaveAddressAlone>();
+            }
         }
     }
 }
