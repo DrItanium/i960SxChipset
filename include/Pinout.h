@@ -341,5 +341,9 @@ inline void setMuxDirection(decltype(INPUT) value) {
         portMode(PORTA, value);
     }
 }
+/**
+ * @brief Choose the lines the multiplexed data lines act as
+ */
+void connectMuxPinsToId(byte id) noexcept;
 
 #endif //ARDUINO_PINOUT_H
