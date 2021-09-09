@@ -346,4 +346,7 @@ inline void setMuxDirection(decltype(INPUT) value) {
  */
 void connectMuxPinsToId(byte id) noexcept;
 
+void setSPIBusId(byte id) noexcept;
+
+
 #endif //ARDUINO_PINOUT_H

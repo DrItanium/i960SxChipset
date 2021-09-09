@@ -25,14 +25,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "Pinout.h"
 
-constexpr byte translationTable[4] {
-    0,
-    0b0100'0000,
-    0b1000'0000,
-    0b1100'0000,
-};
+namespace {
+    constexpr byte MuxTranslationTable[4] {
+            0,
+            0b0100'0000,
+            0b1000'0000,
+            0b1100'0000,
+    };
+    constexpr byte SPIIDTranslationTable[8] {
+            0b0000'0000,
+            0b0000'1000,
+            0b0001'0000,
+            0b0001'1000,
+            0b0010'0000,
+            0b0010'1000,
+            0b0011'0000,
+            0b0011'1000,
+    };
+}
 void
 connectMuxPinsToId(byte id) noexcept {
-    auto oldValue = PORTD & ~(0b1100'0000); // mask out all bits but the ones we care about
-    PORTD = (oldValue | translationTable[id & 0b11]);
+    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        auto oldValue = PORTD & ~(0b1100'0000); // mask out all bits but the ones we care about
+        PORTD = (oldValue | MuxTranslationTable[id & 0b11]);
+    }
+}
+
+void
+setSPIBusId(byte id) noexcept {
+    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        auto oldValue = PORTD & ~(0b0011'1000);
+        PORTD = (oldValue | SPIIDTranslationTable[id & 0b111]);
+    }
 }
