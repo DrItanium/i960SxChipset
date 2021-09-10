@@ -156,8 +156,31 @@ ProcessorInterface::newDataCycle() noexcept {
         address_.bytes[3] = highest;
         return highest;
     } else if (TargetBoard::onAtmega1284p_Type2()) {
-        /// @todo implement
-        return 0;
+        // reset the direction pins
+        DDRA = 0;
+        DDRC = 0;
+        // set the mux id to 0b00
+        connectMuxPinsToId(0b00);
+        auto highest = PORTC;
+        auto lowest = PORTA;
+        bool isWriteOperation = lowest & 0b0000'0001;
+        address_.bytes[0] = lowest & 0b1111'1110;
+        cacheOffsetEntry_ = (lowest >> 1) & 0b111;
+        address_.bytes[3] = highest;
+        connectMuxPinsToId(0b01);
+        auto flags = PORTC;
+        connectMuxPinsToId(0b10);
+        auto higher = PORTC;
+        auto lower = PORTA;
+        address_.bytes[1] = lower;
+        address_.bytes[2] = higher;
+        connectMuxPinsToId(0b11);
+        if (!isWriteOperation) {
+            // we have a read operation so call the setup function
+            setupDataLinesForRead();
+        }
+        /// @todo continue this
+        return highest;
     } else {
         return 0;
     }
