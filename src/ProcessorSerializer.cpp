@@ -24,19 +24,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ProcessorSerializer.h"
+#include "Pinout.h"
 //#include "PSRAMChip.h"
 uint16_t
 ProcessorInterface::getDataBits() noexcept {
-    return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
+    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
+    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        // we have to read from ports c and a
+        return SplitWord16{PINC, PINC}.getWholeValue();
+    } else {
+        // stub out
+        return 0;
+    }
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    // the latch is preserved in between data line changes
-    // okay we are still pointing as output values
-    // check the latch and see if the output value is the same as what is latched
-    if (latchedDataOutput != value) {
-        latchedDataOutput = value;
-        writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
+    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        // the latch is preserved in between data line changes
+        // okay we are still pointing as output values
+        // check the latch and see if the output value is the same as what is latched
+        if (latchedDataOutput != value) {
+            latchedDataOutput = value;
+            writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
+        }
+    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        SplitWord16 split(value);
+        PORTC = split.bytes[0];
+        PORTA = split.bytes[1];
+    } else {
+       // do nothing
     }
 }
 
@@ -58,16 +75,22 @@ ProcessorInterface::begin() noexcept {
         // set IOCON.HAEN on all chips
         auto iocon = read8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>();
         write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(iocon | 0b0000'1000);
-        // now all devices tied to this ~CS pin have separate addresses
-        // make each of these inputs
-        writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
-        writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
-        writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
-        writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0x005F);
-        // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
-        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
-        // write the default value out to the latch to start with
-        write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput);
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            // now all devices tied to this ~CS pin have separate addresses
+            // make each of these inputs
+            writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
+            writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
+            writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
+            writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0x005F);
+            // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
+            write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
+            // write the default value out to the latch to start with
+            write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput);
+        } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+            /// @todo implement this
+        } else {
+            /// @todo implement this
+        }
         SPI.endTransaction();
     }
 }
@@ -133,29 +156,40 @@ ProcessorInterface::newDataCycle() noexcept {
         address_.bytes[3] = highest;
         return highest;
     } else if (TargetBoard::onAtmega1284p_Type2()) {
-        connectMuxPinsToId(0b00);
-        auto highest = Multiplexer::readMuxLowerHalf();
-        auto lowest = Multiplexer::readMuxUpperHalf();
-        connectMuxPinsToId(0b10);
-        auto higher = Multiplexer::readMuxLowerHalf();
-        auto lower = Multiplexer::readMuxUpperHalf();
         /// @todo implement
-        return highest;
+        return 0;
     } else {
         return 0;
     }
 }
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
-    if (!dataLinesDirection_) {
-        dataLinesDirection_ = ~dataLinesDirection_;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
+    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        if (!dataLinesDirection_) {
+            dataLinesDirection_ = ~dataLinesDirection_;
+            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
+        }
+    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        // do nothing special because the port should already be setup for read at this point
+        // but we should still update the port direction registers
+        DDRA = 0;
+        DDRC = 0;
+    } else {
+        // do nothing
     }
 }
 void
 ProcessorInterface::setupDataLinesForRead() noexcept {
-    if (dataLinesDirection_) {
-        dataLinesDirection_ = ~dataLinesDirection_;
-        writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
+    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        if (dataLinesDirection_) {
+            dataLinesDirection_ = ~dataLinesDirection_;
+            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
+        }
+    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        // just set the direction correctly, the point where this is called is different on type2 designs
+        DDRA = 0xFF;
+        DDRC = 0xFF;
+    } else {
+        // do nothing
     }
 }
