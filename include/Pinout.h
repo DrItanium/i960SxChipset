@@ -122,6 +122,32 @@ template<i960Pinout pin>
 }
 
 template<i960Pinout pin>
+[[nodiscard]] inline volatile unsigned char& getAssociatedDirectionPort() noexcept {
+    static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
+    switch (static_cast<UnderlyingPinoutType >(pin)) {
+#define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
+#define Y(id) \
+    X(id, 0): \
+    X(id, 1): \
+    X(id, 2): \
+    X(id, 3): \
+    X(id, 4): \
+    X(id, 5): \
+    X(id, 6): \
+    X(id, 7)
+        Y(A): return DDRA;
+        Y(C): return DDRC;
+        Y(D): return DDRD;
+        Y(B): return DDRB;
+#undef Y
+#undef X
+
+        default:
+            return DDRA;
+    }
+}
+
+template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
     switch (static_cast<UnderlyingPinoutType >(pin)) {
