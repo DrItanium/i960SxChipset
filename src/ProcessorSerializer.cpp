@@ -135,11 +135,11 @@ ProcessorInterface::newDataCycle() noexcept {
         return highest;
     } else if (TargetBoard::onAtmega1284p_Type2()) {
         connectMuxPinsToId(0b00);
-        auto highest = readMuxLowerHalf();
-        auto lowest = readMuxUpperHalf();
+        auto highest = Multiplexer::readMuxLowerHalf();
+        auto lowest = Multiplexer::readMuxUpperHalf();
         connectMuxPinsToId(0b10);
-        auto higher = readMuxLowerHalf();
-        auto lower = readMuxUpperHalf();
+        auto higher = Multiplexer::readMuxLowerHalf();
+        auto lower = Multiplexer::readMuxUpperHalf();
         /// @todo implement
         return highest;
     } else {

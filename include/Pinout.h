@@ -334,39 +334,75 @@ public:
     ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
 };
 
-inline byte readMuxLowerHalf() noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        // Port C is the lower half
-        return PINC;
-    } else {
-        return 0;
+class Multiplexer final {
+public:
+    Multiplexer() = delete;
+    ~Multiplexer() = delete;
+    Multiplexer(const Multiplexer&) = delete;
+    Multiplexer(Multiplexer&&) = delete;
+    Multiplexer& operator=(const Multiplexer&) = delete;
+    Multiplexer& operator=(Multiplexer&&) = delete;
+    static void begin() noexcept;
+    inline static byte readMuxLowerHalf() noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+            // Port C is the lower half
+            DDRC = 0;
+            return PINC;
+        } else {
+            return 0;
+        }
     }
-}
+    inline static byte readMuxUpperHalf() noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+            DDRA = 0;
+            return PINA;
+        } else {
+            return 0;
+        }
+    }
+    inline static void setMuxLowerHalf(byte value) noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+            DDRC = 0xFF;
+            PORTC = value;
+        }
+    }
+    inline static void setMuxUpperHalf(byte value) noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+            DDRA = 0xFF;
+            PORTA = value;
+        }
+    }
 
-inline byte readMuxUpperHalf() noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        return PINA;
-    } else {
-        return 0;
-    }
-}
+    static void setMuxId(byte id) noexcept;
+    static void setSPIBusId(byte id) noexcept;
+    static void updatePortD() noexcept;
 
-inline void setMuxLowerHalf(byte value) noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        PORTC = value;
-    }
-}
-inline void setMuxUpperHalf(byte value) noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        PORTA = value;
-    }
-}
-inline void setMuxDirection(decltype(INPUT) value) {
-    if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        portMode(PORTC, value);
-        portMode(PORTA, value);
-    }
-}
+private:
+    union PORTDSnapshot {
+        explicit constexpr PORTDSnapshot() noexcept : whole_(0) { }
+        constexpr auto getFullValue() const noexcept { return whole_; }
+        void setSPIBusId(byte id) noexcept {
+            if (spiId != id) {
+                spiId = id;
+            }
+        }
+        void setMuxId(byte id) noexcept {
+            if (muxId != id) {
+                muxId = id;
+            }
+        }
+    private:
+        byte whole_;
+        struct {
+            byte unused : 3;
+            byte spiId : 3;
+            byte muxId : 2;
+        };
+    };
+    static inline PORTDSnapshot pdSnapshot();
+};
+
+
 /**
  * @brief Choose the lines the multiplexed data lines act as
  */
