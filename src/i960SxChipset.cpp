@@ -311,6 +311,7 @@ inline void handleCoreChipsetLoop() noexcept {
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
+    asm volatile ("nop");
     while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
     // keep processing data requests until we
     // when we do the transition, record the information we need
