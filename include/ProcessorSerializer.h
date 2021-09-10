@@ -229,34 +229,10 @@ public:
     static void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
-    static void setHOLDPin(bool value) noexcept {
-        if (value != holdValue_) {
-            holdValue_ = value;
-            updateOutputLatch();
-        }
-    }
-    static void setLOCKPin(bool value) noexcept {
-        if (value != lockValue_) {
-            lockValue_ = value;
-            updateOutputLatch();
-        }
-    }
 public:
     static void setupDataLinesForWrite() noexcept;
     static void setupDataLinesForRead() noexcept;
 private:
-    static void updateOutputLatch() noexcept {
-        // construct the bit pattern as needed
-        byte latchValue = 0;
-        if (holdValue_ && lockValue_) {
-            latchValue = 0b1010'0000;
-        } else if (holdValue_ && !lockValue_) {
-            latchValue = 0b0010'0000;
-        } else if (!holdValue_ && lockValue_) {
-            latchValue = 0b1000'0000;
-        }
-        write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA>(latchValue);
-    }
 public:
     static byte newDataCycle() noexcept;
     template<bool advanceAddress = true>
@@ -274,14 +250,11 @@ public:
      */
     [[nodiscard]] static auto getLeastSignificantAddressByte() noexcept { return address_.bytes[0]; }
 private:
-    static inline byte dataLinesDirection_ = 0xFF;
     static inline SplitWord32 address_{0};
-    //static inline LoadStoreStyle lss_ = LoadStoreStyle::None;
-    static inline bool lockValue_ = true;
-    static inline bool holdValue_ = false;
-    static inline bool initialized_ = false;
-    static inline byte cacheOffsetEntry_ = 0;
     static inline uint16_t latchedDataOutput = 0;
+    static inline byte dataLinesDirection_ = 0xFF;
+    static inline byte cacheOffsetEntry_ = 0;
+    static inline bool initialized_ = false;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
