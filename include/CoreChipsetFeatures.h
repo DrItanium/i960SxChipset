@@ -48,6 +48,7 @@ public:
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(ConsoleIO),
         TwoByteEntry(ConsoleFlush),
+        FourByteEntry(ConsoleTimeout),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -56,6 +57,8 @@ public:
         End,
         ConsoleIO = ConsoleIO0,
         ConsoleFlush = ConsoleFlush0,
+        ConsoleTimeoutLower = ConsoleTimeout00,
+        ConsoleTimeoutUpper = ConsoleTimeout10,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -65,15 +68,20 @@ public:
     CoreChipsetFeatures(CoreChipsetFeatures&&) = delete;
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
-    static void begin() noexcept { }
+    static void begin() noexcept {
+        timeoutCopy_ = SplitWord32(Serial.getTimeout());
+    }
     static uint16_t read(byte offset, LoadStoreStyle) noexcept {
         // force override the default implementation
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO: return Serial.read();
+            case Registers::ConsoleTimeoutLower: return timeoutCopy_.halves[0];
+            case Registers::ConsoleTimeoutUpper: return timeoutCopy_.halves[1];
             default: return 0;
         }
     }
     static void write(byte offset, LoadStoreStyle, uint16_t value) noexcept {
+        bool updateTimeout = false;
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleFlush:
                 Serial.flush();
@@ -81,9 +89,22 @@ public:
             case Registers::ConsoleIO:
                 Serial.write(static_cast<char>(value));
                 break;
+            case Registers::ConsoleTimeoutLower:
+                timeoutCopy_.halves[0] = value;
+                updateTimeout = true;
+                break;
+            case Registers::ConsoleTimeoutUpper:
+                timeoutCopy_.halves[1] = value;
+                updateTimeout = true;
+                break;
             default:
                 break;
         }
+        if (updateTimeout) {
+            Serial.setTimeout(timeoutCopy_.getWholeValue());
+        }
     }
+private:
+    static inline SplitWord32 timeoutCopy_{0};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

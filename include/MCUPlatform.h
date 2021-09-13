@@ -581,6 +581,7 @@ union SplitWord32 {
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     uint32_t wholeValue_ = 0;
     byte bytes[sizeof(uint32_t)];
+    uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
 };
 using UnderlyingPinoutType = decltype(BoardDescription<TargetBoard::getMCUTarget()>.getNoneSpecifier());
 #endif //I960SXCHIPSET_MCUPLATFORM_H
