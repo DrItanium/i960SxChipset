@@ -30,6 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_CORECHIPSETFEATURES_H
 #include "MemoryThing.h"
 #include "ProcessorSerializer.h"
+#include <SdFat.h>
+extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
     enum class Registers : uint8_t {
@@ -55,6 +57,7 @@ public:
         TwoByteEntry(CacheLineCount),
         TwoByteEntry(CacheLineSize),
         TwoByteEntry(NumberOfCacheWays),
+        FourByteEntry(SDClusterCount),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -72,6 +75,8 @@ public:
         CacheLineCount = CacheLineCount0,
         CacheLineSize = CacheLineSize0,
         NumberOfCacheWays = NumberOfCacheWays0,
+        SDClusterCountLower = SDClusterCount00,
+        SDClusterCountUpper = SDClusterCount10,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -83,6 +88,7 @@ public:
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
+        clusterCount_ = SplitWord32(SD.clusterCount());
     }
     static uint16_t read(byte offset, LoadStoreStyle) noexcept {
         static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
@@ -98,6 +104,8 @@ public:
             case Registers::CacheLineCount: return TargetBoard::numberOfCacheLines();
             case Registers::CacheLineSize: return TargetBoard::cacheLineSize();
             case Registers::NumberOfCacheWays: return 2;
+            case Registers::SDClusterCountLower: return clusterCount_.halves[0];
+            case Registers::SDClusterCountUpper: return clusterCount_.halves[1];
             default: return 0;
         }
     }
@@ -127,5 +135,6 @@ public:
     }
 private:
     static inline SplitWord32 timeoutCopy_{0};
+    static inline SplitWord32 clusterCount_ {0};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
