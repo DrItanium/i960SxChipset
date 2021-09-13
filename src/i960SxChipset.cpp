@@ -270,7 +270,7 @@ inline void handleMemoryInterface() noexcept {
 
         // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-            theEntry.set(i, ProcessorInterface::getStyle(), SplitWord16{ProcessorInterface::getDataBits()});
+            theEntry.set(i, ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
             if (informCPU()) {
                 break;
             }
