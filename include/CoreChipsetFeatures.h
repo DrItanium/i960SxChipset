@@ -96,52 +96,108 @@ public:
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
         bytesPerSector_ = SD.bytesPerSector();
+        for (auto& sc : stringCache_) {
+            sc = SplitWord16{0};
+        }
     }
-    static uint16_t read(byte offset, LoadStoreStyle) noexcept {
+    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
         // force override the default implementation
-        switch (static_cast<Registers>(offset)) {
-            case Registers::ConsoleIO: return Serial.read();
-            case Registers::ConsoleTimeoutLower: return timeoutCopy_.halves[0];
-            case Registers::ConsoleTimeoutUpper: return timeoutCopy_.halves[1];
-            case Registers::ConsoleRXBufferSize: return SERIAL_RX_BUFFER_SIZE;
-            case Registers::ConsoleTXBufferSize: return SERIAL_TX_BUFFER_SIZE;
-            case Registers::ChipsetClockSpeedLower: return clockSpeedHolder.halves[0];
-            case Registers::ChipsetClockSpeedUpper: return clockSpeedHolder.halves[1];
-            case Registers::CacheLineCount: return TargetBoard::numberOfCacheLines();
-            case Registers::CacheLineSize: return TargetBoard::cacheLineSize();
-            case Registers::NumberOfCacheWays: return 2;
-            case Registers::SDClusterCountLower: return clusterCount_.halves[0];
-            case Registers::SDClusterCountUpper: return clusterCount_.halves[1];
-            case Registers::SDVolumeSectorCountLower: return volumeSectorCount_.halves[0];
-            case Registers::SDVolumeSectorCountUpper: return volumeSectorCount_.halves[1];
-            case Registers::SDBytesPerSector: return bytesPerSector_;
+        if (targetPage == 0) {
+            switch (static_cast<Registers>(offset)) {
+                case Registers::ConsoleIO:
+                    return Serial.read();
+                case Registers::ConsoleTimeoutLower:
+                    return timeoutCopy_.halves[0];
+                case Registers::ConsoleTimeoutUpper:
+                    return timeoutCopy_.halves[1];
+                case Registers::ConsoleRXBufferSize:
+                    return SERIAL_RX_BUFFER_SIZE;
+                case Registers::ConsoleTXBufferSize:
+                    return SERIAL_TX_BUFFER_SIZE;
+                case Registers::ChipsetClockSpeedLower:
+                    return clockSpeedHolder.halves[0];
+                case Registers::ChipsetClockSpeedUpper:
+                    return clockSpeedHolder.halves[1];
+                case Registers::CacheLineCount:
+                    return TargetBoard::numberOfCacheLines();
+                case Registers::CacheLineSize:
+                    return TargetBoard::cacheLineSize();
+                case Registers::NumberOfCacheWays:
+                    return 2;
+                case Registers::SDClusterCountLower:
+                    return clusterCount_.halves[0];
+                case Registers::SDClusterCountUpper:
+                    return clusterCount_.halves[1];
+                case Registers::SDVolumeSectorCountLower:
+                    return volumeSectorCount_.halves[0];
+                case Registers::SDVolumeSectorCountUpper:
+                    return volumeSectorCount_.halves[1];
+                case Registers::SDBytesPerSector:
+                    return bytesPerSector_;
 
-            default: return 0;
+                default:
+                    return 0;
+            }
+        } else if (targetPage == 0x01) {
+            // we are in the string cache so just return the value found at the given offset
+            const auto& targetEntry = stringCache_[offset >> 1];
+            switch (lss) {
+                case LoadStoreStyle::Full16:
+                    return targetEntry.getWholeValue();
+                case LoadStoreStyle::Upper8:
+                    return SplitWord16{0, targetEntry.bytes[1]}.getWholeValue();
+                case LoadStoreStyle::Lower8:
+                    return static_cast<uint16_t>(targetEntry.bytes[0]);
+                    break;
+                default:
+                    return 0;
+            }
+        } else {
+            return 0;
         }
     }
-    static void write(byte offset, LoadStoreStyle, uint16_t value) noexcept {
-        bool updateTimeout = false;
-        switch (static_cast<Registers>(offset)) {
-            case Registers::ConsoleFlush:
-                Serial.flush();
-                break;
-            case Registers::ConsoleIO:
-                Serial.write(static_cast<char>(value));
-                break;
-            case Registers::ConsoleTimeoutLower:
-                timeoutCopy_.halves[0] = value;
-                updateTimeout = true;
-                break;
-            case Registers::ConsoleTimeoutUpper:
-                timeoutCopy_.halves[1] = value;
-                updateTimeout = true;
-                break;
-            default:
-                break;
-        }
-        if (updateTimeout) {
-            Serial.setTimeout(timeoutCopy_.getWholeValue());
+    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, uint16_t value) noexcept {
+
+        if (targetPage == 0) {
+            bool updateTimeout = false;
+            switch (static_cast<Registers>(offset)) {
+                case Registers::ConsoleFlush:
+                    Serial.flush();
+                    break;
+                case Registers::ConsoleIO:
+                    Serial.write(static_cast<char>(value));
+                    break;
+                case Registers::ConsoleTimeoutLower:
+                    timeoutCopy_.halves[0] = value;
+                    updateTimeout = true;
+                    break;
+                case Registers::ConsoleTimeoutUpper:
+                    timeoutCopy_.halves[1] = value;
+                    updateTimeout = true;
+                    break;
+                default:
+                    break;
+            }
+            if (updateTimeout) {
+                Serial.setTimeout(timeoutCopy_.getWholeValue());
+            }
+        } else if (targetPage == 0x01) {
+            SplitWord16 theSplit(value);
+            auto& targetEntry = stringCache_[offset >> 1];
+            switch (lss) {
+                case LoadStoreStyle::Full16:
+                    targetEntry.wholeValue_ = theSplit.wholeValue_;
+                    break;
+                case LoadStoreStyle::Upper8:
+                    targetEntry.bytes[1] = theSplit.bytes[1];
+                    break;
+                case LoadStoreStyle::Lower8:
+                    targetEntry.bytes[0] = theSplit.bytes[0];
+                    break;
+                default:
+                    break;
+            }
         }
     }
 private:
@@ -149,5 +205,7 @@ private:
     static inline SplitWord32 clusterCount_ {0};
     static inline SplitWord32 volumeSectorCount_ {0};
     static inline uint16_t bytesPerSector_ = 0;
+    // 257th char is always zero and not accessible, prevent crap from going beyond the cache
+    static inline SplitWord16 stringCache_[258 / sizeof(SplitWord16)];
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

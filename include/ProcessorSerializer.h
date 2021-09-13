@@ -249,6 +249,7 @@ public:
      * @return The LSB of the address
      */
     [[nodiscard]] static auto getLeastSignificantAddressByte() noexcept { return address_.bytes[0]; }
+    [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[1]; }
 private:
     static inline SplitWord32 address_{0};
     static inline uint16_t latchedDataOutput = 0;

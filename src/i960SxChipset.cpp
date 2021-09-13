@@ -286,8 +286,8 @@ inline void handleCoreChipsetLoop() noexcept {
     // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
         ProcessorInterface::setupDataLinesForRead();
-        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-            ProcessorInterface::setDataBits(CoreChipsetFeatures::read(i, ProcessorInterface::getStyle()));
+        for (byte i = ProcessorInterface::getLeastSignificantAddressByte(); i < (ProcessorInterface::getLeastSignificantAddressByte() + MaximumNumberOfWordsTransferrableInASingleTransaction); ++i) {
+            ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getPageOffset(), i, ProcessorInterface::getStyle()));
             if (informCPU()) {
                 break;
             }
@@ -297,8 +297,8 @@ inline void handleCoreChipsetLoop() noexcept {
         }
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-            CoreChipsetFeatures::write(i, ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
+        for (byte i = ProcessorInterface::getLeastSignificantAddressByte(); i < ProcessorInterface::getLeastSignificantAddressByte() + MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+            CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(), i, ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
             if (informCPU()) {
                 break;
             }
