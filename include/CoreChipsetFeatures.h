@@ -149,7 +149,6 @@ public:
                     return SplitWord16{0, targetEntry.bytes[1]}.getWholeValue();
                 case LoadStoreStyle::Lower8:
                     return static_cast<uint16_t>(targetEntry.bytes[0]);
-                    break;
                 default:
                     return 0;
             }
