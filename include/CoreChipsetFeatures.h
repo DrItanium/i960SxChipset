@@ -137,18 +137,9 @@ private:
                 return 0;
         }
     }
-    static uint16_t handleStringCacheRead(uint8_t offset, LoadStoreStyle lss) noexcept {
+    static uint16_t handleStringCacheRead(uint8_t offset, LoadStoreStyle) noexcept {
         // we are in the string cache so just return the value found at the given offset
-        switch (lss) {
-            case LoadStoreStyle::Full16:
-                return SplitWord16{stringCache_[offset], stringCache_[offset+1]}.getWholeValue();
-            case LoadStoreStyle::Upper8:
-                return SplitWord16{0, stringCache_[offset+1]}.getWholeValue();
-            case LoadStoreStyle::Lower8:
-                return static_cast<uint16_t>(stringCache_[offset]);
-            default:
-                return 0;
-        }
+        return SplitWord16{stringCache_[offset], stringCache_[offset+1]}.getWholeValue();
     }
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, const SplitWord16& value) noexcept {
         bool updateTimeout = false;
