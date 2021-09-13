@@ -52,6 +52,9 @@ public:
         TwoByteEntry(ConsoleRXBufferSize),
         TwoByteEntry(ConsoleTXBufferSize),
         FourByteEntry(ChipsetClockSpeed),
+        TwoByteEntry(CacheLineCount),
+        TwoByteEntry(CacheLineSize),
+        TwoByteEntry(NumberOfCacheWays),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -66,7 +69,9 @@ public:
         ConsoleTXBufferSize = ConsoleTXBufferSize0,
         ChipsetClockSpeedLower = ChipsetClockSpeed00,
         ChipsetClockSpeedUpper = ChipsetClockSpeed10,
-
+        CacheLineCount = CacheLineCount0,
+        CacheLineSize = CacheLineSize0,
+        NumberOfCacheWays = NumberOfCacheWays0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -90,6 +95,9 @@ public:
             case Registers::ConsoleTXBufferSize: return SERIAL_TX_BUFFER_SIZE;
             case Registers::ChipsetClockSpeedLower: return clockSpeedHolder.halves[0];
             case Registers::ChipsetClockSpeedUpper: return clockSpeedHolder.halves[1];
+            case Registers::CacheLineCount: return TargetBoard::numberOfCacheLines();
+            case Registers::CacheLineSize: return TargetBoard::cacheLineSize();
+            case Registers::NumberOfCacheWays: return 2;
             default: return 0;
         }
     }
