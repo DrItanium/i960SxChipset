@@ -59,6 +59,7 @@ public:
         TwoByteEntry(NumberOfCacheWays),
         FourByteEntry(SDClusterCount),
         FourByteEntry(SDVolumeSectorCount),
+        TwoByteEntry(SDBytesPerSector),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -80,6 +81,7 @@ public:
         SDClusterCountUpper = SDClusterCount10,
         SDVolumeSectorCountLower = SDVolumeSectorCount00,
         SDVolumeSectorCountUpper = SDVolumeSectorCount10,
+        SDBytesPerSector = SDBytesPerSector0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -93,6 +95,7 @@ public:
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
+        bytesPerSector_ = SD.bytesPerSector();
     }
     static uint16_t read(byte offset, LoadStoreStyle) noexcept {
         static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
@@ -112,6 +115,8 @@ public:
             case Registers::SDClusterCountUpper: return clusterCount_.halves[1];
             case Registers::SDVolumeSectorCountLower: return volumeSectorCount_.halves[0];
             case Registers::SDVolumeSectorCountUpper: return volumeSectorCount_.halves[1];
+            case Registers::SDBytesPerSector: return bytesPerSector_;
+
             default: return 0;
         }
     }
@@ -143,5 +148,6 @@ private:
     static inline SplitWord32 timeoutCopy_{0};
     static inline SplitWord32 clusterCount_ {0};
     static inline SplitWord32 volumeSectorCount_ {0};
+    static inline uint16_t bytesPerSector_ = 0;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
