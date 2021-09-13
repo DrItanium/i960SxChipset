@@ -282,29 +282,32 @@ inline void handleMemoryInterface() noexcept {
     }
 }
 inline void handleCoreChipsetLoop() noexcept {
-    // generally we shouldn't see burst operations here but who knows!
-    // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
+    // with burst transactions in the core chipset, we do not have access to a cache line to write into.
+    // instead we need to do the old style infinite iteration design
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
         ProcessorInterface::setupDataLinesForRead();
-        for (byte i = 0; i < (MaximumNumberOfWordsTransferrableInASingleTransaction * 2); i += 2) {
-            ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getPageOffset(), ProcessorInterface::getLeastSignificantAddressByte() + i, ProcessorInterface::getStyle()));
+        for(;;) {
+            ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getPageOffset(),
+                                                                      ProcessorInterface::getLeastSignificantAddressByte(),
+                                                                      ProcessorInterface::getStyle()));
             if (informCPU()) {
                 break;
             }
-            // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
-            // so you may still be reading the previous i960 cycle state!
-            ProcessorInterface::burstNext<LeaveAddressAlone>();
+            ProcessorInterface::burstNext<IncrementAddress>();
         }
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        for (byte i = 0; i < (MaximumNumberOfWordsTransferrableInASingleTransaction * 2); i += 2) {
-            CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(), ProcessorInterface::getLeastSignificantAddressByte() + i, ProcessorInterface::getStyle(), SplitWord16{ProcessorInterface::getDataBits()});
+        for (;;) {
+            CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(),
+                                       ProcessorInterface::getLeastSignificantAddressByte(),
+                                       ProcessorInterface::getStyle(),
+                                       SplitWord16{ProcessorInterface::getDataBits()});
             if (informCPU()) {
                 break;
             }
             // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
             // so you may still be reading the previous i960 cycle state!
-            ProcessorInterface::burstNext<LeaveAddressAlone>();
+            ProcessorInterface::burstNext<IncrementAddress>();
         }
     }
 }
