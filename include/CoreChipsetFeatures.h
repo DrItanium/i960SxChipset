@@ -58,6 +58,7 @@ public:
         TwoByteEntry(CacheLineSize),
         TwoByteEntry(NumberOfCacheWays),
         FourByteEntry(SDClusterCount),
+        FourByteEntry(SDVolumeSectorCount),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -77,6 +78,8 @@ public:
         NumberOfCacheWays = NumberOfCacheWays0,
         SDClusterCountLower = SDClusterCount00,
         SDClusterCountUpper = SDClusterCount10,
+        SDVolumeSectorCountLower = SDVolumeSectorCount00,
+        SDVolumeSectorCountUpper = SDVolumeSectorCount10,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -89,6 +92,7 @@ public:
     static void begin() noexcept {
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
         clusterCount_ = SplitWord32(SD.clusterCount());
+        volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
     }
     static uint16_t read(byte offset, LoadStoreStyle) noexcept {
         static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
@@ -106,6 +110,8 @@ public:
             case Registers::NumberOfCacheWays: return 2;
             case Registers::SDClusterCountLower: return clusterCount_.halves[0];
             case Registers::SDClusterCountUpper: return clusterCount_.halves[1];
+            case Registers::SDVolumeSectorCountLower: return volumeSectorCount_.halves[0];
+            case Registers::SDVolumeSectorCountUpper: return volumeSectorCount_.halves[1];
             default: return 0;
         }
     }
@@ -136,5 +142,6 @@ public:
 private:
     static inline SplitWord32 timeoutCopy_{0};
     static inline SplitWord32 clusterCount_ {0};
+    static inline SplitWord32 volumeSectorCount_ {0};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
