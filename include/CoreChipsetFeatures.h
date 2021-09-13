@@ -101,7 +101,7 @@ public:
         }
     }
 private:
-    static uint16_t handleFirstPageRegisters(uint8_t offset, LoadStoreStyle) noexcept {
+    static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO:
                 return Serial.read();
@@ -151,55 +151,60 @@ private:
                 return 0;
         }
     }
+    static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, const SplitWord16& value) noexcept {
+        bool updateTimeout = false;
+        switch (static_cast<Registers>(offset)) {
+            case Registers::ConsoleFlush:
+                Serial.flush();
+                break;
+            case Registers::ConsoleIO:
+                Serial.write(static_cast<char>(value.getWholeValue()));
+                break;
+            case Registers::ConsoleTimeoutLower:
+                timeoutCopy_.halves[0] = value.getWholeValue();
+                updateTimeout = true;
+                break;
+            case Registers::ConsoleTimeoutUpper:
+                timeoutCopy_.halves[1] = value.getWholeValue();
+                updateTimeout = true;
+                break;
+            default:
+                break;
+        }
+        if (updateTimeout) {
+            Serial.setTimeout(timeoutCopy_.getWholeValue());
+        }
+    }
+    static void handleStringCacheWrite(uint8_t offset, LoadStoreStyle lss, const SplitWord16& value) noexcept {
+        auto& targetEntry = stringCache_[offset >> 1];
+        switch (lss) {
+            case LoadStoreStyle::Full16:
+                targetEntry.wholeValue_ = value.getWholeValue();
+                break;
+            case LoadStoreStyle::Upper8:
+                targetEntry.bytes[1] = value.bytes[1];
+                break;
+            case LoadStoreStyle::Lower8:
+                targetEntry.bytes[0] = value.bytes[0];
+                break;
+            default:
+                break;
+        }
+    }
 public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
         switch (targetPage) {
-            case 0: return handleFirstPageRegisters(offset, lss);
+            case 0: return handleFirstPageRegisterReads(offset, lss);
             case 1: return handleStringCacheRead(offset, lss);
             default: return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, const SplitWord16& value) noexcept {
-
-        if (targetPage == 0) {
-            bool updateTimeout = false;
-            switch (static_cast<Registers>(offset)) {
-                case Registers::ConsoleFlush:
-                    Serial.flush();
-                    break;
-                case Registers::ConsoleIO:
-                    Serial.write(static_cast<char>(value.getWholeValue()));
-                    break;
-                case Registers::ConsoleTimeoutLower:
-                    timeoutCopy_.halves[0] = value.getWholeValue();
-                    updateTimeout = true;
-                    break;
-                case Registers::ConsoleTimeoutUpper:
-                    timeoutCopy_.halves[1] = value.getWholeValue();
-                    updateTimeout = true;
-                    break;
-                default:
-                    break;
-            }
-            if (updateTimeout) {
-                Serial.setTimeout(timeoutCopy_.getWholeValue());
-            }
-        } else if (targetPage == 0x01) {
-            auto& targetEntry = stringCache_[offset >> 1];
-            switch (lss) {
-                case LoadStoreStyle::Full16:
-                    targetEntry.wholeValue_ = value.getWholeValue();
-                    break;
-                case LoadStoreStyle::Upper8:
-                    targetEntry.bytes[1] = value.bytes[1];
-                    break;
-                case LoadStoreStyle::Lower8:
-                    targetEntry.bytes[0] = value.bytes[0];
-                    break;
-                default:
-                    break;
-            }
+        switch (targetPage) {
+            case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
+            case 1: handleStringCacheWrite(offset, lss, value); break;
+            default: break;
         }
     }
 private:
