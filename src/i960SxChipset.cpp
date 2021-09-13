@@ -298,7 +298,8 @@ inline void handleCoreChipsetLoop() noexcept {
     } else {
         ProcessorInterface::setupDataLinesForWrite();
         for (byte i = ProcessorInterface::getLeastSignificantAddressByte(); i < ProcessorInterface::getLeastSignificantAddressByte() + MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-            CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(), i, ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
+            SplitWord16 value{ProcessorInterface::getDataBits()};
+            CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(), i, ProcessorInterface::getStyle(), value);
             if (informCPU()) {
                 break;
             }

@@ -156,7 +156,7 @@ public:
             return 0;
         }
     }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, uint16_t value) noexcept {
+    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, const SplitWord16& value) noexcept {
 
         if (targetPage == 0) {
             bool updateTimeout = false;
@@ -165,14 +165,14 @@ public:
                     Serial.flush();
                     break;
                 case Registers::ConsoleIO:
-                    Serial.write(static_cast<char>(value));
+                    Serial.write(static_cast<char>(value.getWholeValue()));
                     break;
                 case Registers::ConsoleTimeoutLower:
-                    timeoutCopy_.halves[0] = value;
+                    timeoutCopy_.halves[0] = value.getWholeValue();
                     updateTimeout = true;
                     break;
                 case Registers::ConsoleTimeoutUpper:
-                    timeoutCopy_.halves[1] = value;
+                    timeoutCopy_.halves[1] = value.getWholeValue();
                     updateTimeout = true;
                     break;
                 default:
@@ -182,17 +182,16 @@ public:
                 Serial.setTimeout(timeoutCopy_.getWholeValue());
             }
         } else if (targetPage == 0x01) {
-            SplitWord16 theSplit(value);
             auto& targetEntry = stringCache_[offset >> 1];
             switch (lss) {
                 case LoadStoreStyle::Full16:
-                    targetEntry.wholeValue_ = theSplit.wholeValue_;
+                    targetEntry.wholeValue_ = value.getWholeValue();
                     break;
                 case LoadStoreStyle::Upper8:
-                    targetEntry.bytes[1] = theSplit.bytes[1];
+                    targetEntry.bytes[1] = value.bytes[1];
                     break;
                 case LoadStoreStyle::Lower8:
-                    targetEntry.bytes[0] = theSplit.bytes[0];
+                    targetEntry.bytes[0] = value.bytes[0];
                     break;
                 default:
                     break;
