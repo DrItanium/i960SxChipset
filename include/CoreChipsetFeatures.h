@@ -97,7 +97,7 @@ public:
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
         bytesPerSector_ = SD.bytesPerSector();
         for (auto& sc : stringCache_) {
-            sc = SplitWord16{0};
+            sc = 0;
         }
     }
 private:
@@ -139,14 +139,13 @@ private:
     }
     static uint16_t handleStringCacheRead(uint8_t offset, LoadStoreStyle lss) noexcept {
         // we are in the string cache so just return the value found at the given offset
-        const auto& targetEntry = stringCache_[offset >> 1];
         switch (lss) {
             case LoadStoreStyle::Full16:
-                return targetEntry.getWholeValue();
+                return SplitWord16{stringCache_[offset], stringCache_[offset+1]}.getWholeValue();
             case LoadStoreStyle::Upper8:
-                return SplitWord16{0, targetEntry.bytes[1]}.getWholeValue();
+                return SplitWord16{0, stringCache_[offset+1]}.getWholeValue();
             case LoadStoreStyle::Lower8:
-                return static_cast<uint16_t>(targetEntry.bytes[0]);
+                return static_cast<uint16_t>(stringCache_[offset]);
             default:
                 return 0;
         }
@@ -176,16 +175,16 @@ private:
         }
     }
     static void handleStringCacheWrite(uint8_t offset, LoadStoreStyle lss, const SplitWord16& value) noexcept {
-        auto& targetEntry = stringCache_[offset >> 1];
         switch (lss) {
             case LoadStoreStyle::Full16:
-                targetEntry.wholeValue_ = value.getWholeValue();
+                stringCache_[offset] = value.bytes[0];
+                stringCache_[offset+1] = value.bytes[1];
                 break;
             case LoadStoreStyle::Upper8:
-                targetEntry.bytes[1] = value.bytes[1];
+                stringCache_[offset+1] = value.bytes[1];
                 break;
             case LoadStoreStyle::Lower8:
-                targetEntry.bytes[0] = value.bytes[0];
+                stringCache_[offset] = value.bytes[0];
                 break;
             default:
                 break;
@@ -213,7 +212,7 @@ private:
     static inline SplitWord32 volumeSectorCount_ {0};
     static inline uint16_t bytesPerSector_ = 0;
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
-    static inline SplitWord16 stringCache_[258 / sizeof(SplitWord16)];
+    static inline byte stringCache_[257] { 0};
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
