@@ -286,7 +286,7 @@ inline void handleCoreChipsetLoop() noexcept {
     // don't read lss when dealing with the chipset interface since all should be aligned to 16-bits
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
         ProcessorInterface::setupDataLinesForRead();
-        for (byte i = ProcessorInterface::getLeastSignificantAddressByte(); i < (ProcessorInterface::getLeastSignificantAddressByte() + MaximumNumberOfWordsTransferrableInASingleTransaction); ++i) {
+        for (byte i = ProcessorInterface::getLeastSignificantAddressByte(); i < (ProcessorInterface::getLeastSignificantAddressByte() + MaximumNumberOfWordsTransferrableInASingleTransaction); i += 2) {
             ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getPageOffset(), i, ProcessorInterface::getStyle()));
             if (informCPU()) {
                 break;
@@ -297,7 +297,7 @@ inline void handleCoreChipsetLoop() noexcept {
         }
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        for (byte i = ProcessorInterface::getLeastSignificantAddressByte(); i < ProcessorInterface::getLeastSignificantAddressByte() + MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+        for (byte i = ProcessorInterface::getLeastSignificantAddressByte(); i < ProcessorInterface::getLeastSignificantAddressByte() + MaximumNumberOfWordsTransferrableInASingleTransaction; i += 2) {
             SplitWord16 value{ProcessorInterface::getDataBits()};
             CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(), i, ProcessorInterface::getStyle(), value);
             if (informCPU()) {
