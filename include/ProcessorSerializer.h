@@ -82,7 +82,7 @@ class ProcessorInterface {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
-    static uint16_t read16() noexcept {
+    static SplitWord16 read16() noexcept {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
@@ -117,7 +117,7 @@ class ProcessorInterface {
         if constexpr (standalone) {
             SPI.endTransaction();
         }
-        return output.getWholeValue();
+        return output;
     }
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static uint8_t read8() noexcept {
@@ -204,7 +204,7 @@ class ProcessorInterface {
         }
     }
     template<IOExpanderAddress addr, bool standalone = true>
-    static inline uint16_t readGPIO16() noexcept {
+    static inline SplitWord16 readGPIO16() noexcept {
         return read16<addr, MCP23x17Registers::GPIO, standalone>();
     }
     template<IOExpanderAddress addr, bool standalone = true>
@@ -225,7 +225,7 @@ public:
 public:
     static void begin() noexcept;
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
-    [[nodiscard]] static uint16_t getDataBits() noexcept;
+    [[nodiscard]] static SplitWord16 getDataBits() noexcept;
     static void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }

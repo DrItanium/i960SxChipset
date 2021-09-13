@@ -301,7 +301,7 @@ inline void handleCoreChipsetLoop() noexcept {
             CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(),
                                        ProcessorInterface::getLeastSignificantAddressByte(),
                                        ProcessorInterface::getStyle(),
-                                       SplitWord16{ProcessorInterface::getDataBits()});
+                                       ProcessorInterface::getDataBits());
             if (informCPU()) {
                 break;
             }

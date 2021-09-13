@@ -26,16 +26,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessorSerializer.h"
 #include "Pinout.h"
 //#include "PSRAMChip.h"
-uint16_t
+SplitWord16
 ProcessorInterface::getDataBits() noexcept {
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
     } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
         // we have to read from ports c and a
-        return SplitWord16{PINC, PINC}.getWholeValue();
+        return SplitWord16{PINC, PINC};
     } else {
         // stub out
-        return 0;
+        return SplitWord16(0);
     }
 }
 void
