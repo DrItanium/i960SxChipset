@@ -49,6 +49,9 @@ public:
         TwoByteEntry(ConsoleIO),
         TwoByteEntry(ConsoleFlush),
         FourByteEntry(ConsoleTimeout),
+        TwoByteEntry(ConsoleRXBufferSize),
+        TwoByteEntry(ConsoleTXBufferSize),
+        FourByteEntry(ChipsetClockSpeed),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -59,6 +62,11 @@ public:
         ConsoleFlush = ConsoleFlush0,
         ConsoleTimeoutLower = ConsoleTimeout00,
         ConsoleTimeoutUpper = ConsoleTimeout10,
+        ConsoleRXBufferSize = ConsoleRXBufferSize0,
+        ConsoleTXBufferSize = ConsoleTXBufferSize0,
+        ChipsetClockSpeedLower = ChipsetClockSpeed00,
+        ChipsetClockSpeedUpper = ChipsetClockSpeed10,
+
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -72,11 +80,16 @@ public:
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
     }
     static uint16_t read(byte offset, LoadStoreStyle) noexcept {
+        static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
         // force override the default implementation
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO: return Serial.read();
             case Registers::ConsoleTimeoutLower: return timeoutCopy_.halves[0];
             case Registers::ConsoleTimeoutUpper: return timeoutCopy_.halves[1];
+            case Registers::ConsoleRXBufferSize: return SERIAL_RX_BUFFER_SIZE;
+            case Registers::ConsoleTXBufferSize: return SERIAL_TX_BUFFER_SIZE;
+            case Registers::ChipsetClockSpeedLower: return clockSpeedHolder.halves[0];
+            case Registers::ChipsetClockSpeedUpper: return clockSpeedHolder.halves[1];
             default: return 0;
         }
     }
