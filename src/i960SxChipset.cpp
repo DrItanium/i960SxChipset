@@ -222,7 +222,6 @@ constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
 inline void fallbackBody() noexcept {
     // fallback, be consistent to make sure we don't run faster than the i960
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-        ProcessorInterface::setupDataLinesForRead();
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
             // need to introduce some delay
             ProcessorInterface::setDataBits(0);
@@ -232,7 +231,6 @@ inline void fallbackBody() noexcept {
             ProcessorInterface::burstNext<LeaveAddressAlone>();
         }
     } else {
-        ProcessorInterface::setupDataLinesForWrite();
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
             // put four cycles worth of delay into this to make damn sure we are ready with the i960
             asm volatile ("nop");
@@ -252,7 +250,6 @@ inline void handleMemoryInterface() noexcept {
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
     if (auto& theEntry = getLine(); DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-        ProcessorInterface::setupDataLinesForRead();
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
@@ -264,7 +261,6 @@ inline void handleMemoryInterface() noexcept {
             ProcessorInterface::burstNext<LeaveAddressAlone>();
         }
     } else {
-        ProcessorInterface::setupDataLinesForWrite();
         // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
         // far as we can go with how the Sx works!
 
@@ -285,7 +281,6 @@ inline void handleCoreChipsetLoop() noexcept {
     // with burst transactions in the core chipset, we do not have access to a cache line to write into.
     // instead we need to do the old style infinite iteration design
     if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
-        ProcessorInterface::setupDataLinesForRead();
         for(;;) {
             ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getPageOffset(),
                                                                       ProcessorInterface::getLeastSignificantAddressByte(),
@@ -296,7 +291,6 @@ inline void handleCoreChipsetLoop() noexcept {
             ProcessorInterface::burstNext<IncrementAddress>();
         }
     } else {
-        ProcessorInterface::setupDataLinesForWrite();
         for (;;) {
             CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(),
                                        ProcessorInterface::getLeastSignificantAddressByte(),

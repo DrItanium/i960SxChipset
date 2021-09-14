@@ -154,6 +154,11 @@ ProcessorInterface::newDataCycle() noexcept {
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
+        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+            setupDataLinesForRead();
+        } else {
+            setupDataLinesForWrite();
+        }
         return highest;
     } else if (TargetBoard::onAtmega1284p_Type2()) {
         // reset the direction pins
