@@ -282,8 +282,8 @@ inline void handleCoreChipsetLoop() noexcept {
     // instead we need to do the old style infinite iteration design
     if (ProcessorInterface::isReadOperation()) {
         for(;;) {
-            ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getPageOffset(),
-                                                                      ProcessorInterface::getLeastSignificantAddressByte(),
+            ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getPageIndex(),
+                                                                      ProcessorInterface::getPageOffset(),
                                                                       ProcessorInterface::getStyle()));
             if (informCPU()) {
                 break;
@@ -292,8 +292,8 @@ inline void handleCoreChipsetLoop() noexcept {
         }
     } else {
         for (;;) {
-            CoreChipsetFeatures::write(ProcessorInterface::getPageOffset(),
-                                       ProcessorInterface::getLeastSignificantAddressByte(),
+            CoreChipsetFeatures::write(ProcessorInterface::getPageIndex(),
+                                       ProcessorInterface::getPageOffset(),
                                        ProcessorInterface::getStyle(),
                                        ProcessorInterface::getDataBits());
             if (informCPU()) {
