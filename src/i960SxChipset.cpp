@@ -79,7 +79,7 @@ public:
         };
     };
 public:
-    void reset(const TaggedAddress& newTag) noexcept {
+    void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
         if (needsFlushing()) {
             // just do the write out to disk to save time
