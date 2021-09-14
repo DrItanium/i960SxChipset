@@ -229,10 +229,9 @@ public:
     static void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
-public:
+private:
     static void setupDataLinesForWrite() noexcept;
     static void setupDataLinesForRead() noexcept;
-private:
 public:
     static byte newDataCycle() noexcept;
     template<bool advanceAddress = true>
