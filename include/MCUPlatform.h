@@ -582,6 +582,7 @@ union SplitWord32 {
     uint32_t wholeValue_ = 0;
     byte bytes[sizeof(uint32_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
+    SplitWord16 words_[sizeof(uint32_t) / sizeof(SplitWord16)];
 };
 using UnderlyingPinoutType = decltype(BoardDescription<TargetBoard::getMCUTarget()>.getNoneSpecifier());
 #endif //I960SXCHIPSET_MCUPLATFORM_H
