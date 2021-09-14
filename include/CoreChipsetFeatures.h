@@ -141,7 +141,7 @@ private:
         // we are in the string cache so just return the value found at the given offset
         return SplitWord16{stringCache_[offset], stringCache_[offset+1]}.getWholeValue();
     }
-    static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, const SplitWord16& value) noexcept {
+    static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         bool updateTimeout = false;
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleFlush:
@@ -165,7 +165,7 @@ private:
             Serial.setTimeout(timeoutCopy_.getWholeValue());
         }
     }
-    static void handleStringCacheWrite(uint8_t offset, LoadStoreStyle lss, const SplitWord16& value) noexcept {
+    static void handleStringCacheWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (lss) {
             case LoadStoreStyle::Full16:
                 stringCache_[offset] = value.bytes[0];
@@ -190,7 +190,7 @@ public:
             default: return 0;
         }
     }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, const SplitWord16& value) noexcept {
+    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (targetPage) {
             case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
             case 1: handleStringCacheWrite(offset, lss, value); break;
