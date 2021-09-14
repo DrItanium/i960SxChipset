@@ -154,7 +154,7 @@ ProcessorInterface::newDataCycle() noexcept {
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
-        if (DigitalPin<i960Pinout::W_R_>::isAsserted()) {
+        if (isReadOperation()) {
             setupDataLinesForRead();
         } else {
             setupDataLinesForWrite();
