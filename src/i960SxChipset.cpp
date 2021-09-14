@@ -69,7 +69,7 @@ public:
             result.lowest = 0;
             return result;
         }
-        [[nodiscard]] bool restEqual(const TaggedAddress& other) const noexcept { return getRest() == other.getRest(); }
+        [[nodiscard]] bool restEqual(TaggedAddress other) const noexcept { return getRest() == other.getRest(); }
     private:
         Address base;
         struct {
@@ -103,7 +103,7 @@ public:
             a.wholeValue_ = 0;
         }
     }
-    [[nodiscard]] constexpr bool matches(const TaggedAddress& addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
+    [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
     template<bool terminateEarlyOnMatch = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
@@ -160,7 +160,7 @@ public:
     using TaggedAddress = CacheEntry::TaggedAddress;
     static constexpr auto NumberOfWays = 2;
 public:
-    CacheEntry& getLine(const TaggedAddress& theAddress) noexcept __attribute__((noinline));
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
     void clear() noexcept {
         for (auto& way : ways_) {
             way.clear();
@@ -172,7 +172,7 @@ private:
     bool mostRecentlyUsed_ = false;
 };
 CacheEntry&
-CacheWay::getLine(const TaggedAddress& theAddress) noexcept {
+CacheWay::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
     if (ways_[0].matches(theAddress)) {
