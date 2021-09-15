@@ -572,7 +572,7 @@ union SplitWord16 {
     constexpr SplitWord16(uint8_t lower, uint8_t upper) noexcept : bytes{lower, upper} { }
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     uint16_t wholeValue_ = 0;
-    uint8_t bytes[2];
+    uint8_t bytes[sizeof(uint16_t) / sizeof(uint8_t)];
 };
 union SplitWord32 {
     // adding this dropped program size by over 500 bytes!
