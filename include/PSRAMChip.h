@@ -324,7 +324,7 @@ private:
     union Decomposition {
         constexpr explicit Decomposition(byte value = 0) : index(value) { }
         constexpr auto getIndex() const noexcept { return index; }
-        byte index : 3;
+        byte index;
         struct {
             byte s0 : 1;
             byte s1 : 1;
