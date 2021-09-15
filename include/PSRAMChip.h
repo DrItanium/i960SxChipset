@@ -321,22 +321,12 @@ public:
         return genericReadWriteOperation<0x03>(address, buf, capacity);
     }
 private:
-    union Decomposition {
-        constexpr explicit Decomposition(byte value = 0) : index(value) { }
-        constexpr auto getIndex() const noexcept { return index; }
-        byte index;
-        struct {
-            byte s0 : 1;
-            byte s1 : 1;
-            byte s2 : 1;
-        };
-    };
     static void setChipId(byte index) noexcept {
-        if (Decomposition dec(index); dec.getIndex() != currentIndex_.getIndex()) {
-            digitalWrite<Select0>(dec.s0);
-            digitalWrite<Select1>(dec.s1);
-            digitalWrite<Select2>(dec.s2);
-            currentIndex_ = dec;
+        if (index != currentIndex_) {
+            digitalWrite<Select0>((index & (1 << 0)) ? HIGH : LOW);
+            digitalWrite<Select1>((index & (1 << 1)) ? HIGH : LOW);
+            digitalWrite<Select2>((index & (1 << 2)) ? HIGH : LOW);
+            currentIndex_ = index;
         }
     }
 public:
@@ -344,7 +334,6 @@ public:
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
-            currentIndex_.index = 0;
             setChipId(0);
             for (int i = 0; i < NumChips; ++i) {
                 setChipId(i);
@@ -362,7 +351,7 @@ public:
         }
     }
 private:
-    static inline Decomposition currentIndex_ { 0xFF };
+    static inline byte currentIndex_ = 0xFF;
 };
 
 template<bool clearOnBegin, bool performSanityCheck>
