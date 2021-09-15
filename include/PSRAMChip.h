@@ -324,18 +324,18 @@ private:
     union Decomposition {
         constexpr explicit Decomposition(byte value = 0) : index(value) { }
         constexpr auto getIndex() const noexcept { return index; }
-        byte index;
+        byte index : 3;
         struct {
-            bool s0 : 1;
-            bool s1 : 1;
-            bool s2 : 1;
+            byte s0 : 1;
+            byte s1 : 1;
+            byte s2 : 1;
         };
     };
     static void setChipId(byte index) noexcept {
         if (Decomposition dec(index); dec.getIndex() != currentIndex_.getIndex()) {
-            digitalWrite<Select0>(dec.s0 ? HIGH : LOW);
-            digitalWrite<Select1>(dec.s1 ? HIGH : LOW);
-            digitalWrite<Select2>(dec.s2 ? HIGH : LOW);
+            digitalWrite<Select0>(dec.s0);
+            digitalWrite<Select1>(dec.s1);
+            digitalWrite<Select2>(dec.s2);
             currentIndex_ = dec;
         }
     }
