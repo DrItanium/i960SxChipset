@@ -175,9 +175,10 @@ CacheEntry&
 CacheWay::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
+    constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
     for (int i = 0; i < 2; ++i) {
         if (ways_[i].matches(theAddress)) {
-            mostRecentlyUsed_ = (i == 0) ? Way0MostRecentlyUsed : Way1MostRecentlyUsed;
+            mostRecentlyUsed_ = computeMostRecentlyUsed(i);
             return ways_[i];
         }
     }
@@ -185,12 +186,12 @@ CacheWay::getLine(TaggedAddress theAddress) noexcept {
     for (int i = 0; i < 2; ++i) {
         if (!ways_[i].isValid()) {
             ways_[i].reset(theAddress);
-            mostRecentlyUsed_ = (i == 0) ? Way0MostRecentlyUsed : Way1MostRecentlyUsed;
+            mostRecentlyUsed_ = computeMostRecentlyUsed(i);
             return ways_[i];
         }
     }
     auto index = mostRecentlyUsed_ == Way0MostRecentlyUsed ? 1 : 0;
-    mostRecentlyUsed_ = index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed;
+    mostRecentlyUsed_ = computeMostRecentlyUsed(index);
     ways_[index].reset(theAddress);
     return ways_[index];
 }
