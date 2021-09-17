@@ -176,14 +176,14 @@ CacheWay::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
     constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < NumberOfWays; ++i) {
         if (ways_[i].matches(theAddress)) {
             mostRecentlyUsed_ = computeMostRecentlyUsed(i);
             return ways_[i];
         }
     }
 
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < NumberOfWays; ++i) {
         if (!ways_[i].isValid()) {
             ways_[i].reset(theAddress);
             mostRecentlyUsed_ = computeMostRecentlyUsed(i);
