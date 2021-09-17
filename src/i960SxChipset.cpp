@@ -175,31 +175,24 @@ CacheEntry&
 CacheWay::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
-    if (ways_[0].matches(theAddress)) {
-        mostRecentlyUsed_ = Way0MostRecentlyUsed; // way0 was the last used
-        return ways_[0];
-    } else if (ways_[1].matches(theAddress)) {
-        mostRecentlyUsed_ = Way1MostRecentlyUsed; // way1 was the last used
-        return ways_[1];
-    } else if (!ways_[0].isValid()) {
-        ways_[0].reset(theAddress);
-        mostRecentlyUsed_ = Way0MostRecentlyUsed;
-        return ways_[0];
-    } else if (!ways_[1].isValid()) {
-        ways_[1].reset(theAddress);
-        mostRecentlyUsed_ = Way1MostRecentlyUsed;
-        return ways_[1];
-    } else if (!mostRecentlyUsed_) {
-        // way1 needs to be reset
-        ways_[1].reset(theAddress);
-        mostRecentlyUsed_ = Way1MostRecentlyUsed;
-        return ways_[1];
-    } else {
-        // way0 was the
-        ways_[0].reset(theAddress);
-        mostRecentlyUsed_ = Way0MostRecentlyUsed;
-        return ways_[0];
+    for (int i = 0; i < 2; ++i) {
+        if (ways_[i].matches(theAddress)) {
+            mostRecentlyUsed_ = (i == 0) ? Way0MostRecentlyUsed : Way1MostRecentlyUsed;
+            return ways_[i];
+        }
     }
+
+    for (int i = 0; i < 2; ++i) {
+        if (!ways_[i].isValid()) {
+            ways_[i].reset(theAddress);
+            mostRecentlyUsed_ = (i == 0) ? Way0MostRecentlyUsed : Way1MostRecentlyUsed;
+            return ways_[i];
+        }
+    }
+    auto index = mostRecentlyUsed_ == Way0MostRecentlyUsed ? 1 : 0;
+    mostRecentlyUsed_ = index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed;
+    ways_[index].reset(theAddress);
+    return ways_[index];
 }
 
 CacheWay entries[TargetBoard::numberOfCacheLines()];
