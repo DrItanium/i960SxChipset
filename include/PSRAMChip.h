@@ -335,10 +335,10 @@ public:
         if (!initialized_) {
             initialized_ = true;
             setChipId(0);
+            SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             for (int i = 0; i < NumChips; ++i) {
                 setChipId(i);
                 delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-                SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
                 digitalWrite<enablePin, LOW>();
                 SPI.transfer(0x66);
                 digitalWrite<enablePin, HIGH>();
@@ -348,6 +348,7 @@ public:
                 SPI.transfer(0x99);
                 digitalWrite<enablePin, HIGH>();
             }
+            SPI.endTransaction();
         }
     }
 private:
