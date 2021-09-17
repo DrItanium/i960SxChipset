@@ -160,7 +160,7 @@ public:
     using TaggedAddress = CacheEntry::TaggedAddress;
     static constexpr auto NumberOfWays = 2;
 public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept /*__attribute__((noinline))*/;
     void clear() noexcept {
         for (auto& way : ways_) {
             way.clear();
