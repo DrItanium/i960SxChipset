@@ -495,6 +495,7 @@ void loop() {
 [[noreturn]]
 void
 signalHaltState(const __FlashStringHelper* haltMsg) {
+    Serial.print(F("CHIPSET HALT: "));
     Serial.println(haltMsg);
     while(true) {
         delay(1000);
