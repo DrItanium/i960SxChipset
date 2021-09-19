@@ -276,6 +276,9 @@ private:
         auto numBytesToSecondChip = end.getOffset();
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+        if (numBytesToFirstChip == 0) {
+            return 0;
+        }
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
@@ -293,22 +296,18 @@ private:
         while (!(SPSR & _BV(SPIF))) ; // wait
         if constexpr (kind == OperationKind::Write) {
             auto count = numBytesToFirstChip;
-            if (count > 0) {
-                for (decltype(count) i = 0; i < count; ++i) {
-                    SPDR = buf[i];
-                    asm volatile("nop");
-                    while (!(SPSR & _BV(SPIF)));
-                }
+            for (decltype(count) i = 0; i < count; ++i) {
+                SPDR = buf[i];
+                asm volatile("nop");
+                while (!(SPSR & _BV(SPIF)));
             }
         } else if constexpr (kind == OperationKind::Read) {
             auto count = numBytesToFirstChip;
-            if (count > 0) {
-                for (decltype(count) i = 0; i < count; ++i) {
-                    SPDR = 0;
-                    asm volatile("nop");
-                    while (!(SPSR & _BV(SPIF)));
-                    buf[i] = SPDR;
-                }
+            for (decltype(count) i = 0; i < count; ++i) {
+                SPDR = 0;
+                asm volatile("nop");
+                while (!(SPSR & _BV(SPIF)));
+                buf[i] = SPDR;
             }
         } else {
             SPI.transfer(buf, numBytesToFirstChip);
@@ -335,24 +334,20 @@ private:
             while (!(SPSR & _BV(SPIF))) ; // wait
             if constexpr (kind == OperationKind::Write) {
                 auto count = numBytesToSecondChip;
-                if (count > 0) {
-                    auto actualBuf = buf + numBytesToFirstChip;
-                    for (decltype(count) i = 0; i < count; ++i) {
-                        SPDR = actualBuf[i];
-                        asm volatile("nop");
-                        while (!(SPSR & _BV(SPIF)));
-                    }
+                auto actualBuf = buf + numBytesToFirstChip;
+                for (decltype(count) i = 0; i < count; ++i) {
+                    SPDR = actualBuf[i];
+                    asm volatile("nop");
+                    while (!(SPSR & _BV(SPIF)));
                 }
             } else if (kind == OperationKind::Read) {
                 auto count = numBytesToSecondChip;
-                if (count > 0) {
-                    auto actualBuf = buf + numBytesToFirstChip;
-                    for (decltype(count) i = 0; i < count; ++i) {
-                        SPDR = 0;
-                        asm volatile("nop");
-                        while (!(SPSR & _BV(SPIF)));
-                        actualBuf[i] = SPDR;
-                    }
+                auto actualBuf = buf + numBytesToFirstChip;
+                for (decltype(count) i = 0; i < count; ++i) {
+                    SPDR = 0;
+                    asm volatile("nop");
+                    while (!(SPSR & _BV(SPIF)));
+                    actualBuf[i] = SPDR;
                 }
             } else {
                 SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
