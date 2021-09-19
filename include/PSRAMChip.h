@@ -264,7 +264,7 @@ public:
         byte bytes_[4];
     };
 private:
-    template<byte opcode>
+    template<byte opcode, bool isWriteOperation = false>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         PSRAMBlockAddress curr(address);
         PSRAMBlockAddress end(address + capacity);
@@ -286,7 +286,18 @@ private:
         SPDR = curr.bytes_[0];
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPI.transfer(buf, numBytesToFirstChip);
+        if constexpr (isWriteOperation) {
+            auto count = numBytesToFirstChip;
+            if (count > 0) {
+                for (decltype(count) i = 0; i < count; ++i) {
+                    SPDR = buf[i];
+                    asm volatile("nop");
+                    while (!(SPSR & _BV(SPIF)));
+                }
+            }
+        } else {
+            SPI.transfer(buf, numBytesToFirstChip);
+        }
         digitalWrite<EnablePin, HIGH>();
         if (!localToASingleChip && (numBytesToSecondChip > 0)) {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
@@ -307,7 +318,19 @@ private:
             SPDR = 0;
             asm volatile("nop");
             while (!(SPSR & _BV(SPIF))) ; // wait
-            SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
+            if constexpr (isWriteOperation) {
+                auto count = numBytesToSecondChip;
+                if (count > 0) {
+                    auto actualBuf = buf + numBytesToFirstChip;
+                    for (decltype(count) i = 0; i < count; ++i) {
+                        SPDR = actualBuf[i];
+                        asm volatile("nop");
+                        while (!(SPSR & _BV(SPIF)));
+                    }
+                }
+            } else {
+                SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
+            }
             digitalWrite<EnablePin, HIGH>();
         }
         SPI.endTransaction();
@@ -315,7 +338,7 @@ private:
     }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x02>(address, buf, capacity);
+        return genericReadWriteOperation<0x02, true>(address, buf, capacity);
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x03>(address, buf, capacity);
