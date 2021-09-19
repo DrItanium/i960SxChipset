@@ -105,40 +105,32 @@ public:
     }
     [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
-    template<bool terminateEarlyOnMatch = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         auto& target = data[offset];
-        auto oldValue = target.getWholeValue();
-        if constexpr (terminateEarlyOnMatch) {
-            if (oldValue == value.getWholeValue()) {
-                // Check and see if the oldValue equals the new value and return early if it is true
-                // this does add some overhead overall but if we aren't actually making a change then there is no point in writing
-                // to the cache line
-                return;
+        if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
+            switch (style) {
+                case LoadStoreStyle::Full16:
+                    target.bytes[0] = value.bytes[0];
+                    target.bytes[1] = value.bytes[1];
+                    break;
+                case LoadStoreStyle::Lower8:
+                    target.bytes[0] = value.bytes[0];
+                    break;
+                case LoadStoreStyle::Upper8:
+                    target.bytes[1] = value.bytes[1];
+                    break;
+                default:
+                    signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
             }
-        }
-        switch (style) {
-            case LoadStoreStyle::Full16:
-                target.bytes[0] = value.bytes[0];
-                target.bytes[1] = value.bytes[1];
-                break;
-            case LoadStoreStyle::Lower8:
-                target.bytes[0] = value.bytes[0];
-                break;
-            case LoadStoreStyle::Upper8:
-                target.bytes[1] = value.bytes[1];
-                break;
-            default:
-                signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
-        }
-        // do a comparison at the end to see if we actually changed anything
-        // the idea is that if the values don't change don't mark the cache line as dirty again
-        // it may already be dirty but don't force the matter on any write
-        // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
-        if (oldValue != target.getWholeValue()) {
-            // consumes more flash to do it this way but we only update ram when we have something to change
-            flags_ |= IsDirty;
+            // do a comparison at the end to see if we actually changed anything
+            // the idea is that if the values don't change don't mark the cache line as dirty again
+            // it may already be dirty but don't force the matter on any write
+            // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
+            if (oldValue != target.getWholeValue()) {
+                // consumes more flash to do it this way but we only update ram when we have something to change
+                flags_ |= IsDirty;
+            }
         }
     }
     [[nodiscard]] constexpr bool isValid() const noexcept { return flags_ & IsValid ; }
