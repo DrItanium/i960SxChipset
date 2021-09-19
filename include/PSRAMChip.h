@@ -271,9 +271,6 @@ private:
     };
     template<byte opcode, OperationKind kind = OperationKind::Generic>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
-        if (capacity == 0) {
-            return 0;
-        }
         PSRAMBlockAddress curr(address);
         PSRAMBlockAddress end(address + capacity);
         auto numBytesToSecondChip = end.getOffset();
