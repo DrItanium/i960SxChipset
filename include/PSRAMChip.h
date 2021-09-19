@@ -264,7 +264,12 @@ public:
         byte bytes_[4];
     };
 private:
-    template<byte opcode, bool isWriteOperation = false>
+    enum class OperationKind {
+        Write,
+        Read,
+        Generic,
+    };
+    template<byte opcode, OperationKind kind = OperationKind::Generic>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         PSRAMBlockAddress curr(address);
         PSRAMBlockAddress end(address + capacity);
@@ -286,13 +291,23 @@ private:
         SPDR = curr.bytes_[0];
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
-        if constexpr (isWriteOperation) {
+        if constexpr (kind == OperationKind::Write) {
             auto count = numBytesToFirstChip;
             if (count > 0) {
                 for (decltype(count) i = 0; i < count; ++i) {
                     SPDR = buf[i];
                     asm volatile("nop");
                     while (!(SPSR & _BV(SPIF)));
+                }
+            }
+        } else if constexpr (kind == OperationKind::Read) {
+            auto count = numBytesToFirstChip;
+            if (count > 0) {
+                for (decltype(count) i = 0; i < count; ++i) {
+                    SPDR = 0;
+                    asm volatile("nop");
+                    while (!(SPSR & _BV(SPIF)));
+                    buf[i] = SPDR;
                 }
             }
         } else {
@@ -318,7 +333,7 @@ private:
             SPDR = 0;
             asm volatile("nop");
             while (!(SPSR & _BV(SPIF))) ; // wait
-            if constexpr (isWriteOperation) {
+            if constexpr (kind == OperationKind::Write) {
                 auto count = numBytesToSecondChip;
                 if (count > 0) {
                     auto actualBuf = buf + numBytesToFirstChip;
@@ -326,6 +341,17 @@ private:
                         SPDR = actualBuf[i];
                         asm volatile("nop");
                         while (!(SPSR & _BV(SPIF)));
+                    }
+                }
+            } else if (kind == OperationKind::Read) {
+                auto count = numBytesToSecondChip;
+                if (count > 0) {
+                    auto actualBuf = buf + numBytesToFirstChip;
+                    for (decltype(count) i = 0; i < count; ++i) {
+                        SPDR = 0;
+                        asm volatile("nop");
+                        while (!(SPSR & _BV(SPIF)));
+                        actualBuf[i] = SPDR;
                     }
                 }
             } else {
@@ -338,10 +364,10 @@ private:
     }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x02, true>(address, buf, capacity);
+        return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x03>(address, buf, capacity);
+        return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
     static void setChipId(byte index) noexcept {
