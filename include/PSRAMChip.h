@@ -272,24 +272,24 @@ private:
     template<byte opcode, OperationKind kind = OperationKind::Generic>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         PSRAMBlockAddress curr(address);
-        PSRAMBlockAddress end(address + capacity);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         SPDR = opcode;
         asm volatile("nop");
-        auto numBytesToSecondChip = end.getOffset();
+        PSRAMBlockAddress end(address + capacity);
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[2];
         asm volatile("nop");
-        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        auto numBytesToSecondChip = end.getOffset();
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[1];
         asm volatile("nop");
-        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+        auto localToASingleChip = curr.getIndex() == end.getIndex();
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[0];
         asm volatile("nop");
+        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         while (!(SPSR & _BV(SPIF))) ; // wait
         if constexpr (kind == OperationKind::Write) {
             auto count = numBytesToFirstChip;
