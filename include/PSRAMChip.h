@@ -80,13 +80,11 @@ private:
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         while (!(SPSR & _BV(SPIF))) ; // wait
         if constexpr (kind == OperationKind::Write) {
-            auto count = numBytesToFirstChip;
-            for (decltype(count) i = 0; i < count; ++i) {
+            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
                 transmitByte(buf[i]);
             }
         } else if constexpr (kind == OperationKind::Read) {
-            auto count = numBytesToFirstChip;
-            for (decltype(count) i = 0; i < count; ++i) {
+            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
                 transmitByte(0);
                 buf[i] = SPDR;
             }
