@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryMappedFileThing.h"
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
+#include "TaggedCacheAddress.h"
 
 
 /**
@@ -45,39 +46,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 class CacheEntry final {
 public:
-    static constexpr size_t NumBytesCached = TargetBoard::cacheLineSize();
+    static constexpr size_t NumBytesCached = 16;
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
-    static constexpr size_t LowestBitCount = 4;
-    static constexpr size_t TagIndexSize = 8;
-    static constexpr size_t UpperBitCount = 32 - (LowestBitCount + TagIndexSize);
-    static_assert((LowestBitCount + TagIndexSize + UpperBitCount) == 32, "TaggedAddress must map exactly to a 32-bit address");
-    static constexpr byte TagMask = static_cast<byte>(0xFF << LowestBitCount); // exploit shift beyond
-    static constexpr byte OffsetMask = static_cast<byte>(~TagMask) >> 1;  // remember that this 16-bit aligned
-    // sanity checks for optimization purposes
-    static_assert(LowestBitCount <= 8, "Offset must fit within a byte!");
-    static_assert(TagIndexSize <= 8, "Tag size index is too large for a single byte");
 
-    union TaggedAddress {
-        constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
-        void clear() noexcept { base = 0; }
-        [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
-        [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
-        [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
-        [[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
-        [[nodiscard]] TaggedAddress aligned() const noexcept {
-            TaggedAddress result(base);
-            result.lowest = 0;
-            return result;
-        }
-        [[nodiscard]] bool restEqual(TaggedAddress other) const noexcept { return getRest() == other.getRest(); }
-    private:
-        Address base;
-        struct {
-            byte lowest : LowestBitCount;
-            byte tagIndex : TagIndexSize;
-            Address rest : UpperBitCount;
-        };
-    };
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
@@ -149,7 +120,7 @@ private:
 };
 class CacheWay {
 public:
-    using TaggedAddress = CacheEntry::TaggedAddress;
+    using TaggedAddress = TaggedAddress;
     static constexpr auto NumberOfWays = 2;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
@@ -192,7 +163,7 @@ CacheWay entries[TargetBoard::numberOfCacheLines()];
 // inlining actually causes a large amount of overhead
 auto& getLine() noexcept {
     // only align if we need to reset the chip
-    CacheEntry::TaggedAddress theAddress(ProcessorInterface::getAddress());
+    TaggedAddress theAddress(ProcessorInterface::getAddress());
     return entries[theAddress.getTagIndex()].getLine(theAddress);
 }
 
