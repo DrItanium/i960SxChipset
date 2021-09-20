@@ -113,15 +113,10 @@ public:
         return isValid() && isDirty();
     }
 private:
-    //static constexpr byte IsDirty = 0b10;
-    //static constexpr byte IsValid = 0b01;
-    //static constexpr byte IsClean = 0;
-    //static constexpr byte IsInvalid = 0;
     SplitWord16 data[NumWordsCached]; // 32 bytes
     TaggedAddress tag { 0}; // 4 bytes
     bool valid_ = false;
     bool dirty_ = false;
-    //byte flags_ = 0;
 };
 class CacheWay {
 public:
