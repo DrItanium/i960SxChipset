@@ -358,7 +358,7 @@ private:
         return capacity;
     }
 public:
-    static void writeCacheLine(TaggedAddress address, byte* buf) noexcept {
+    static void writeCacheLine(TaggedAddress address, const byte* buf) noexcept {
         //return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
