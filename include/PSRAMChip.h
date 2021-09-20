@@ -271,46 +271,6 @@ private:
         Read,
         Generic,
     };
-    template<byte opcode, OperationKind kind = OperationKind::Generic>
-    inline static void genericCacheLineReadWriteOperation(TaggedAddress address, byte* buf) noexcept {
-        // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
-        // need to do the offset calculation
-        setChipId(address.getPSRAMChipId());
-        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        digitalWrite<EnablePin, LOW>();
-        SPDR = opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_High();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_Middle();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_Low();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        if constexpr (kind == OperationKind::Write) {
-            for (int i = 0; i < 16; ++i) {
-                SPDR = buf[i];
-                asm volatile("nop");
-                while (!(SPSR & _BV(SPIF)));
-            }
-        } else if constexpr (kind == OperationKind::Read) {
-            for (int i = 0; i < 16; ++i) {
-                SPDR = 0;
-                asm volatile("nop");
-                while (!(SPSR & _BV(SPIF)));
-                buf[i] = SPDR;
-            }
-        } else {
-            SPI.transfer(buf, 16);
-        }
-        digitalWrite<EnablePin, HIGH>();
-        SPI.endTransaction();
-    }
-
-
 
     template<byte opcode, OperationKind kind = OperationKind::Generic>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
@@ -399,10 +359,58 @@ private:
     }
 public:
     static void writeCacheLine(TaggedAddress address, byte* buf) noexcept {
-        return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
+        //return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
+        // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
+        // need to do the offset calculation
+        setChipId(address.getPSRAMChipId());
+        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<EnablePin, LOW>();
+        SPDR = 0x02;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = address.getPSRAMAddress_High();
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = address.getPSRAMAddress_Middle();
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = address.getPSRAMAddress_Low();
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        for (int i = 0; i < 16; ++i) {
+            SPDR = buf[i];
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF)));
+        }
+        digitalWrite<EnablePin, HIGH>();
+        SPI.endTransaction();
     }
     static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
-        return genericCacheLineReadWriteOperation<0x03, OperationKind::Read>(address, buf);
+        // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
+        // need to do the offset calculation
+        setChipId(address.getPSRAMChipId());
+        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<EnablePin, LOW>();
+        SPDR = 0x03;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = address.getPSRAMAddress_High();
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = address.getPSRAMAddress_Middle();
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = address.getPSRAMAddress_Low();
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        for (int i = 0; i < 16; ++i) {
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF)));
+            buf[i] = SPDR;
+        }
+        digitalWrite<EnablePin, HIGH>();
+        SPI.endTransaction();
     }
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
