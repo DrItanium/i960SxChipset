@@ -254,7 +254,6 @@ public:
     ~MemoryBlock() = delete;
     union PSRAMBlockAddress {
         constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
-        constexpr PSRAMBlockAddress(const TaggedAddress& address) noexcept : base(address.getAddress()) {}
         constexpr auto getAddress() const noexcept { return base; }
         constexpr auto getOffset() const noexcept { return offset; }
         constexpr auto getIndex() const noexcept { return index; }
