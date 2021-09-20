@@ -43,6 +43,11 @@ public:
         byte bytes_[4];
     };
 private:
+    static inline void transmitByte(byte value) noexcept {
+        SPDR = value;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+    }
     enum class OperationKind {
         Write,
         Read,
@@ -74,16 +79,12 @@ private:
         if constexpr (kind == OperationKind::Write) {
             auto count = numBytesToFirstChip;
             for (decltype(count) i = 0; i < count; ++i) {
-                SPDR = buf[i];
-                asm volatile("nop");
-                while (!(SPSR & _BV(SPIF)));
+                transmitByte(buf[i]);
             }
         } else if constexpr (kind == OperationKind::Read) {
             auto count = numBytesToFirstChip;
             for (decltype(count) i = 0; i < count; ++i) {
-                SPDR = 0;
-                asm volatile("nop");
-                while (!(SPSR & _BV(SPIF)));
+                transmitByte(0);
                 buf[i] = SPDR;
             }
         } else {
@@ -97,33 +98,21 @@ private:
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
             digitalWrite<EnablePin, LOW>();
-            SPDR = opcode;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
+            transmitByte(opcode);
+            transmitByte(0);
+            transmitByte(0);
+            transmitByte(0);
             if constexpr (kind == OperationKind::Write) {
                 auto count = numBytesToSecondChip;
                 auto actualBuf = buf + numBytesToFirstChip;
                 for (decltype(count) i = 0; i < count; ++i) {
-                    SPDR = actualBuf[i];
-                    asm volatile("nop");
-                    while (!(SPSR & _BV(SPIF)));
+                    transmitByte(actualBuf[i]);
                 }
             } else if (kind == OperationKind::Read) {
                 auto count = numBytesToSecondChip;
                 auto actualBuf = buf + numBytesToFirstChip;
                 for (decltype(count) i = 0; i < count; ++i) {
-                    SPDR = 0;
-                    asm volatile("nop");
-                    while (!(SPSR & _BV(SPIF)));
+                    transmitByte(0);
                     actualBuf[i] = SPDR;
                 }
             } else {
@@ -142,22 +131,12 @@ public:
         setChipId(address.getPSRAMChipId());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
-        SPDR = 0x02;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_High();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_Middle();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_Low();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
+        transmitByte(0x02);
+        transmitByte(address.getPSRAMAddress_High());
+        transmitByte(address.getPSRAMAddress_Middle());
+        transmitByte(address.getPSRAMAddress_Low());
         for (int i = 0; i < 16; ++i) {
-            SPDR = buf[i];
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF)));
+            transmitByte(buf[i]);
         }
         digitalWrite<EnablePin, HIGH>();
         SPI.endTransaction();
@@ -168,22 +147,12 @@ public:
         setChipId(address.getPSRAMChipId());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
-        SPDR = 0x03;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_High();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_Middle();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = address.getPSRAMAddress_Low();
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
+        transmitByte(0x03);
+        transmitByte(address.getPSRAMAddress_High());
+        transmitByte(address.getPSRAMAddress_Middle());
+        transmitByte(address.getPSRAMAddress_Low());
         for (int i = 0; i < 16; ++i) {
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF)));
+            transmitByte(0);
             buf[i] = SPDR;
         }
         digitalWrite<EnablePin, HIGH>();
