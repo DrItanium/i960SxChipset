@@ -58,7 +58,8 @@ public:
             OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
             //OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
         }
-        flags_ = IsClean | IsValid;
+        valid_ = true;
+        dirty_ = false;
         // since we have called reset, now align the new address internally
         tag = newTag.aligned();
         // this is a _very_ expensive operation
@@ -69,7 +70,8 @@ public:
      */
     void clear() noexcept {
         // clear all flags
-        flags_ = IsClean | IsInvalid;
+        valid_ = false;
+        dirty_ = false;
         tag.clear();
         for (auto& a : data) {
             a.wholeValue_ = 0;
@@ -101,23 +103,25 @@ public:
             // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
             if (oldValue != target.getWholeValue()) {
                 // consumes more flash to do it this way but we only update ram when we have something to change
-                flags_ |= IsDirty;
+                dirty_ = true;
             }
         }
     }
-    [[nodiscard]] constexpr bool isValid() const noexcept { return flags_ & IsValid ; }
-    [[nodiscard]] constexpr bool isDirty() const noexcept { return flags_ & IsDirty; }
+    [[nodiscard]] constexpr bool isValid() const noexcept { return valid_; }
+    [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_; }
     [[nodiscard]] constexpr bool needsFlushing() const noexcept {
         return isValid() && isDirty();
     }
 private:
-    static constexpr byte IsDirty = 0b10;
-    static constexpr byte IsValid = 0b01;
-    static constexpr byte IsClean = 0;
-    static constexpr byte IsInvalid = 0;
+    //static constexpr byte IsDirty = 0b10;
+    //static constexpr byte IsValid = 0b01;
+    //static constexpr byte IsClean = 0;
+    //static constexpr byte IsInvalid = 0;
     SplitWord16 data[NumWordsCached]; // 32 bytes
     TaggedAddress tag { 0}; // 4 bytes
-    byte flags_ = 0;
+    bool valid_ = false;
+    bool dirty_ = false;
+    //byte flags_ = 0;
 };
 class CacheWay {
 public:
