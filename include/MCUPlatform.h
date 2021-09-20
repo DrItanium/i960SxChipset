@@ -435,19 +435,13 @@ class MCUConfiguration final {
 public:
     using UnderlyingPinoutType = T;
     constexpr MCUConfiguration(uint32_t sramSize,
-                               uint32_t cacheLineCount,
-                               uint32_t cacheLineSize,
                                uint32_t ioExpanderSpeedCap,
                                uint32_t psramSpeedCap
     ) noexcept : sramAmount_(sramSize),
-                 cacheLineCount_(cacheLineCount),
-                 cacheLineSize_(cacheLineSize),
                  ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
                  psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap) { }
 
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
-    [[nodiscard]] constexpr uint32_t getCacheLineCount() const noexcept { return cacheLineCount_; }
-    [[nodiscard]] constexpr uint32_t getCacheLineSize() const noexcept { return cacheLineSize_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
     [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
     [[nodiscard]] constexpr auto getReadyPin() const noexcept { return static_cast<int>(T::READY_); }
@@ -476,22 +470,18 @@ public:
     [[nodiscard]] constexpr auto getNoneSpecifier() const noexcept { return T::None; }
 private:
     uint32_t sramAmount_;
-    uint32_t cacheLineCount_;
-    uint32_t cacheLineSize_;
     uint32_t ioExpanderPeripheralSpeed_;
     uint32_t psramSpeedCap_;
 };
 template<TargetMCU mcu>
 constexpr MCUConfiguration<UndefinedPinout> BoardDescription = {
         0,
-        256, 16,
         10_MHz,
         8_MHz
 };
 template<>
 constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         16_KB,
-        256, 16,
         10_MHz,
         5_MHz // due to the current design, we have to run the psram at 5 Mhz
 };
@@ -499,7 +489,6 @@ constexpr MCUConfiguration<Pinout1284p_Type1> BoardDescription<TargetMCU::ATmega
 template<>
 constexpr MCUConfiguration<Pinout1284p_Type2> BoardDescription<TargetMCU::ATmega1284p_Type2> = {
         16_KB,
-        256, 16,
         10_MHz,
         5_MHz // due to the current design, we have to run the psram at 5 Mhz
 };
@@ -525,8 +514,6 @@ public:
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return onAtmega1284p_Type1() || onAtmega1284p_Type2(); }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
     [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept { return BoardDescription<getMCUTarget()>.getSramAmount(); }
-    [[nodiscard]] static constexpr auto numberOfCacheLines() noexcept { return BoardDescription<getMCUTarget()>.getCacheLineCount(); }
-    [[nodiscard]] static constexpr auto cacheLineSize() noexcept { return BoardDescription<getMCUTarget()>.getCacheLineSize(); }
     [[nodiscard]] static constexpr auto runIOExpanderSPIInterfaceAt() noexcept { return BoardDescription<getMCUTarget()>.runIOExpanderSPIInterfaceAt(); }
     [[nodiscard]] static constexpr auto runPSRAMAt() noexcept { return BoardDescription<getMCUTarget()>.runPSRAMAt(); }
     [[nodiscard]] static constexpr auto getReadyPin() noexcept { return BoardDescription<getMCUTarget()>.getReadyPin(); }

@@ -118,9 +118,9 @@ private:
             case Registers::ChipsetClockSpeedUpper:
                 return clockSpeedHolder.halves[1];
             case Registers::CacheLineCount:
-                return TargetBoard::numberOfCacheLines();
+                return 256;
             case Registers::CacheLineSize:
-                return TargetBoard::cacheLineSize();
+                return 16;
             case Registers::NumberOfCacheWays:
                 return 2;
             case Registers::SDClusterCountLower:

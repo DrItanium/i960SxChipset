@@ -159,7 +159,7 @@ CacheWay::getLine(TaggedAddress theAddress) noexcept {
     return ways_[index];
 }
 
-CacheWay entries[TargetBoard::numberOfCacheLines()];
+CacheWay entries[256];
 // inlining actually causes a large amount of overhead
 auto& getLine() noexcept {
     // only align if we need to reset the chip
