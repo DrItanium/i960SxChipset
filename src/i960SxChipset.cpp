@@ -120,7 +120,6 @@ private:
 };
 class CacheWay {
 public:
-    using TaggedAddress = TaggedAddress;
     static constexpr auto NumberOfWays = 2;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));

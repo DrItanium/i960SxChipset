@@ -9,6 +9,7 @@
 #include "MCUPlatform.h"
 #include "Pinout.h"
 #include "MemoryThing.h"
+#include "TaggedCacheAddress.h"
 /**
  * @brief Represents access to a single PSRAM chip
  */
@@ -253,6 +254,7 @@ public:
     ~MemoryBlock() = delete;
     union PSRAMBlockAddress {
         constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
+        constexpr PSRAMBlockAddress(const TaggedAddress& address) noexcept : base(address.getAddress()) {}
         constexpr auto getAddress() const noexcept { return base; }
         constexpr auto getOffset() const noexcept { return offset; }
         constexpr auto getIndex() const noexcept { return index; }
@@ -355,6 +357,12 @@ private:
         return capacity;
     }
 public:
+    static void writeCacheLine(TaggedAddress address, byte* buf) noexcept {
+        return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, 16);
+    }
+    static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
+        return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, 16);
+    }
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
     }
