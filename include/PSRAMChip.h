@@ -273,88 +273,45 @@ private:
     };
     template<byte opcode, OperationKind kind = OperationKind::Generic>
     inline static void genericCacheLineReadWriteOperation(TaggedAddress address, byte* buf) noexcept {
-        PSRAMBlockAddress curr(address);
-        setChipId(curr.getIndex());
+        // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
+        // need to do the offset calculation
+        setChipId(address.getPSRAMChipId());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         SPDR = opcode;
         asm volatile("nop");
-        PSRAMBlockAddress end(address.getAddress() + 16);
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[2];
+        SPDR = address.getPSRAMAddress_High();
         asm volatile("nop");
-        auto numBytesToSecondChip = end.getOffset();
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[1];
+        SPDR = address.getPSRAMAddress_Middle();
         asm volatile("nop");
-        auto localToASingleChip = curr.getIndex() == end.getIndex();
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[0];
+        SPDR = address.getPSRAMAddress_Low();
         asm volatile("nop");
-        auto numBytesToFirstChip = localToASingleChip ? 16 : (16 - numBytesToSecondChip);
         while (!(SPSR & _BV(SPIF))) ; // wait
         if constexpr (kind == OperationKind::Write) {
-            auto count = numBytesToFirstChip;
-            for (decltype(count) i = 0; i < count; ++i) {
+            for (int i = 0; i < 16; ++i) {
                 SPDR = buf[i];
                 asm volatile("nop");
                 while (!(SPSR & _BV(SPIF)));
             }
         } else if constexpr (kind == OperationKind::Read) {
-            auto count = numBytesToFirstChip;
-            for (decltype(count) i = 0; i < count; ++i) {
+            for (int i = 0; i < 16; ++i) {
                 SPDR = 0;
                 asm volatile("nop");
                 while (!(SPSR & _BV(SPIF)));
                 buf[i] = SPDR;
             }
         } else {
-            SPI.transfer(buf, numBytesToFirstChip);
+            SPI.transfer(buf, 16);
         }
         digitalWrite<EnablePin, HIGH>();
-        if (!localToASingleChip && (numBytesToSecondChip > 0)) {
-            // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
-            // thus we can actually convert this work into two separate spi transactions
-            // start writing at the start of the next chip the remaining number of bytes
-            setChipId(end.getIndex());
-            // we start at address zero on this new chip always
-            digitalWrite<EnablePin, LOW>();
-            SPDR = opcode;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            if constexpr (kind == OperationKind::Write) {
-                auto count = numBytesToSecondChip;
-                auto actualBuf = buf + numBytesToFirstChip;
-                for (decltype(count) i = 0; i < count; ++i) {
-                    SPDR = actualBuf[i];
-                    asm volatile("nop");
-                    while (!(SPSR & _BV(SPIF)));
-                }
-            } else if (kind == OperationKind::Read) {
-                auto count = numBytesToSecondChip;
-                auto actualBuf = buf + numBytesToFirstChip;
-                for (decltype(count) i = 0; i < count; ++i) {
-                    SPDR = 0;
-                    asm volatile("nop");
-                    while (!(SPSR & _BV(SPIF)));
-                    actualBuf[i] = SPDR;
-                }
-            } else {
-                SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
-            }
-            digitalWrite<EnablePin, HIGH>();
-        }
         SPI.endTransaction();
     }
+
+
+
     template<byte opcode, OperationKind kind = OperationKind::Generic>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         PSRAMBlockAddress curr(address);
