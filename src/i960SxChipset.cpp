@@ -55,13 +55,14 @@ public:
         if (needsFlushing()) {
             // just do the write out to disk to save time
             // still an expensive operation
-            OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
+            OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
+            //OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
         }
         flags_ = IsClean | IsValid;
         // since we have called reset, now align the new address internally
         tag = newTag.aligned();
         // this is a _very_ expensive operation
-        OnboardPSRAMBlock::read(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof (data));
+        OnboardPSRAMBlock ::readCacheLine(tag, reinterpret_cast<byte*>(data));
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose

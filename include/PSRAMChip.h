@@ -272,6 +272,90 @@ private:
         Generic,
     };
     template<byte opcode, OperationKind kind = OperationKind::Generic>
+    inline static void genericCacheLineReadWriteOperation(TaggedAddress address, byte* buf) noexcept {
+        PSRAMBlockAddress curr(address);
+        setChipId(curr.getIndex());
+        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<EnablePin, LOW>();
+        SPDR = opcode;
+        asm volatile("nop");
+        PSRAMBlockAddress end(address.getAddress() + 16);
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[2];
+        asm volatile("nop");
+        auto numBytesToSecondChip = end.getOffset();
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[1];
+        asm volatile("nop");
+        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[0];
+        asm volatile("nop");
+        auto numBytesToFirstChip = localToASingleChip ? 16 : (16 - numBytesToSecondChip);
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        if constexpr (kind == OperationKind::Write) {
+            auto count = numBytesToFirstChip;
+            for (decltype(count) i = 0; i < count; ++i) {
+                SPDR = buf[i];
+                asm volatile("nop");
+                while (!(SPSR & _BV(SPIF)));
+            }
+        } else if constexpr (kind == OperationKind::Read) {
+            auto count = numBytesToFirstChip;
+            for (decltype(count) i = 0; i < count; ++i) {
+                SPDR = 0;
+                asm volatile("nop");
+                while (!(SPSR & _BV(SPIF)));
+                buf[i] = SPDR;
+            }
+        } else {
+            SPI.transfer(buf, numBytesToFirstChip);
+        }
+        digitalWrite<EnablePin, HIGH>();
+        if (!localToASingleChip && (numBytesToSecondChip > 0)) {
+            // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
+            // thus we can actually convert this work into two separate spi transactions
+            // start writing at the start of the next chip the remaining number of bytes
+            setChipId(end.getIndex());
+            // we start at address zero on this new chip always
+            digitalWrite<EnablePin, LOW>();
+            SPDR = opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            if constexpr (kind == OperationKind::Write) {
+                auto count = numBytesToSecondChip;
+                auto actualBuf = buf + numBytesToFirstChip;
+                for (decltype(count) i = 0; i < count; ++i) {
+                    SPDR = actualBuf[i];
+                    asm volatile("nop");
+                    while (!(SPSR & _BV(SPIF)));
+                }
+            } else if (kind == OperationKind::Read) {
+                auto count = numBytesToSecondChip;
+                auto actualBuf = buf + numBytesToFirstChip;
+                for (decltype(count) i = 0; i < count; ++i) {
+                    SPDR = 0;
+                    asm volatile("nop");
+                    while (!(SPSR & _BV(SPIF)));
+                    actualBuf[i] = SPDR;
+                }
+            } else {
+                SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
+            }
+            digitalWrite<EnablePin, HIGH>();
+        }
+        SPI.endTransaction();
+    }
+    template<byte opcode, OperationKind kind = OperationKind::Generic>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         PSRAMBlockAddress curr(address);
         setChipId(curr.getIndex());
@@ -358,10 +442,10 @@ private:
     }
 public:
     static void writeCacheLine(TaggedAddress address, byte* buf) noexcept {
-        return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, 16);
+        return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
     }
     static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
-        return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, 16);
+        return genericCacheLineReadWriteOperation<0x03, OperationKind::Read>(address, buf);
     }
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
