@@ -115,10 +115,6 @@ public:
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
         bytesPerSector_ = SD.bytesPerSector();
-        for (auto& sc : stringCache_) {
-            sc = 0;
-        }
-
         pinMode(i960Pinout::TFT_CS, OUTPUT);
         pinMode(i960Pinout::TFT_DC, OUTPUT);
         digitalWriteBlock(HIGH, i960Pinout::TFT_CS, i960Pinout::TFT_DC);
@@ -190,10 +186,6 @@ private:
                 return 0;
         }
     }
-    static uint16_t handleStringCacheRead(uint8_t offset, LoadStoreStyle) noexcept {
-        // we are in the string cache so just return the value found at the given offset
-        return SplitWord16{stringCache_[offset], stringCache_[offset+1]}.getWholeValue();
-    }
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         bool updateTimeout = false;
         switch (static_cast<Registers>(offset)) {
@@ -218,35 +210,17 @@ private:
             Serial.setTimeout(timeoutCopy_.getWholeValue());
         }
     }
-    static void handleStringCacheWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        switch (lss) {
-            case LoadStoreStyle::Full16:
-                stringCache_[offset] = value.bytes[0];
-                stringCache_[offset+1] = value.bytes[1];
-                break;
-            case LoadStoreStyle::Upper8:
-                stringCache_[offset+1] = value.bytes[1];
-                break;
-            case LoadStoreStyle::Lower8:
-                stringCache_[offset] = value.bytes[0];
-                break;
-            default:
-                break;
-        }
-    }
 public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
         switch (targetPage) {
             case 0: return handleFirstPageRegisterReads(offset, lss);
-            case 1: return handleStringCacheRead(offset, lss);
             default: return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (targetPage) {
             case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
-            case 1: handleStringCacheWrite(offset, lss, value); break;
             default: break;
         }
     }
@@ -256,7 +230,6 @@ private:
     static inline SplitWord32 volumeSectorCount_ {0};
     static inline uint16_t bytesPerSector_ = 0;
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
-    static inline byte stringCache_[257] { 0};
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
     static inline Adafruit_TFTShield18 ss;
     static inline Adafruit_ST7735 tft {static_cast<int>(i960Pinout::TFT_CS),
