@@ -64,6 +64,12 @@ public:
         FourByteEntry(SDClusterCount),
         FourByteEntry(SDVolumeSectorCount),
         TwoByteEntry(SDBytesPerSector),
+        TwoByteEntry(DisplayBacklight),
+        TwoByteEntry(FillScreen),
+        FourByteEntry(Buttons),
+        TwoByteEntry(CursorX),
+        TwoByteEntry(CursorY),
+        TwoByteEntry(SetCursor),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -86,6 +92,13 @@ public:
         SDVolumeSectorCountLower = SDVolumeSectorCount00,
         SDVolumeSectorCountUpper = SDVolumeSectorCount10,
         SDBytesPerSector = SDBytesPerSector0,
+        DisplayBacklight = DisplayBacklight0,
+        FillScreen = FillScreen0,
+        ButtonsLower = Buttons00,
+        ButtonsUpper = Buttons10,
+        CursorX = CursorX0,
+        CursorY = CursorY0,
+        SetCursor = SetCursor0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -133,7 +146,6 @@ public:
         tft.fillScreen(ST77XX_BLUE);
         delay(100);
         tft.fillScreen(ST77XX_BLACK);
-
         tft.setTextSize(1);
         tft.setTextColor(ST77XX_WHITE);
         tft.setCursor(0, 0);
