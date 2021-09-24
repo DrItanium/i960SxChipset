@@ -48,40 +48,70 @@ enum class LoadStoreStyle : uint8_t {
 };
 /// @todo fix this pinout for different targets
 enum class i960Pinout : int {
-    // PORT B
-    Ready = TargetBoard::getReadyPin(),
-    CLOCK_OUT = TargetBoard::getClockOutPin(),
-    PSRAM_EN = TargetBoard::getPsramEnPin(),
-    GPIOSelect = TargetBoard::getGpioSelectPin(),
-    MOSI = TargetBoard::getMosiPin(),          // reserved
-    MISO = TargetBoard::getMisoPin(),          // reserved
-    SCK = TargetBoard::getSckPin(),          // reserved
-    DEN_ = TargetBoard::getDenPin(),      // AVR Interrupt INT0
-    // PD4 is not used by simple management card
-    Reset960= TargetBoard::getReset960Pin(),
-    Int0_ = TargetBoard::getInt0Pin(),
-    // PD7 is not used by simple management card
-    SPI_OFFSET0 = TargetBoard::getSpiOffset0Pin(),
-    SPI_OFFSET1 = TargetBoard::getSpiOffset1Pin(),
-    SPI_OFFSET2 = TargetBoard::getSpiOffset2Pin(),
-    SD_EN = TargetBoard::getSdEnablePin(),      // output
-    W_R_ = TargetBoard::getWrPin(),
-    BA1 = TargetBoard::getBurstAddress1Pin(),
-    BA2 = TargetBoard::getBurstAddress2Pin(),
-    BA3 = TargetBoard::getBurstAddress3Pin(),
-    BE0 = TargetBoard::getByteEnable0Pin(),
-    BE1 = TargetBoard::getByteEnable1Pin(),
-    BLAST_ = TargetBoard::getBlastPin(),     // input
-    FAIL = TargetBoard::getFailPin(),         // input
+    PORT_B0 = 0,
+    PORT_B1,
+    PORT_B2,
+    PORT_B3,
+    PORT_B4,
+    PORT_B5,
+    PORT_B6,
+    PORT_B7,
+    PORT_D0,
+    PORT_D1,
+    PORT_D2,
+    PORT_D3,
+    PORT_D4,
+    PORT_D5,
+    PORT_D6,
+    PORT_D7,
+    PORT_C0,
+    PORT_C1,
+    PORT_C2,
+    PORT_C3,
+    PORT_C4,
+    PORT_C5,
+    PORT_C6,
+    PORT_C7,
+    PORT_A0,
+    PORT_A1,
+    PORT_A2,
+    PORT_A3,
+    PORT_A4,
+    PORT_A5,
+    PORT_A6,
+    PORT_A7,
+    Count,
+    Ready = PORT_B0,
+    CLOCK_OUT= PORT_B1,
+    AS_ = PORT_B2,
+    PSRAM_EN = PORT_B3,
+    GPIOSelect = PORT_B4,
+    MOSI = PORT_B5,
+    MISO = PORT_B6,
+    SCK = PORT_B7,
+    RX0 = PORT_D0,
+    TX0 = PORT_D1,
+    DEN_ = PORT_D2,
+    Reset960 = PORT_D5,
+    Int0_ = PORT_D6,
+    SCL = PORT_C0,
+    SDA = PORT_C1,
+    SPI_OFFSET0 = PORT_C2,
+    SPI_OFFSET1 = PORT_C3,
+    SPI_OFFSET2 = PORT_C4,
+    TFT_CS = PORT_C5,
+    TFT_DC = PORT_C6,
+    SD_EN = PORT_C7,
+    W_R_ = PORT_A0,
+    BA1 = PORT_A1,
+    BA2 = PORT_A2,
+    BA3 = PORT_A3,
+    BE0 = PORT_A4,
+    BE1 = PORT_A5,
+    BLAST_ = PORT_A6,
+    FAIL = PORT_A7,
 };
-constexpr bool isValidPin(i960Pinout pin) noexcept {
-    return isValidPin<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pin));
-}
-constexpr auto attachedToIOExpander(i960Pinout pinout) noexcept {
-    return attachedToIOExpander<UnderlyingPinoutType>(static_cast<UnderlyingPinoutType>(pinout));
-}
-template<i960Pinout pin>
-constexpr bool attachedToIOExpander_v = attachedToIOExpander(pin);
+
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);
 }
@@ -93,13 +123,13 @@ inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));
 }
 template<i960Pinout pin>
-constexpr auto isValidPin960_v = isValidPin_v<static_cast<UnderlyingPinoutType >(pin)>;
+constexpr auto isValidPin960_v = static_cast<int>(pin) < static_cast<int>(i960Pinout::Count);
 //static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
-    switch (static_cast<UnderlyingPinoutType >(pin)) {
-#define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
+    switch (pin) {
+#define X(id, number) case i960Pinout:: PORT_ ## id ## number
 #define Y(id) \
     X(id, 0): \
     X(id, 1): \
@@ -124,8 +154,8 @@ template<i960Pinout pin>
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedDirectionPort() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
-    switch (static_cast<UnderlyingPinoutType >(pin)) {
-#define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
+    switch (pin) {
+#define X(id, number) case i960Pinout:: PORT_ ## id ## number
 #define Y(id) \
     X(id, 0): \
     X(id, 1): \
@@ -150,8 +180,8 @@ template<i960Pinout pin>
 template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
-    switch (static_cast<UnderlyingPinoutType >(pin)) {
-#define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number
+    switch (pin) {
+#define X(id, number) case i960Pinout:: PORT_ ## id ## number
 #define Y(id) \
     X(id, 0): \
     X(id, 1): \
@@ -174,8 +204,8 @@ template<i960Pinout pin>
 template<i960Pinout pin>
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
-    switch (static_cast<UnderlyingPinoutType >(pin)) {
-#define X(id, number) case UnderlyingPinoutType:: PORT_ ## id ## number : return _BV ( P ## id ## number )
+    switch (pin) {
+#define X(id, number) case i960Pinout:: PORT_ ## id ## number : return _BV ( P ## id ## number )
 #define Y(id) \
     X(id, 0); \
     X(id, 1); \

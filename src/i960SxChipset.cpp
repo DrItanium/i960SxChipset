@@ -304,15 +304,11 @@ void setup() {
               i960Pinout::GPIOSelect,
               i960Pinout::SPI_OFFSET0,
               i960Pinout::SPI_OFFSET1,
-              i960Pinout::SPI_OFFSET2);
-    if constexpr (!attachedToIOExpander_v<i960Pinout::Reset960>) {
-        pinMode(i960Pinout::Reset960, OUTPUT);
-        digitalWrite<i960Pinout::Reset960, HIGH>();
-    }
-    if constexpr (!attachedToIOExpander_v<i960Pinout::Int0_>) {
-        pinMode(i960Pinout::Int0_, OUTPUT);
-        digitalWrite<i960Pinout::Int0_, HIGH>();
-    }
+              i960Pinout::SPI_OFFSET2,
+              i960Pinout::Reset960,
+              i960Pinout::Int0_);
+    digitalWrite<i960Pinout::Reset960, HIGH>();
+    digitalWrite<i960Pinout::Int0_, HIGH>();
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
@@ -324,11 +320,11 @@ void setup() {
         digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
         digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
         // setup the pins that could be attached to an io expander separately
-        if constexpr (!attachedToIOExpander_v<i960Pinout::BA1>) { pinMode(i960Pinout::BA1, INPUT); }
-        if constexpr (!attachedToIOExpander_v<i960Pinout::BA2>) { pinMode(i960Pinout::BA2, INPUT); }
-        if constexpr (!attachedToIOExpander_v<i960Pinout::BA3>) { pinMode(i960Pinout::BA3, INPUT); }
-        if constexpr (!attachedToIOExpander_v<i960Pinout::BE0>) { pinMode(i960Pinout::BE0, INPUT); }
-        if constexpr (!attachedToIOExpander_v<i960Pinout::BE1>) { pinMode(i960Pinout::BE1, INPUT); }
+        pinMode(i960Pinout::BA1, INPUT);
+        pinMode(i960Pinout::BA2, INPUT);
+        pinMode(i960Pinout::BA3, INPUT);
+        pinMode(i960Pinout::BE0, INPUT);
+        pinMode(i960Pinout::BE1, INPUT);
         setupPins(INPUT,
                   i960Pinout::BLAST_,
                   i960Pinout::W_R_,
