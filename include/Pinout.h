@@ -334,14 +334,4 @@ public:
     ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
 };
 
-
-
-/**
- * @brief Choose the lines the multiplexed data lines act as
- */
-void connectMuxPinsToId(byte id) noexcept;
-
-void setSPIBusId(byte id) noexcept;
-
-
 #endif //ARDUINO_PINOUT_H
