@@ -28,6 +28,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_CORECHIPSETFEATURES_H
 #define I960SXCHIPSET_CORECHIPSETFEATURES_H
+#include <Adafruit_GFX.h>
+#include <Adafruit_seesaw.h>
+#include <Adafruit_TFTShield18.h>
+#include <Adafruit_ST7735.h>
 #include "MemoryThing.h"
 #include "ProcessorSerializer.h"
 #include <SdFat.h>
@@ -99,6 +103,41 @@ public:
         for (auto& sc : stringCache_) {
             sc = 0;
         }
+
+        pinMode(i960Pinout::TFT_CS, OUTPUT);
+        pinMode(i960Pinout::TFT_DC, OUTPUT);
+        digitalWriteBlock(HIGH, i960Pinout::TFT_CS, i960Pinout::TFT_DC);
+        if (!ss.begin()) {
+            signalHaltState(F("seesaw could not be initialized"));
+        }
+        Serial.println(F("seesaw started"));
+        Serial.print(F("Version: "));
+        Serial.println(ss.getVersion(), HEX);
+
+        ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
+        ss.tftReset();
+        tft.initR(INITR_BLACKTAB); // initialize the screen, it has a black tab
+
+        Serial.println(F("TFT OK!"));
+        tft.fillScreen(ST77XX_CYAN);
+
+        for (int32_t i = TFTSHIELD_BACKLIGHT_OFF; i < TFTSHIELD_BACKLIGHT_ON; ++i) {
+            ss.setBacklight(i);
+            delay(1);
+        }
+        delay(100);
+        tft.fillScreen(ST77XX_RED);
+        delay(100);
+        tft.fillScreen(ST77XX_GREEN);
+        delay(100);
+        tft.fillScreen(ST77XX_BLUE);
+        delay(100);
+        tft.fillScreen(ST77XX_BLACK);
+
+        tft.setTextSize(1);
+        tft.setTextColor(ST77XX_WHITE);
+        tft.setCursor(0, 0);
+        tft.print(F("i960"));
     }
 private:
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
@@ -205,5 +244,9 @@ private:
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
     static inline byte stringCache_[257] { 0};
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
+    static inline Adafruit_TFTShield18 ss;
+    static inline Adafruit_ST7735 tft {static_cast<int>(i960Pinout::TFT_CS),
+                                       static_cast<int>(i960Pinout::TFT_DC),
+                                       -1};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
