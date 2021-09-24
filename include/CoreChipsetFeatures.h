@@ -64,13 +64,6 @@ public:
         FourByteEntry(SDClusterCount),
         FourByteEntry(SDVolumeSectorCount),
         TwoByteEntry(SDBytesPerSector),
-        TwoByteEntry(DisplayBacklight),
-        TwoByteEntry(FillScreen),
-        FourByteEntry(Buttons),
-        TwoByteEntry(CursorX),
-        TwoByteEntry(CursorY),
-        TwoByteEntry(SetCursor),
-        TwoByteEntry(DisplayIO),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -93,6 +86,36 @@ public:
         SDVolumeSectorCountLower = SDVolumeSectorCount00,
         SDVolumeSectorCountUpper = SDVolumeSectorCount10,
         SDBytesPerSector = SDBytesPerSector0,
+    };
+    static_assert(static_cast<int>(Registers::End) < 0x100);
+    enum class DisplayRegisters : uint8_t {
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) \
+        FourByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define TwelveByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        EightByteEntry(Prefix ## 1)
+        TwoByteEntry(DisplayIO),
+        TwoByteEntry(DisplayFlush),
+        TwoByteEntry(DisplayBacklight),
+        TwoByteEntry(FillScreen),
+        FourByteEntry(Buttons),
+        TwoByteEntry(CursorX),
+        TwoByteEntry(CursorY),
+        TwoByteEntry(SetCursor),
+#undef SixteenByteEntry
+#undef TwelveByteEntry
+#undef EightByteEntry
+#undef FourByteEntry
+#undef TwoByteEntry
+        End,
         DisplayBacklight = DisplayBacklight0,
         FillScreen = FillScreen0,
         ButtonsLower = Buttons00,
@@ -102,7 +125,7 @@ public:
         SetCursor = SetCursor0,
         DisplayIO = DisplayIO0,
     };
-    static_assert(static_cast<int>(Registers::End) < 0x100);
+    static_assert(static_cast<int>(DisplayRegisters::End) < 0x100);
 public:
     CoreChipsetFeatures() = delete;
     ~CoreChipsetFeatures() = delete;
