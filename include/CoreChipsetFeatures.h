@@ -88,6 +88,9 @@ public:
         SDBytesPerSector = SDBytesPerSector0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
+    /**
+     * @brief Functionality related to the tft display provided by the board; Uses a TFT 1.8" shield from adafruit
+     */
     enum class DisplayRegisters : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
