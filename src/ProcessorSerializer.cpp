@@ -30,9 +30,6 @@ SplitWord16
 ProcessorInterface::getDataBits() noexcept {
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
-    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        // we have to read from ports c and a
-        return SplitWord16{PINC, PINC};
     } else {
         // stub out
         return SplitWord16(0);
@@ -48,10 +45,6 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
             latchedDataOutput = value;
             writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
         }
-    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        SplitWord16 split(value);
-        PORTC = split.bytes[0];
-        PORTA = split.bytes[1];
     } else {
        // do nothing
     }
@@ -86,8 +79,6 @@ ProcessorInterface::begin() noexcept {
             write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
             // write the default value out to the latch to start with
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput);
-        } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-            /// @todo implement this
         } else {
             /// @todo implement this
         }
@@ -160,32 +151,6 @@ ProcessorInterface::newDataCycle() noexcept {
             setupDataLinesForWrite();
         }
         return highest;
-    } else if (TargetBoard::onAtmega1284p_Type2()) {
-        // reset the direction pins
-        DDRA = 0;
-        DDRC = 0;
-        // set the mux id to 0b00
-        connectMuxPinsToId(0b00);
-        auto highest = PORTC;
-        auto lowest = PORTA;
-        bool isWriteOperation = lowest & 0b0000'0001;
-        address_.bytes[0] = lowest & 0b1111'1110;
-        cacheOffsetEntry_ = (lowest >> 1) & 0b111;
-        address_.bytes[3] = highest;
-        connectMuxPinsToId(0b01);
-        auto flags = PORTC;
-        connectMuxPinsToId(0b10);
-        auto higher = PORTC;
-        auto lower = PORTA;
-        address_.bytes[1] = lower;
-        address_.bytes[2] = higher;
-        connectMuxPinsToId(0b11);
-        if (!isWriteOperation) {
-            // we have a read operation so call the setup function
-            setupDataLinesForRead();
-        }
-        /// @todo continue this
-        return highest;
     } else {
         return 0;
     }
@@ -197,11 +162,6 @@ ProcessorInterface::setupDataLinesForWrite() noexcept {
             dataLinesDirection_ = ~dataLinesDirection_;
             writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
         }
-    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        // do nothing special because the port should already be setup for read at this point
-        // but we should still update the port direction registers
-        DDRA = 0;
-        DDRC = 0;
     } else {
         // do nothing
     }
@@ -213,10 +173,6 @@ ProcessorInterface::setupDataLinesForRead() noexcept {
             dataLinesDirection_ = ~dataLinesDirection_;
             writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
         }
-    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        // just set the direction correctly, the point where this is called is different on type2 designs
-        DDRA = 0xFF;
-        DDRC = 0xFF;
     } else {
         // do nothing
     }
