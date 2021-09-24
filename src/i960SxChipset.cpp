@@ -320,12 +320,12 @@ void setup() {
         digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
         digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
         // setup the pins that could be attached to an io expander separately
-        pinMode(i960Pinout::BA1, INPUT);
-        pinMode(i960Pinout::BA2, INPUT);
-        pinMode(i960Pinout::BA3, INPUT);
-        pinMode(i960Pinout::BE0, INPUT);
-        pinMode(i960Pinout::BE1, INPUT);
         setupPins(INPUT,
+                  i960Pinout::BA1,
+                  i960Pinout::BA2,
+                  i960Pinout::BA3,
+                  i960Pinout::BE0,
+                  i960Pinout::BE1,
                   i960Pinout::BLAST_,
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
