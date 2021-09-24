@@ -158,7 +158,7 @@ public:
         Serial.println(F("TFT OK!"));
         tft.fillScreen(ST77XX_CYAN);
 
-        for (int32_t i = TFTSHIELD_BACKLIGHT_OFF; i < TFTSHIELD_BACKLIGHT_ON; ++i) {
+        for (int32_t i = TFTSHIELD_BACKLIGHT_OFF; i < TFTSHIELD_BACKLIGHT_ON; i+=16) {
             ss.setBacklight(i);
             delay(1);
         }
