@@ -70,6 +70,7 @@ public:
         TwoByteEntry(CursorX),
         TwoByteEntry(CursorY),
         TwoByteEntry(SetCursor),
+        TwoByteEntry(DisplayIO),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -99,6 +100,7 @@ public:
         CursorX = CursorX0,
         CursorY = CursorY0,
         SetCursor = SetCursor0,
+        DisplayIO = DisplayIO0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
