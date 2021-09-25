@@ -35,7 +35,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryThing.h"
 #include "ProcessorSerializer.h"
 #include <SdFat.h>
+#ifdef USE_DAZZLER
 #include <GD2.h>
+#endif
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
@@ -175,7 +177,9 @@ public:
         tft.setTextColor(ST77XX_WHITE);
         tft.setCursor(0, 0);
         tft.print(F("i960"));
+#ifdef USE_DAZZLER
         GD.begin(0);
+#endif
     }
 private:
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
