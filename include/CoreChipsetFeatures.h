@@ -28,10 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_CORECHIPSETFEATURES_H
 #define I960SXCHIPSET_CORECHIPSETFEATURES_H
-#include <Adafruit_GFX.h>
-#include <Adafruit_seesaw.h>
-#include <Adafruit_TFTShield18.h>
-#include <Adafruit_ST7735.h>
 #include "MemoryThing.h"
 #include "ProcessorSerializer.h"
 #include <SdFat.h>
@@ -91,47 +87,6 @@ public:
         SDBytesPerSector = SDBytesPerSector0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
-    /**
-     * @brief Functionality related to the tft display provided by the board; Uses a TFT 1.8" shield from adafruit
-     */
-    enum class DisplayRegisters : uint8_t {
-#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
-#define FourByteEntry(Prefix) \
-        TwoByteEntry(Prefix ## 0), \
-        TwoByteEntry(Prefix ## 1)
-#define EightByteEntry(Prefix) \
-        FourByteEntry(Prefix ## 0), \
-        FourByteEntry(Prefix ## 1)
-#define TwelveByteEntry(Prefix) \
-        EightByteEntry(Prefix ## 0), \
-        FourByteEntry(Prefix ## 1)
-#define SixteenByteEntry(Prefix) \
-        EightByteEntry(Prefix ## 0), \
-        EightByteEntry(Prefix ## 1)
-        TwoByteEntry(DisplayIO),
-        TwoByteEntry(DisplayFlush),
-        TwoByteEntry(DisplayBacklight),
-        TwoByteEntry(FillScreen),
-        FourByteEntry(Buttons),
-        TwoByteEntry(CursorX),
-        TwoByteEntry(CursorY),
-        TwoByteEntry(SetCursor),
-#undef SixteenByteEntry
-#undef TwelveByteEntry
-#undef EightByteEntry
-#undef FourByteEntry
-#undef TwoByteEntry
-        End,
-        DisplayBacklight = DisplayBacklight0,
-        FillScreen = FillScreen0,
-        ButtonsLower = Buttons00,
-        ButtonsUpper = Buttons10,
-        CursorX = CursorX0,
-        CursorY = CursorY0,
-        SetCursor = SetCursor0,
-        DisplayIO = DisplayIO0,
-    };
-    static_assert(static_cast<int>(DisplayRegisters::End) < 0x100);
 public:
     CoreChipsetFeatures() = delete;
     ~CoreChipsetFeatures() = delete;
@@ -144,39 +99,6 @@ public:
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
         bytesPerSector_ = SD.bytesPerSector();
-        pinMode(i960Pinout::TFT_CS, OUTPUT);
-        pinMode(i960Pinout::TFT_DC, OUTPUT);
-        digitalWriteBlock(HIGH, i960Pinout::TFT_CS, i960Pinout::TFT_DC);
-        if (!ss.begin()) {
-            signalHaltState(F("seesaw could not be initialized"));
-        }
-        Serial.println(F("seesaw started"));
-        Serial.print(F("Version: "));
-        Serial.println(ss.getVersion(), HEX);
-
-        ss.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
-        ss.tftReset();
-        tft.initR(INITR_BLACKTAB); // initialize the screen, it has a black tab
-
-        Serial.println(F("TFT OK!"));
-        tft.fillScreen(ST77XX_CYAN);
-
-        for (int32_t i = TFTSHIELD_BACKLIGHT_OFF; i < TFTSHIELD_BACKLIGHT_ON; i+=16) {
-            ss.setBacklight(i);
-            delay(1);
-        }
-        delay(100);
-        tft.fillScreen(ST77XX_RED);
-        delay(100);
-        tft.fillScreen(ST77XX_GREEN);
-        delay(100);
-        tft.fillScreen(ST77XX_BLUE);
-        delay(100);
-        tft.fillScreen(ST77XX_BLACK);
-        tft.setTextSize(1);
-        tft.setTextColor(ST77XX_WHITE);
-        tft.setCursor(0, 0);
-        tft.print(F("i960"));
 #ifdef USE_DAZZLER
         GD.begin(0);
 #endif
@@ -263,9 +185,5 @@ private:
     static inline uint16_t bytesPerSector_ = 0;
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
-    static inline Adafruit_TFTShield18 ss;
-    static inline Adafruit_ST7735 tft {static_cast<int>(i960Pinout::TFT_CS),
-                                       static_cast<int>(i960Pinout::TFT_DC),
-                                       -1};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
