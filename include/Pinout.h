@@ -81,6 +81,7 @@ enum class i960Pinout : int {
     PORT_A6,
     PORT_A7,
     Count,
+    // current type 1 pinout that will evolve into type 3 once the hardware design is complete
     Ready = PORT_B0,
     CLOCK_OUT= PORT_B1,
     AS_ = PORT_B2,
@@ -99,8 +100,6 @@ enum class i960Pinout : int {
     SPI_OFFSET0 = PORT_C2,
     SPI_OFFSET1 = PORT_C3,
     SPI_OFFSET2 = PORT_C4,
-    TFT_CS = PORT_C5,
-    TFT_DC = PORT_C6,
     SD_EN = PORT_C7,
     W_R_ = PORT_A0,
     BA1 = PORT_A1,
@@ -110,6 +109,19 @@ enum class i960Pinout : int {
     BE1 = PORT_A5,
     BLAST_ = PORT_A6,
     FAIL = PORT_A7,
+    // type 3 specific
+    DAZZLER_INT = PORT_B2,
+    GPIO_CS0 = PORT_B4,
+    MOSI0 = PORT_B5,
+    MISO0 = PORT_B6,
+    SCK0 = PORT_B7,
+    MOSI1 = PORT_D3,
+    MISO1 = PORT_D2,
+    SCK1 = PORT_D4,
+    GPIO_CS1 = PORT_D5,
+    DEN_TYPE3 = PORT_D6,
+    Ready_TYPE3 = PORT_D7,
+    Speaker = PORT_B3, // single channel speaker
 };
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
