@@ -121,7 +121,6 @@ enum class i960Pinout : int {
     GPIO_CS1 = PORT_D5,
     DEN_TYPE3 = PORT_D6,
     Ready_TYPE3 = PORT_D7,
-    Speaker = PORT_B3, // single channel speaker
 };
 
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
