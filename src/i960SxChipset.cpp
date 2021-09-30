@@ -201,7 +201,13 @@ inline void fallbackBody() noexcept {
         }
     }
 }
-
+inline void displayRequestedAddress() noexcept {
+    if (CoreChipsetFeatures::addressDebuggingEnabled()) {
+        auto address = ProcessorInterface::getAddress();
+        Serial.print(F("ADDRESS: 0x"));
+        Serial.println(address, HEX);
+    }
+}
 inline void handleMemoryInterface() noexcept {
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
@@ -276,12 +282,15 @@ inline void invocationBody() noexcept {
         case 1:
         case 2:
         case 3:
+            displayRequestedAddress();
             handleMemoryInterface();
             break;
         case 0xFE:
+            displayRequestedAddress();
             handleCoreChipsetLoop();
             break;
         default:
+            displayRequestedAddress();
             fallbackBody();
             break;
     }

@@ -147,10 +147,7 @@ private:
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
                 digitalWrite<i960Pinout::Int0_, LOW>();
-                asm volatile("nop");
-                asm volatile("nop");
-                asm volatile("nop");
-                asm volatile("nop");
+                enableAddressDebugging_ = true;
                 digitalWrite<i960Pinout::Int0_, HIGH>();
                 break;
             case Registers::ConsoleFlush:
@@ -188,6 +185,7 @@ public:
             default: break;
         }
     }
+    static bool addressDebuggingEnabled() noexcept { return enableAddressDebugging_; }
 private:
     static inline SplitWord32 timeoutCopy_{0};
     static inline SplitWord32 clusterCount_ {0};
@@ -195,5 +193,6 @@ private:
     static inline uint16_t bytesPerSector_ = 0;
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
+    static inline bool enableAddressDebugging_ = false;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
