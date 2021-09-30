@@ -149,6 +149,8 @@ private:
                 digitalWrite<i960Pinout::Int0_, LOW>();
                 asm volatile("nop");
                 asm volatile("nop");
+                asm volatile("nop");
+                asm volatile("nop");
                 digitalWrite<i960Pinout::Int0_, HIGH>();
                 break;
             case Registers::ConsoleFlush:
