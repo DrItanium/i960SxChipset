@@ -63,6 +63,7 @@ public:
         FourByteEntry(SDClusterCount),
         FourByteEntry(SDVolumeSectorCount),
         TwoByteEntry(SDBytesPerSector),
+        TwoByteEntry(TriggerInterrupt),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -85,6 +86,7 @@ public:
         SDVolumeSectorCountLower = SDVolumeSectorCount00,
         SDVolumeSectorCountUpper = SDVolumeSectorCount10,
         SDBytesPerSector = SDBytesPerSector0,
+        TriggerInterrupt = TriggerInterrupt0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -143,6 +145,12 @@ private:
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         bool updateTimeout = false;
         switch (static_cast<Registers>(offset)) {
+            case Registers::TriggerInterrupt:
+                digitalWrite<i960Pinout::Int0_, LOW>();
+                asm volatile("nop");
+                asm volatile("nop");
+                digitalWrite<i960Pinout::Int0_, HIGH>();
+                break;
             case Registers::ConsoleFlush:
                 Serial.flush();
                 break;
