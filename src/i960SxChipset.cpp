@@ -175,6 +175,7 @@ auto& getLine() noexcept {
 constexpr auto IncrementAddress = true;
 constexpr auto LeaveAddressAlone = false;
 constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
+template<bool inDebugMode>
 inline void fallbackBody() noexcept {
     // fallback, be consistent to make sure we don't run faster than the i960
     if (ProcessorInterface::isReadOperation()) {
@@ -201,13 +202,13 @@ inline void fallbackBody() noexcept {
         }
     }
 }
+
 inline void displayRequestedAddress() noexcept {
-    if (CoreChipsetFeatures::addressDebuggingEnabled()) {
-        auto address = ProcessorInterface::getAddress();
-        Serial.print(F("ADDRESS: 0x"));
-        Serial.println(address, HEX);
-    }
+    auto address = ProcessorInterface::getAddress();
+    Serial.print(F("ADDRESS: 0x"));
+    Serial.println(address, HEX);
 }
+template<bool inDebugMode>
 inline void handleMemoryInterface() noexcept {
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
@@ -239,6 +240,7 @@ inline void handleMemoryInterface() noexcept {
         }
     }
 }
+template<bool inDebugMode>
 inline void handleCoreChipsetLoop() noexcept {
     // with burst transactions in the core chipset, we do not have access to a cache line to write into.
     // instead we need to do the old style infinite iteration design
@@ -267,6 +269,7 @@ inline void handleCoreChipsetLoop() noexcept {
         }
     }
 }
+template<bool inDebugMode>
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
@@ -281,21 +284,36 @@ inline void invocationBody() noexcept {
         case 0:
         case 1:
         case 2:
-        case 3:
-            displayRequestedAddress();
-            handleMemoryInterface();
+        case 3: {
+            if constexpr (inDebugMode) {
+                displayRequestedAddress();
+            }
+            handleMemoryInterface<inDebugMode>();
             break;
-        case 0xFE:
-            displayRequestedAddress();
-            handleCoreChipsetLoop();
+        }
+        case 0xFE: {
+            if constexpr (inDebugMode) {
+                displayRequestedAddress();
+            }
+            handleCoreChipsetLoop<inDebugMode>();
             break;
-        default:
-            displayRequestedAddress();
-            fallbackBody();
+        }
+        default: {
+            if constexpr (inDebugMode) {
+                displayRequestedAddress();
+            }
+            fallbackBody<inDebugMode>();
             break;
+        }
     }
 }
-
+void doInvocationBody() {
+   if (CoreChipsetFeatures::addressDebuggingEnabled())  {
+       invocationBody<true>();
+   } else {
+       invocationBody<false>();
+   }
+}
 // the setup routine runs once when you press reset:
 void setup() {
     Serial.begin(250'000);
@@ -407,8 +425,8 @@ void setup() {
     // at this point, the i960 will request 32-bytes to perform a boot check sum on.
     // If the checksum is successful then execution will continue as normal
     // first set of 16-byte request from memory
-    invocationBody();
-    invocationBody();
+    doInvocationBody();
+    doInvocationBody();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
@@ -455,7 +473,7 @@ void loop() {
     // and doesn't seem to impact performance in burst transactions
 
     for (;;) {
-        invocationBody();
+        doInvocationBody();
     }
 }
 
