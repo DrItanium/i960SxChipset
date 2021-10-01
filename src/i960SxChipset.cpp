@@ -216,7 +216,14 @@ inline void handleMemoryInterface() noexcept {
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-            ProcessorInterface::setDataBits(theEntry.get(i));
+            auto outcome = theEntry.get(i);
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tOffset: 0x")) ;
+                Serial.println(i, HEX);
+                Serial.print(F("\tRead the value: 0x"));
+                Serial.println(outcome, HEX);
+            }
+            ProcessorInterface::setDataBits(outcome);
             if (informCPU()) {
                 break;
             }
@@ -229,7 +236,14 @@ inline void handleMemoryInterface() noexcept {
 
         // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-            theEntry.set(i, ProcessorInterface::getStyle(), ProcessorInterface::getDataBits());
+            auto bits = ProcessorInterface::getDataBits();
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tOffset: 0x")) ;
+                Serial.println(i, HEX);
+                Serial.print(F("\tWriting the value: 0x"));
+                Serial.println(bits.getWholeValue(), HEX);
+            }
+            theEntry.set(i, ProcessorInterface::getStyle(), bits);
             if (informCPU()) {
                 break;
             }
@@ -246,9 +260,20 @@ inline void handleCoreChipsetLoop() noexcept {
     // instead we need to do the old style infinite iteration design
     if (ProcessorInterface::isReadOperation()) {
         for(;;) {
-            ProcessorInterface::setDataBits(CoreChipsetFeatures::read(ProcessorInterface::getPageIndex(),
-                                                                      ProcessorInterface::getPageOffset(),
-                                                                      ProcessorInterface::getStyle()));
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tPage Index: 0x")) ;
+                Serial.println(ProcessorInterface::getPageIndex(), HEX);
+                Serial.print(F("\tPage Offset: 0x")) ;
+                Serial.println(ProcessorInterface::getPageOffset(), HEX);
+            }
+            auto result = CoreChipsetFeatures::read(ProcessorInterface::getPageIndex(),
+                                                    ProcessorInterface::getPageOffset(),
+                                                    ProcessorInterface::getStyle());
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tRead Value: 0x"));
+                Serial.println(result, HEX);
+            }
+            ProcessorInterface::setDataBits(result);
             if (informCPU()) {
                 break;
             }
@@ -256,10 +281,19 @@ inline void handleCoreChipsetLoop() noexcept {
         }
     } else {
         for (;;) {
+            auto dataBits = ProcessorInterface::getDataBits();
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tPage Index: 0x")) ;
+                Serial.println(ProcessorInterface::getPageIndex(), HEX);
+                Serial.print(F("\tPage Offset: 0x")) ;
+                Serial.println(ProcessorInterface::getPageOffset(), HEX);
+                Serial.print(F("\tData To Write: 0x"));
+                Serial.println(dataBits.getWholeValue(), HEX);
+            }
             CoreChipsetFeatures::write(ProcessorInterface::getPageIndex(),
                                        ProcessorInterface::getPageOffset(),
                                        ProcessorInterface::getStyle(),
-                                       ProcessorInterface::getDataBits());
+                                       dataBits);
             if (informCPU()) {
                 break;
             }
