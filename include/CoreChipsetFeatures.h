@@ -37,6 +37,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
+    static constexpr Address IOBaseAddress = 0xFE00'0000;
+    static constexpr Address RegisterPage0BaseAddress = IOBaseAddress;
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -64,6 +66,7 @@ public:
         FourByteEntry(SDVolumeSectorCount),
         TwoByteEntry(SDBytesPerSector),
         TwoByteEntry(TriggerInterrupt),
+        TwoByteEntry(AddressDebuggingFlag),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -87,6 +90,7 @@ public:
         SDVolumeSectorCountUpper = SDVolumeSectorCount10,
         SDBytesPerSector = SDBytesPerSector0,
         TriggerInterrupt = TriggerInterrupt0,
+        AddressDebuggingFlag = AddressDebuggingFlag0,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
@@ -104,6 +108,28 @@ public:
 #ifdef USE_DAZZLER
         GD.begin(0);
 #endif
+#define X(thing) Serial.print(F("Address of " #thing ": 0x")); \
+        Serial.println(RegisterPage0BaseAddress + static_cast<byte>(Registers:: thing ), HEX)
+
+        X(ConsoleIO);
+        X(ConsoleFlush);
+        X(ConsoleTimeoutLower);
+        X(ConsoleTimeoutUpper);
+        X(ConsoleRXBufferSize);
+        X(ConsoleTXBufferSize);
+        X(ChipsetClockSpeedLower);
+        X(ChipsetClockSpeedUpper);
+        X(CacheLineCount );
+        X(CacheLineSize );
+        X(NumberOfCacheWays );
+        X(SDClusterCountLower );
+        X(SDClusterCountUpper );
+        X(SDVolumeSectorCountLower );
+        X(SDVolumeSectorCountUpper );
+        X(SDBytesPerSector );
+        X(TriggerInterrupt );
+        X(AddressDebuggingFlag );
+#undef X
     }
 private:
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
@@ -138,6 +164,8 @@ private:
                 return volumeSectorCount_.halves[1];
             case Registers::SDBytesPerSector:
                 return bytesPerSector_;
+            case Registers::AddressDebuggingFlag:
+                return static_cast<uint16_t>(enableAddressDebugging_);
             default:
                 return 0;
         }
@@ -164,6 +192,8 @@ private:
                 timeoutCopy_.halves[1] = value.getWholeValue();
                 updateTimeout = true;
                 break;
+            case Registers::AddressDebuggingFlag:
+                enableAddressDebugging_ = (value.getWholeValue() != 0);
             default:
                 break;
         }
