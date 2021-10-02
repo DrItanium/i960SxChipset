@@ -66,7 +66,7 @@ public:
         FourByteEntry(SDVolumeSectorCount),
         TwoByteEntry(SDBytesPerSector),
         TwoByteEntry(TriggerInterrupt),
-        TwoByteEntry(AddressDebuggingFlag),
+        FourByteEntry(AddressDebuggingFlag),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -90,7 +90,7 @@ public:
         SDVolumeSectorCountUpper = SDVolumeSectorCount10,
         SDBytesPerSector = SDBytesPerSector0,
         TriggerInterrupt = TriggerInterrupt0,
-        AddressDebuggingFlag = AddressDebuggingFlag0,
+        AddressDebuggingFlag = AddressDebuggingFlag00,
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
