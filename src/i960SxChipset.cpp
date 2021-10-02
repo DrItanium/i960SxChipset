@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 
 
+constexpr auto CompileInAddressDebuggingSupport = true;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
@@ -338,12 +339,17 @@ inline void invocationBody() noexcept {
         }
     }
 }
+template<bool allowAddressDebuggingCodePath>
 void doInvocationBody() noexcept {
-   if (CoreChipsetFeatures::addressDebuggingEnabled())  {
-       invocationBody<true>();
-   } else {
-       invocationBody<false>();
-   }
+    if constexpr (allowAddressDebuggingCodePath) {
+        if (CoreChipsetFeatures::addressDebuggingEnabled())  {
+            invocationBody<true>();
+        } else {
+            invocationBody<false>();
+        }
+    } else {
+        invocationBody<false>();
+    }
 }
 void installBootImage() noexcept {
 
@@ -455,8 +461,8 @@ void setup() {
     // at this point, the i960 will request 32-bytes to perform a boot check sum on.
     // If the checksum is successful then execution will continue as normal
     // first set of 16-byte request from memory
-    doInvocationBody();
-    doInvocationBody();
+    doInvocationBody<CompileInAddressDebuggingSupport>();
+    doInvocationBody<CompileInAddressDebuggingSupport>();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
@@ -503,7 +509,7 @@ void loop() {
     // and doesn't seem to impact performance in burst transactions
 
     for (;;) {
-        doInvocationBody();
+        doInvocationBody<CompileInAddressDebuggingSupport>();
     }
 }
 
