@@ -91,6 +91,7 @@ public:
         SDBytesPerSector = SDBytesPerSector0,
         TriggerInterrupt = TriggerInterrupt0,
         AddressDebuggingFlag = AddressDebuggingFlag00,
+        // we ignore the upper half of the register but reserve it to make sure
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 public:
