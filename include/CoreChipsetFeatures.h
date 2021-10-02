@@ -102,6 +102,11 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
+        while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+            Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
+            delay(1000);
+        }
+        Serial.println(F("SD CARD UP!"));
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
@@ -178,9 +183,7 @@ private:
         bool updateTimeout = false;
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
-                digitalWrite<i960Pinout::Int0_, LOW>();
-                asm volatile ("nop");
-                digitalWrite<i960Pinout::Int0_, HIGH>();
+                pulse<i960Pinout::Int0_>();
                 break;
             case Registers::ConsoleFlush:
                 Serial.flush();

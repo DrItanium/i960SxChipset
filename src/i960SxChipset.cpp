@@ -395,11 +395,6 @@ void setup() {
         SPI.begin();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
-        while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-            Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
-            delay(1000);
-        }
-        Serial.println(F("SD CARD UP!"));
         CoreChipsetFeatures::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
