@@ -109,7 +109,10 @@ public:
         GD.begin(0);
 #endif
 #define X(thing) Serial.print(F("Address of " #thing ": 0x")); \
-        Serial.println(RegisterPage0BaseAddress + static_cast<byte>(Registers:: thing ), HEX)
+        Serial.print(RegisterPage0BaseAddress + static_cast<byte>(Registers:: thing ), HEX); \
+        Serial.print(F(", ("));                                \
+        Serial.print(RegisterPage0BaseAddress + static_cast<byte>(Registers::thing));        \
+        Serial.println(F(")"));
 
         X(ConsoleIO);
         X(ConsoleFlush);
