@@ -179,7 +179,7 @@ private:
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
                 digitalWrite<i960Pinout::Int0_, LOW>();
-                enableAddressDebugging_ = true;
+                asm volatile ("nop");
                 digitalWrite<i960Pinout::Int0_, HIGH>();
                 break;
             case Registers::ConsoleFlush:
