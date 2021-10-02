@@ -341,12 +341,49 @@ inline void invocationBody() noexcept {
         }
     }
 }
-void doInvocationBody() {
+void doInvocationBody() noexcept {
    if (CoreChipsetFeatures::addressDebuggingEnabled())  {
        invocationBody<true>();
    } else {
        invocationBody<false>();
    }
+}
+void installBootImage() noexcept {
+
+    // okay now we need to actually open boot.system and copy it into the ramBlock
+    if (!SD.exists(const_cast<char*>("boot.sys"))) {
+        // delete the file and start a new
+        signalHaltState(F("Could not find file \"boot.sys\"!"));
+    }
+    if (auto theFile = SD.open("boot.sys", FILE_READ); !theFile) {
+        signalHaltState(F("Could not open \"boot.sys\"! SD CARD may be corrupt?")) ;
+    } else {
+        // okay we were successful in opening the file, now copy the image into psram
+        Address size = theFile.size();
+        static constexpr auto CacheSize = sizeof(entries);
+        //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
+        // use the cache as a buffer since it won't be in use at this point in time
+        auto* storage = reinterpret_cast<byte*>(entries);
+        Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
+        for (Address addr = 0; addr < size; addr += CacheSize) {
+            // do a linear read from the start to the end of storage
+            // wait around to make sure we don't run afoul of the sdcard itself
+            while (theFile.isBusy());
+            auto numRead = theFile.read(storage, CacheSize);
+            if (numRead < 0) {
+                // something wen't wrong so halt at this point
+                SD.errorHalt();
+            }
+            (void)OnboardPSRAMBlock::write(addr, storage, numRead);
+            //Serial.print(F("."));
+        }
+        Serial.println(F("Transfer complete!"));
+        // make sure we close the file before destruction
+        theFile.close();
+        for (auto& way : entries) {
+            way.clear();
+        }
+    }
 }
 // the setup routine runs once when you press reset:
 void setup() {
@@ -398,40 +435,7 @@ void setup() {
         CoreChipsetFeatures::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
-        // okay now we need to actually open boot.system and copy it into the ramBlock
-        if (!SD.exists(const_cast<char*>("boot.sys"))) {
-            // delete the file and start a new
-            signalHaltState(F("Could not find file \"boot.sys\"!"));
-        }
-        if (auto theFile = SD.open("boot.sys", FILE_READ); !theFile) {
-            signalHaltState(F("Could not open \"boot.sys\"! SD CARD may be corrupt?")) ;
-        } else {
-            // okay we were successful in opening the file, now copy the image into psram
-            Address size = theFile.size();
-            static constexpr auto CacheSize = sizeof(entries);
-            //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
-            // use the cache as a buffer since it won't be in use at this point in time
-            auto* storage = reinterpret_cast<byte*>(entries);
-            Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
-            for (Address addr = 0; addr < size; addr += CacheSize) {
-                // do a linear read from the start to the end of storage
-                // wait around to make sure we don't run afoul of the sdcard itself
-                while (theFile.isBusy());
-                auto numRead = theFile.read(storage, CacheSize);
-                if (numRead < 0) {
-                    // something wen't wrong so halt at this point
-                    SD.errorHalt();
-                }
-                (void)OnboardPSRAMBlock::write(addr, storage, numRead);
-                //Serial.print(F("."));
-            }
-            Serial.println(F("Transfer complete!"));
-            // make sure we close the file before destruction
-            theFile.close();
-            for (auto& way : entries) {
-                way.clear();
-            }
-        }
+        installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
