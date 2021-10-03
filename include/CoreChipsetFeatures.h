@@ -115,7 +115,8 @@ public:
         TwoByteEntry(RemovePort),
         FourByteEntry(SDClusterCount),
         FourByteEntry(SDVolumeSectorCount),
-        FourByteEntry(SDBytesPerSector),
+        TwoByteEntry(SDBytesPerSector),
+        TwoByteEntry(NumberOfOpenFiles),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -132,8 +133,8 @@ public:
         SDClusterCountUpper = SDClusterCount10,
         SDVolumeSectorCountLower = SDVolumeSectorCount00,
         SDVolumeSectorCountUpper = SDVolumeSectorCount10,
-        SDBytesPerSectorLower = SDBytesPerSector00,
-        SDBytesPerSectorUpper = SDBytesPerSector10,
+        SDBytesPerSector = SDBytesPerSector0,
+        NumberOfOpenFiles = NumberOfOpenFiles0,
         // we ignore the upper half of the register but reserve it to make sure
     };
 
@@ -153,32 +154,92 @@ public:
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
-        bytesPerSector_ = SplitWord32(SD.bytesPerSector());
+        bytesPerSector_ = SD.bytesPerSector();
 #ifdef USE_DAZZLER
         GD.begin(0);
 #endif
-#define X(thing) Serial.print(F("Address of " #thing ": 0x")); \
-        Serial.print(RegisterPage0BaseAddress + static_cast<byte>(Registers:: thing ), HEX); \
+#define X(thing, base, type) Serial.print(F("Address of " #thing ": 0x")); \
+        Serial.print(base + static_cast<byte>(type :: thing ), HEX); \
         Serial.print(F(", ("));                                \
-        Serial.print(RegisterPage0BaseAddress + static_cast<byte>(Registers::thing));        \
+        Serial.print(base + static_cast<byte>(type ::thing));        \
         Serial.println(F(")"));
+#define P0(thing) X(thing, RegisterPage0BaseAddress, Registers)
+#define P1(thing) X(thing, SDCardInterfaceBaseAddress, SDCardFileSystemRegisters)
 
-        X(ConsoleIO);
-        X(ConsoleFlush);
-        X(ConsoleTimeoutLower);
-        X(ConsoleTimeoutUpper);
-        X(ConsoleRXBufferSize);
-        X(ConsoleTXBufferSize);
-        X(ChipsetClockSpeedLower);
-        X(ChipsetClockSpeedUpper);
-        X(CacheLineCount );
-        X(CacheLineSize );
-        X(NumberOfCacheWays );
-        X(TriggerInterrupt );
-        X(AddressDebuggingFlag );
+        P0(ConsoleIO);
+        P0(ConsoleFlush);
+        P0(ConsoleTimeoutLower);
+        P0(ConsoleTimeoutUpper);
+        P0(ConsoleRXBufferSize);
+        P0(ConsoleTXBufferSize);
+        P0(ChipsetClockSpeedLower);
+        P0(ChipsetClockSpeedUpper);
+        P0(CacheLineCount );
+        P0(CacheLineSize );
+        P0(NumberOfCacheWays );
+        P0(TriggerInterrupt );
+        P0(AddressDebuggingFlag );
+        P1(PathStart);
+        P1(PathEnd);
+        P1(OpenPort);
+        P1(MakeDirectoryPort);
+        P1(ExistsPort );
+        P1(RemovePort );
+        P1(SDClusterCountLower );
+        P1(SDClusterCountUpper );
+        P1(SDVolumeSectorCountLower );
+        P1(SDVolumeSectorCountUpper );
+        P1(SDBytesPerSector);
+        P1(NumberOfOpenFiles);
+#undef P0
+#undef P1
 #undef X
     }
 private:
+    static uint16_t handleSecondPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
+        using T = SDCardFileSystemRegisters;
+        switch (static_cast<T>(offset)) {
+#define OneByteEntry(index) case T :: index : return sdCardPath_[static_cast<byte>(T :: index)];
+#define TwoByteEntry(Prefix) OneByteEntry(Prefix ## 0) OneByteEntry(Prefix ## 1)
+#define FourByteEntry(Prefix) TwoByteEntry(Prefix ## 0) TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) FourByteEntry(Prefix ## 0) FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) EightByteEntry(Prefix ## 0) EightByteEntry(Prefix ## 1)
+            SixteenByteEntry(Path0);
+            SixteenByteEntry(Path1);
+            SixteenByteEntry(Path2);
+            SixteenByteEntry(Path3);
+            SixteenByteEntry(Path4);
+#undef SixteenByteEntry
+#undef EightByteEntry
+#undef FourByteEntry
+#undef TwoByteEntry
+#undef OneByteEntry
+            case T::OpenPort:
+                /// @todo implement open support
+                return -1;
+            case T::MakeDirectoryPort:
+                /// @todo implement mkdir support
+                return -1;
+            case T::ExistsPort:
+                /// @todo implement exists support
+                return 0;
+            case T::RemovePort:
+                /// @todo implement remove support
+                return 0;
+            case T::SDClusterCountLower:
+                return clusterCount_.halves[0];
+            case T::SDClusterCountUpper:
+                return clusterCount_.halves[1];
+            case T::SDVolumeSectorCountLower:
+                return volumeSectorCount_.halves[0];
+            case T::SDVolumeSectorCountUpper:
+                return volumeSectorCount_.halves[1];
+            case T::SDBytesPerSector:
+                return bytesPerSector_;
+            default:
+                return 0;
+        }
+    }
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO:
@@ -201,18 +262,6 @@ private:
                 return 16;
             case Registers::NumberOfCacheWays:
                 return 2;
-#if 0
-            case Registers::SDClusterCountLower:
-                return clusterCount_.halves[0];
-            case Registers::SDClusterCountUpper:
-                return clusterCount_.halves[1];
-            case Registers::SDVolumeSectorCountLower:
-                return volumeSectorCount_.halves[0];
-            case Registers::SDVolumeSectorCountUpper:
-                return volumeSectorCount_.halves[1];
-            case Registers::SDBytesPerSector:
-                return bytesPerSector_;
-#endif
             case Registers::AddressDebuggingFlag:
                 return static_cast<uint16_t>(enableAddressDebugging_);
             default:
@@ -267,7 +316,7 @@ private:
     static inline SplitWord32 timeoutCopy_{0};
     static inline SplitWord32 clusterCount_ {0};
     static inline SplitWord32 volumeSectorCount_ {0};
-    static inline SplitWord32 bytesPerSector_ { 0 };
+    static inline uint16_t bytesPerSector_ = 0;
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
     static inline bool enableAddressDebugging_ = false;
