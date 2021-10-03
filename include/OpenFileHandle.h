@@ -57,6 +57,10 @@ public:
 #undef EightByteEntry
 #undef FourByteEntry
 #undef TwoByteEntry
+        IOPort = IOPort0,
+        Flush = Flush0,
+        Sync = Sync0,
+        IsOpen = IsOpen0,
         End,
     };
 public:
@@ -96,16 +100,27 @@ public:
             return 0xFFFF;
         }
     }
+    void putChar(SplitWord16 value) noexcept {
+        if (backingStore_) {
+            backingStore_.write(static_cast<byte>(value.getWholeValue()));
+        }
+    }
     [[nodiscard]] uint16_t read(uint8_t offset, LoadStoreStyle lss) noexcept {
-        switch (static_cast<Registers>(offset)) {
-            /// @todo implement
-            default:
-                return 0;
+        using T = Registers;
+        switch (static_cast<T>(offset)) {
+            case T::IOPort: return getChar();
+            case T::IsOpen: return isOpen() ? 0xFFFF : 0;
+            default: return 0;
         }
     }
     void write(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        switch(static_cast<Registers>(offset)) {
-            /// @todo implement
+        using T = Registers;
+        switch(static_cast<T>(offset)) {
+            case T::IOPort:
+                putChar(value);
+                break;
+            case T::Sync: sync(); break;
+            case T::Flush: flush(); break;
             default:
                 break;
         }
