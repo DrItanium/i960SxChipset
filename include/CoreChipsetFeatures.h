@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_CORECHIPSETFEATURES_H
 #include "MemoryThing.h"
 #include "ProcessorSerializer.h"
+#include "OpenFileHandle.h"
 #include <SdFat.h>
 #ifdef USE_DAZZLER
 #include <GD2.h>
