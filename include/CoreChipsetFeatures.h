@@ -39,6 +39,7 @@ class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
     static constexpr Address IOBaseAddress = 0xFE00'0000;
     static constexpr Address RegisterPage0BaseAddress = IOBaseAddress;
+    static constexpr Address SDCardInterfaceBaseAddress = RegisterPage0BaseAddress + 0x100;
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -62,9 +63,9 @@ public:
         TwoByteEntry(CacheLineCount),
         TwoByteEntry(CacheLineSize),
         TwoByteEntry(NumberOfCacheWays),
-        FourByteEntry(SDClusterCount),
-        FourByteEntry(SDVolumeSectorCount),
-        TwoByteEntry(SDBytesPerSector),
+        FourByteEntry(Unused0),
+        FourByteEntry(Unused1),
+        TwoByteEntry(Unused2),
         TwoByteEntry(TriggerInterrupt),
         FourByteEntry(AddressDebuggingFlag),
 #undef SixteenByteEntry
@@ -84,16 +85,50 @@ public:
         CacheLineCount = CacheLineCount0,
         CacheLineSize = CacheLineSize0,
         NumberOfCacheWays = NumberOfCacheWays0,
-        SDClusterCountLower = SDClusterCount00,
-        SDClusterCountUpper = SDClusterCount10,
-        SDVolumeSectorCountLower = SDVolumeSectorCount00,
-        SDVolumeSectorCountUpper = SDVolumeSectorCount10,
-        SDBytesPerSector = SDBytesPerSector0,
         TriggerInterrupt = TriggerInterrupt0,
         AddressDebuggingFlag = AddressDebuggingFlag00,
         // we ignore the upper half of the register but reserve it to make sure
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
+    enum class SDCardFileSystemRegisters : uint8_t {
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) \
+        FourByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define TwelveByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        EightByteEntry(Prefix ## 1)
+        SixteenByteEntry(Path0),
+        SixteenByteEntry(Path1),
+        SixteenByteEntry(Path2),
+        SixteenByteEntry(Path3),
+        SixteenByteEntry(Path4),
+        FourByteEntry(SDClusterCount),
+        FourByteEntry(SDVolumeSectorCount),
+        FourByteEntry(SDBytesPerSector),
+#undef SixteenByteEntry
+#undef TwelveByteEntry
+#undef EightByteEntry
+#undef FourByteEntry
+#undef TwoByteEntry
+        End,
+        PathStart = Path00000,
+        PathEnd = Path41111,
+        SDClusterCountLower = SDClusterCount00,
+        SDClusterCountUpper = SDClusterCount10,
+        SDVolumeSectorCountLower = SDVolumeSectorCount00,
+        SDVolumeSectorCountUpper = SDVolumeSectorCount10,
+        SDBytesPerSectorLower = SDBytesPerSector00,
+        SDBytesPerSectorUpper = SDBytesPerSector10,
+        // we ignore the upper half of the register but reserve it to make sure
+    };
+
 public:
     CoreChipsetFeatures() = delete;
     ~CoreChipsetFeatures() = delete;
@@ -110,7 +145,7 @@ public:
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
-        bytesPerSector_ = SD.bytesPerSector();
+        bytesPerSector_ = SplitWord32(SD.bytesPerSector());
 #ifdef USE_DAZZLER
         GD.begin(0);
 #endif
@@ -131,11 +166,6 @@ public:
         X(CacheLineCount );
         X(CacheLineSize );
         X(NumberOfCacheWays );
-        X(SDClusterCountLower );
-        X(SDClusterCountUpper );
-        X(SDVolumeSectorCountLower );
-        X(SDVolumeSectorCountUpper );
-        X(SDBytesPerSector );
         X(TriggerInterrupt );
         X(AddressDebuggingFlag );
 #undef X
@@ -163,6 +193,7 @@ private:
                 return 16;
             case Registers::NumberOfCacheWays:
                 return 2;
+#if 0
             case Registers::SDClusterCountLower:
                 return clusterCount_.halves[0];
             case Registers::SDClusterCountUpper:
@@ -173,6 +204,7 @@ private:
                 return volumeSectorCount_.halves[1];
             case Registers::SDBytesPerSector:
                 return bytesPerSector_;
+#endif
             case Registers::AddressDebuggingFlag:
                 return static_cast<uint16_t>(enableAddressDebugging_);
             default:
@@ -227,9 +259,10 @@ private:
     static inline SplitWord32 timeoutCopy_{0};
     static inline SplitWord32 clusterCount_ {0};
     static inline SplitWord32 volumeSectorCount_ {0};
-    static inline uint16_t bytesPerSector_ = 0;
+    static inline SplitWord32 bytesPerSector_ { 0 };
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
     static inline bool enableAddressDebugging_ = false;
+    static inline char sdCardPath_[81] = { 0 };
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
