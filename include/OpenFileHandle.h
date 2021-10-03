@@ -37,14 +37,54 @@ extern SdFat SD;
  */
 class OpenFileHandle {
 public:
-    uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    enum class Registers : uint8_t {
+
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) \
+        FourByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define TwelveByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        EightByteEntry(Prefix ## 1)
+#undef SixteenByteEntry
+#undef TwelveByteEntry
+#undef EightByteEntry
+#undef FourByteEntry
+#undef TwoByteEntry
+        End,
+    };
+public:
+    bool open(const char* path, SplitWord32 permissions) noexcept {
+        if (!backingStore_) {
+            backingStore_ = SD.open(path, permissions.bytes[0]);
+            return backingStore_;
+        } else {
+            return false;
+        }
+    }
+    bool close() noexcept {
+        if (backingStore_) {
+            return backingStore_.close();
+        } else {
+            return false;
+        }
+    }
+
+    [[nodiscard]] bool isOpen() const noexcept { return backingStore_.isOpen(); }
+    explicit operator bool() const noexcept { return backingStore_.operator bool(); }
+    [[nodiscard]] uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         return 0;
     }
     void write(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-
     }
 private:
-
+    File backingStore_;
 };
 
 #endif //SXCHIPSET_OPENFILEHANDLE_H

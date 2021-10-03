@@ -120,6 +120,7 @@ public:
         TwoByteEntry(NumberOfOpenFiles),
         TwoByteEntry(MaximumNumberOfOpenFiles),
         TwoByteEntry(ErrorCode),
+        FourByteEntry(Permissions),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -140,6 +141,8 @@ public:
         NumberOfOpenFiles = NumberOfOpenFiles0,
         MaximumNumberOfOpenFiles = MaximumNumberOfOpenFiles0,
         ErrorCode = ErrorCode0,
+        PermissionsLower = Permissions00,
+        PermissionsUpper = Permissions10,
         // we ignore the upper half of the register but reserve it to make sure
     };
 
@@ -295,6 +298,12 @@ private:
 #undef FourByteEntry
 #undef TwoByteEntry
 #undef OneByteEntry
+            case T::PermissionsLower:
+                permissions_.words_[0] = value;
+                break;
+            case T::PermissionsUpper:
+                permissions_.words_[1] = value;
+                break;
             default:
                 break;
         }
@@ -357,5 +366,6 @@ private:
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
     static inline bool enableAddressDebugging_ = false;
     static inline char sdCardPath_[81] = { 0 };
+    static inline SplitWord32 permissions_ { 0 };
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
