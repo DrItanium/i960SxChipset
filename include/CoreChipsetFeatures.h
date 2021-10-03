@@ -117,6 +117,8 @@ public:
         FourByteEntry(SDVolumeSectorCount),
         TwoByteEntry(SDBytesPerSector),
         TwoByteEntry(NumberOfOpenFiles),
+        TwoByteEntry(MaximumNumberOfOpenFiles),
+        TwoByteEntry(ErrorCode),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -135,6 +137,8 @@ public:
         SDVolumeSectorCountUpper = SDVolumeSectorCount10,
         SDBytesPerSector = SDBytesPerSector0,
         NumberOfOpenFiles = NumberOfOpenFiles0,
+        MaximumNumberOfOpenFiles = MaximumNumberOfOpenFiles0,
+        ErrorCode = ErrorCode0,
         // we ignore the upper half of the register but reserve it to make sure
     };
 
@@ -236,6 +240,10 @@ private:
                 return volumeSectorCount_.halves[1];
             case T::SDBytesPerSector:
                 return bytesPerSector_;
+            case T::MaximumNumberOfOpenFiles:
+                return 32;
+            case T::NumberOfOpenFiles:
+                return numberOfOpenFiles_;
             default:
                 return 0;
         }
@@ -266,6 +274,28 @@ private:
                 return static_cast<uint16_t>(enableAddressDebugging_);
             default:
                 return 0;
+        }
+    }
+    static void handleSecondPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
+        using T = SDCardFileSystemRegisters;
+        switch (static_cast<T>(offset)) {
+#define OneByteEntry(index, offset) case T :: index : sdCardPath_[static_cast<byte>(T :: index)] = value.bytes[offset]; break;
+#define TwoByteEntry(Prefix) OneByteEntry(Prefix ## 0, 0) OneByteEntry(Prefix ## 1, 1)
+#define FourByteEntry(Prefix) TwoByteEntry(Prefix ## 0) TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) FourByteEntry(Prefix ## 0) FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) EightByteEntry(Prefix ## 0) EightByteEntry(Prefix ## 1)
+            SixteenByteEntry(Path0);
+            SixteenByteEntry(Path1);
+            SixteenByteEntry(Path2);
+            SixteenByteEntry(Path3);
+            SixteenByteEntry(Path4);
+#undef SixteenByteEntry
+#undef EightByteEntry
+#undef FourByteEntry
+#undef TwoByteEntry
+#undef OneByteEntry
+            default:
+                break;
         }
     }
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
@@ -302,21 +332,26 @@ public:
         // force override the default implementation
         switch (targetPage) {
             case 0: return handleFirstPageRegisterReads(offset, lss);
+            case 1: return handleSecondPageRegisterReads(offset, lss);
             default: return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (targetPage) {
             case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
+            case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
             default: break;
         }
     }
     static bool addressDebuggingEnabled() noexcept { return enableAddressDebugging_; }
 private:
+    using PageWriteFunction = void (*)(uint8_t, LoadStoreStyle, SplitWord16) noexcept;
+    using PageReadFunction = uint16_t (*)(uint8_t, LoadStoreStyle) noexcept;
     static inline SplitWord32 timeoutCopy_{0};
     static inline SplitWord32 clusterCount_ {0};
     static inline SplitWord32 volumeSectorCount_ {0};
     static inline uint16_t bytesPerSector_ = 0;
+    static inline uint16_t numberOfOpenFiles_ = 0;
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
     static inline bool enableAddressDebugging_ = false;
