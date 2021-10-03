@@ -53,6 +53,11 @@ public:
         TwoByteEntry(Flush),
         TwoByteEntry(Sync),
         TwoByteEntry(IsOpen),
+        TwoByteEntry(SeekEnd),
+        TwoByteEntry(SeekBeginning),
+        FourByteEntry(SeekAbsolute),
+        FourByteEntry(SeekRelative),
+        FourByteEntry(Size),
 #undef SixteenByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
@@ -61,6 +66,14 @@ public:
         Flush = Flush0,
         Sync = Sync0,
         IsOpen = IsOpen0,
+        SeekEnd = SeekEnd0,
+        SeekBeginning = SeekBeginning0,
+        SeekAbsoluteLower = SeekAbsolute00,
+        SeekAbsoluteUpper = SeekAbsolute10,
+        SeekRelativeLower = SeekRelative00,
+        SeekRelativeUpper = SeekRelative10,
+        SizeLower = Size00,
+        SizeUpper = Size10,
         End,
     };
 public:
@@ -87,6 +100,7 @@ public:
     bool setAbsolutePosition(uint32_t pos) noexcept { return backingStore_.seekSet(pos); }
     bool setRelativePosition(int32_t pos) noexcept { return backingStore_.seekCur(pos); }
     bool seekToEnd() noexcept { return backingStore_.seekEnd(); }
+    bool seekToBeginning() noexcept { return backingStore_.seekSet(0); }
     bool getWriteError() const noexcept { return backingStore_.getWriteError(); }
     auto getError() const noexcept { return backingStore_.getError(); }
     void flush() noexcept { backingStore_.flush(); }
@@ -110,6 +124,8 @@ public:
         switch (static_cast<T>(offset)) {
             case T::IOPort: return getChar();
             case T::IsOpen: return isOpen() ? 0xFFFF : 0;
+            case T::SizeLower: return static_cast<uint16_t>(size());
+            case T::SizeUpper: return static_cast<uint16_t>(size() >> 16);
             default: return 0;
         }
     }
@@ -121,6 +137,8 @@ public:
                 break;
             case T::Sync: sync(); break;
             case T::Flush: flush(); break;
+            case T::SeekBeginning: seekToBeginning(); break;
+            case T::SeekEnd: seekToEnd(); break;
             default:
                 break;
         }
