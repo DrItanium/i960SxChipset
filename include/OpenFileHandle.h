@@ -46,14 +46,14 @@ public:
 #define EightByteEntry(Prefix) \
         FourByteEntry(Prefix ## 0), \
         FourByteEntry(Prefix ## 1)
-#define TwelveByteEntry(Prefix) \
-        EightByteEntry(Prefix ## 0), \
-        FourByteEntry(Prefix ## 1)
 #define SixteenByteEntry(Prefix) \
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
+        TwoByteEntry(IOPort),
+        TwoByteEntry(Flush),
+        TwoByteEntry(Sync),
+        TwoByteEntry(IsOpen),
 #undef SixteenByteEntry
-#undef TwelveByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
 #undef TwoByteEntry
@@ -78,10 +78,37 @@ public:
 
     [[nodiscard]] bool isOpen() const noexcept { return backingStore_.isOpen(); }
     explicit operator bool() const noexcept { return backingStore_.operator bool(); }
-    [[nodiscard]] uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        return 0;
+    [[nodiscard]] auto size() const noexcept { return backingStore_.fileSize(); }
+    [[nodiscard]] auto position() const noexcept { return backingStore_.curPosition(); }
+    bool setAbsolutePosition(uint32_t pos) noexcept { return backingStore_.seekSet(pos); }
+    bool setRelativePosition(int32_t pos) noexcept { return backingStore_.seekCur(pos); }
+    bool seekToEnd() noexcept { return backingStore_.seekEnd(); }
+    bool getWriteError() const noexcept { return backingStore_.getWriteError(); }
+    auto getError() const noexcept { return backingStore_.getError(); }
+    void flush() noexcept { backingStore_.flush(); }
+    void sync() noexcept { backingStore_.sync(); }
+    bool isBusy() noexcept { return backingStore_.isBusy(); }
+    bool isDirectory() noexcept { return backingStore_.isDirectory(); }
+    uint16_t getChar() noexcept {
+        if (backingStore_) {
+            return static_cast<uint16_t>(backingStore_.read());
+        } else {
+            return 0xFFFF;
+        }
+    }
+    [[nodiscard]] uint16_t read(uint8_t offset, LoadStoreStyle lss) noexcept {
+        switch (static_cast<Registers>(offset)) {
+            /// @todo implement
+            default:
+                return 0;
+        }
     }
     void write(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+        switch(static_cast<Registers>(offset)) {
+            /// @todo implement
+            default:
+                break;
+        }
     }
 private:
     File backingStore_;
