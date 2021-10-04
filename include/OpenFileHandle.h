@@ -62,6 +62,8 @@ public:
         FourByteEntry(SeekRelative),
         FourByteEntry(Size),
         FourByteEntry(Permissions),
+        TwoByteEntry(WriteError),
+        TwoByteEntry(ErrorCode),
 #undef SixteenByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
@@ -80,6 +82,8 @@ public:
         SizeUpper = Size10,
         PermissionsLower = Permissions00,
         PermissionsUpper = Permissions10,
+        WriteError = WriteError0,
+        ErrorCode = ErrorCode0,
         End,
     };
 public:
@@ -135,6 +139,8 @@ public:
             case T::SizeUpper: return static_cast<uint16_t>(size() >> 16);
             case T::PermissionsLower: return permissions_.halves[0];
             case T::PermissionsUpper: return permissions_.halves[1];
+            case T::ErrorCode: return getError();
+            case T::WriteError: return getWriteError();
             default: return 0;
         }
     }

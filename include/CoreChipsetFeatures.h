@@ -42,6 +42,8 @@ public:
     static constexpr Address IOBaseAddress = 0xFE00'0000;
     static constexpr Address RegisterPage0BaseAddress = IOBaseAddress;
     static constexpr Address SDCardInterfaceBaseAddress = RegisterPage0BaseAddress + 0x100;
+    static constexpr Address SDCardFileInterfaceBlockBaseAddress = SDCardInterfaceBaseAddress + 0x100;
+    static constexpr Address SDCardFileInterfaceBlockEndAddress = SDCardFileInterfaceBlockBaseAddress + (MaximumNumberOfOpenFiles * 0x100);
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -379,6 +381,14 @@ public:
         switch (targetPage) {
             case 0: return handleFirstPageRegisterReads(offset, lss);
             case 1: return handleSecondPageRegisterReads(offset, lss);
+#define X(index) case (2+ index): return files_[index].read(offset, lss)
+#define Y(base) X(base + 0); X(base + 1); X(base + 2); X(base + 3); X(base + 4); X(base + 5); X(base + 6); X(base + 7)
+            Y(0);
+            Y(8);
+            Y(16);
+            Y(24);
+#undef Y
+#undef X
             default: return 0;
         }
     }
@@ -386,6 +396,14 @@ public:
         switch (targetPage) {
             case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
             case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
+#define X(index) case (2+ index): files_[index].write(offset, lss, value); break
+#define Y(base) X(base + 0); X(base + 1); X(base + 2); X(base + 3); X(base + 4); X(base + 5); X(base + 6); X(base + 7)
+            Y(0);
+            Y(8);
+            Y(16);
+            Y(24);
+#undef Y
+#undef X
             default: break;
         }
     }
