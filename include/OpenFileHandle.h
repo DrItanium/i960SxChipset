@@ -93,6 +93,8 @@ public:
 public:
     bool open(const char* path, uint16_t permissions) noexcept {
         if (!backingStore_) {
+            Serial.print(F("Trying to open file: "));
+            Serial.println(path);
             permissions_ = permissions;
             backingStore_ = SD.open(path, static_cast<byte>(permissions));
             return backingStore_;

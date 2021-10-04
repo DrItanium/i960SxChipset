@@ -327,7 +327,7 @@ private:
     static void handleSecondPageRegisterWrites(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         if (offset < 80) {
             if (lss == LoadStoreStyle::Upper8) {
-                sdCardPath_[offset] = static_cast<char>(value.bytes[1]);
+                sdCardPath_[offset + 1] = static_cast<char>(value.bytes[1]);
             } else if (lss == LoadStoreStyle::Lower8) {
                 sdCardPath_[offset] = static_cast<char>(value.bytes[0]);
             } else {
