@@ -120,8 +120,14 @@ public:
         TwoByteEntry(NumberOfOpenFiles),
         TwoByteEntry(MaximumNumberOfOpenFiles),
         TwoByteEntry(ErrorCode),
-        FourByteEntry(Permissions),
         TwoByteEntry(MakeMissingParentDirectories),
+        TwoByteEntry(FilePermissions), // raw interface
+        TwoByteEntry(OpenReadWrite), // O_READ | O_WRITE
+        TwoByteEntry(OpenReadOnly), // O_READ
+        TwoByteEntry(OpenWriteOnly), // O_WRITE
+        TwoByteEntry(CreateFileIfMissing), // O_CREAT
+        TwoByteEntry(ClearFileContentsOnOpen), // O_TRUNC
+
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -142,9 +148,13 @@ public:
         NumberOfOpenFiles = NumberOfOpenFiles0,
         MaximumNumberOfOpenFiles = MaximumNumberOfOpenFiles0,
         ErrorCode = ErrorCode0,
-        PermissionsLower = Permissions00,
-        PermissionsUpper = Permissions10,
         MakeMissingParentDirectories = MakeMissingParentDirectories0,
+        OpenReadWrite = OpenReadWrite0,
+        OpenReadOnly = OpenReadOnly0,
+        OpenWriteOnly = OpenWriteOnly0,
+        CreateFileIfMissing = CreateFileIfMissing0,
+        ClearFileContentsOnOpen = ClearFileContentsOnOpen0,
+        FilePermissions = FilePermissions0,
         // we ignore the upper half of the register but reserve it to make sure
     };
 
@@ -202,9 +212,8 @@ public:
         P1(SDBytesPerSector);
         P1(NumberOfOpenFiles);
         P1(ErrorCode);
-        P1(PermissionsLower);
-        P1(PermissionsUpper);
         P1(MakeMissingParentDirectories);
+        P1(OpenReadWrite);
 #undef P0
 #undef P1
 #undef X
@@ -224,7 +233,7 @@ private:
             // But we also need to keep track of proper indexes as well. This is a two layer process
             auto newId = findFreeFile();
             auto& targetFile = files_[newId];
-            if (targetFile.open(sdCardPath_, permissions_)) {
+            if (targetFile.open(sdCardPath_, filePermissions_)) {
                 ++numberOfOpenFiles_;
                 return newId;
             } else {
@@ -244,47 +253,47 @@ private:
     static bool remove() noexcept {
         return SD.remove(sdCardPath_);
     }
-    static uint16_t handleSecondPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
-        using T = SDCardFileSystemRegisters;
-        switch (static_cast<T>(offset)) {
-#define OneByteEntry(index) case T :: index : return sdCardPath_[static_cast<byte>(T :: index)];
-#define TwoByteEntry(Prefix) OneByteEntry(Prefix ## 0) OneByteEntry(Prefix ## 1)
-#define FourByteEntry(Prefix) TwoByteEntry(Prefix ## 0) TwoByteEntry(Prefix ## 1)
-#define EightByteEntry(Prefix) FourByteEntry(Prefix ## 0) FourByteEntry(Prefix ## 1)
-#define SixteenByteEntry(Prefix) EightByteEntry(Prefix ## 0) EightByteEntry(Prefix ## 1)
-            SixteenByteEntry(Path0);
-            SixteenByteEntry(Path1);
-            SixteenByteEntry(Path2);
-            SixteenByteEntry(Path3);
-            SixteenByteEntry(Path4);
-#undef SixteenByteEntry
-#undef EightByteEntry
-#undef FourByteEntry
-#undef TwoByteEntry
-#undef OneByteEntry
-            case T::OpenPort: return tryOpenFile();
-            case T::MakeDirectoryPort:
-                return tryMakeDirectory(makeMissingParentDirectories_);
-            case T::ExistsPort: return exists();
-            case T::RemovePort: return remove();
-            case T::SDClusterCountLower:
-                return clusterCount_.halves[0];
-            case T::SDClusterCountUpper:
-                return clusterCount_.halves[1];
-            case T::SDVolumeSectorCountLower:
-                return volumeSectorCount_.halves[0];
-            case T::SDVolumeSectorCountUpper:
-                return volumeSectorCount_.halves[1];
-            case T::SDBytesPerSector:
-                return bytesPerSector_;
-            case T::MaximumNumberOfOpenFiles:
-                return MaximumNumberOfOpenFiles;
-            case T::NumberOfOpenFiles:
-                return numberOfOpenFiles_;
-            case T::MakeMissingParentDirectories:
-                return makeMissingParentDirectories_;
-            default:
-                return 0;
+    static uint16_t handleSecondPageRegisterReads(uint8_t offset, LoadStoreStyle lss) noexcept {
+        if (offset < 80) {
+            if (auto result = SplitWord16(reinterpret_cast<uint16_t*>(sdCardPath_)[offset >> 1]); lss == LoadStoreStyle::Upper8) {
+                return result.bytes[1];
+            } else if (lss == LoadStoreStyle::Lower8) {
+                return result.bytes[0];
+            } else {
+                return result.getWholeValue();
+            }
+        } else {
+            using T = SDCardFileSystemRegisters;
+            switch (static_cast<T>(offset)) {
+                case T::OpenPort:
+                    return tryOpenFile();
+                case T::MakeDirectoryPort:
+                    return tryMakeDirectory(makeMissingParentDirectories_);
+                case T::ExistsPort:
+                    return exists();
+                case T::RemovePort:
+                    return remove();
+                case T::SDClusterCountLower:
+                    return clusterCount_.halves[0];
+                case T::SDClusterCountUpper:
+                    return clusterCount_.halves[1];
+                case T::SDVolumeSectorCountLower:
+                    return volumeSectorCount_.halves[0];
+                case T::SDVolumeSectorCountUpper:
+                    return volumeSectorCount_.halves[1];
+                case T::SDBytesPerSector:
+                    return bytesPerSector_;
+                case T::MaximumNumberOfOpenFiles:
+                    return MaximumNumberOfOpenFiles;
+                case T::NumberOfOpenFiles:
+                    return numberOfOpenFiles_;
+                case T::MakeMissingParentDirectories:
+                    return makeMissingParentDirectories_;
+                case T::FilePermissions:
+                    return filePermissions_;
+                default:
+                    return 0;
+            }
         }
     }
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
@@ -315,35 +324,52 @@ private:
                 return 0;
         }
     }
-    static void handleSecondPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
-        using T = SDCardFileSystemRegisters;
-        switch (static_cast<T>(offset)) {
-#define OneByteEntry(index, offset) case T :: index : sdCardPath_[static_cast<byte>(T :: index)] = value.bytes[offset]; break;
-#define TwoByteEntry(Prefix) OneByteEntry(Prefix ## 0, 0) OneByteEntry(Prefix ## 1, 1)
-#define FourByteEntry(Prefix) TwoByteEntry(Prefix ## 0) TwoByteEntry(Prefix ## 1)
-#define EightByteEntry(Prefix) FourByteEntry(Prefix ## 0) FourByteEntry(Prefix ## 1)
-#define SixteenByteEntry(Prefix) EightByteEntry(Prefix ## 0) EightByteEntry(Prefix ## 1)
-            SixteenByteEntry(Path0);
-            SixteenByteEntry(Path1);
-            SixteenByteEntry(Path2);
-            SixteenByteEntry(Path3);
-            SixteenByteEntry(Path4);
-#undef SixteenByteEntry
-#undef EightByteEntry
-#undef FourByteEntry
-#undef TwoByteEntry
-#undef OneByteEntry
-            case T::PermissionsLower:
-                permissions_.words_[0] = value;
-                break;
-            case T::PermissionsUpper:
-                permissions_.words_[1] = value;
-                break;
-            case T::MakeMissingParentDirectories:
-                makeMissingParentDirectories_ = value.getWholeValue() != 0;
-                break;
-            default:
-                break;
+    static void handleSecondPageRegisterWrites(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+        if (offset < 80) {
+            if (lss == LoadStoreStyle::Upper8) {
+                sdCardPath_[offset] = static_cast<char>(value.bytes[1]);
+            } else if (lss == LoadStoreStyle::Lower8) {
+                sdCardPath_[offset] = static_cast<char>(value.bytes[0]);
+            } else {
+                // do nothing
+            }
+        } else {
+            using T = SDCardFileSystemRegisters;
+            switch (static_cast<T>(offset)) {
+                case T::MakeMissingParentDirectories:
+                    makeMissingParentDirectories_ = value.getWholeValue() != 0;
+                    break;
+                case T::FilePermissions:
+                    filePermissions_ = value.getWholeValue();
+                    break;
+                case T::OpenReadWrite:
+                    if (value.getWholeValue() != 0) {
+                        filePermissions_ |= O_RDWR;
+                    }
+                    break;
+                case T::OpenReadOnly:
+                    if (value.getWholeValue() != 0) {
+                        filePermissions_ |= O_RDONLY;
+                    }
+                    break;
+                case T::OpenWriteOnly:
+                    if (value.getWholeValue() != 0) {
+                        filePermissions_ |= O_WRITE;
+                    }
+                    break;
+                case T::CreateFileIfMissing:
+                    if (value.getWholeValue() != 0) {
+                        filePermissions_ |= O_CREAT;
+                    }
+                    break;
+                case T::ClearFileContentsOnOpen:
+                    if (value.getWholeValue() != 0) {
+                        filePermissions_ |= O_TRUNC;
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
     }
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
@@ -419,9 +445,8 @@ private:
     static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
     static inline bool enableAddressDebugging_ = false;
     static inline char sdCardPath_[81] = { 0 };
-    static inline SplitWord32 permissions_ { 0 };
     static inline OpenFileHandle files_[MaximumNumberOfOpenFiles];
     static inline bool makeMissingParentDirectories_ = false;
-    static inline uint32_t errorCode = 0;
+    static inline uint16_t filePermissions_ = 0;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

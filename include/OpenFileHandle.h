@@ -61,10 +61,13 @@ public:
         FourByteEntry(SeekAbsolute),
         FourByteEntry(SeekRelative),
         FourByteEntry(Size),
-        FourByteEntry(Permissions),
+
+        TwoByteEntry(Permissions),
         TwoByteEntry(WriteError),
+
         TwoByteEntry(ErrorCode),
         TwoByteEntry(Close),
+
 #undef SixteenByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
@@ -81,18 +84,17 @@ public:
         SeekRelativeUpper = SeekRelative10,
         SizeLower = Size00,
         SizeUpper = Size10,
-        PermissionsLower = Permissions00,
-        PermissionsUpper = Permissions10,
+        Permissions = Permissions0,
         WriteError = WriteError0,
         ErrorCode = ErrorCode0,
         Close = Close0,
         End,
     };
 public:
-    bool open(const char* path, SplitWord32 permissions) noexcept {
+    bool open(const char* path, uint16_t permissions) noexcept {
         if (!backingStore_) {
             permissions_ = permissions;
-            backingStore_ = SD.open(path, permissions.bytes[0]);
+            backingStore_ = SD.open(path, static_cast<byte>(permissions));
             return backingStore_;
         } else {
             return false;
@@ -139,8 +141,7 @@ public:
             case T::IsOpen: return isOpen() ? 0xFFFF : 0;
             case T::SizeLower: return static_cast<uint16_t>(size());
             case T::SizeUpper: return static_cast<uint16_t>(size() >> 16);
-            case T::PermissionsLower: return permissions_.halves[0];
-            case T::PermissionsUpper: return permissions_.halves[1];
+            case T::Permissions: return permissions_;
             case T::ErrorCode: return getError();
             case T::WriteError: return getWriteError();
             default: return 0;
@@ -185,7 +186,7 @@ private:
     File backingStore_;
     SplitWord32 seekAbsoluteTemporary_{0};
     SplitWord32 seekRelativeTemporary_{0};
-    SplitWord32 permissions_ {0};
+    uint16_t permissions_ = 0;
 };
 
 #endif //SXCHIPSET_OPENFILEHANDLE_H
