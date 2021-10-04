@@ -204,6 +204,10 @@ public:
         P1(SDVolumeSectorCountUpper );
         P1(SDBytesPerSector);
         P1(NumberOfOpenFiles);
+        P1(ErrorCode);
+        P1(PermissionsLower);
+        P1(PermissionsUpper);
+        P1(MakeMissingParentDirectories);
 #undef P0
 #undef P1
 #undef X
@@ -421,5 +425,6 @@ private:
     static inline SplitWord32 permissions_ { 0 };
     static inline OpenFileHandle files_[MaximumNumberOfOpenFiles];
     static inline bool makeMissingParentDirectories_ = false;
+    static inline uint32_t errorCode = 0;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
