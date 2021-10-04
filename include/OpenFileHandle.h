@@ -133,6 +133,8 @@ public:
     }
     void putChar(SplitWord16 value) noexcept {
         if (backingStore_) {
+            Serial.print(F("Putting char: 0x"));
+            Serial.println(static_cast<byte>(value.getWholeValue()), HEX);
             backingStore_.write(static_cast<byte>(value.getWholeValue()));
         }
     }
