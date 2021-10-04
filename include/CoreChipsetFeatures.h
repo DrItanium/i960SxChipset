@@ -409,8 +409,6 @@ public:
     }
     static bool addressDebuggingEnabled() noexcept { return enableAddressDebugging_; }
 private:
-    using PageWriteFunction = void (*)(uint8_t, LoadStoreStyle, SplitWord16) noexcept;
-    using PageReadFunction = uint16_t (*)(uint8_t, LoadStoreStyle) noexcept;
     static inline SplitWord32 timeoutCopy_{0};
     static inline SplitWord32 clusterCount_ {0};
     static inline SplitWord32 volumeSectorCount_ {0};
