@@ -284,7 +284,9 @@ union SplitWord32 {
     explicit constexpr SplitWord32(uint32_t value = 0) noexcept : wholeValue_(value) { }
     constexpr SplitWord32(uint8_t lowest, uint8_t lower, uint8_t higher, uint8_t highest) noexcept : bytes{lowest, lower, higher, highest} {}
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
+    [[nodiscard]] constexpr auto getSignedRepresentation() const noexcept { return signedRepresentation_; }
     uint32_t wholeValue_ = 0;
+    int32_t signedRepresentation_;
     byte bytes[sizeof(uint32_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     SplitWord16 words_[sizeof(uint32_t) / sizeof(SplitWord16)];

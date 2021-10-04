@@ -131,20 +131,42 @@ public:
     }
     void write(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         using T = Registers;
+        bool callSeekAbsolute = false;
+        bool callSeekRelative = false;
         switch(static_cast<T>(offset)) {
-            case T::IOPort:
-                putChar(value);
-                break;
+            case T::IOPort: putChar(value); break;
             case T::Sync: sync(); break;
             case T::Flush: flush(); break;
             case T::SeekBeginning: seekToBeginning(); break;
             case T::SeekEnd: seekToEnd(); break;
+            case T::SeekAbsoluteLower:
+                seekAbsoluteTemporary_.words_[0] = value;
+                break;
+            case T::SeekAbsoluteUpper:
+                callSeekAbsolute = true;
+                seekAbsoluteTemporary_.words_[1] = value;
+                break;
+            case T::SeekRelativeLower:
+                seekRelativeTemporary_.words_[0] = value;
+                break;
+            case T::SeekRelativeUpper:
+                callSeekRelative = true;
+                seekRelativeTemporary_.words_[1] = value;
+                break;
             default:
                 break;
+        }
+        if (callSeekAbsolute) {
+            setAbsolutePosition(seekAbsoluteTemporary_.getWholeValue());
+        }
+        if (callSeekRelative) {
+            setRelativePosition(seekRelativeTemporary_.getSignedRepresentation());
         }
     }
 private:
     File backingStore_;
+    SplitWord32 seekAbsoluteTemporary_{0};
+    SplitWord32 seekRelativeTemporary_{0};
 };
 
 #endif //SXCHIPSET_OPENFILEHANDLE_H
