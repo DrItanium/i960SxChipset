@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
+    static constexpr auto MaximumNumberOfOpenFiles = 32;
     static constexpr Address IOBaseAddress = 0xFE00'0000;
     static constexpr Address RegisterPage0BaseAddress = IOBaseAddress;
     static constexpr Address SDCardInterfaceBaseAddress = RegisterPage0BaseAddress + 0x100;
@@ -121,6 +122,7 @@ public:
         TwoByteEntry(MaximumNumberOfOpenFiles),
         TwoByteEntry(ErrorCode),
         FourByteEntry(Permissions),
+        TwoByteEntry(MakeMissingParentDirectories),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -143,6 +145,7 @@ public:
         ErrorCode = ErrorCode0,
         PermissionsLower = Permissions00,
         PermissionsUpper = Permissions10,
+        MakeMissingParentDirectories = MakeMissingParentDirectories0,
         // we ignore the upper half of the register but reserve it to make sure
     };
 
@@ -204,6 +207,40 @@ public:
 #undef X
     }
 private:
+    static uint16_t findFreeFile() noexcept {
+        for (uint16_t i = 0; i < MaximumNumberOfOpenFiles; ++i) {
+            if (!files_[i].isOpen()) {
+                return i;
+            }
+        }
+        return 0xFFFF;
+    }
+    static uint16_t tryOpenFile() noexcept {
+        if (numberOfOpenFiles_ < MaximumNumberOfOpenFiles) {
+            // when we open a new file we have to make sure that we are less than the number of open files
+            // But we also need to keep track of proper indexes as well. This is a two layer process
+            auto newId = findFreeFile();
+            auto& targetFile = files_[newId];
+            if (targetFile.open(sdCardPath_, permissions_)) {
+                ++numberOfOpenFiles_;
+                return newId;
+            } else {
+                /// @todo set appropriate error condition for bad file open
+            }
+        } else {
+            /// @todo set appropriate error condition for too many open files
+        }
+        return -1;
+    }
+    static bool tryMakeDirectory(bool makeMissingParents = false) noexcept {
+        return SD.mkdir(sdCardPath_, makeMissingParents);
+    }
+    static bool exists() noexcept {
+        return SD.exists(sdCardPath_);
+    }
+    static bool remove() noexcept {
+        return SD.remove(sdCardPath_);
+    }
     static uint16_t handleSecondPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
         using T = SDCardFileSystemRegisters;
         switch (static_cast<T>(offset)) {
@@ -222,18 +259,11 @@ private:
 #undef FourByteEntry
 #undef TwoByteEntry
 #undef OneByteEntry
-            case T::OpenPort:
-                /// @todo implement open support
-                return -1;
+            case T::OpenPort: return tryOpenFile();
             case T::MakeDirectoryPort:
-                /// @todo implement mkdir support
-                return -1;
-            case T::ExistsPort:
-                /// @todo implement exists support
-                return 0;
-            case T::RemovePort:
-                /// @todo implement remove support
-                return 0;
+                return tryMakeDirectory(makeMissingParentDirectories_);
+            case T::ExistsPort: return exists();
+            case T::RemovePort: return remove();
             case T::SDClusterCountLower:
                 return clusterCount_.halves[0];
             case T::SDClusterCountUpper:
@@ -245,9 +275,11 @@ private:
             case T::SDBytesPerSector:
                 return bytesPerSector_;
             case T::MaximumNumberOfOpenFiles:
-                return 32;
+                return MaximumNumberOfOpenFiles;
             case T::NumberOfOpenFiles:
                 return numberOfOpenFiles_;
+            case T::MakeMissingParentDirectories:
+                return makeMissingParentDirectories_;
             default:
                 return 0;
         }
@@ -304,6 +336,9 @@ private:
             case T::PermissionsUpper:
                 permissions_.words_[1] = value;
                 break;
+            case T::MakeMissingParentDirectories:
+                makeMissingParentDirectories_ = value.getWholeValue() != 0;
+                break;
             default:
                 break;
         }
@@ -330,6 +365,7 @@ private:
                 break;
             case Registers::AddressDebuggingFlag:
                 enableAddressDebugging_ = (value.getWholeValue() != 0);
+                break;
             default:
                 break;
         }
@@ -367,5 +403,7 @@ private:
     static inline bool enableAddressDebugging_ = false;
     static inline char sdCardPath_[81] = { 0 };
     static inline SplitWord32 permissions_ { 0 };
+    static inline OpenFileHandle files_[MaximumNumberOfOpenFiles];
+    static inline bool makeMissingParentDirectories_ = false;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
