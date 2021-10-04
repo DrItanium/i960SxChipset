@@ -64,6 +64,7 @@ public:
         FourByteEntry(Permissions),
         TwoByteEntry(WriteError),
         TwoByteEntry(ErrorCode),
+        TwoByteEntry(Close),
 #undef SixteenByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
@@ -84,6 +85,7 @@ public:
         PermissionsUpper = Permissions10,
         WriteError = WriteError0,
         ErrorCode = ErrorCode0,
+        Close = Close0,
         End,
     };
 public:
@@ -149,6 +151,7 @@ public:
         bool callSeekAbsolute = false;
         bool callSeekRelative = false;
         switch(static_cast<T>(offset)) {
+            case T::Close: close(); break;
             case T::IOPort: putChar(value); break;
             case T::Sync: sync(); break;
             case T::Flush: flush(); break;
