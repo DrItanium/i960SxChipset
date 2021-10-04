@@ -67,9 +67,6 @@ public:
         TwoByteEntry(CacheLineCount),
         TwoByteEntry(CacheLineSize),
         TwoByteEntry(NumberOfCacheWays),
-        FourByteEntry(Unused0),
-        FourByteEntry(Unused1),
-        TwoByteEntry(Unused2),
         TwoByteEntry(TriggerInterrupt),
         FourByteEntry(AddressDebuggingFlag),
 #undef SixteenByteEntry
