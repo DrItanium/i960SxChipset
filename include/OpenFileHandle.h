@@ -51,13 +51,17 @@ public:
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(IOPort),
         TwoByteEntry(Flush),
+
         TwoByteEntry(Sync),
         TwoByteEntry(IsOpen),
+
         TwoByteEntry(SeekEnd),
         TwoByteEntry(SeekBeginning),
+
         FourByteEntry(SeekAbsolute),
         FourByteEntry(SeekRelative),
         FourByteEntry(Size),
+        FourByteEntry(Permissions),
 #undef SixteenByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
@@ -74,11 +78,14 @@ public:
         SeekRelativeUpper = SeekRelative10,
         SizeLower = Size00,
         SizeUpper = Size10,
+        PermissionsLower = Permissions00,
+        PermissionsUpper = Permissions10,
         End,
     };
 public:
     bool open(const char* path, SplitWord32 permissions) noexcept {
         if (!backingStore_) {
+            permissions_ = permissions;
             backingStore_ = SD.open(path, permissions.bytes[0]);
             return backingStore_;
         } else {
@@ -126,6 +133,8 @@ public:
             case T::IsOpen: return isOpen() ? 0xFFFF : 0;
             case T::SizeLower: return static_cast<uint16_t>(size());
             case T::SizeUpper: return static_cast<uint16_t>(size() >> 16);
+            case T::PermissionsLower: return permissions_.halves[0];
+            case T::PermissionsUpper: return permissions_.halves[1];
             default: return 0;
         }
     }
@@ -167,6 +176,7 @@ private:
     File backingStore_;
     SplitWord32 seekAbsoluteTemporary_{0};
     SplitWord32 seekRelativeTemporary_{0};
+    SplitWord32 permissions_ {0};
 };
 
 #endif //SXCHIPSET_OPENFILEHANDLE_H
