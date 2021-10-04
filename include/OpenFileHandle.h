@@ -126,6 +126,9 @@ public:
     bool isDirectory() noexcept { return backingStore_.isDirectory(); }
     uint16_t getChar() noexcept {
         if (backingStore_) {
+            auto result = static_cast<uint16_t>(backingStore_.read());
+            Serial.print(F("Getting char: 0x"));
+            Serial.println(result, HEX);
             return static_cast<uint16_t>(backingStore_.read());
         } else {
             return 0xFFFF;
