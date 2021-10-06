@@ -228,7 +228,13 @@ public:
     [[nodiscard]] static SplitWord16 getDataBits() noexcept;
     static void setDataBits(uint16_t value) noexcept;
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
-    [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
+    [[nodiscard]] static bool isReadOperation() noexcept {
+#ifdef CHIPSET_TYPE1
+        return DigitalPin<i960Pinout::W_R_>::isAsserted();
+#else
+        return isReadOperation_;
+#endif
+    }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
 private:
     static void setupDataLinesForWrite() noexcept;
@@ -256,6 +262,7 @@ private:
     static inline byte dataLinesDirection_ = 0xFF;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
+    static inline bool isReadOperation_ = false;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved

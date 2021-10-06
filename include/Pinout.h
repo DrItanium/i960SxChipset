@@ -111,45 +111,35 @@ enum class i960Pinout : int {
     BLAST_ = PORT_A6,
     FAIL = PORT_A7,
 #elif defined(CHIPSET_TYPE3)
-    Ready = PORT_B0,
-    CLOCK_OUT= PORT_B1,
-    AS_ = PORT_B2,
-    PSRAM_EN = PORT_B3,
-    GPIOSelect = PORT_B4,
-    MOSI = PORT_B5,
-    MISO = PORT_B6,
-    SCK = PORT_B7,
-    RX0 = PORT_D0,
-    TX0 = PORT_D1,
-    DEN_ = PORT_D2,
-    Reset960 = PORT_D5,
-    Int0_ = PORT_D6,
-    SCL = PORT_C0,
-    SDA = PORT_C1,
-    SPI_OFFSET0 = PORT_C2,
-    SPI_OFFSET1 = PORT_C3,
-    SPI_OFFSET2 = PORT_C4,
-    SD_EN = PORT_C7,
-    W_R_ = PORT_A0,
-    BA1 = PORT_A1,
-    BA2 = PORT_A2,
-    BA3 = PORT_A3,
-    BE0 = PORT_A4,
-    BE1 = PORT_A5,
-    BLAST_ = PORT_A6,
-    FAIL = PORT_A7,
-    // type 3 specific
+    FAIL = PORT_B0,
+    CLOCK_OUT = PORT_B1,
     DAZZLER_INT = PORT_B2,
+    // PB3 free for use
     GPIO_CS0 = PORT_B4,
     MOSI0 = PORT_B5,
     MISO0 = PORT_B6,
     SCK0 = PORT_B7,
-    MOSI1 = PORT_D3,
+    RX0 = PORT_D0,
+    TX0 = PORT_D1,
     MISO1 = PORT_D2,
+    MOSI1 = PORT_D3,
     SCK1 = PORT_D4,
     GPIO_CS1 = PORT_D5,
-    DEN_TYPE3 = PORT_D6,
-    Ready_TYPE3 = PORT_D7,
+    // PD6 and PD7 are free for use
+    SCL = PORT_C0,
+    SDA = PORT_C1,
+    PSRAM_EN0 = PORT_C2,
+    PSRAM_EN1 = PORT_C3,
+    SD_EN = PORT_C4,
+    GPU_EN = PORT_C5,
+    DAZZLER_EN = PORT_C6,
+    Ready = PORT_C7,
+    // PA0-PA3 free for use
+    BE0 = PORT_A4,
+    BE1 = PORT_A5,
+    BLAST_ = PORT_A6,
+    DEN_ = PORT_A7,
+
 #else
 #error "Unknown pinout type!"
 #endif
@@ -376,15 +366,25 @@ struct DigitalPin {
     }
 #define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
 
+#ifdef CHIPSET_TYPE1
 DefSPICSPin(i960Pinout::GPIOSelect);
-DefSPICSPin(i960Pinout::SD_EN);
-DefSPICSPin(i960Pinout::PSRAM_EN);
+DefInputPin(i960Pinout::W_R_, LOW, HIGH);
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
+DefSPICSPin(i960Pinout::PSRAM_EN);
+#elif defined(CHIPSET_TYPE3)
+DefSPICSPin(i960Pinout::GPIO_CS0);
+DefSPICSPin(i960Pinout::GPIO_CS1);
+DefSPICSPin(i960Pinout::PSRAM_EN0);
+DefSPICSPin(i960Pinout::PSRAM_EN1);
+DefSPICSPin(i960Pinout::GPU_EN);
+DefSPICSPin(i960Pinout::DAZZLER_EN);
+#endif
+
+DefSPICSPin(i960Pinout::SD_EN);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
-DefInputPin(i960Pinout::W_R_, LOW, HIGH);
 #undef DefSPICSPin
 #undef DefInputPin
 #undef DefOutputPin
