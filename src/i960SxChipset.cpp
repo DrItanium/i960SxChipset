@@ -429,7 +429,9 @@ void setup() {
     // trigger a reset
 #endif
     {
+#ifdef CHIPSET_TYPE1
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
+#endif
         // all of these pins need to be pulled high
 #ifdef CHIPSET_TYPE1
         digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
@@ -439,21 +441,27 @@ void setup() {
 #endif
         digitalWrite<i960Pinout::SD_EN, HIGH>();
         digitalWrite<i960Pinout::Ready, HIGH>();
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+#ifdef CHIPSET_TYPE3
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+#endif
 #ifdef CHIPSET_TYPE1
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
         digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
         digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
 #endif
         // setup the pins that could be attached to an io expander separately
         setupPins(INPUT,
+#ifdef CHIPSET_TYPE1
                   i960Pinout::BA1,
                   i960Pinout::BA2,
                   i960Pinout::BA3,
+                  i960Pinout::W_R_,
+#endif
                   i960Pinout::BE0,
                   i960Pinout::BE1,
                   i960Pinout::BLAST_,
-                  i960Pinout::W_R_,
                   i960Pinout::DEN_,
                   i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
