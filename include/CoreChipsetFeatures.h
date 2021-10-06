@@ -376,7 +376,7 @@ private:
         bool updateTimeout = false;
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
-                pulse<i960Pinout::Int0_>();
+                ProcessorInterface::triggerInt0();
                 break;
             case Registers::ConsoleFlush:
                 Serial.flush();

@@ -397,28 +397,54 @@ void setup() {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     setupPins(OUTPUT,
+#ifdef CHIPSET_TYPE1
               i960Pinout::PSRAM_EN,
+#elif defined(CHIPSET_TYPE3)
+            i960Pinout::PSRAM_EN0,
+             i960Pinout::PSRAM_EN1,
+#endif
               i960Pinout::SD_EN,
+#ifdef CHIPSET_TYPE1
               i960Pinout::Reset960,
-              i960Pinout::Ready,
+#endif
+#ifdef CHIPSET_TYPE1
               i960Pinout::GPIOSelect,
+#elif defined(CHIPSET_TYPE3)
+            i960Pinout::GPIO_CS0,
+              i960Pinout::GPIO_CS1,
+#endif
+#ifdef CHIPSET_TYPE1
               i960Pinout::SPI_OFFSET0,
               i960Pinout::SPI_OFFSET1,
               i960Pinout::SPI_OFFSET2,
               i960Pinout::Reset960,
-              i960Pinout::Int0_);
+              i960Pinout::Int0_,
+#endif
+              i960Pinout::Ready
+    );
+#ifdef CHIPSET_TYPE1
     digitalWrite<i960Pinout::Reset960, HIGH>();
     digitalWrite<i960Pinout::Int0_, HIGH>();
+#else
+    // trigger a reset
+#endif
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
+#ifdef CHIPSET_TYPE1
         digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+#elif defined(CHIPSET_TYPE3)
+        digitalWrite<i960Pinout::PSRAM_EN0, HIGH>();
+        digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
+#endif
         digitalWrite<i960Pinout::SD_EN, HIGH>();
         digitalWrite<i960Pinout::Ready, HIGH>();
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+#ifdef CHIPSET_TYPE1
         digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
         digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
         digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
+#endif
         // setup the pins that could be attached to an io expander separately
         setupPins(INPUT,
                   i960Pinout::BA1,

@@ -235,6 +235,7 @@ public:
         return isReadOperation_;
 #endif
     }
+    static void triggerInt0() noexcept;
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
 private:
     static void setupDataLinesForWrite() noexcept;

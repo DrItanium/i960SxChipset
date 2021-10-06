@@ -177,3 +177,12 @@ ProcessorInterface::setupDataLinesForRead() noexcept {
         // do nothing
     }
 }
+
+void
+ProcessorInterface::triggerInt0() noexcept {
+#ifdef CHIPSET_TYPE1
+    pulse<i960Pinout::Int0_>();
+#elif defined(CHIPSET_TYPE3)
+    /// @todo implement this
+#endif
+}

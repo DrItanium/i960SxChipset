@@ -125,7 +125,7 @@ enum class i960Pinout : int {
     MOSI1 = PORT_D3,
     SCK1 = PORT_D4,
     GPIO_CS1 = PORT_D5,
-    // PD6 and PD7 are free for use
+    // PD6 and PD7 are connected to the arduino breakout
     SCL = PORT_C0,
     SDA = PORT_C1,
     PSRAM_EN0 = PORT_C2,
@@ -139,7 +139,8 @@ enum class i960Pinout : int {
     BE1 = PORT_A5,
     BLAST_ = PORT_A6,
     DEN_ = PORT_A7,
-
+    // compat
+    GPIOSelect = GPIO_CS0,
 #else
 #error "Unknown pinout type!"
 #endif

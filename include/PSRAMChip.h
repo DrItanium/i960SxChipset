@@ -21,12 +21,18 @@ template<i960Pinout enablePin>
 class MemoryBlock {
 public:
     static constexpr auto EnablePin = enablePin;
+#ifdef CHIPSET_TYPE1
     static constexpr auto Select0 = i960Pinout::SPI_OFFSET0;
     static constexpr auto Select1 = i960Pinout::SPI_OFFSET1;
     static constexpr auto Select2 = i960Pinout::SPI_OFFSET2;
     static constexpr auto NumChips = 8;
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
+#elif defined(CHIPSET_TYPE3)
+    // in hardware, we bind two psrams to the same enable pin across two spi busses
+    // externally, we present this as a single class
+    static constexpr auto NumChips = 2;
+#endif
 public:
     MemoryBlock() = delete;
     ~MemoryBlock() = delete;
@@ -236,12 +242,16 @@ public:
     }
 private:
     static void setChipId(byte index) noexcept {
+#ifdef CHIPSET_TYPE1
         if (index != currentIndex_) {
             digitalWrite<Select0>((index & (1 << 0)) ? HIGH : LOW);
             digitalWrite<Select1>((index & (1 << 1)) ? HIGH : LOW);
             digitalWrite<Select2>((index & (1 << 2)) ? HIGH : LOW);
             currentIndex_ = index;
         }
+#else
+// do nothing
+#endif
     }
 public:
     static void begin() noexcept {
@@ -269,5 +279,10 @@ private:
     static inline byte currentIndex_ = 0xFF;
 };
 
+#ifdef CHIPSET_TYPE1
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
+#elif defined(CHIPSET_TYPE3)
+// lower 16 megabytes
+using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN0>;
+#endif
 #endif //I960SXCHIPSET_PSRAMCHIP_H
