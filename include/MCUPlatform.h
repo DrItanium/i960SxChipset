@@ -205,6 +205,8 @@ static_assert(20_MHz == 20'000'000);
 
 enum class TargetMCU {
     ATmega1284p_Type1,
+    // there is no type 2
+    ATmega1284p_Type3,
     Unknown,
 };
 class MCUConfiguration final {
@@ -236,6 +238,12 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         10_MHz,
         5_MHz // due to the current design, we have to run the psram at 5 Mhz
 };
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type3> = {
+        16_KB,
+        10_MHz,
+        10_MHz
+};
 
 class TargetBoard {
 public:
@@ -244,6 +252,8 @@ public:
 #ifdef ARDUINO_AVR_ATmega1284
 #ifdef CHIPSET_TYPE1
         return TargetMCU::ATmega1284p_Type1;
+#elif defined(CHIPSET_TYPE3)
+        return TargetMCU::ATmega1284p_Type3;
 #else
         return TargetMCU::Unknown;
 #endif
