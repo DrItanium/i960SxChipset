@@ -114,6 +114,7 @@ enum class i960Pinout : int {
     FAIL = PORT_B0,
     CLOCK_OUT = PORT_B1,
     DAZZLER_INT = PORT_B2,
+    SD_EN = PORT_B3,
     // PB3 free for use
     GPIO_CS0 = PORT_B4,
     MOSI0 = PORT_B5,
@@ -130,7 +131,7 @@ enum class i960Pinout : int {
     SDA = PORT_C1,
     PSRAM_EN0 = PORT_C2,
     PSRAM_EN1 = PORT_C3,
-    SD_EN = PORT_C4,
+    DAZZLER_SD_EN = PORT_C4, // this is from the dazzler
     GPU_EN = PORT_C5,
     DAZZLER_EN = PORT_C6,
     Ready = PORT_C7,
