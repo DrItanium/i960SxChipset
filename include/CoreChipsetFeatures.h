@@ -177,6 +177,9 @@ public:
         bytesPerSector_ = SD.bytesPerSector();
 #ifdef USE_DAZZLER
         GD.begin(0);
+        // then immediately end it for now
+        /// @todo get rid of this next statement
+        GD.__end();
 #endif
 #define X(thing, base, type) Serial.print(F("Address of " #thing ": 0x")); \
         Serial.print(base + static_cast<byte>(type :: thing ), HEX); \
