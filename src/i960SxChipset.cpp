@@ -466,6 +466,15 @@ void setup() {
                   i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
+#ifdef CHIPSET_TYPE3
+        // configure the second uart to operate in MSPIM mode
+        UBRR1 = 0x0000;
+        pinMode(i960Pinout::SCK1, OUTPUT);
+        UCSR1C = _BV(UMSEL11) | _BV(UMSEL10); // set spi mode of operation and data mode 1,1
+        UCSR1B = _BV(TXEN1)  | _BV(RXEN1); // enable transmitter and receiver
+        // set baud rate, must be done fater enabling the transmitter
+        UBRR1 = 0x0000; // full speed 10 mhz
+#endif
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
         CoreChipsetFeatures::begin();
