@@ -32,8 +32,8 @@ private:
         Address rest : 20;
     };
     struct {
-        Address psramIndex : 23;
-        byte offset : 3;
+        Address psramIndex : 24;
+        byte offset : 2; // 64 megs max
     };
     byte bytes_[4];
 };
