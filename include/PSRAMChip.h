@@ -378,14 +378,15 @@ public:
             // bus 0 -> odd addresses
             UDR1 = 0;
             SPDR = 0;
-            while (!(UCSR1A & (1 << UDRE1)));
+            while (!(UCSR1A & (1 << RXC1)));
             buf[i] = UDR1;
             while (!(SPSR & (1 << SPIF)));
             buf[i+1] = SPDR;
         }
         digitalWrite<EnablePin, HIGH>();
     }
-    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+    static size_t write(uint32_t address, const byte *buf, size_t capacity) noexcept {
+        SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
         //return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
         // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
         // entire
@@ -427,9 +428,11 @@ public:
             while (!(UCSR1A & (1 << UDRE1)));
         }
         digitalWrite<EnablePin, HIGH>();
+        SPI.endTransaction();
         return numBytesToFirstChip;
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+        SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
         //return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
         // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
         // entire
@@ -467,12 +470,13 @@ public:
             UDR1 = 0;
             SPDR = 0;
             asm volatile("nop");
-            while (!(UCSR1A & (1 << UDRE1)));
+            while (!(UCSR1A & (1 << RXC1)));
             while (!(SPSR & _BV(SPIF))) ; // wait
             buf[i] = UDR1;
             buf[i+1] = SPDR;
         }
         digitalWrite<EnablePin, HIGH>();
+        SPI.endTransaction();
         return numBytesToFirstChip;
     }
 private:
@@ -480,23 +484,28 @@ public:
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
+            SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
             initialized_ = true;
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
             digitalWrite<EnablePin, LOW>();
             UDR1 = 0x66;
             SPDR = 0x66;
             asm volatile ("nop");
-            while (!(UCSR1A & (1 << UDRE1)));
             while (!(SPSR & (1 << SPIF)));
+            while (!(UCSR1A & (1 << UDRE1)));
             digitalWrite<EnablePin, HIGH>();
+            asm volatile ("nop");
+            asm volatile ("nop");
+            asm volatile ("nop");
+            asm volatile ("nop");
             digitalWrite<EnablePin, LOW>();
-            SPI.transfer(0x99);
             UDR1 = 0x99;
             SPDR = 0x99;
             asm volatile ("nop");
-            while (!(UCSR1A & (1 << UDRE1)));
             while (!(SPSR & (1 << SPIF)));
+            while (!(UCSR1A & (1 << UDRE1)));
             digitalWrite<EnablePin, HIGH>();
+            SPI.endTransaction();
         }
     }
 };
