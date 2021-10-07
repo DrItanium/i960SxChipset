@@ -515,10 +515,28 @@ public:
         Upper16Megabytes::begin();
     }
     static void writeCacheLine(TaggedAddress address, const byte* buf) noexcept {
-        /// @todo implement
+        switch (address.getPSRAMChipId()) {
+            case 0:
+                Lower16Megabytes::writeCacheLine(address, buf);
+                break;
+            case 1:
+                Upper16Megabytes::writeCacheLine(address, buf);
+                break;
+            default:
+                break;
+        }
     }
     static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
-        /// @todo implement
+        switch (address.getPSRAMChipId()) {
+            case 0:
+                Lower16Megabytes::readCacheLine(address, buf);
+                break;
+            case 1:
+                Upper16Megabytes::readCacheLine(address, buf);
+                break;
+            default:
+                break;
+        }
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         if (PSRAMBlockAddress addr(address); addr.getIndex() == 0) {
