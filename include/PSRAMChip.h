@@ -497,23 +497,23 @@ public:
             initialized_ = true;
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
             digitalWrite<EnablePin2, LOW>();
-            UDR1 = 0x66;
-            while (!(UCSR1A & (1 << UDRE1)));
-            digitalWrite<EnablePin2, HIGH>();
-
             digitalWrite<EnablePin, LOW>();
+            UDR1 = 0x66;
             SPDR = 0x66;
             asm volatile ("nop");
-            while (!(SPSR & (1 << SPIF)));
-            digitalWrite<EnablePin, HIGH>();
-            digitalWrite<EnablePin2, LOW>();
-            UDR1 = 0x99;
             while (!(UCSR1A & (1 << UDRE1)));
+            while (!(SPSR & (1 << SPIF)));
             digitalWrite<EnablePin2, HIGH>();
+            digitalWrite<EnablePin, HIGH>();
+
+            digitalWrite<EnablePin2, LOW>();
             digitalWrite<EnablePin, LOW>();
+            UDR1 = 0x99;
             SPDR = 0x99;
             asm volatile ("nop");
+            while (!(UCSR1A & (1 << UDRE1)));
             while (!(SPSR & (1 << SPIF)));
+            digitalWrite<EnablePin2, HIGH>();
             digitalWrite<EnablePin, HIGH>();
             //SPI.endTransaction();
         }

@@ -499,16 +499,19 @@ void setup() {
         }
         // write ahead of time because the first two byte positions on one of my psram chips needs a second write before it will be accepted
         OnboardPSRAMBlock::write(0, memoryStorage, 16);
+        // doing a read followed by a write seems to solve the issue
+        OnboardPSRAMBlock::read(0, memoryStorage, 16);
         for (uint32_t i = 0; i < 0x800000; i+= 16) {
-            for (int i = 0; i < 16; ++i) {
-                memoryStorage[i] = PatternStorage[i];
+            for (int x = 0; x < 16; ++x) {
+                memoryStorage[x] = PatternStorage[x];
             }
-            OnboardPSRAMBlock::write(0, memoryStorage, 16);
-            OnboardPSRAMBlock::read(0, memoryStorage, 16);
-            for (int i = 0; i < 16; ++i) {
-                auto expected = PatternStorage[i], got = memoryStorage[i];
+            OnboardPSRAMBlock::write(i, memoryStorage, 16);
+            OnboardPSRAMBlock::read(i, memoryStorage, 16);
+            for (int x = 0; x < 16; ++x) {
+                auto expected = PatternStorage[x], got = memoryStorage[x];
                 if (expected != got) {
-                    Serial.print(i);
+                    Serial.print(F("0x"));
+                    Serial.print(x + i, HEX);
                     Serial.print(F(": EXPECTED: 0x"));
                     Serial.print(expected, HEX);
                     Serial.print(F(", GOT: 0x"));
