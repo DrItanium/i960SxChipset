@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenFileHandle.h"
 #include <SdFat.h>
 #ifdef USE_DAZZLER
-#include <GD2.h>
+#include "DazzlerConfig.h"
 #endif
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
