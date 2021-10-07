@@ -166,6 +166,13 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
+        // dazzler setup must come first
+#ifdef USE_DAZZLER
+        GD.begin(0);
+        // then immediately end it for now
+        /// @todo get rid of this next statement
+        GD.__end();
+#endif
         while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
             Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
             delay(1000);
@@ -175,12 +182,6 @@ public:
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
         bytesPerSector_ = SD.bytesPerSector();
-#ifdef USE_DAZZLER
-        GD.begin(0);
-        // then immediately end it for now
-        /// @todo get rid of this next statement
-        GD.__end();
-#endif
 #define X(thing, base, type) Serial.print(F("Address of " #thing ": 0x")); \
         Serial.print(base + static_cast<byte>(type :: thing ), HEX); \
         Serial.print(F(", ("));                                \
