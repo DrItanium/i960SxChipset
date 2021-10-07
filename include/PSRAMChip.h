@@ -454,21 +454,21 @@ public:
         asm volatile("nop");
         PSRAMBlockAddress end(address + capacity);
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[2];
         while (!(UCSR1A & (1 << UDRE1)));
         UDR1 = curr.bytes_[2];
+        SPDR = curr.bytes_[2];
         asm volatile("nop");
         auto numBytesToSecondChip = end.getOffset();
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[1];
         while (!(UCSR1A & (1 << UDRE1)));
         UDR1 = curr.bytes_[1];
+        SPDR = curr.bytes_[1];
         asm volatile("nop");
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[0];
         while (!(UCSR1A & (1 << UDRE1)));
         UDR1 = curr.bytes_[0];
+        SPDR = curr.bytes_[0];
         asm volatile("nop");
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         while (!(SPSR & _BV(SPIF))) ; // wait
@@ -478,7 +478,7 @@ public:
             UDR1 = 0;
             SPDR = 0;
             asm volatile("nop");
-            while (!(UCSR1A & (1 << RXC1)));
+            while (!(UCSR1A & (1 << UDRE1)));
             while (!(SPSR & _BV(SPIF))) ; // wait
             buf[i] = UDR1;
             buf[i+1] = SPDR;
