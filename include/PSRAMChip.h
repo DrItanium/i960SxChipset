@@ -304,10 +304,15 @@ public:
         constexpr auto getAddress() const noexcept { return base; }
         constexpr auto getOffset() const noexcept { return offset; }
         constexpr auto getIndex() const noexcept { return index; }
+        /**
+         * @brief Return the actual address that will be passed to the psram chips
+         * @return The system address shifted right by 1
+         */
+        constexpr auto computeSingleChipAddress() const noexcept { return offset >> 1; }
         Address base;
         struct {
             Address offset : 24;
-            byte index : 5; // up to 512 megabytes because decoding hardware could be used in the future
+            byte index : 2; // currently type 3 allows up to 32-megabytes, but 64-megs is a good target
         };
         byte bytes_[4];
     };
@@ -391,7 +396,7 @@ private:
         Read,
     };
 
-    template<byte opcode, OperationKind kind = OperationKind::Generic>
+    template<byte opcode, OperationKind kind>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
         // entire
@@ -399,8 +404,6 @@ private:
             return 0;
         }
         PSRAMBlockAddress curr(address);
-        setChipId(curr.getIndex());
-        //SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         SPDR = opcode;
         asm volatile("nop");
@@ -435,7 +438,6 @@ private:
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             // start writing at the start of the next chip the remaining number of bytes
-            setChipId(end.getIndex());
             // we start at address zero on this new chip always
             digitalWrite<EnablePin, LOW>();
             transmitByte(opcode);
@@ -460,7 +462,6 @@ private:
             }
             digitalWrite<EnablePin, HIGH>();
         }
-        SPI.endTransaction();
         return capacity;
     }
 public:
@@ -468,33 +469,69 @@ public:
         //return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
-        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
+
         digitalWrite<EnablePin, LOW>();
-        transmitByte(0x02);
-        transmitByte(address.getPSRAMAddress_High());
-        transmitByte(address.getPSRAMAddress_Middle());
-        transmitByte(address.getPSRAMAddress_Low());
-        for (int i = 0; i < 16; ++i) {
-            transmitByte(buf[i]);
+        UDR1 = 0x02;
+        SPDR = 0x02;
+        TaggedAddress correctAddress(address.getAddress() >> 1);
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & (1 << SPIF)));
+        UDR1 = correctAddress.getPSRAMAddress_High();
+        SPDR = correctAddress.getPSRAMAddress_High();
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & (1 << SPIF)));
+        UDR1 = correctAddress.getPSRAMAddress_Middle();
+        SPDR = correctAddress.getPSRAMAddress_Middle();
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & (1 << SPIF)));
+        UDR1 = correctAddress.getPSRAMAddress_Low();
+        SPDR = correctAddress.getPSRAMAddress_Low();
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & (1 << SPIF)));
+        for (int i = 0; i < 16; i+=2) {
+            // okay this is the important part, we need to maintain consistency
+            // bus 1 -> even addresses
+            // bus 0 -> odd addresses
+            UDR1 = buf[i];
+            SPDR = buf[i+1];
+            while (!(UCSR1A & (1 << UDRE1)));
+            while (!(SPSR & (1 << SPIF)));
         }
         digitalWrite<EnablePin, HIGH>();
-        SPI.endTransaction();
     }
     static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
-        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
-        transmitByte(0x03);
-        transmitByte(address.getPSRAMAddress_High());
-        transmitByte(address.getPSRAMAddress_Middle());
-        transmitByte(address.getPSRAMAddress_Low());
-        for (int i = 0; i < 16; ++i) {
-            transmitByte(0);
-            buf[i] = SPDR;
+        UDR1 = 0x03;
+        SPDR = 0x03;
+        TaggedAddress correctAddress(address.getAddress() >> 1);
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & (1 << SPIF)));
+        UDR1 = correctAddress.getPSRAMAddress_High();
+        SPDR = correctAddress.getPSRAMAddress_High();
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & (1 << SPIF)));
+        UDR1 = correctAddress.getPSRAMAddress_Middle();
+        SPDR = correctAddress.getPSRAMAddress_Middle();
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & (1 << SPIF)));
+        UDR1 = correctAddress.getPSRAMAddress_Low();
+        SPDR = correctAddress.getPSRAMAddress_Low();
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & (1 << SPIF)));
+        for (int i = 0; i < 16; i+=2) {
+            // okay this is the important part, we need to maintain consistency
+            // bus 1 -> even addresses
+            // bus 0 -> odd addresses
+            UDR1 = 0;
+            SPDR = 0;
+            while (!(UCSR1A & (1 << UDRE1)));
+            buf[i] = UDR1;
+            while (!(SPSR & (1 << SPIF)));
+            buf[i+1] = SPDR;
         }
         digitalWrite<EnablePin, HIGH>();
-        SPI.endTransaction();
     }
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
@@ -508,34 +545,34 @@ public:
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
-            //SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-            digitalWrite<enablePin, LOW>();
+            digitalWrite<EnablePin, LOW>();
             UDR1 = 0x66;
             SPDR = 0x66;
             asm volatile ("nop");
             while (!(UCSR1A & (1 << UDRE1)));
             while (!(SPSR & (1 << SPIF)));
-            digitalWrite<enablePin, HIGH>();
-            digitalWrite<enablePin, LOW>();
+            digitalWrite<EnablePin, HIGH>();
+            digitalWrite<EnablePin, LOW>();
             SPI.transfer(0x99);
             UDR1 = 0x99;
             SPDR = 0x99;
             asm volatile ("nop");
             while (!(UCSR1A & (1 << UDRE1)));
             while (!(SPSR & (1 << SPIF)));
-            digitalWrite<enablePin, HIGH>();
-            //SPI.endTransaction();
+            digitalWrite<EnablePin, HIGH>();
         }
     }
-private:
-    static inline byte currentIndex_ = 0xFF;
 };
 
 #if defined(CHIPSET_TYPE1)
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
 #elif defined(CHIPSET_TYPE3)
 // lower 16 megabytes
-using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN0>;
+using Lower16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN0>;
+// upper 16 megabytes
+using Upper16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN1>;
+
+using OnboardPSRAMBlock = Lower16Megabytes;
 #endif
 #endif //I960SXCHIPSET_PSRAMCHIP_H
