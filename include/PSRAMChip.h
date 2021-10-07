@@ -280,18 +280,25 @@ private:
 };
 
 /**
- * @brief Controls two 8mb psram chips connected to two separate spi busses concurrently
+ * @brief Controls two 8mb psram chips connected to two separate spi busses concurrently.
+ * Since the memory interface operates exclusively on 16-byte cache lines, the memory usage is cut in half on each one.
+ * A safe analogy would be like RAID-0/Striping where we fill up both chips concurrently. The way we store the data to
+ * the psram chips is inconsequential to the external interface. The important part is making sure we take advantage of
+ * both busses simultaneously.
  */
 template<i960Pinout enablePin>
 class DualChannelMemoryBlock {
 public:
     static constexpr auto EnablePin = enablePin;
-    // in hardware, we bind two psrams to the same enable pin across two spi busses
-    // externally, we present this as a single class
-    static constexpr auto NumChips = 2;
+    // The real issue with the design is the fact that the design is going to turn one 16-byte (or whatever width) cache line into
+    // two separate 8-byte (or n/2) cache lines that store at the same address. Doing some experiments, this seems to be as simple as
+    // shifting right by 1.
 public:
     DualChannelMemoryBlock() = delete;
     ~DualChannelMemoryBlock() = delete;
+    /**
+     * @brief Describes the block address decomposition for a dual spi bus setup.
+     */
     union PSRAMBlockAddress {
         constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
         constexpr auto getAddress() const noexcept { return base; }
@@ -299,8 +306,8 @@ public:
         constexpr auto getIndex() const noexcept { return index; }
         Address base;
         struct {
-            Address offset : 23;
-            byte index : 3;
+            Address offset : 24;
+            byte index : 5; // up to 512 megabytes because decoding hardware could be used in the future
         };
         byte bytes_[4];
     };
@@ -382,17 +389,18 @@ private:
     enum class OperationKind {
         Write,
         Read,
-        Generic,
     };
 
     template<byte opcode, OperationKind kind = OperationKind::Generic>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
+        // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
+        // entire
         if (capacity == 0) {
             return 0;
         }
         PSRAMBlockAddress curr(address);
         setChipId(curr.getIndex());
-        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
+        //SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         SPDR = opcode;
         asm volatile("nop");
@@ -420,7 +428,7 @@ private:
                 buf[i] = SPDR;
             }
         } else {
-            SPI.transfer(buf, numBytesToFirstChip);
+            signalHaltState(F("ILLEGAL OPERATION KIND IN PSRAM TRANSFER FUNCTION!"));
         }
         digitalWrite<EnablePin, HIGH>();
         if (!localToASingleChip && (numBytesToSecondChip > 0)) {
@@ -460,7 +468,6 @@ public:
         //return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
-        setChipId(address.getPSRAMChipId());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         transmitByte(0x02);
@@ -476,7 +483,6 @@ public:
     static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
-        setChipId(address.getPSRAMChipId());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         transmitByte(0x03);
