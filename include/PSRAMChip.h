@@ -500,15 +500,39 @@ public:
         }
     }
 };
+class Type3MemoryInterface {
+public:
+// lower 16 megabytes
+    using Lower16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN0>;
+// upper 16 megabytes
+    using Upper16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN1>;
+public:
+    Type3MemoryInterface() = delete;
+    ~Type3MemoryInterface() = delete;
+    static void begin() noexcept {
+        Lower16Megabytes::begin();
+        Upper16Megabytes::begin();
+    }
+    static void writeCacheLine(TaggedAddress address, const byte* buf) noexcept {
+        /// @todo implement
+    }
+    static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
+        /// @todo implement
+    }
+    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+        /// @todo implement
+        return 0;
+    }
+    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+        /// @todo implement
+        return 0;
+    }
+};
 
 #if defined(CHIPSET_TYPE1)
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
 #elif defined(CHIPSET_TYPE3)
-// lower 16 megabytes
-using Lower16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN0>;
-// upper 16 megabytes
-using Upper16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN1>;
 
-using OnboardPSRAMBlock = Lower16Megabytes;
+using OnboardPSRAMBlock = Type3MemoryInterface;
 #endif
 #endif //I960SXCHIPSET_PSRAMCHIP_H
