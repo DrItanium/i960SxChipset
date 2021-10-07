@@ -413,14 +413,14 @@ public:
         auto numBytesToSecondChip = end.getOffset();
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << UDRE1)));
-        UDR1 = curr.bytes_[1];
         SPDR = curr.bytes_[1];
+        UDR1 = curr.bytes_[1];
         asm volatile("nop");
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << UDRE1)));
-        UDR1 = curr.bytes_[0];
         SPDR = curr.bytes_[0];
+        UDR1 = curr.bytes_[0];
         asm volatile("nop");
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         while (!(SPSR & _BV(SPIF))) ; // wait
@@ -449,26 +449,26 @@ public:
         PSRAMBlockAddress curr(address);
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
-        UDR1 = 0x03;
         SPDR = 0x03;
+        UDR1 = 0x03;
         asm volatile("nop");
         PSRAMBlockAddress end(address + capacity);
         while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[2];
         while (!(UCSR1A & (1 << UDRE1)));
         UDR1 = curr.bytes_[2];
-        SPDR = curr.bytes_[2];
         asm volatile("nop");
         auto numBytesToSecondChip = end.getOffset();
         while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[1];
         while (!(UCSR1A & (1 << UDRE1)));
         UDR1 = curr.bytes_[1];
-        SPDR = curr.bytes_[1];
         asm volatile("nop");
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = curr.bytes_[0];
         while (!(UCSR1A & (1 << UDRE1)));
         UDR1 = curr.bytes_[0];
-        SPDR = curr.bytes_[0];
         asm volatile("nop");
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         while (!(SPSR & _BV(SPIF))) ; // wait
@@ -493,28 +493,29 @@ public:
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
-            SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
+            //SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
             initialized_ = true;
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-            digitalWrite<EnablePin, LOW>();
             digitalWrite<EnablePin2, LOW>();
             UDR1 = 0x66;
+            while (!(UCSR1A & (1 << UDRE1)));
+            digitalWrite<EnablePin2, HIGH>();
+
+            digitalWrite<EnablePin, LOW>();
             SPDR = 0x66;
             asm volatile ("nop");
             while (!(SPSR & (1 << SPIF)));
-            while (!(UCSR1A & (1 << UDRE1)));
-            digitalWrite<EnablePin2, HIGH>();
             digitalWrite<EnablePin, HIGH>();
-            digitalWrite<EnablePin, LOW>();
             digitalWrite<EnablePin2, LOW>();
             UDR1 = 0x99;
+            while (!(UCSR1A & (1 << UDRE1)));
+            digitalWrite<EnablePin2, HIGH>();
+            digitalWrite<EnablePin, LOW>();
             SPDR = 0x99;
             asm volatile ("nop");
             while (!(SPSR & (1 << SPIF)));
-            while (!(UCSR1A & (1 << UDRE1)));
             digitalWrite<EnablePin, HIGH>();
-            digitalWrite<EnablePin2, HIGH>();
-            SPI.endTransaction();
+            //SPI.endTransaction();
         }
     }
 };

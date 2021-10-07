@@ -493,31 +493,32 @@ void setup() {
                 valueEven, valueOdd,
                 valueEven, valueOdd,
         };
-        while (true) {
-            byte memoryStorage[16] = {0};
+        byte memoryStorage[16] = {0};
+        for (int i = 0; i < 16; ++i) {
+            memoryStorage[i] = PatternStorage[i];
+        }
+        // write ahead of time because the first two byte positions on one of my psram chips needs a second write before it will be accepted
+        OnboardPSRAMBlock::write(0, memoryStorage, 16);
+        for (uint32_t i = 0; i < 0x800000; i+= 16) {
             for (int i = 0; i < 16; ++i) {
                 memoryStorage[i] = PatternStorage[i];
             }
             OnboardPSRAMBlock::write(0, memoryStorage, 16);
             OnboardPSRAMBlock::read(0, memoryStorage, 16);
-#if 0
             for (int i = 0; i < 16; ++i) {
                 auto expected = PatternStorage[i], got = memoryStorage[i];
-                Serial.print(i);
-                Serial.print(F(": EXPECTED: 0x"));
-                Serial.print(expected, HEX);
-                Serial.print(F(", GOT: 0x"));
-                Serial.print(got, HEX);
-                Serial.print(F(", RESULT: "));
-                if (expected == got) {
-                    Serial.println(F("MATCH"));
-                } else {
+                if (expected != got) {
+                    Serial.print(i);
+                    Serial.print(F(": EXPECTED: 0x"));
+                    Serial.print(expected, HEX);
+                    Serial.print(F(", GOT: 0x"));
+                    Serial.print(got, HEX);
+                    Serial.print(F(", RESULT: "));
                     Serial.println(F("MISMATCH"));
                 }
             }
-#endif
         }
-        signalHaltState(F("FORCE TERMINATING HERE!"));
+        signalHaltState(F("MEMORY WRITE COMPLETE!"));
         installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
