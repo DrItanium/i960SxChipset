@@ -286,10 +286,11 @@ private:
  * the psram chips is inconsequential to the external interface. The important part is making sure we take advantage of
  * both busses simultaneously.
  */
-template<i960Pinout enablePin>
+template<i960Pinout enablePin, i960Pinout enablePin2>
 class DualChannelMemoryBlock {
 public:
     static constexpr auto EnablePin = enablePin;
+    static constexpr auto EnablePin2 = enablePin2;
     // The real issue with the design is the fact that the design is going to turn one 16-byte (or whatever width) cache line into
     // two separate 8-byte (or n/2) cache lines that store at the same address. Doing some experiments, this seems to be as simple as
     // shifting right by 1.
@@ -323,6 +324,7 @@ public:
         // need to do the offset calculation
 
         digitalWrite<EnablePin, LOW>();
+        digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x02;
         SPDR = 0x02;
         TaggedAddress correctAddress(address.getAddress() >> 1);
@@ -349,12 +351,14 @@ public:
             while (!(UCSR1A & (1 << UDRE1)));
             while (!(SPSR & (1 << SPIF)));
         }
+        digitalWrite<EnablePin2, HIGH>();
         digitalWrite<EnablePin, HIGH>();
     }
     static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
         digitalWrite<EnablePin, LOW>();
+        digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x03;
         SPDR = 0x03;
         TaggedAddress correctAddress(address.getAddress() >> 1);
@@ -384,6 +388,7 @@ public:
             buf[i+1] = SPDR;
         }
         digitalWrite<EnablePin, HIGH>();
+        digitalWrite<EnablePin2, HIGH>();
     }
     static size_t write(uint32_t address, const byte *buf, size_t capacity) noexcept {
         SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
@@ -395,6 +400,7 @@ public:
         }
         PSRAMBlockAddress curr(address);
         digitalWrite<EnablePin, LOW>();
+        digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x02;
         SPDR = 0x02;
         asm volatile("nop");
@@ -428,6 +434,7 @@ public:
             while (!(UCSR1A & (1 << UDRE1)));
         }
         digitalWrite<EnablePin, HIGH>();
+        digitalWrite<EnablePin2, HIGH>();
         SPI.endTransaction();
         return numBytesToFirstChip;
     }
@@ -441,6 +448,7 @@ public:
         }
         PSRAMBlockAddress curr(address);
         digitalWrite<EnablePin, LOW>();
+        digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x03;
         SPDR = 0x03;
         asm volatile("nop");
@@ -475,6 +483,7 @@ public:
             buf[i] = UDR1;
             buf[i+1] = SPDR;
         }
+        digitalWrite<EnablePin2, HIGH>();
         digitalWrite<EnablePin, HIGH>();
         SPI.endTransaction();
         return numBytesToFirstChip;
@@ -488,95 +497,24 @@ public:
             initialized_ = true;
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
             digitalWrite<EnablePin, LOW>();
+            digitalWrite<EnablePin2, LOW>();
             UDR1 = 0x66;
             SPDR = 0x66;
             asm volatile ("nop");
             while (!(SPSR & (1 << SPIF)));
             while (!(UCSR1A & (1 << UDRE1)));
+            digitalWrite<EnablePin2, HIGH>();
             digitalWrite<EnablePin, HIGH>();
-            asm volatile ("nop");
-            asm volatile ("nop");
-            asm volatile ("nop");
-            asm volatile ("nop");
             digitalWrite<EnablePin, LOW>();
+            digitalWrite<EnablePin2, LOW>();
             UDR1 = 0x99;
             SPDR = 0x99;
             asm volatile ("nop");
             while (!(SPSR & (1 << SPIF)));
             while (!(UCSR1A & (1 << UDRE1)));
             digitalWrite<EnablePin, HIGH>();
+            digitalWrite<EnablePin2, HIGH>();
             SPI.endTransaction();
-        }
-    }
-};
-class Type3MemoryInterface {
-public:
-// lower 16 megabytes
-    using Lower16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN0>;
-// upper 16 megabytes
-    using Upper16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN1>;
-    using PSRAMBlockAddress = Lower16Megabytes::PSRAMBlockAddress;
-public:
-    Type3MemoryInterface() = delete;
-    ~Type3MemoryInterface() = delete;
-    static void begin() noexcept {
-        Lower16Megabytes::begin();
-        Upper16Megabytes::begin();
-    }
-    static void writeCacheLine(TaggedAddress address, const byte* buf) noexcept {
-        switch (address.getPSRAMChipId()) {
-            case 0:
-                Lower16Megabytes::writeCacheLine(address, buf);
-                break;
-            case 1:
-                Upper16Megabytes::writeCacheLine(address, buf);
-                break;
-            default:
-                break;
-        }
-    }
-    static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
-        switch (address.getPSRAMChipId()) {
-            case 0:
-                Lower16Megabytes::readCacheLine(address, buf);
-                break;
-            case 1:
-                Upper16Megabytes::readCacheLine(address, buf);
-                break;
-            default:
-                break;
-        }
-    }
-    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        if (PSRAMBlockAddress addr(address); addr.getIndex() == 0) {
-            if (auto result = Lower16Megabytes ::read(address, buf, capacity); result != capacity) {
-                auto difference = capacity - result;
-                // transfer the remaining
-                return Upper16Megabytes :: read(address + result, buf + result, difference) + result;
-            } else {
-                return result;
-            }
-        } else if (addr.getIndex() == 1) {
-            // only read from mapped memory
-            return Upper16Megabytes :: read(address, buf, capacity);
-        } else {
-            return 0;
-        }
-    }
-    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        if (PSRAMBlockAddress addr(address); addr.getIndex() == 0) {
-            if (auto result = Lower16Megabytes ::write(address, buf, capacity); result != capacity) {
-                auto difference = capacity - result;
-                // transfer the remaining
-                return Upper16Megabytes :: write(address + result, buf + result, difference) + result;
-            } else {
-                return result;
-            }
-        } else if (addr.getIndex() == 1) {
-            // only read from mapped memory
-            return Upper16Megabytes :: write(address, buf, capacity);
-        } else {
-            return 0;
         }
     }
 };
@@ -585,6 +523,6 @@ public:
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
 #elif defined(CHIPSET_TYPE3)
 
-using OnboardPSRAMBlock = Type3MemoryInterface;
+using OnboardPSRAMBlock = DualChannelMemoryBlock<i960Pinout::PSRAM_EN0, i960Pinout::PSRAM_EN1>;
 #endif
 #endif //I960SXCHIPSET_PSRAMCHIP_H
