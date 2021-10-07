@@ -506,6 +506,7 @@ public:
     using Lower16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN0>;
 // upper 16 megabytes
     using Upper16Megabytes = DualChannelMemoryBlock<i960Pinout::PSRAM_EN1>;
+    using PSRAMBlockAddress = Lower16Megabytes::PSRAMBlockAddress;
 public:
     Type3MemoryInterface() = delete;
     ~Type3MemoryInterface() = delete;
@@ -520,12 +521,36 @@ public:
         /// @todo implement
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        /// @todo implement
-        return 0;
+        if (PSRAMBlockAddress addr(address); addr.getIndex() == 0) {
+            if (auto result = Lower16Megabytes ::read(address, buf, capacity); result != capacity) {
+                auto difference = capacity - result;
+                // transfer the remaining
+                return Upper16Megabytes :: read(address + result, buf + result, difference) + result;
+            } else {
+                return result;
+            }
+        } else if (addr.getIndex() == 1) {
+            // only read from mapped memory
+            return Upper16Megabytes :: read(address, buf, capacity);
+        } else {
+            return 0;
+        }
     }
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        /// @todo implement
-        return 0;
+        if (PSRAMBlockAddress addr(address); addr.getIndex() == 0) {
+            if (auto result = Lower16Megabytes ::write(address, buf, capacity); result != capacity) {
+                auto difference = capacity - result;
+                // transfer the remaining
+                return Upper16Megabytes :: write(address + result, buf + result, difference) + result;
+            } else {
+                return result;
+            }
+        } else if (addr.getIndex() == 1) {
+            // only read from mapped memory
+            return Upper16Megabytes :: write(address, buf, capacity);
+        } else {
+            return 0;
+        }
     }
 };
 
