@@ -534,10 +534,94 @@ public:
         digitalWrite<EnablePin, HIGH>();
     }
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
+        //return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
+        // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
+        // entire
+        if (capacity == 0) {
+            return 0;
+        }
+        PSRAMBlockAddress curr(address);
+        digitalWrite<EnablePin, LOW>();
+        UDR1 = 0x02;
+        SPDR = 0x02;
+        asm volatile("nop");
+        PSRAMBlockAddress end(address + capacity);
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = curr.bytes_[2];
+        SPDR = curr.bytes_[2];
+        asm volatile("nop");
+        auto numBytesToSecondChip = end.getOffset();
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = curr.bytes_[1];
+        SPDR = curr.bytes_[1];
+        asm volatile("nop");
+        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = curr.bytes_[0];
+        SPDR = curr.bytes_[0];
+        asm volatile("nop");
+        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        /// @todo fix
+        for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
+            UDR1 = buf[i];
+            SPDR = buf[i+1];
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            while (!(UCSR1A & (1 << UDRE1)));
+        }
+        digitalWrite<EnablePin, HIGH>();
+        return numBytesToFirstChip;
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
+        //return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
+        // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
+        // entire
+        if (capacity == 0) {
+            return 0;
+        }
+        PSRAMBlockAddress curr(address);
+        digitalWrite<EnablePin, LOW>();
+        UDR1 = 0x03;
+        SPDR = 0x03;
+        asm volatile("nop");
+        PSRAMBlockAddress end(address + capacity);
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = curr.bytes_[2];
+        SPDR = curr.bytes_[2];
+        asm volatile("nop");
+        auto numBytesToSecondChip = end.getOffset();
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = curr.bytes_[1];
+        SPDR = curr.bytes_[1];
+        asm volatile("nop");
+        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = curr.bytes_[0];
+        SPDR = curr.bytes_[0];
+        asm volatile("nop");
+        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        /// @todo fix
+        for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
+            UDR1 = 0;
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(UCSR1A & (1 << UDRE1)));
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            buf[i] = UDR1;
+            buf[i+1] = SPDR;
+        }
+        digitalWrite<EnablePin, HIGH>();
+        return numBytesToFirstChip;
     }
 private:
 public:
