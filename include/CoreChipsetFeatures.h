@@ -167,8 +167,9 @@ public:
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
         // dazzler setup must come first
+#if 0
 #ifdef USE_DAZZLER
-        GD.begin(0);
+        GD.begin(GD_STORAGE);
         // then immediately end it for now
         /// @todo get rid of this next statement
         GD.__end();
@@ -178,6 +179,7 @@ public:
             delay(1000);
         }
         Serial.println(F("SD CARD UP!"));
+#endif
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
