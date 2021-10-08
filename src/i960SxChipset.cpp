@@ -457,9 +457,9 @@ void setup() {
             memoryStorage[i] = PatternStorage[i];
         }
         // write ahead of time because the first two byte positions on one of my psram chips needs a second write before it will be accepted
-        //OnboardPSRAMBlock::write(0, memoryStorage, 16);
+        OnboardPSRAMBlock::write(0, memoryStorage, 16);
         // doing a read followed by a write seems to solve the issue
-        //OnboardPSRAMBlock::read(0, memoryStorage, 16);
+        OnboardPSRAMBlock::read(0, memoryStorage, 16);
 #if 0
         for (uint32_t i = 0; i < 0x800000; i+= 16) {
             for (int x = 0; x < 16; ++x) {
