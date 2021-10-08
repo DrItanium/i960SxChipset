@@ -78,8 +78,8 @@ ProcessorInterface::getDataBits() noexcept {
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    //Serial.print(F("setDataBits: 0x"));
-    //Serial.println(value, HEX);
+    Serial.print(F("setDataBits: 0x"));
+    Serial.println(value, HEX);
     /// @todo cache the result eventually
     SplitWord16 divisor(value);
     auto opcode = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
@@ -134,6 +134,8 @@ ProcessorInterface::begin() noexcept {
                       iodirRegister);
         MixedTransmit(0xFF,
                       0xFF);
+        MixedTransmit(0xFF,
+                      0xFF);
         digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
         digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
 
@@ -142,7 +144,7 @@ ProcessorInterface::begin() noexcept {
         SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::MemoryCommitExtras);
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+        SPDR = iodirRegister;
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = 0b0010'0000; // the only thing that should be input is HLDA
