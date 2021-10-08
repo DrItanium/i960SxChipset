@@ -41,9 +41,9 @@ ProcessorInterface::getDataBits() noexcept {
     SPDR = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
     // use the 16-bit write capabilities of the MSPIM device
     UDR1 = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-    UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
+    UDR1 = static_cast<byte>(MCP23x17Registers::GPIOB);
     while (!(SPSR & _BV(SPIF))); // wait
-    SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+    SPDR = static_cast<byte>(MCP23x17Registers::GPIOA);
     while (!(UCSR1A & (1 << UDRE1)));
     // use the 16-bit write capabilities of the MSPIM device
     UDR1 = 0;
@@ -60,7 +60,6 @@ ProcessorInterface::getDataBits() noexcept {
     Serial.print(F("getDataBits: 0x"));
     Serial.println(theWord.getWholeValue(), HEX);
     return theWord;
-    return SplitWord16{lower, upper};
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
@@ -83,12 +82,12 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
         latchedDataOutput = value;
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
         digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        UDR1 = static_cast<byte>(MCP23x17Registers::GPIOB);
         SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
         // use the 16-bit write capabilities of the MSPIM device
-        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
         while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+        SPDR = static_cast<byte>(MCP23x17Registers::GPIOA);
         SplitWord16 divisor(latchedDataOutput);
         while (!(UCSR1A & (1 << UDRE1)));
         // use the 16-bit write capabilities of the MSPIM device
