@@ -359,8 +359,8 @@ public:
             // bus 1 -> even addresses
             // bus 0 -> odd addresses
             UDR1 = buf[i];
-            UDR1 = buf[i+2];
-            SPDR = buf[i+1];
+            UDR1 = buf[i+1];
+            SPDR = buf[i+2];
             asm volatile ("nop");
             waitForSPIDone();
             SPDR = buf[i+3];
@@ -409,11 +409,11 @@ public:
             SPDR = 0;
             asm volatile ("nop");
             waitForSPIDone();
-            buf[i+1] = SPDR;
+            buf[i+2] = SPDR;
             waitForUDRTransmitDone();
-            buf[i] = UDR1;
-            buf[i+2] = UDR1;
             waitForSPIDone();
+            buf[i] = UDR1;
+            buf[i+1] = UDR1;
             buf[i+3] = SPDR;
         };
         fn(0);
