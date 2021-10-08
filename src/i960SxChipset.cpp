@@ -397,68 +397,22 @@ void setup() {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     setupPins(OUTPUT,
-#ifdef CHIPSET_TYPE1
-              i960Pinout::PSRAM_EN,
-#elif defined(CHIPSET_TYPE3)
-            i960Pinout::PSRAM_EN0,
-             i960Pinout::PSRAM_EN1,
-#endif
+              i960Pinout::PSRAM_EN0,
+              i960Pinout::PSRAM_EN1,
               i960Pinout::SD_EN,
-#ifdef CHIPSET_TYPE1
-              i960Pinout::Reset960,
-#endif
-#ifdef CHIPSET_TYPE1
-              i960Pinout::GPIOSelect,
-#elif defined(CHIPSET_TYPE3)
-            i960Pinout::GPIO_CS0,
+              i960Pinout::GPIO_CS0,
               i960Pinout::GPIO_CS1,
-#endif
-#ifdef CHIPSET_TYPE1
-              i960Pinout::SPI_OFFSET0,
-              i960Pinout::SPI_OFFSET1,
-              i960Pinout::SPI_OFFSET2,
-              i960Pinout::Reset960,
-              i960Pinout::Int0_,
-#endif
-              i960Pinout::Ready
-    );
-#ifdef CHIPSET_TYPE1
-    digitalWrite<i960Pinout::Reset960, HIGH>();
-    digitalWrite<i960Pinout::Int0_, HIGH>();
-#else
-    // trigger a reset
-#endif
+              i960Pinout::Ready);
     {
-#ifdef CHIPSET_TYPE1
-        PinAsserter<i960Pinout::Reset960> holdi960InReset;
-#endif
         // all of these pins need to be pulled high
-#ifdef CHIPSET_TYPE1
-        digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-#elif defined(CHIPSET_TYPE3)
         digitalWrite<i960Pinout::PSRAM_EN0, HIGH>();
         digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
-#endif
         digitalWrite<i960Pinout::SD_EN, HIGH>();
         digitalWrite<i960Pinout::Ready, HIGH>();
-#ifdef CHIPSET_TYPE3
         digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
         digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-#endif
-#ifdef CHIPSET_TYPE1
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
-        digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
-        digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
-#endif
         // setup the pins that could be attached to an io expander separately
         setupPins(INPUT,
-#ifdef CHIPSET_TYPE1
-                  i960Pinout::BA1,
-                  i960Pinout::BA2,
-                  i960Pinout::BA3,
-                  i960Pinout::W_R_,
-#endif
                   i960Pinout::BE0,
                   i960Pinout::BE1,
                   i960Pinout::BLAST_,
@@ -466,7 +420,6 @@ void setup() {
                   i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
-#ifdef CHIPSET_TYPE3
         // configure the second uart to operate in MSPIM mode
         UBRR1 = 0x0000;
         pinMode(i960Pinout::SCK1, OUTPUT);
@@ -474,12 +427,12 @@ void setup() {
         UCSR1B = _BV(TXEN1)  | _BV(RXEN1); // enable transmitter and receiver
         // set baud rate, must be done fater enabling the transmitter
         UBRR1 = 0x0000; // full speed 10 mhz
-#endif
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
         CoreChipsetFeatures::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
+        ProcessorInterface::holdResetLine();
         // test out the psram here to start
         constexpr byte valueEven = 0x55;
         constexpr byte valueOdd = ~valueEven;
@@ -527,7 +480,7 @@ void setup() {
         installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
-
+        ProcessorInterface::releaseResetLine();
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state
