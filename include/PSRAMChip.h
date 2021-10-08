@@ -399,8 +399,32 @@ public:
             waitForSPIDone();
             buf[i+1] = SPDR;
             waitForUDRTransmitDone();
-            buf[i] = UDR1;
-            (void)UDR1;
+            auto a0 = UDR1;
+            auto a1 = UDR1;
+            auto a2 = UDR1;
+            auto a3 = UDR1;
+            auto a4 = UDR1;
+            auto a5 = UDR1;
+            auto a6 = UDR1;
+            auto a7 = UDR1;
+            Serial.print(F("a0 = 0x"));
+            Serial.println(a0, HEX);
+            Serial.print(F("a1 = 0x"));
+            Serial.println(a1, HEX);
+            Serial.print(F("a2 = 0x"));
+            Serial.println(a2, HEX);
+            Serial.print(F("a3 = 0x"));
+            Serial.println(a3, HEX);
+            Serial.print(F("a4 = 0x"));
+            Serial.println(a4, HEX);
+            Serial.print(F("a5 = 0x"));
+            Serial.println(a5, HEX);
+            Serial.print(F("a6 = 0x"));
+            Serial.println(a6, HEX);
+            Serial.print(F("a7 = 0x"));
+            Serial.println(a7, HEX);
+            buf[i] = a0;
+            //(void)UDR1;
         }
         digitalWrite<EnablePin, HIGH>();
         digitalWrite<EnablePin2, HIGH>();
@@ -413,7 +437,7 @@ public:
         if (capacity == 0) {
             return 0;
         }
-        PSRAMBlockAddress curr(address);
+        PSRAMBlockAddress curr(address >> 1);
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x02;
@@ -458,6 +482,7 @@ public:
         SPI.endTransaction();
         return numBytesToFirstChip;
     }
+    template<bool printoutStats = false>
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
         drainUDR1Fifo();
@@ -467,7 +492,7 @@ public:
         if (capacity == 0) {
             return 0;
         }
-        PSRAMBlockAddress curr(address);
+        PSRAMBlockAddress curr(address >> 1);
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
         SPDR = 0x03;
@@ -505,7 +530,21 @@ public:
             asm volatile("nop");
             waitForSPIDone();
             waitForUDRTransmitDone();
-            buf[i] = UDR1;
+            auto a0 = UDR1;
+            if constexpr (printoutStats) {
+                auto a1 = UDR1;
+                auto a2 = UDR1;
+                auto a3 = UDR1;
+                Serial.print(F("a0 = 0x"));
+                Serial.println(a0, HEX);
+                Serial.print(F("a1 = 0x"));
+                Serial.println(a1, HEX);
+                Serial.print(F("a2 = 0x"));
+                Serial.println(a2, HEX);
+                Serial.print(F("a3 = 0x"));
+                Serial.println(a3, HEX);
+            }
+            buf[i] = a0;
             buf[i+1] = SPDR;
             (void)UDR1; // make sure
         }
