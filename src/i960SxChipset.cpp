@@ -501,6 +501,7 @@ void setup() {
         OnboardPSRAMBlock::write(0, memoryStorage, 16);
         // doing a read followed by a write seems to solve the issue
         OnboardPSRAMBlock::read(0, memoryStorage, 16);
+#if 0
         for (uint32_t i = 0; i < 0x800000; i+= 16) {
             for (int x = 0; x < 16; ++x) {
                 memoryStorage[x] = PatternStorage[x];
@@ -522,6 +523,7 @@ void setup() {
             }
         }
         signalHaltState(F("MEMORY WRITE COMPLETE!"));
+#endif
         installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
