@@ -254,7 +254,7 @@ ProcessorInterface::updateControlSignals() noexcept {
     SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::MemoryCommitExtras);
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
-    SPDR = static_cast<byte>(MCP23x17Registers::OLATA);
+    SPDR = static_cast<byte>(MCP23x17Registers::GPIOA);
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
     SPDR = controlSignals_;
