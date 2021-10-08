@@ -76,8 +76,8 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
        // do nothing
     }
 #endif
-    Serial.print(F("setDataBits: 0x"));
-    Serial.println(value, HEX);
+    //Serial.print(F("setDataBits: 0x"));
+    //Serial.println(value, HEX);
     if (latchedDataOutput != value) {
         latchedDataOutput = value;
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
@@ -109,7 +109,11 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
 
 
 
-
+inline void
+drainUDR1() noexcept {
+    (void) UDR1;
+    (void) UDR1;
+}
 void
 ProcessorInterface::begin() noexcept {
     if (!initialized_) {
@@ -124,27 +128,30 @@ ProcessorInterface::begin() noexcept {
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
         // pull iocon from both channels
+        drainUDR1();
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
         digitalWrite<i960Pinout::GPIO_CS1, LOW>();
-        SPDR = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
         UDR1 = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
-        SPDR = static_cast<byte>(MCP23x17Registers::IOCON);
         UDR1 = static_cast<byte>(MCP23x17Registers::IOCON);
+        SPDR = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::IOCON);
         while (!(UCSR1A & (1 << UDRE1)));
-        SPDR = 0;
+        drainUDR1();
         UDR1 = 0;
-        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << RXC1)));
+        SPDR = 0;
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & _BV(SPIF))) ; // wait
         auto iocon0 = SPDR;
-        auto iocon1 = UDR1;
+        volatile auto iocon1 = UDR1; // if I don't make this volatile, problems happen....
         digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
         digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+        Serial.print(F("iocon0 = 0b"));
+        Serial.println(iocon0, BIN);
+        Serial.print(F("iocon1 = 0b"));
+        Serial.println(iocon1, BIN);
         // then setup the iocon registers
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
         digitalWrite<i960Pinout::GPIO_CS1, LOW>();
@@ -160,7 +167,7 @@ ProcessorInterface::begin() noexcept {
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << UDRE1)));
         SPDR = iocon0;
-        UDR1 = iocon1;
+        UDR1 = iocon1; // just use iocon0 to make sure we have a correct copy
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << RXC1)));
@@ -247,8 +254,8 @@ ProcessorInterface::begin() noexcept {
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << UDRE1)));
         // use the 16-bit write capabilities of the MSPIM device
-        UDR1 = ldo.bytes[1];
-        SPDR = ldo.bytes[0];
+        UDR1 = ldo.bytes[0];
+        SPDR = ldo.bytes[1];
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << UDRE1)));
@@ -315,7 +322,7 @@ ProcessorInterface::newDataCycle() noexcept {
     SPDR = 0;
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
-    while (!(UCSR1A & (1 << RXC1)));
+    while (!(UCSR1A & (1 << UDRE1)));
     auto b1 = UDR1;
     auto b3 = SPDR;
     // use the 16-bit write capabilities of the MSPIM device
@@ -417,18 +424,6 @@ ProcessorInterface::newDataCycle() noexcept {
 }
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
-#if 0
-    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-        if (!dataLinesDirection_) {
-            dataLinesDirection_ = ~dataLinesDirection_;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
-        }
-    } else {
-        // do nothing
-    }
-#endif
-if (!dataLinesDirection_) {
-    /// @todo eliminate the extra byte of transmission because of the separate io expanders
     digitalWrite<i960Pinout::GPIO_CS0, LOW>();
     digitalWrite<i960Pinout::GPIO_CS1, LOW>();
     SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
@@ -451,47 +446,32 @@ if (!dataLinesDirection_) {
     while (!(SPSR & _BV(SPIF))); // wait
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-    dataLinesDirection_ = ~dataLinesDirection_;
-}
 }
 void
 ProcessorInterface::setupDataLinesForRead() noexcept {
-#if 0
-    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-        if (dataLinesDirection_) {
-            dataLinesDirection_ = ~dataLinesDirection_;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
-        }
-    } else {
-        // do nothing
-    }
-#endif
-    if (dataLinesDirection_) {
-        /// @todo eliminate the extra byte of transmission because of the separate io expanders
-        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
-        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
-        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
-        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        // use the 16-bit write capabilities of the MSPIM device
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
-        while (!(UCSR1A & (1 << UDRE1)));
-        // use the 16-bit write capabilities of the MSPIM device
-        UDR1 = 0;
-        UDR1 = 0;
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        while (!(UCSR1A & (1 << UDRE1)));
-        SPDR = 0;
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
-        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-        dataLinesDirection_ = ~dataLinesDirection_;
-    }
+    /// @todo eliminate the extra byte of transmission because of the separate io expanders
+    digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+    digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+    UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+    UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
+    SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+    // use the 16-bit write capabilities of the MSPIM device
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))); // wait
+    SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+    while (!(UCSR1A & (1 << UDRE1)));
+    // use the 16-bit write capabilities of the MSPIM device
+    UDR1 = 0;
+    UDR1 = 0;
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))); // wait
+    SPDR = 0;
+    while (!(UCSR1A & (1 << UDRE1)));
+    SPDR = 0;
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))); // wait
+    digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
 }
 
 void
@@ -501,4 +481,12 @@ ProcessorInterface::triggerInt0() noexcept {
 #elif defined(CHIPSET_TYPE3)
     /// @todo implement this
 #endif
+}
+
+void
+ProcessorInterface::ioExpanderWriteTest() noexcept {
+    setupDataLinesForRead();
+    for (uint32_t i = 0; i < 0x10000; ++i) {
+        ProcessorInterface::setDataBits(i);
+    }
 }

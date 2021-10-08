@@ -440,6 +440,7 @@ void setup() {
         CoreChipsetFeatures::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
+        ProcessorInterface::holdResetLine();
         // test out the psram here to start
         constexpr byte valueEven = 0x55;
         constexpr byte valueOdd = ~valueEven;
@@ -484,10 +485,17 @@ void setup() {
         }
         signalHaltState(F("MEMORY WRITE COMPLETE!"));
 #endif
+#if 0
+        while (true) {
+            ProcessorInterface::ioExpanderWriteTest();
+        }
+        signalHaltState(F("IO EXPANDER TEST DONE!"));
+#endif
         installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
         digitalWrite<i960Pinout::Reset960, HIGH>();
+        ProcessorInterface::releaseResetLine();
     }
     // at this point we have started execution of the i960
     // wait until we enter self test state

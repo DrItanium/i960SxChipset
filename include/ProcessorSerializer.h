@@ -259,6 +259,7 @@ public:
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
     static void holdResetLine() noexcept;
     static void releaseResetLine() noexcept;
+    static void ioExpanderWriteTest() noexcept;
 private:
     static void updateControlSignals() noexcept;
 private:
