@@ -334,6 +334,7 @@ public:
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
         TaggedAddress correctAddress(address.getAddress() >> 1);
+        drainUDR1Fifo();
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x02;
@@ -359,8 +360,8 @@ public:
             // bus 1 -> even addresses
             // bus 0 -> odd addresses
             UDR1 = buf[i];
-            UDR1 = buf[i+1];
-            SPDR = buf[i+2];
+            SPDR = buf[i+1];
+            UDR1 = buf[i+2];
             asm volatile ("nop");
             waitForSPIDone();
             SPDR = buf[i+3];
@@ -379,6 +380,7 @@ public:
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
         TaggedAddress correctAddress(address.getAddress() >> 1);
+        drainUDR1Fifo();
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x03;
@@ -409,11 +411,12 @@ public:
             SPDR = 0;
             asm volatile ("nop");
             waitForSPIDone();
-            buf[i+2] = SPDR;
+            buf[i+1] = SPDR;
+            SPDR = 0;
             waitForUDRTransmitDone();
-            waitForSPIDone();
             buf[i] = UDR1;
-            buf[i+1] = UDR1;
+            buf[i+2] = UDR1;
+            waitForSPIDone();
             buf[i+3] = SPDR;
         };
         fn(0);
@@ -425,7 +428,7 @@ public:
     }
     static size_t write(uint32_t address, const byte *buf, size_t capacity) noexcept {
         SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
-        //return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
+        drainUDR1Fifo();
         // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
         // entire
         if (capacity == 0) {
@@ -478,6 +481,7 @@ public:
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
+        drainUDR1Fifo();
         //return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
         // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
         // entire
@@ -557,9 +561,7 @@ public:
             while (!(SPSR & (1 << SPIF)));
             digitalWrite<EnablePin2, HIGH>();
             digitalWrite<EnablePin, HIGH>();
-            // drain the receive fifo
-            (void)UDR1;
-            (void)UDR1;
+            drainUDR1Fifo();
             //SPI.endTransaction();
         }
     }
