@@ -77,9 +77,9 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
        // do nothing
     }
 #endif
+    Serial.print(F("Setting word: 0x"));
+    Serial.println(value, HEX);
     if (latchedDataOutput != value) {
-        Serial.print(F("Setting word: 0x"));
-        Serial.println(value, HEX);
         latchedDataOutput = value;
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
         digitalWrite<i960Pinout::GPIO_CS1, LOW>();
@@ -190,31 +190,34 @@ ProcessorInterface::begin() noexcept {
         SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         // use the 16-bit write capabilities of the MSPIM device
         UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
-        UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
         SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
         while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & _BV(SPIF))) ; // wait
         // use the 16-bit write capabilities of the MSPIM device
         UDR1 = 0xFF;
-        UDR1 = 0xFF;
-        while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = 0xFF;
+        while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = 0xFF;
         SPDR = 0xFF;
         while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
         digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
         digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
 
         // setup the direction registers for the reset, interrupts, and element lines
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
-        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::MemoryCommitExtras);
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = 0b0101'0000;
+        SPDR = 0b0010'0000; // the only thing that should be input is HLDA
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         // don't waste time chaning the direction of portb
