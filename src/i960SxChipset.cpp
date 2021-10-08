@@ -397,6 +397,8 @@ void setup() {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     setupPins(OUTPUT,
+              i960Pinout::Reset960,
+              i960Pinout::Int0_,
               i960Pinout::PSRAM_EN0,
               i960Pinout::PSRAM_EN1,
               i960Pinout::SD_EN,
@@ -404,6 +406,8 @@ void setup() {
               i960Pinout::GPIO_CS1,
               i960Pinout::Ready);
     {
+        digitalWrite<i960Pinout::Reset960, LOW>();
+        digitalWrite<i960Pinout::Int0_, HIGH>();
         // all of these pins need to be pulled high
         digitalWrite<i960Pinout::PSRAM_EN0, HIGH>();
         digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
@@ -418,6 +422,8 @@ void setup() {
                   i960Pinout::BLAST_,
                   i960Pinout::DEN_,
                   i960Pinout::FAIL);
+        pinMode(i960Pinout::DEN_, INPUT_PULLUP);
+        pinMode(i960Pinout::BLAST_, INPUT_PULLUP);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
         // configure the second uart to operate in MSPIM mode
@@ -432,7 +438,6 @@ void setup() {
         CoreChipsetFeatures::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
-        ProcessorInterface::holdResetLine();
         // test out the psram here to start
         constexpr byte valueEven = 0x55;
         constexpr byte valueOdd = ~valueEven;
@@ -480,8 +485,14 @@ void setup() {
         installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
-        ProcessorInterface::releaseResetLine();
+        digitalWrite<i960Pinout::Reset960, HIGH>();
     }
+    goto entry;
+    retry:
+    digitalWrite<i960Pinout::Reset960, LOW>();
+    delay(10000);
+    digitalWrite<i960Pinout::Reset960, HIGH>();
+    entry:
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
@@ -503,6 +514,9 @@ void setup() {
     doInvocationBody<CompileInAddressDebuggingSupport>();
     doInvocationBody<CompileInAddressDebuggingSupport>();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
+        Serial.println(F("CHECKSUM FAILURE....TRYING AGAIN!"));
+        delay(10000);
+        goto retry;
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
     Serial.println(F("SYSTEM BOOT SUCCESSFUL!"));
