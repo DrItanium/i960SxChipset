@@ -317,76 +317,109 @@ public:
         };
         byte bytes_[4];
     };
+private:
+    inline static void drainUDR1Fifo() noexcept {
+        (void) UDR1;
+        (void) UDR1;
+    }
+    inline static void waitForSPIDone() noexcept {
+        while (!(SPSR & (1 << SPIF)));
+    }
+    inline static void waitForUDRTransmitDone() noexcept {
+        while (!(UCSR1A & (1 << UDRE1)));
+    }
 public:
     static void writeCacheLine(TaggedAddress address, const byte* buf) noexcept {
         //return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
-
+        TaggedAddress correctAddress(address.getAddress() >> 1);
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x02;
-        SPDR = 0x02;
-        TaggedAddress correctAddress(address.getAddress() >> 1);
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
         UDR1 = correctAddress.getPSRAMAddress_High();
+        SPDR = 0x02;
+        asm volatile ("nop");
+        waitForSPIDone();
         SPDR = correctAddress.getPSRAMAddress_High();
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
+        waitForSPIDone();
         UDR1 = correctAddress.getPSRAMAddress_Middle();
-        SPDR = correctAddress.getPSRAMAddress_Middle();
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
         UDR1 = correctAddress.getPSRAMAddress_Low();
+        SPDR = correctAddress.getPSRAMAddress_Middle();
+        asm volatile ("nop");
+        waitForSPIDone();
         SPDR = correctAddress.getPSRAMAddress_Low();
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
-        for (int i = 0; i < 16; i+=2) {
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
+        waitForSPIDone();
+        auto fn = [&buf](int i) noexcept {
             // okay this is the important part, we need to maintain consistency
             // bus 1 -> even addresses
             // bus 0 -> odd addresses
             UDR1 = buf[i];
+            UDR1 = buf[i+2];
             SPDR = buf[i+1];
-            while (!(UCSR1A & (1 << UDRE1)));
-            while (!(SPSR & (1 << SPIF)));
-        }
+            asm volatile ("nop");
+            waitForSPIDone();
+            SPDR = buf[i+3];
+            waitForUDRTransmitDone();
+            drainUDR1Fifo();
+            waitForSPIDone();
+        };
+        fn(0);
+        fn(4);
+        fn(8);
+        fn(12);
         digitalWrite<EnablePin2, HIGH>();
         digitalWrite<EnablePin, HIGH>();
     }
     static void readCacheLine(TaggedAddress address, byte* buf) noexcept {
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
+        TaggedAddress correctAddress(address.getAddress() >> 1);
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
         UDR1 = 0x03;
-        SPDR = 0x03;
-        TaggedAddress correctAddress(address.getAddress() >> 1);
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
         UDR1 = correctAddress.getPSRAMAddress_High();
+        SPDR = 0x03;
+        asm volatile ("nop");
+        waitForSPIDone();
         SPDR = correctAddress.getPSRAMAddress_High();
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
+        asm volatile ("nop");
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         UDR1 = correctAddress.getPSRAMAddress_Middle();
-        SPDR = correctAddress.getPSRAMAddress_Middle();
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
         UDR1 = correctAddress.getPSRAMAddress_Low();
+        SPDR = correctAddress.getPSRAMAddress_Middle();
+        asm volatile ("nop");
+        waitForSPIDone();
         SPDR = correctAddress.getPSRAMAddress_Low();
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
-        for (int i = 0; i < 16; i+=2) {
+        asm volatile ("nop");
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
+        waitForSPIDone();
+        auto fn = [&buf](int i) noexcept {
             // okay this is the important part, we need to maintain consistency
             // bus 1 -> even addresses
             // bus 0 -> odd addresses
             UDR1 = 0;
+            UDR1 = 0;
             SPDR = 0;
-            while (!(UCSR1A & (1 << RXC1)));
-            buf[i] = UDR1;
-            while (!(SPSR & (1 << SPIF)));
+            asm volatile ("nop");
+            waitForSPIDone();
             buf[i+1] = SPDR;
-        }
+            waitForUDRTransmitDone();
+            buf[i] = UDR1;
+            buf[i+2] = UDR1;
+            waitForSPIDone();
+            buf[i+3] = SPDR;
+        };
+        fn(0);
+        fn(4);
+        fn(8);
+        fn(12);
         digitalWrite<EnablePin, HIGH>();
         digitalWrite<EnablePin2, HIGH>();
     }
@@ -405,33 +438,38 @@ public:
         SPDR = 0x02;
         asm volatile("nop");
         PSRAMBlockAddress end(address + capacity);
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
+        waitForSPIDone();
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         UDR1 = curr.bytes_[2];
         SPDR = curr.bytes_[2];
         asm volatile("nop");
         auto numBytesToSecondChip = end.getOffset();
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
+        waitForSPIDone();
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         SPDR = curr.bytes_[1];
         UDR1 = curr.bytes_[1];
         asm volatile("nop");
         auto localToASingleChip = curr.getIndex() == end.getIndex();
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
+        waitForSPIDone();
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         SPDR = curr.bytes_[0];
         UDR1 = curr.bytes_[0];
         asm volatile("nop");
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
+        waitForSPIDone();
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         /// @todo fix
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
             UDR1 = buf[i];
             SPDR = buf[i+1];
             asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            while (!(UCSR1A & (1 << UDRE1)));
+            waitForSPIDone();
+            waitForUDRTransmitDone();
+            drainUDR1Fifo();
         }
         digitalWrite<EnablePin, HIGH>();
         digitalWrite<EnablePin2, HIGH>();
@@ -453,35 +491,40 @@ public:
         UDR1 = 0x03;
         asm volatile("nop");
         PSRAMBlockAddress end(address + capacity);
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
+        waitForSPIDone();
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         UDR1 = curr.bytes_[2];
         SPDR = curr.bytes_[2];
         asm volatile("nop");
         auto numBytesToSecondChip = end.getOffset();
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
+        waitForSPIDone();
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         UDR1 = curr.bytes_[1];
         SPDR = curr.bytes_[1];
         asm volatile("nop");
         auto localToASingleChip = curr.getIndex() == end.getIndex();
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
+        waitForSPIDone();
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         UDR1 = curr.bytes_[0];
         SPDR = curr.bytes_[0];
         asm volatile("nop");
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
+        waitForSPIDone();
+        waitForUDRTransmitDone();
+        drainUDR1Fifo();
         /// @todo fix
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
             UDR1 = 0;
             SPDR = 0;
             asm volatile("nop");
-            while (!(UCSR1A & (1 << UDRE1)));
-            while (!(SPSR & _BV(SPIF))) ; // wait
+            waitForSPIDone();
+            waitForUDRTransmitDone();
             buf[i] = UDR1;
             buf[i+1] = SPDR;
+            (void)UDR1; // make sure
         }
         digitalWrite<EnablePin2, HIGH>();
         digitalWrite<EnablePin, HIGH>();
@@ -505,7 +548,6 @@ public:
             while (!(SPSR & (1 << SPIF)));
             digitalWrite<EnablePin2, HIGH>();
             digitalWrite<EnablePin, HIGH>();
-
             digitalWrite<EnablePin2, LOW>();
             digitalWrite<EnablePin, LOW>();
             UDR1 = 0x99;
@@ -515,6 +557,9 @@ public:
             while (!(SPSR & (1 << SPIF)));
             digitalWrite<EnablePin2, HIGH>();
             digitalWrite<EnablePin, HIGH>();
+            // drain the receive fifo
+            (void)UDR1;
+            (void)UDR1;
             //SPI.endTransaction();
         }
     }
