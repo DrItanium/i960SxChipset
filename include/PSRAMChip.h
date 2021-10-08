@@ -401,29 +401,6 @@ public:
             buf[i+1] = SPDR;
             waitForUDRTransmitDone();
             auto a0 = UDR1;
-            auto a1 = UDR1;
-            auto a2 = UDR1;
-            auto a3 = UDR1;
-            auto a4 = UDR1;
-            auto a5 = UDR1;
-            auto a6 = UDR1;
-            auto a7 = UDR1;
-            Serial.print(F("a0 = 0x"));
-            Serial.println(a0, HEX);
-            Serial.print(F("a1 = 0x"));
-            Serial.println(a1, HEX);
-            Serial.print(F("a2 = 0x"));
-            Serial.println(a2, HEX);
-            Serial.print(F("a3 = 0x"));
-            Serial.println(a3, HEX);
-            Serial.print(F("a4 = 0x"));
-            Serial.println(a4, HEX);
-            Serial.print(F("a5 = 0x"));
-            Serial.println(a5, HEX);
-            Serial.print(F("a6 = 0x"));
-            Serial.println(a6, HEX);
-            Serial.print(F("a7 = 0x"));
-            Serial.println(a7, HEX);
             buf[i] = a0;
             //(void)UDR1;
         }
@@ -526,28 +503,15 @@ public:
         drainUDR1Fifo();
         /// @todo fix
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
+            drainUDR1Fifo();
             UDR1 = 0;
             SPDR = 0;
             asm volatile("nop");
             waitForSPIDone();
             waitForUDRTransmitDone();
             auto a0 = UDR1;
-            if constexpr (printoutStats) {
-                auto a1 = UDR1;
-                auto a2 = UDR1;
-                auto a3 = UDR1;
-                Serial.print(F("a0 = 0x"));
-                Serial.println(a0, HEX);
-                Serial.print(F("a1 = 0x"));
-                Serial.println(a1, HEX);
-                Serial.print(F("a2 = 0x"));
-                Serial.println(a2, HEX);
-                Serial.print(F("a3 = 0x"));
-                Serial.println(a3, HEX);
-            }
             buf[i] = a0;
             buf[i+1] = SPDR;
-            (void)UDR1; // make sure
         }
         digitalWrite<EnablePin2, HIGH>();
         digitalWrite<EnablePin, HIGH>();
