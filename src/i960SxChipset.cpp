@@ -417,6 +417,7 @@ void setup() {
         digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
         // setup the pins that could be attached to an io expander separately
         setupPins(INPUT,
+                  i960Pinout::W_R_,
                   i960Pinout::BE0,
                   i960Pinout::BE1,
                   i960Pinout::BLAST_,
@@ -487,12 +488,6 @@ void setup() {
         Serial.println(F("i960Sx chipset brought up fully!"));
         digitalWrite<i960Pinout::Reset960, HIGH>();
     }
-    goto entry;
-    retry:
-    digitalWrite<i960Pinout::Reset960, LOW>();
-    delay(10000);
-    digitalWrite<i960Pinout::Reset960, HIGH>();
-    entry:
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
@@ -513,10 +508,8 @@ void setup() {
     // first set of 16-byte request from memory
     doInvocationBody<CompileInAddressDebuggingSupport>();
     doInvocationBody<CompileInAddressDebuggingSupport>();
+    doInvocationBody<CompileInAddressDebuggingSupport>();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
-        Serial.println(F("CHECKSUM FAILURE....TRYING AGAIN!"));
-        delay(10000);
-        goto retry;
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
     Serial.println(F("SYSTEM BOOT SUCCESSFUL!"));

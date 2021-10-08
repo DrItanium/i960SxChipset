@@ -57,7 +57,7 @@ ProcessorInterface::getDataBits() noexcept {
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
     SplitWord16 theWord{lower, upper};
-    Serial.print(F("Retrieved word: 0x"));
+    Serial.print(F("getDataBits: 0x"));
     Serial.println(theWord.getWholeValue(), HEX);
     return theWord;
     return SplitWord16{lower, upper};
@@ -77,7 +77,7 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
        // do nothing
     }
 #endif
-    Serial.print(F("Setting word: 0x"));
+    Serial.print(F("setDataBits: 0x"));
     Serial.println(value, HEX);
     if (latchedDataOutput != value) {
         latchedDataOutput = value;
@@ -280,7 +280,8 @@ ProcessorInterface::releaseResetLine() noexcept {
 
 byte
 ProcessorInterface::newDataCycle() noexcept {
-
+    Serial.print(F("PREVIOUS ADDRESS = 0x"));
+    Serial.println(address_.getWholeValue(), HEX);
     // read from both busses
     digitalWrite<i960Pinout::GPIO_CS0, LOW>();
     digitalWrite<i960Pinout::GPIO_CS1, LOW>();
@@ -298,18 +299,37 @@ ProcessorInterface::newDataCycle() noexcept {
     UDR1 = 0;
     SPDR = 0;
     asm volatile ("nop");
-    while (!(UCSR1A & (1 << RXC1)));
     while (!(SPSR & _BV(SPIF))) ; // wait
-    address_.bytes[0] = UDR1;
-    address_.bytes[2] = SPDR;
+    while (!(UCSR1A & (1 << UDRE1)));
+    auto b0a = UDR1;
+    auto b0b = UDR1;
+    auto b2 = SPDR;
+    Serial.print(F("b0a: 0x"));
+    Serial.println(b0a, HEX);
+    Serial.print(F("b0b: 0x"));
+    Serial.println(b0b, HEX);
+    Serial.print(F("b2: 0x"));
+    Serial.println(b2, HEX);
+    address_.bytes[0] = b0a;
+    address_.bytes[2] = b2;
     UDR1 = 0;
     SPDR = 0;
     isReadOperation_ = (address_.bytes[0] & 0b1) == 0;
-    address_.bytes[0] &= (~0b0000'0001); // clear the least significant bit
-    while (!(UCSR1A & (1 << RXC1)));
     while (!(SPSR & _BV(SPIF))) ; // wait
-    address_.bytes[1] = UDR1;
-    address_.bytes[3] = SPDR;
+    while (!(UCSR1A & (1 << UDRE1)));
+    auto b1a = UDR1;
+    auto b1b = UDR1;
+    auto b3 = SPDR;
+    address_.bytes[1] = b1b;
+    address_.bytes[3] = b3;
+    Serial.print(F("b1a: 0x"));
+    Serial.println(b1a, HEX);
+    Serial.print(F("b1b: 0x"));
+    Serial.println(b1b, HEX);
+    Serial.print(F("b3: 0x"));
+    Serial.println(b3, HEX);
+    Serial.print(F("addrWhole: 0x"));
+    Serial.println(address_.getWholeValue(), HEX);
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
     if (isReadOperation()) {
@@ -317,6 +337,7 @@ ProcessorInterface::newDataCycle() noexcept {
     } else {
         setupDataLinesForWrite();
     }
+    address_.bytes[0] &= (~0b0000'0001); // clear the least significant bit
     Serial.print(F("Address Request: 0x"));
     Serial.println(address_.getWholeValue(), HEX);
     Serial.println(isReadOperation() ? F("READ") : F("WRITE"));

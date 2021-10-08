@@ -136,6 +136,7 @@ enum class i960Pinout : int {
     DAZZLER_EN = PORT_C6,
     Ready = PORT_C7,
     // PA0-PA3 free for use
+    W_R_ = PORT_A1,
     Int0_ = PORT_A2,
     Reset960 = PORT_A3,
     BE0 = PORT_A4,
