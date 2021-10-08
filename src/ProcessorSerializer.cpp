@@ -282,6 +282,8 @@ byte
 ProcessorInterface::newDataCycle() noexcept {
     Serial.print(F("PREVIOUS ADDRESS = 0x"));
     Serial.println(address_.getWholeValue(), HEX);
+    (void)UDR1;
+    (void)UDR1;
     // read from both busses
     digitalWrite<i960Pinout::GPIO_CS0, LOW>();
     digitalWrite<i960Pinout::GPIO_CS1, LOW>();
@@ -290,48 +292,47 @@ ProcessorInterface::newDataCycle() noexcept {
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
     while (!(UCSR1A & (1 << UDRE1)));
+    (void)UDR1;
+    (void)UDR1;
     UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
     SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
     while (!(UCSR1A & (1 << UDRE1)));
-    // use the 16-bit write capabilities of the MSPIM device
+    (void)UDR1;
+    (void)UDR1;
     UDR1 = 0;
     SPDR = 0;
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
     while (!(UCSR1A & (1 << UDRE1)));
-    auto b0a = UDR1;
-    auto b0b = UDR1;
+    auto b0 = UDR1;
     auto b2 = SPDR;
-    Serial.print(F("b0a: 0x"));
-    Serial.println(b0a, HEX);
-    Serial.print(F("b0b: 0x"));
-    Serial.println(b0b, HEX);
-    Serial.print(F("b2: 0x"));
-    Serial.println(b2, HEX);
-    address_.bytes[0] = b0a;
-    address_.bytes[2] = b2;
     UDR1 = 0;
     SPDR = 0;
-    isReadOperation_ = (address_.bytes[0] & 0b1) == 0;
+    asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))) ; // wait
-    while (!(UCSR1A & (1 << UDRE1)));
-    auto b1a = UDR1;
-    auto b1b = UDR1;
+    while (!(UCSR1A & (1 << RXC1)));
+    auto b1 = UDR1;
     auto b3 = SPDR;
-    address_.bytes[1] = b1b;
-    address_.bytes[3] = b3;
-    Serial.print(F("b1a: 0x"));
-    Serial.println(b1a, HEX);
-    Serial.print(F("b1b: 0x"));
-    Serial.println(b1b, HEX);
+    // use the 16-bit write capabilities of the MSPIM device
+    digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    Serial.print(F("b0: 0x"));
+    Serial.println(b0, HEX);
+    Serial.print(F("b1: 0x"));
+    Serial.println(b1, HEX);
+    Serial.print(F("b2: 0x"));
+    Serial.println(b2, HEX);
     Serial.print(F("b3: 0x"));
     Serial.println(b3, HEX);
     Serial.print(F("addrWhole: 0x"));
     Serial.println(address_.getWholeValue(), HEX);
-    digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
-    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    address_.bytes[0] = b0;
+    address_.bytes[1] = b1;
+    address_.bytes[2] = b2;
+    address_.bytes[3] = b3;
+    isReadOperation_ = (address_.bytes[0] & 0b1) == 0;
     if (isReadOperation()) {
         setupDataLinesForRead();
     } else {

@@ -508,7 +508,6 @@ void setup() {
     // first set of 16-byte request from memory
     doInvocationBody<CompileInAddressDebuggingSupport>();
     doInvocationBody<CompileInAddressDebuggingSupport>();
-    doInvocationBody<CompileInAddressDebuggingSupport>();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
