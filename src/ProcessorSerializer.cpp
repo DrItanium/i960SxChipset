@@ -41,16 +41,17 @@ USART_Receive(byte value) noexcept {
 }
 inline void
 MixedTransmit(byte udrValue, byte spiValue) noexcept {
-    //while (!(UCSR1A & (1 << UDRE1)));
+    while (!(UCSR1A & (1 << UDRE1)));
     UDR1 = udrValue;
     SPDR = spiValue;
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
     while (!(UCSR1A & (1 << RXC1)));
+    (void)UDR1;
 }
 inline SplitWord16
 MixedTransfer(byte udrValue, byte spiValue) noexcept {
-    //while (!(UCSR1A & (1 << UDRE1)));
+    while (!(UCSR1A & (1 << UDRE1)));
     UDR1 = udrValue;
     SPDR = spiValue;
     asm volatile ("nop");
@@ -72,14 +73,14 @@ ProcessorInterface::getDataBits() noexcept {
     auto theWord = MixedTransfer(0, 0);
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-    Serial.print(F("getDataBits: 0x"));
-    Serial.println(theWord.getWholeValue(), HEX);
+    //Serial.print(F("getDataBits: 0x"));
+    //Serial.println(theWord.getWholeValue(), HEX);
     return theWord;
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    Serial.print(F("setDataBits: 0x"));
-    Serial.println(value, HEX);
+    //Serial.print(F("setDataBits: 0x"));
+    //Serial.println(value, HEX);
     /// @todo cache the result eventually
     SplitWord16 divisor(value);
     auto opcode = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
@@ -196,8 +197,8 @@ ProcessorInterface::releaseResetLine() noexcept {
 
 byte
 ProcessorInterface::newDataCycle() noexcept {
-    Serial.print(F("PREVIOUS ADDRESS = 0x"));
-    Serial.println(address_.getWholeValue(), HEX);
+    //Serial.print(F("PREVIOUS ADDRESS = 0x"));
+    //Serial.println(address_.getWholeValue(), HEX);
     static constexpr auto addressLinesOpcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
     static constexpr auto gpioRegister = static_cast<byte>(MCP23x17Registers::GPIO);
     // read from both busses
@@ -218,16 +219,16 @@ ProcessorInterface::newDataCycle() noexcept {
     auto b1 = p1.bytes[0];
     auto b2 = p0.bytes[1];
     auto b3 = p1.bytes[1];
-    Serial.print(F("b0: 0x"));
-    Serial.println(b0, HEX);
-    Serial.print(F("b1: 0x"));
-    Serial.println(b1, HEX);
-    Serial.print(F("b2: 0x"));
-    Serial.println(b2, HEX);
-    Serial.print(F("b3: 0x"));
-    Serial.println(b3, HEX);
-    Serial.print(F("addrWhole: 0x"));
-    Serial.println(address_.getWholeValue(), HEX);
+    //Serial.print(F("b0: 0x"));
+    //Serial.println(b0, HEX);
+    //Serial.print(F("b1: 0x"));
+    //Serial.println(b1, HEX);
+    //Serial.print(F("b2: 0x"));
+    //Serial.println(b2, HEX);
+    //Serial.print(F("b3: 0x"));
+    //Serial.println(b3, HEX);
+    //Serial.print(F("addrWhole: 0x"));
+    //Serial.println(address_.getWholeValue(), HEX);
     address_.bytes[0] = b0;
     address_.bytes[1] = b1;
     address_.bytes[2] = b2;

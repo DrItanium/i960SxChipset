@@ -317,50 +317,45 @@ public:
         };
         byte bytes_[4];
     };
-private:
-    inline static void drainUDR1Fifo() noexcept {
-        (void) UDR1;
-        (void) UDR1;
-    }
-    inline static void waitForSPIDone() noexcept {
-        while (!(SPSR & (1 << SPIF)));
-    }
-    inline static void waitForUDRTransmitDone() noexcept {
-        while (!(UCSR1A & (1 << UDRE1)));
-    }
 public:
+    inline static void
+    MixedTransmit(byte udrValue, byte spiValue) noexcept {
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = udrValue;
+        SPDR = spiValue;
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        while (!(UCSR1A & (1 << RXC1)));
+        (void)UDR1;
+    }
+    inline static SplitWord16
+    MixedTransfer(byte udrValue, byte spiValue) noexcept {
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = udrValue;
+        SPDR = spiValue;
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto sResult = SPDR;
+        while (!(UCSR1A & (1 << RXC1)));
+        auto uResult = UDR1;
+        return SplitWord16{uResult, sResult};
+    }
     static void writeCacheLine(TaggedAddress address, const byte* buf) noexcept {
         //return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
         TaggedAddress correctAddress(address.getAddress() >> 1);
-        drainUDR1Fifo();
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
-        UDR1 = 0x02;
-        UDR1 = correctAddress.getPSRAMAddress_High();
-        SPDR = 0x02;
-        asm volatile ("nop");
-        waitForSPIDone();
-        SPDR = correctAddress.getPSRAMAddress_High();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        UDR1 = correctAddress.getPSRAMAddress_Middle();
-        UDR1 = correctAddress.getPSRAMAddress_Low();
-        waitForSPIDone();
-        SPDR = correctAddress.getPSRAMAddress_Middle();
-        asm volatile ("nop");
-        waitForSPIDone();
-        SPDR = correctAddress.getPSRAMAddress_Low();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        waitForSPIDone();
+        MixedTransmit(0x02, 0x02);
+        MixedTransmit(correctAddress.getPSRAMAddress_High(),
+                      correctAddress.getPSRAMAddress_High());
+        MixedTransmit(correctAddress.getPSRAMAddress_Middle(),
+                      correctAddress.getPSRAMAddress_Middle());
+        MixedTransmit(correctAddress.getPSRAMAddress_Low(),
+                      correctAddress.getPSRAMAddress_Low());
         for (int i = 0; i < 16; i+=2) {
-            UDR1 = buf[i];
-            SPDR = buf[i+1];
-            waitForSPIDone();
-            waitForUDRTransmitDone();
-            drainUDR1Fifo();
+            MixedTransmit(buf[i], buf[i+1]);
         }
         digitalWrite<EnablePin2, HIGH>();
         digitalWrite<EnablePin, HIGH>();
@@ -369,91 +364,49 @@ public:
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
         TaggedAddress correctAddress(address.getAddress() >> 1);
-        drainUDR1Fifo();
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
-        UDR1 = 0x03;
-        UDR1 = correctAddress.getPSRAMAddress_High();
-        SPDR = 0x03;
-        asm volatile ("nop");
-        waitForSPIDone();
-        SPDR = correctAddress.getPSRAMAddress_High();
-        asm volatile ("nop");
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        UDR1 = correctAddress.getPSRAMAddress_Middle();
-        UDR1 = correctAddress.getPSRAMAddress_Low();
-        waitForSPIDone();
-        SPDR = correctAddress.getPSRAMAddress_Middle();
-        asm volatile ("nop");
-        waitForSPIDone();
-        SPDR = correctAddress.getPSRAMAddress_Low();
-        asm volatile ("nop");
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        waitForSPIDone();
+        MixedTransmit(0x03,
+                      0x03);
+        MixedTransmit(correctAddress.getPSRAMAddress_High(),
+                      correctAddress.getPSRAMAddress_High());
+        MixedTransmit(correctAddress.getPSRAMAddress_Middle(),
+                      correctAddress.getPSRAMAddress_Middle());
+        MixedTransmit(correctAddress.getPSRAMAddress_Low(),
+                      correctAddress.getPSRAMAddress_Low());
+
         for (int i = 0; i < 16; i+=2) {
-            drainUDR1Fifo();
-            UDR1 = 0;
-            SPDR = 0;
-            asm volatile ("nop");
-            waitForSPIDone();
-            buf[i+1] = SPDR;
-            waitForUDRTransmitDone();
-            auto a0 = UDR1;
-            buf[i] = a0;
-            //(void)UDR1;
+            auto result = MixedTransfer(0,
+                                        0);
+            buf[i] = result.bytes[0];
+            buf[i+1] = result.bytes[1];
         }
         digitalWrite<EnablePin, HIGH>();
         digitalWrite<EnablePin2, HIGH>();
     }
     static size_t write(uint32_t address, const byte *buf, size_t capacity) noexcept {
         SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
-        drainUDR1Fifo();
-        // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
-        // entire
         if (capacity == 0) {
             return 0;
         }
         PSRAMBlockAddress curr(address >> 1);
+        PSRAMBlockAddress end(address + capacity);
+        auto numBytesToSecondChip = end.getOffset();
+        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
-        UDR1 = 0x02;
-        SPDR = 0x02;
-        asm volatile("nop");
-        PSRAMBlockAddress end(address + capacity);
-        waitForSPIDone();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        UDR1 = curr.bytes_[2];
-        SPDR = curr.bytes_[2];
-        asm volatile("nop");
-        auto numBytesToSecondChip = end.getOffset();
-        waitForSPIDone();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        SPDR = curr.bytes_[1];
-        UDR1 = curr.bytes_[1];
-        asm volatile("nop");
-        auto localToASingleChip = curr.getIndex() == end.getIndex();
-        waitForSPIDone();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        SPDR = curr.bytes_[0];
-        UDR1 = curr.bytes_[0];
-        asm volatile("nop");
-        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
-        waitForSPIDone();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
+        MixedTransmit(0x02, 0x02);
+        MixedTransmit(curr.bytes_[2],
+                      curr.bytes_[2]);
+        MixedTransmit(curr.bytes_[1],
+                      curr.bytes_[1]);
+        MixedTransmit(curr.bytes_[0],
+                      curr.bytes_[0]);
         /// @todo fix
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
-            UDR1 = buf[i];
-            SPDR = buf[i+1];
-            asm volatile("nop");
-            waitForSPIDone();
-            waitForUDRTransmitDone();
-            drainUDR1Fifo();
+            MixedTransmit(buf[i],
+                          buf[i+1]);
         }
         digitalWrite<EnablePin, HIGH>();
         digitalWrite<EnablePin2, HIGH>();
@@ -463,7 +416,6 @@ public:
     template<bool printoutStats = false>
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
-        drainUDR1Fifo();
         //return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
         // unlike with the single spi bus linear design, this class assumes that you can _only_ write to the
         // entire
@@ -471,47 +423,26 @@ public:
             return 0;
         }
         PSRAMBlockAddress curr(address >> 1);
+        PSRAMBlockAddress end(address + capacity);
+        auto numBytesToSecondChip = end.getOffset();
+        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin2, LOW>();
-        SPDR = 0x03;
-        UDR1 = 0x03;
-        asm volatile("nop");
-        PSRAMBlockAddress end(address + capacity);
-        waitForSPIDone();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        UDR1 = curr.bytes_[2];
-        SPDR = curr.bytes_[2];
-        asm volatile("nop");
-        auto numBytesToSecondChip = end.getOffset();
-        waitForSPIDone();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        UDR1 = curr.bytes_[1];
-        SPDR = curr.bytes_[1];
-        asm volatile("nop");
-        auto localToASingleChip = curr.getIndex() == end.getIndex();
-        waitForSPIDone();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
-        UDR1 = curr.bytes_[0];
-        SPDR = curr.bytes_[0];
-        asm volatile("nop");
-        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
-        waitForSPIDone();
-        waitForUDRTransmitDone();
-        drainUDR1Fifo();
+        MixedTransmit(0x03,
+                      0x03);
+        MixedTransmit(curr.bytes_[2],
+                      curr.bytes_[2]);
+        MixedTransmit(curr.bytes_[1],
+                      curr.bytes_[1]);
+        MixedTransmit(curr.bytes_[0],
+                      curr.bytes_[0]);
         /// @todo fix
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
-            drainUDR1Fifo();
-            UDR1 = 0;
-            SPDR = 0;
-            asm volatile("nop");
-            waitForSPIDone();
-            waitForUDRTransmitDone();
-            auto a0 = UDR1;
-            buf[i] = a0;
-            buf[i+1] = SPDR;
+            auto result = MixedTransfer(0,
+                                        0);
+            buf[i] = result.bytes[0];
+            buf[i+1] = result.bytes[1];
         }
         digitalWrite<EnablePin2, HIGH>();
         digitalWrite<EnablePin, HIGH>();
@@ -523,29 +454,20 @@ public:
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
-            //SPI.beginTransaction(SPISettings(10_MHz, MSBFIRST, SPI_MODE0));
             initialized_ = true;
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
             digitalWrite<EnablePin2, LOW>();
             digitalWrite<EnablePin, LOW>();
-            UDR1 = 0x66;
-            SPDR = 0x66;
-            asm volatile ("nop");
-            while (!(UCSR1A & (1 << UDRE1)));
-            while (!(SPSR & (1 << SPIF)));
+            MixedTransmit(0x66,
+                          0x66);
             digitalWrite<EnablePin2, HIGH>();
             digitalWrite<EnablePin, HIGH>();
             digitalWrite<EnablePin2, LOW>();
             digitalWrite<EnablePin, LOW>();
-            UDR1 = 0x99;
-            SPDR = 0x99;
-            asm volatile ("nop");
-            while (!(UCSR1A & (1 << UDRE1)));
-            while (!(SPSR & (1 << SPIF)));
+            MixedTransmit(0x99,
+                          0x99);
             digitalWrite<EnablePin2, HIGH>();
             digitalWrite<EnablePin, HIGH>();
-            drainUDR1Fifo();
-            //SPI.endTransaction();
         }
     }
 };
