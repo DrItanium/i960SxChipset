@@ -26,6 +26,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessorSerializer.h"
 #include "Pinout.h"
 //#include "PSRAMChip.h"
+inline void
+drainUDR1() noexcept {
+    (void) UDR1;
+    (void) UDR1;
+}
 SplitWord16
 ProcessorInterface::getDataBits() noexcept {
 #if 0
@@ -78,42 +83,37 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
 #endif
     //Serial.print(F("setDataBits: 0x"));
     //Serial.println(value, HEX);
-    if (latchedDataOutput != value) {
-        latchedDataOutput = value;
-        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
-        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
-        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
-        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        // use the 16-bit write capabilities of the MSPIM device
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-        SplitWord16 divisor(latchedDataOutput);
-        while (!(UCSR1A & (1 << UDRE1)));
-        // use the 16-bit write capabilities of the MSPIM device
-        UDR1 = divisor.bytes[0];
-        UDR1 = divisor.bytes[0];
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = divisor.bytes[1];
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = divisor.bytes[1];
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        while (!(UCSR1A & (1 << UDRE1)));
-        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
-        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-    }
+    //if (latchedDataOutput != value) {
+    //    latchedDataOutput = value;
+    SplitWord16 divisor(value);
+    drainUDR1();
+    auto opcode = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+    digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+    UDR1 = opcode;
+    while (!(UCSR1A & (1 << RXC1)));
+    UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
+    while (!(UCSR1A & (1 << RXC1)));
+    drainUDR1();
+    UDR1 = divisor.bytes[0];
+    while (!(UCSR1A & (1 << RXC1)));
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    drainUDR1();
+
+    digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+    SPDR = opcode;
+    while (!(SPSR & _BV(SPIF))); // wait
+    SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+    while (!(SPSR & _BV(SPIF))); // wait
+    SPDR = divisor.bytes[1];
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))); // wait
+    digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+    //}
 }
 
 
 
 
-inline void
-drainUDR1() noexcept {
-    (void) UDR1;
-    (void) UDR1;
-}
 void
 ProcessorInterface::begin() noexcept {
     if (!initialized_) {
@@ -421,32 +421,40 @@ ProcessorInterface::setupDataLinesForWrite() noexcept {
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
 }
+auto
+USART_Receive(byte value) noexcept {
+    while (!(UCSR1A & (1 << UDRE1)));
+    UDR1 = value;
+    while (!(UCSR1A & (1 << RXC1)));
+    return UDR1;
+}
 void
 ProcessorInterface::setupDataLinesForRead() noexcept {
     /// @todo eliminate the extra byte of transmission because of the separate io expanders
-    digitalWrite<i960Pinout::GPIO_CS0, LOW>();
     digitalWrite<i960Pinout::GPIO_CS1, LOW>();
     UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
     UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
+    while (!(UCSR1A & (1 << UDRE1)));
+    UDR1 = 0;
+    UDR1 = 0;
+    while (!(UCSR1A & (1 << UDRE1)));
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+
+    digitalWrite<i960Pinout::GPIO_CS0, LOW>();
     SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
     // use the 16-bit write capabilities of the MSPIM device
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
     SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
-    while (!(UCSR1A & (1 << UDRE1)));
-    // use the 16-bit write capabilities of the MSPIM device
-    UDR1 = 0;
-    UDR1 = 0;
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
     SPDR = 0;
-    while (!(UCSR1A & (1 << UDRE1)));
+    asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
     SPDR = 0;
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
-    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
 }
 
 void
@@ -460,9 +468,20 @@ ProcessorInterface::triggerInt0() noexcept {
 
 void
 ProcessorInterface::ioExpanderWriteTest() noexcept {
-    setupDataLinesForRead();
-    for (uint32_t i = 0; i < 0x10000; ++i) {
-        //ProcessorInterface::newDataCycle();
-        ProcessorInterface::setDataBits(i);
+    //setupDataLinesForRead();
+    auto opcode = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+    digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+    (void)USART_Receive(opcode);
+    (void)USART_Receive(static_cast<byte>(MCP23x17Registers::IODIR));
+    (void)USART_Receive(0);
+    (void)USART_Receive(0);
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    for (uint16_t i = 0; i < 0x100; ++i) {
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        (void)USART_Receive(opcode);
+        (void)USART_Receive(static_cast<byte>(MCP23x17Registers::GPIO));
+        (void)USART_Receive(static_cast<byte>(i));
+        (void)USART_Receive(static_cast<byte>(i));
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
     }
 }

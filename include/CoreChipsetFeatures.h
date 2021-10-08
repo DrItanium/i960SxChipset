@@ -173,11 +173,15 @@ public:
         /// @todo get rid of this next statement
         GD.__end();
 #endif
+#if 0
         while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
             Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
             delay(1000);
         }
         Serial.println(F("SD CARD UP!"));
+#else
+        Serial.println(F("SDCARD Support disabled"));
+#endif
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
