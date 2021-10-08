@@ -345,9 +345,9 @@ public:
         SPDR = correctAddress.getPSRAMAddress_High();
         waitForUDRTransmitDone();
         drainUDR1Fifo();
-        waitForSPIDone();
         UDR1 = correctAddress.getPSRAMAddress_Middle();
         UDR1 = correctAddress.getPSRAMAddress_Low();
+        waitForSPIDone();
         SPDR = correctAddress.getPSRAMAddress_Middle();
         asm volatile ("nop");
         waitForSPIDone();
@@ -355,24 +355,13 @@ public:
         waitForUDRTransmitDone();
         drainUDR1Fifo();
         waitForSPIDone();
-        auto fn = [&buf](int i) noexcept {
-            // okay this is the important part, we need to maintain consistency
-            // bus 1 -> even addresses
-            // bus 0 -> odd addresses
+        for (int i = 0; i < 16; i+=2) {
             UDR1 = buf[i];
             SPDR = buf[i+1];
-            UDR1 = buf[i+2];
-            asm volatile ("nop");
             waitForSPIDone();
-            SPDR = buf[i+3];
             waitForUDRTransmitDone();
             drainUDR1Fifo();
-            waitForSPIDone();
-        };
-        fn(0);
-        fn(4);
-        fn(8);
-        fn(12);
+        }
         digitalWrite<EnablePin2, HIGH>();
         digitalWrite<EnablePin, HIGH>();
     }
@@ -394,6 +383,7 @@ public:
         drainUDR1Fifo();
         UDR1 = correctAddress.getPSRAMAddress_Middle();
         UDR1 = correctAddress.getPSRAMAddress_Low();
+        waitForSPIDone();
         SPDR = correctAddress.getPSRAMAddress_Middle();
         asm volatile ("nop");
         waitForSPIDone();
@@ -402,27 +392,16 @@ public:
         waitForUDRTransmitDone();
         drainUDR1Fifo();
         waitForSPIDone();
-        auto fn = [&buf](int i) noexcept {
-            // okay this is the important part, we need to maintain consistency
-            // bus 1 -> even addresses
-            // bus 0 -> odd addresses
-            UDR1 = 0;
+        for (int i = 0; i < 16; i+=2) {
             UDR1 = 0;
             SPDR = 0;
             asm volatile ("nop");
             waitForSPIDone();
             buf[i+1] = SPDR;
-            SPDR = 0;
             waitForUDRTransmitDone();
             buf[i] = UDR1;
-            buf[i+2] = UDR1;
-            waitForSPIDone();
-            buf[i+3] = SPDR;
-        };
-        fn(0);
-        fn(4);
-        fn(8);
-        fn(12);
+            (void)UDR1;
+        }
         digitalWrite<EnablePin, HIGH>();
         digitalWrite<EnablePin2, HIGH>();
     }
