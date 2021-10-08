@@ -66,6 +66,23 @@ ProcessorInterface::getDataBits() noexcept {
     Serial.println(theWord.getWholeValue(), HEX);
     return theWord;
 }
+auto
+USART_Receive(byte value) noexcept {
+    while (!(UCSR1A & (1 << UDRE1)));
+    UDR1 = value;
+    while (!(UCSR1A & (1 << RXC1)));
+    return UDR1;
+}
+void
+MixedTransmit(byte udrValue, byte spiValue) noexcept {
+    while (!(UCSR1A & (1 << UDRE1)));
+    UDR1 = udrValue;
+    SPDR = spiValue;
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))); // wait
+    while (!(UCSR1A & (1 << RXC1)));
+    (void)UDR1;
+}
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
 #if 0
@@ -89,26 +106,12 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
     drainUDR1();
     auto opcode = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
     digitalWrite<i960Pinout::GPIO_CS1, LOW>();
-    UDR1 = opcode;
-    while (!(UCSR1A & (1 << RXC1)));
-    UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
-    while (!(UCSR1A & (1 << RXC1)));
-    drainUDR1();
-    UDR1 = divisor.bytes[0];
-    while (!(UCSR1A & (1 << RXC1)));
-    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-    drainUDR1();
-
     digitalWrite<i960Pinout::GPIO_CS0, LOW>();
-    SPDR = opcode;
-    while (!(SPSR & _BV(SPIF))); // wait
-    SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-    while (!(SPSR & _BV(SPIF))); // wait
-    SPDR = divisor.bytes[1];
-    asm volatile ("nop");
-    while (!(SPSR & _BV(SPIF))); // wait
+    MixedTransmit(opcode, opcode) ;
+    MixedTransmit(static_cast<byte>(MCP23x17Registers::GPIOB), static_cast<byte>(MCP23x17Registers::GPIOA));
+    MixedTransmit(divisor.bytes[0], divisor.bytes[1]);
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
-    //}
 }
 
 
@@ -421,13 +424,6 @@ ProcessorInterface::setupDataLinesForWrite() noexcept {
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
 }
-auto
-USART_Receive(byte value) noexcept {
-    while (!(UCSR1A & (1 << UDRE1)));
-    UDR1 = value;
-    while (!(UCSR1A & (1 << RXC1)));
-    return UDR1;
-}
 void
 ProcessorInterface::setupDataLinesForRead() noexcept {
     /// @todo eliminate the extra byte of transmission because of the separate io expanders
@@ -466,22 +462,11 @@ ProcessorInterface::triggerInt0() noexcept {
 #endif
 }
 
+
 void
 ProcessorInterface::ioExpanderWriteTest() noexcept {
-    //setupDataLinesForRead();
-    auto opcode = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-    digitalWrite<i960Pinout::GPIO_CS1, LOW>();
-    (void)USART_Receive(opcode);
-    (void)USART_Receive(static_cast<byte>(MCP23x17Registers::IODIR));
-    (void)USART_Receive(0);
-    (void)USART_Receive(0);
-    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-    for (uint16_t i = 0; i < 0x100; ++i) {
-        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
-        (void)USART_Receive(opcode);
-        (void)USART_Receive(static_cast<byte>(MCP23x17Registers::GPIO));
-        (void)USART_Receive(static_cast<byte>(i));
-        (void)USART_Receive(static_cast<byte>(i));
-        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    setupDataLinesForRead();
+    for (uint32_t i = 0; i < 0x10000; ++i) {
+        setDataBits(i);
     }
 }
