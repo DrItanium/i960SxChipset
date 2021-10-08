@@ -28,15 +28,43 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#include "PSRAMChip.h"
 SplitWord16
 ProcessorInterface::getDataBits() noexcept {
+#if 0
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
     } else {
         // stub out
         return SplitWord16(0);
     }
+#endif
+    digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+    digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+    SPDR = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+    // use the 16-bit write capabilities of the MSPIM device
+    UDR1 = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+    UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
+    while (!(SPSR & _BV(SPIF))); // wait
+    SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+    while (!(UCSR1A & (1 << UDRE1)));
+    // use the 16-bit write capabilities of the MSPIM device
+    UDR1 = 0;
+    while (!(SPSR & _BV(SPIF))); // wait
+    SPDR = 0;
+    asm volatile ("nop");
+    while (!(UCSR1A & (1 << UDRE1)));
+    while (!(SPSR & _BV(SPIF))); // wait
+    auto lower = UDR1;
+    auto upper = SPDR;
+    digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    SplitWord16 theWord{lower, upper};
+    Serial.print(F("Retrieved word: 0x"));
+    Serial.println(theWord.getWholeValue(), HEX);
+    return theWord;
+    return SplitWord16{lower, upper};
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
+#if 0
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         // the latch is preserved in between data line changes
         // okay we are still pointing as output values
@@ -47,6 +75,31 @@ ProcessorInterface::setDataBits(uint16_t value) noexcept {
         }
     } else {
        // do nothing
+    }
+#endif
+    if (latchedDataOutput != value) {
+        Serial.print(F("Setting word: 0x"));
+        Serial.println(value, HEX);
+        latchedDataOutput = value;
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+        SplitWord16 divisor(latchedDataOutput);
+        while (!(UCSR1A & (1 << UDRE1)));
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = divisor.bytes[0];
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = divisor.bytes[1];
+        asm volatile ("nop");
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & _BV(SPIF))); // wait
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
     }
 }
 
@@ -243,7 +296,7 @@ ProcessorInterface::newDataCycle() noexcept {
     address_.bytes[2] = SPDR;
     UDR1 = 0;
     SPDR = 0;
-    isReadOperation_ = address_.bytes[0] & 0b1;
+    isReadOperation_ = !(address_.bytes[0] & 0b1);
     address_.bytes[0] &= (~0b0000'0001); // clear the least significant bit
     while (!(UCSR1A & (1 << UDRE1)));
     address_.bytes[1] = UDR1;
@@ -251,6 +304,15 @@ ProcessorInterface::newDataCycle() noexcept {
     address_.bytes[3] = SPDR;
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    if (isReadOperation()) {
+        setupDataLinesForRead();
+    } else {
+        setupDataLinesForWrite();
+    }
+    Serial.print(F("Address Request: 0x"));
+    Serial.println(address_.getWholeValue(), HEX);
+    Serial.println(isReadOperation() ? F("READ") : F("WRITE"));
+    return address_.bytes[3];
 #if 0
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
@@ -322,6 +384,7 @@ ProcessorInterface::newDataCycle() noexcept {
 }
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
+#if 0
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         if (!dataLinesDirection_) {
             dataLinesDirection_ = ~dataLinesDirection_;
@@ -330,9 +393,35 @@ ProcessorInterface::setupDataLinesForWrite() noexcept {
     } else {
         // do nothing
     }
+#endif
+if (!dataLinesDirection_) {
+    /// @todo eliminate the extra byte of transmission because of the separate io expanders
+    digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+    digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+    SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+    // use the 16-bit write capabilities of the MSPIM device
+    UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+    UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))); // wait
+    SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+    while (!(UCSR1A & (1 << UDRE1)));
+    // use the 16-bit write capabilities of the MSPIM device
+    UDR1 = 0xFF;
+    UDR1 = 0xFF;
+    while (!(SPSR & _BV(SPIF))); // wait
+    SPDR = 0xFF;
+    while (!(UCSR1A & (1 << UDRE1)));
+    SPDR = 0xFF;
+    while (!(SPSR & _BV(SPIF))); // wait
+    digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    dataLinesDirection_ = ~dataLinesDirection_;
+}
 }
 void
 ProcessorInterface::setupDataLinesForRead() noexcept {
+#if 0
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         if (dataLinesDirection_) {
             dataLinesDirection_ = ~dataLinesDirection_;
@@ -340,6 +429,30 @@ ProcessorInterface::setupDataLinesForRead() noexcept {
         }
     } else {
         // do nothing
+    }
+#endif
+    if (dataLinesDirection_) {
+        /// @todo eliminate the extra byte of transmission because of the separate io expanders
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+        while (!(UCSR1A & (1 << UDRE1)));
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = 0;
+        UDR1 = 0;
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        while (!(UCSR1A & (1 << UDRE1)));
+        SPDR = 0;
+        while (!(SPSR & _BV(SPIF))); // wait
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+        dataLinesDirection_ = ~dataLinesDirection_;
     }
 }
 
