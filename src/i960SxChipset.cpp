@@ -485,7 +485,7 @@ void setup() {
         }
         signalHaltState(F("MEMORY WRITE COMPLETE!"));
 #endif
-#if 0
+#if 1
         while (true) {
             ProcessorInterface::ioExpanderWriteTest();
         }

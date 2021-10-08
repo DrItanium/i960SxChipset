@@ -127,52 +127,25 @@ ProcessorInterface::begin() noexcept {
         // should receive it.
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
-        // pull iocon from both channels
         drainUDR1();
-        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
-        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
-        UDR1 = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        UDR1 = static_cast<byte>(MCP23x17Registers::IOCON);
-        SPDR = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::IOCON);
-        while (!(UCSR1A & (1 << UDRE1)));
-        drainUDR1();
-        UDR1 = 0;
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = 0;
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        auto iocon0 = SPDR;
-        volatile auto iocon1 = UDR1; // if I don't make this volatile, problems happen....
-        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
-        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-        Serial.print(F("iocon0 = 0b"));
-        Serial.println(iocon0, BIN);
-        Serial.print(F("iocon1 = 0b"));
-        Serial.println(iocon1, BIN);
-        // then setup the iocon registers
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
         digitalWrite<i960Pinout::GPIO_CS1, LOW>();
         SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
         UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
-        iocon0 |= 0b0000'1000;
-        iocon1 |= 0b0000'1000;
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << UDRE1)));
-        SPDR = static_cast<byte>(MCP23x17Registers::IOCON);
         UDR1 = static_cast<byte>(MCP23x17Registers::IOCON);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::IOCON);
+        while (!(UCSR1A & (1 << UDRE1)));
+        UDR1 = 0b0000'1000;
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = 0b0000'1000;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << UDRE1)));
-        SPDR = iocon0;
-        UDR1 = iocon1; // just use iocon0 to make sure we have a correct copy
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << RXC1)));
         digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
         digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+        drainUDR1();
         // setup the direction registers for the data lines
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
         digitalWrite<i960Pinout::GPIO_CS1, LOW>();
@@ -441,6 +414,7 @@ ProcessorInterface::setupDataLinesForWrite() noexcept {
     while (!(SPSR & _BV(SPIF))); // wait
     SPDR = 0xFF;
     while (!(UCSR1A & (1 << UDRE1)));
+    while (!(SPSR & _BV(SPIF))); // wait
     SPDR = 0xFF;
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
@@ -467,6 +441,7 @@ ProcessorInterface::setupDataLinesForRead() noexcept {
     while (!(SPSR & _BV(SPIF))); // wait
     SPDR = 0;
     while (!(UCSR1A & (1 << UDRE1)));
+    while (!(SPSR & _BV(SPIF))); // wait
     SPDR = 0;
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
@@ -487,6 +462,7 @@ void
 ProcessorInterface::ioExpanderWriteTest() noexcept {
     setupDataLinesForRead();
     for (uint32_t i = 0; i < 0x10000; ++i) {
+        //ProcessorInterface::newDataCycle();
         ProcessorInterface::setDataBits(i);
     }
 }
