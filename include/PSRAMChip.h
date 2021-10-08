@@ -393,6 +393,7 @@ public:
         drainUDR1Fifo();
         waitForSPIDone();
         for (int i = 0; i < 16; i+=2) {
+            drainUDR1Fifo();
             UDR1 = 0;
             SPDR = 0;
             asm volatile ("nop");
