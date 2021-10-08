@@ -58,31 +58,148 @@ void
 ProcessorInterface::begin() noexcept {
     if (!initialized_) {
         initialized_ = true;
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        pinMode(i960Pinout::GPIOSelect, OUTPUT);
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        pinMode(i960Pinout::GPIO_CS0, OUTPUT);
+        pinMode(i960Pinout::GPIO_CS1, OUTPUT);
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
         // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
         // disabled. We can send out a single IOCON.HAEN enable message and all
         // should receive it.
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
-        auto iocon = read8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>();
-        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(iocon | 0b0000'1000);
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-            // now all devices tied to this ~CS pin have separate addresses
-            // make each of these inputs
-            writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
-            writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
-            writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
-            writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0x005F);
-            // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
-            write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
-            // write the default value out to the latch to start with
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput);
-        } else {
-            /// @todo implement this
-        }
-        SPI.endTransaction();
+        // pull iocon from both channels
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        SPDR = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        UDR1 = generateReadOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        SPDR = static_cast<byte>(MCP23x17Registers::IOCON);
+        UDR1 = static_cast<byte>(MCP23x17Registers::IOCON);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        SPDR = 0;
+        UDR1 = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << RXC1)));
+        auto iocon0 = SPDR;
+        auto iocon1 = UDR1;
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+        // then setup the iocon registers
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        iocon0 |= 0b0000'1000;
+        iocon1 |= 0b0000'1000;
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        SPDR = static_cast<byte>(MCP23x17Registers::IOCON);
+        UDR1 = static_cast<byte>(MCP23x17Registers::IOCON);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << UDRE1)));
+        SPDR = iocon0;
+        UDR1 = iocon1;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << RXC1)));
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+        // setup the direction registers for the data lines
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+        while (!(UCSR1A & (1 << UDRE1)));
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = 0xFF;
+        UDR1 = 0xFF;
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = 0xFF;
+        while (!(UCSR1A & (1 << UDRE1)));
+        SPDR = 0xFF;
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+        // setup the direction registers for the address lines
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        UDR1 = static_cast<byte>(MCP23x17Registers::IODIR);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+        while (!(UCSR1A & (1 << UDRE1)));
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = 0xFF;
+        UDR1 = 0xFF;
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = 0xFF;
+        while (!(UCSR1A & (1 << UDRE1)));
+        SPDR = 0xFF;
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+
+        // setup the direction registers for the reset, interrupts, and element lines
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = 0b0101'0000;
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        // don't waste time chaning the direction of portb
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+
+        // then setup the output latch on the
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::MemoryCommitExtras);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::OLATA);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = 0b1001'0010; // pull the processor into reset
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        SplitWord16 ldo(latchedDataOutput);
+
+        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
+        UDR1 = static_cast<byte>(MCP23x17Registers::OLATB);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::OLATA);
+        while (!(UCSR1A & (1 << UDRE1)));
+        // use the 16-bit write capabilities of the MSPIM device
+        UDR1 = ldo.bytes[1];
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = ldo.bytes[0];
+        while (!(UCSR1A & (1 << UDRE1)));
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
     }
 }
 
