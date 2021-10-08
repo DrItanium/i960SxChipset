@@ -35,22 +35,22 @@ auto
 USART_Receive(byte value) noexcept {
     while (!(UCSR1A & (1 << UDRE1)));
     UDR1 = value;
+    asm volatile ("nop");
     while (!(UCSR1A & (1 << RXC1)));
     return UDR1;
 }
-void
+inline void
 MixedTransmit(byte udrValue, byte spiValue) noexcept {
-    while (!(UCSR1A & (1 << UDRE1)));
+    //while (!(UCSR1A & (1 << UDRE1)));
     UDR1 = udrValue;
     SPDR = spiValue;
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
     while (!(UCSR1A & (1 << RXC1)));
-    (void)UDR1;
 }
-SplitWord16
+inline SplitWord16
 MixedTransfer(byte udrValue, byte spiValue) noexcept {
-    while (!(UCSR1A & (1 << UDRE1)));
+    //while (!(UCSR1A & (1 << UDRE1)));
     UDR1 = udrValue;
     SPDR = spiValue;
     asm volatile ("nop");

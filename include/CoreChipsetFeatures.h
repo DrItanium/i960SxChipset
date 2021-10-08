@@ -173,7 +173,7 @@ public:
         /// @todo get rid of this next statement
         GD.__end();
 #endif
-#if 0
+#if 1
         while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
             Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
             delay(1000);
