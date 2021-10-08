@@ -257,6 +257,10 @@ public:
      */
     [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
+    static void holdResetLine() noexcept;
+    static void releaseResetLine() noexcept;
+private:
+    static void updateControlSignals() noexcept;
 private:
     static inline SplitWord32 address_{0};
     static inline uint16_t latchedDataOutput = 0;
@@ -264,6 +268,7 @@ private:
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
     static inline bool isReadOperation_ = false;
+    static inline byte controlSignals_ = 0b1001'0010;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved

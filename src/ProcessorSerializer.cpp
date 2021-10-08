@@ -168,17 +168,7 @@ ProcessorInterface::begin() noexcept {
         digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
 
         // then setup the output latch on the
-        digitalWrite<i960Pinout::GPIO_CS0, LOW>();
-        SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::MemoryCommitExtras);
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::OLATA);
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = 0b1001'0010; // pull the processor into reset
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+        updateControlSignals();
         SplitWord16 ldo(latchedDataOutput);
 
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
@@ -202,9 +192,66 @@ ProcessorInterface::begin() noexcept {
         digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
     }
 }
+void
+ProcessorInterface::updateControlSignals() noexcept {
+    digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+    SPDR = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::MemoryCommitExtras);
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    SPDR = static_cast<byte>(MCP23x17Registers::OLATA);
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    SPDR = controlSignals_;
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+}
+void
+ProcessorInterface::holdResetLine() noexcept {
+    controlSignals_ &= ~(0b0000'0001);
+    updateControlSignals();
+}
+void
+ProcessorInterface::releaseResetLine() noexcept {
+    controlSignals_ |= 0b0000'0001;
+    updateControlSignals();
+}
 
 byte
 ProcessorInterface::newDataCycle() noexcept {
+
+    // read from both busses
+    digitalWrite<i960Pinout::GPIO_CS0, LOW>();
+    digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+    SPDR = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+    // use the 16-bit write capabilities of the MSPIM device
+    UDR1 = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+    UDR1 = static_cast<byte>(MCP23x17Registers::GPIO);
+    asm volatile ("nop");
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+    asm volatile ("nop");
+    while (!(UCSR1A & (1 << UDRE1)));
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    // use the 16-bit write capabilities of the MSPIM device
+    UDR1 = 0;
+    SPDR = 0;
+    asm volatile ("nop");
+    while (!(UCSR1A & (1 << UDRE1)));
+    address_.bytes[0] = UDR1;
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    address_.bytes[2] = SPDR;
+    UDR1 = 0;
+    SPDR = 0;
+    isReadOperation_ = address_.bytes[0] & 0b1;
+    address_.bytes[0] &= (~0b0000'0001); // clear the least significant bit
+    while (!(UCSR1A & (1 << UDRE1)));
+    address_.bytes[1] = UDR1;
+    while (!(SPSR & _BV(SPIF))) ; // wait
+    address_.bytes[3] = SPDR;
+    digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
+    digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+#if 0
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -271,6 +318,7 @@ ProcessorInterface::newDataCycle() noexcept {
     } else {
         return 0;
     }
+#endif
 }
 void
 ProcessorInterface::setupDataLinesForWrite() noexcept {
