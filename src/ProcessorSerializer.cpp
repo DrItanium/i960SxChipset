@@ -47,7 +47,7 @@ MixedTransmit(byte udrValue, byte spiValue) noexcept {
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
     while (!(UCSR1A & (1 << RXC1)));
-    volatile auto result0 = UDR1;
+    auto result0 = UDR1;
     auto result1 = UDR1;
     Serial.println(F("{"));
     Serial.print(F("\tRESULT0 0x"));
@@ -230,6 +230,7 @@ ProcessorInterface::newDataCycle() noexcept {
     static constexpr auto addressLinesOpcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
     static constexpr auto gpioRegister = static_cast<byte>(MCP23x17Registers::GPIO);
     // read from both busses
+    Serial.println(F("Read Address Lines {"));
     digitalWrite<i960Pinout::GPIO_CS0, LOW>();
     digitalWrite<i960Pinout::GPIO_CS1, LOW>();
     MixedTransmit(addressLinesOpcode,
@@ -243,6 +244,7 @@ ProcessorInterface::newDataCycle() noexcept {
     // use the 16-bit write capabilities of the MSPIM device
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+    Serial.println(F("}"));
     auto b0 = p0.bytes[0];
     auto b1 = p1.bytes[0];
     auto b2 = p0.bytes[1];
@@ -262,11 +264,13 @@ ProcessorInterface::newDataCycle() noexcept {
     address_.bytes[2] = b2;
     address_.bytes[3] = b3;
     isReadOperation_ = (address_.bytes[0] & 0b1) == 0;
+    Serial.println(F("Setup data lines {"));
     if (isReadOperation()) {
         setupDataLinesForRead();
     } else {
         setupDataLinesForWrite();
     }
+    Serial.println(F("}"));
     address_.bytes[0] &= (~0b0000'0001); // clear the least significant bit
     Serial.print(F("Address Request: 0x"));
     Serial.print(address_.getWholeValue(), HEX);
