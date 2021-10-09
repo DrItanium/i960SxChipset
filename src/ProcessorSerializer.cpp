@@ -58,7 +58,12 @@ MixedTransfer(byte udrValue, byte spiValue) noexcept {
     while (!(SPSR & _BV(SPIF))); // wait
     auto sResult = SPDR;
     while (!(UCSR1A & (1 << RXC1)));
-    auto uResult = UDR1;
+    volatile auto uResult = UDR1;
+    auto uResult2 = UDR1;
+    Serial.print(F("\tuR1 0x"));
+    Serial.println(uResult, HEX);
+    Serial.print(F("\tuR2 0x"));
+    Serial.println(uResult2, HEX);
     return SplitWord16{uResult, sResult};
 }
 
@@ -73,14 +78,16 @@ ProcessorInterface::getDataBits() noexcept {
     auto theWord = MixedTransfer(0, 0);
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-    Serial.print(F("getDataBits: 0x"));
-    Serial.println(theWord.getWholeValue(), HEX);
+    //Serial.print(F("getDataBits: 0x"));
+    //Serial.println(theWord.getWholeValue(), HEX);
     return theWord;
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
+#if 0
     Serial.print(F("setDataBits: 0x"));
     Serial.println(value, HEX);
+#endif
     /// @todo cache the result eventually
     SplitWord16 divisor(value);
     auto opcode = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
@@ -140,6 +147,15 @@ ProcessorInterface::begin() noexcept {
                       0xFF);
         digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
         digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+        digitalWrite<i960Pinout::GPIO_CS1, LOW>();
+        (void)USART_Receive(generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines));
+        (void)USART_Receive(static_cast<byte>(MCP23x17Registers::IPOL));
+        auto lower = USART_Receive(0);
+        auto upper = USART_Receive(0);
+        digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
+        Serial.print(F("IPOL VALUE: 0x"));
+        Serial.print(upper, HEX);
+        Serial.println(lower, HEX);
 
         // setup the direction registers for the reset, interrupts, and element lines
         digitalWrite<i960Pinout::GPIO_CS0, LOW>();
@@ -220,6 +236,7 @@ ProcessorInterface::newDataCycle() noexcept {
     auto b1 = p1.bytes[0];
     auto b2 = p0.bytes[1];
     auto b3 = p1.bytes[1];
+#if 0
     Serial.print(F("b0: 0x"));
     Serial.println(b0, HEX);
     Serial.print(F("b1: 0x"));
@@ -228,6 +245,7 @@ ProcessorInterface::newDataCycle() noexcept {
     Serial.println(b2, HEX);
     Serial.print(F("b3: 0x"));
     Serial.println(b3, HEX);
+#endif
     address_.bytes[0] = b0;
     address_.bytes[1] = b1;
     address_.bytes[2] = b2;
