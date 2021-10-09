@@ -47,7 +47,14 @@ MixedTransmit(byte udrValue, byte spiValue) noexcept {
     asm volatile ("nop");
     while (!(SPSR & _BV(SPIF))); // wait
     while (!(UCSR1A & (1 << RXC1)));
-    (void)UDR1;
+    volatile auto result0 = UDR1;
+    auto result1 = UDR1;
+    Serial.println(F("{"));
+    Serial.print(F("\tRESULT0 0x"));
+    Serial.println(result0, HEX);
+    Serial.print(F("\tRESULT1 0x"));
+    Serial.println(result1, HEX);
+    Serial.println(F("}"));
 }
 inline SplitWord16
 MixedTransfer(byte udrValue, byte spiValue) noexcept {
@@ -60,10 +67,14 @@ MixedTransfer(byte udrValue, byte spiValue) noexcept {
     while (!(UCSR1A & (1 << RXC1)));
     volatile auto uResult = UDR1;
     auto uResult2 = UDR1;
+    Serial.println(F("{"));
     Serial.print(F("\tuR1 0x"));
     Serial.println(uResult, HEX);
     Serial.print(F("\tuR2 0x"));
     Serial.println(uResult2, HEX);
+    Serial.print(F("\tsR: 0x"));
+    Serial.println(sResult, HEX);
+    Serial.println(F("}"));
     return SplitWord16{uResult, sResult};
 }
 
