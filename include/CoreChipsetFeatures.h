@@ -32,9 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessorSerializer.h"
 #include "OpenFileHandle.h"
 #include <SdFat.h>
-#ifdef USE_DAZZLER
-#include "DazzlerConfig.h"
-#endif
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
@@ -167,21 +164,11 @@ public:
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
         // dazzler setup must come first
-#ifdef USE_DAZZLER
-        GD.begin(GD_STORAGE);
-        // then immediately end it for now
-        /// @todo get rid of this next statement
-        GD.__end();
-#endif
-#if 1
         while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
             Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
             delay(1000);
         }
         Serial.println(F("SD CARD UP!"));
-#else
-        Serial.println(F("SDCARD Support disabled"));
-#endif
         timeoutCopy_ = SplitWord32(Serial.getTimeout());
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());

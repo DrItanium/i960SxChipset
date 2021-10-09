@@ -73,22 +73,23 @@ ProcessorInterface::getDataBits() noexcept {
     auto theWord = MixedTransfer(0, 0);
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
-    //Serial.print(F("getDataBits: 0x"));
-    //Serial.println(theWord.getWholeValue(), HEX);
+    Serial.print(F("getDataBits: 0x"));
+    Serial.println(theWord.getWholeValue(), HEX);
     return theWord;
 }
 void
 ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    //Serial.print(F("setDataBits: 0x"));
-    //Serial.println(value, HEX);
+    Serial.print(F("setDataBits: 0x"));
+    Serial.println(value, HEX);
     /// @todo cache the result eventually
     SplitWord16 divisor(value);
     auto opcode = generateWriteOpcode(ProcessorInterface::IOExpanderAddress::DataLines);
     digitalWrite<i960Pinout::GPIO_CS1, LOW>();
     digitalWrite<i960Pinout::GPIO_CS0, LOW>();
     MixedTransmit(opcode, opcode);
-    MixedTransmit(static_cast<byte>(MCP23x17Registers::GPIOB),
-                  static_cast<byte>(MCP23x17Registers::GPIOA));
+    MixedTransmit(static_cast<byte>(MCP23x17Registers::GPIO),
+                  static_cast<byte>(MCP23x17Registers::GPIO));
+    MixedTransmit(divisor.bytes[0], divisor.bytes[1]);
     MixedTransmit(divisor.bytes[0], divisor.bytes[1]);
     digitalWrite<i960Pinout::GPIO_CS1, HIGH>();
     digitalWrite<i960Pinout::GPIO_CS0, HIGH>();
@@ -227,8 +228,6 @@ ProcessorInterface::newDataCycle() noexcept {
     Serial.println(b2, HEX);
     Serial.print(F("b3: 0x"));
     Serial.println(b3, HEX);
-    Serial.print(F("addrWhole: 0x"));
-    Serial.println(address_.getWholeValue(), HEX);
     address_.bytes[0] = b0;
     address_.bytes[1] = b1;
     address_.bytes[2] = b2;
@@ -241,8 +240,8 @@ ProcessorInterface::newDataCycle() noexcept {
     }
     address_.bytes[0] &= (~0b0000'0001); // clear the least significant bit
     Serial.print(F("Address Request: 0x"));
-    Serial.println(address_.getWholeValue(), HEX);
-    Serial.println(isReadOperation() ? F("READ") : F("WRITE"));
+    Serial.print(address_.getWholeValue(), HEX);
+    Serial.println(isReadOperation() ? F(": READ") : F(": WRITE"));
     return address_.bytes[3];
 }
 void
