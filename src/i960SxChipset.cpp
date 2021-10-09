@@ -377,8 +377,9 @@ void installBootImage() noexcept {
                 SD.errorHalt();
             }
             (void)OnboardPSRAMBlock::write(addr, storage, numRead);
-            //Serial.print(F("."));
+            Serial.print(F("."));
         }
+        Serial.println();
         Serial.println(F("Transfer complete!"));
         // make sure we close the file before destruction
         theFile.close();
