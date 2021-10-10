@@ -257,7 +257,7 @@ public:
             return readIOConfigurationSpace0(offset, lss);
         } else if (targetPage == Serial0Page) {
             return handleFirstPageRegisterReads(offset, lss);
-        } else if (targetPage >= SDInterface::StartPage && targetPage < SDInterface::EndPage) {
+        } else if (SDInterface::respondsTo(targetPage)) {
             return SDInterface::read(targetPage, offset, lss);
         } else if (targetPage == DisplayShieldAuxPage) {
             return handleDisplayShieldReads(offset, lss);
@@ -268,7 +268,7 @@ public:
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         if (targetPage == Serial0Page) {
             handleFirstPageRegisterWrites(offset, lss, value);
-        } else if (targetPage >= SDInterface::StartPage && targetPage < SDInterface::EndPage) {
+        } else if (SDInterface::respondsTo(targetPage)) {
             SDInterface::write(targetPage, offset, lss, value);
         } else if (targetPage == DisplayShieldAuxPage) {
             handleDisplayShieldWrites(offset, lss, value);

@@ -254,6 +254,9 @@ private:
         files_[index].write(offset, lss, value);
     }
 public:
+    static constexpr bool respondsTo(byte targetPage) noexcept {
+        return targetPage >= StartPage && targetPage < EndPage;
+    }
     static void begin() noexcept {
         while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
             Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
