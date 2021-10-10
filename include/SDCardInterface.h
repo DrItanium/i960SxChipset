@@ -155,41 +155,6 @@ private:
     static bool tryMakeDirectory(bool makeMissingParents = false) noexcept { return SD.mkdir(sdCardPath_, makeMissingParents); }
     static bool exists() noexcept { return SD.exists(sdCardPath_); }
     static bool remove() noexcept { return SD.remove(sdCardPath_); }
-public:
-    static void begin() noexcept {
-        while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-            Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
-            delay(1000);
-        }
-        Serial.println(F("SD CARD UP!"));
-        clusterCount_ = SplitWord32(SD.clusterCount());
-        volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
-        bytesPerSector_ = SD.bytesPerSector();
-    }
-    static uint16_t fileRead(uint8_t index, uint8_t offset, LoadStoreStyle lss) noexcept {
-        return files_[index].read(offset, lss);
-    }
-    static void fileWrite(uint8_t index, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) {
-        files_[index].write(offset, lss, value);
-    }
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        if (targetPage == CTLPage) {
-            return ctlRead(offset, lss);
-        } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {
-            return fileRead(targetPage - FileStartPage, offset, lss);
-        } else {
-            return 0;
-        }
-    }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        if (targetPage == CTLPage) {
-            ctlWrite(offset, lss, value);
-        } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {
-            fileWrite(targetPage - FileStartPage, offset, lss, value);
-        } else {
-            // do nothing
-        }
-    }
     static uint16_t ctlRead(uint8_t offset, LoadStoreStyle lss) noexcept {
         if (offset < 80) {
             if (auto result = SplitWord16(reinterpret_cast<uint16_t*>(sdCardPath_)[offset >> 1]); lss == LoadStoreStyle::Upper8) {
@@ -282,6 +247,42 @@ public:
             }
         }
     }
+    static uint16_t fileRead(uint8_t index, uint8_t offset, LoadStoreStyle lss) noexcept {
+        return files_[index].read(offset, lss);
+    }
+    static void fileWrite(uint8_t index, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) {
+        files_[index].write(offset, lss, value);
+    }
+public:
+    static void begin() noexcept {
+        while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+            Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
+            delay(1000);
+        }
+        Serial.println(F("SD CARD UP!"));
+        clusterCount_ = SplitWord32(SD.clusterCount());
+        volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
+        bytesPerSector_ = SD.bytesPerSector();
+    }
+    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+        if (targetPage == CTLPage) {
+            return ctlRead(offset, lss);
+        } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {
+            return fileRead(targetPage - FileStartPage, offset, lss);
+        } else {
+            return 0;
+        }
+    }
+    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+        if (targetPage == CTLPage) {
+            ctlWrite(offset, lss, value);
+        } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {
+            fileWrite(targetPage - FileStartPage, offset, lss, value);
+        } else {
+            // do nothing
+        }
+    }
+
 private:
     static inline SplitWord32 clusterCount_ {0};
     static inline SplitWord32 volumeSectorCount_ {0};
