@@ -124,7 +124,11 @@ public:
     bool isDirectory() noexcept { return backingStore_.isDirectory(); }
     uint16_t getChar() noexcept {
         if (backingStore_) {
-            return static_cast<uint16_t>(backingStore_.read());
+            if (auto result = backingStore_.read(); result == -1) {
+                return EOF;
+            } else {
+                return static_cast<uint16_t>(result);
+            }
         } else {
             return 0xFFFF;
         }
