@@ -124,13 +124,9 @@ public:
     bool isDirectory() noexcept { return backingStore_.isDirectory(); }
     uint16_t getChar() noexcept {
         if (backingStore_) {
-            if (auto result = backingStore_.read(); result == -1) {
-                return EOF;
-            } else {
-                return static_cast<uint16_t>(result);
-            }
+            return static_cast<uint16_t>(backingStore_.read());
         } else {
-            return EOF;
+            return -1;
         }
     }
     void putChar(SplitWord16 value) noexcept {
