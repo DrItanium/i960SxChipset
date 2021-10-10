@@ -57,13 +57,13 @@ public:
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(ConsoleIO),
         TwoByteEntry(ConsoleFlush),
-        FourByteEntry(ConsoleTimeout),
-        TwoByteEntry(ConsoleRXBufferSize),
-        TwoByteEntry(ConsoleTXBufferSize),
-        FourByteEntry(ChipsetClockSpeed),
-        TwoByteEntry(CacheLineCount),
-        TwoByteEntry(CacheLineSize),
-        TwoByteEntry(NumberOfCacheWays),
+        //FourByteEntry(ConsoleTimeout),
+        //TwoByteEntry(ConsoleRXBufferSize),
+        //TwoByteEntry(ConsoleTXBufferSize),
+        //FourByteEntry(ChipsetClockSpeed),
+        //TwoByteEntry(CacheLineCount),
+        //TwoByteEntry(CacheLineSize),
+        //TwoByteEntry(NumberOfCacheWays),
         TwoByteEntry(TriggerInterrupt),
         FourByteEntry(AddressDebuggingFlag),
 #undef SixteenByteEntry
@@ -74,15 +74,15 @@ public:
         End,
         ConsoleIO = ConsoleIO0,
         ConsoleFlush = ConsoleFlush0,
-        ConsoleTimeoutLower = ConsoleTimeout00,
-        ConsoleTimeoutUpper = ConsoleTimeout10,
-        ConsoleRXBufferSize = ConsoleRXBufferSize0,
-        ConsoleTXBufferSize = ConsoleTXBufferSize0,
-        ChipsetClockSpeedLower = ChipsetClockSpeed00,
-        ChipsetClockSpeedUpper = ChipsetClockSpeed10,
-        CacheLineCount = CacheLineCount0,
-        CacheLineSize = CacheLineSize0,
-        NumberOfCacheWays = NumberOfCacheWays0,
+        //ConsoleTimeoutLower = ConsoleTimeout00,
+        //ConsoleTimeoutUpper = ConsoleTimeout10,
+        //ConsoleRXBufferSize = ConsoleRXBufferSize0,
+        //ConsoleTXBufferSize = ConsoleTXBufferSize0,
+        //ChipsetClockSpeedLower = ChipsetClockSpeed00,
+        //ChipsetClockSpeedUpper = ChipsetClockSpeed10,
+        //CacheLineCount = CacheLineCount0,
+        //CacheLineSize = CacheLineSize0,
+        //NumberOfCacheWays = NumberOfCacheWays0,
         TriggerInterrupt = TriggerInterrupt0,
         AddressDebuggingFlag = AddressDebuggingFlag00,
         // we ignore the upper half of the register but reserve it to make sure
@@ -182,15 +182,15 @@ public:
 
         P0(ConsoleIO);
         P0(ConsoleFlush);
-        P0(ConsoleTimeoutLower);
-        P0(ConsoleTimeoutUpper);
-        P0(ConsoleRXBufferSize);
-        P0(ConsoleTXBufferSize);
-        P0(ChipsetClockSpeedLower);
-        P0(ChipsetClockSpeedUpper);
-        P0(CacheLineCount );
-        P0(CacheLineSize );
-        P0(NumberOfCacheWays );
+        //P0(ConsoleTimeoutLower);
+        //P0(ConsoleTimeoutUpper);
+        //P0(ConsoleRXBufferSize);
+        //P0(ConsoleTXBufferSize);
+        //P0(ChipsetClockSpeedLower);
+        //P0(ChipsetClockSpeedUpper);
+        //P0(CacheLineCount );
+        //P0(CacheLineSize );
+        //P0(NumberOfCacheWays );
         P0(TriggerInterrupt );
         P0(AddressDebuggingFlag );
         P1(PathStart);
@@ -294,6 +294,7 @@ private:
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO:
                 return Serial.read();
+#if 0
             case Registers::ConsoleTimeoutLower:
                 return timeoutCopy_.halves[0];
             case Registers::ConsoleTimeoutUpper:
@@ -312,6 +313,7 @@ private:
                 return 16;
             case Registers::NumberOfCacheWays:
                 return 2;
+#endif
             case Registers::AddressDebuggingFlag:
                 return static_cast<uint16_t>(enableAddressDebugging_);
             default:
@@ -325,7 +327,8 @@ private:
             } else if (lss == LoadStoreStyle::Lower8) {
                 sdCardPath_[offset] = static_cast<char>(value.bytes[0]);
             } else {
-                // do nothing
+                sdCardPath_[offset] = static_cast<char>(value.bytes[0]);
+                sdCardPath_[offset+1] = static_cast<char>(value.bytes[1]);
             }
         } else {
             using T = SDCardFileSystemRegisters;
@@ -367,7 +370,9 @@ private:
         }
     }
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
+#if 0
         bool updateTimeout = false;
+#endif
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
                 pulse<i960Pinout::Int0_>();
@@ -378,6 +383,7 @@ private:
             case Registers::ConsoleIO:
                 Serial.write(static_cast<char>(value.getWholeValue()));
                 break;
+#if 0
             case Registers::ConsoleTimeoutLower:
                 timeoutCopy_.halves[0] = value.getWholeValue();
                 break;
@@ -385,15 +391,18 @@ private:
                 timeoutCopy_.halves[1] = value.getWholeValue();
                 updateTimeout = true;
                 break;
+#endif
             case Registers::AddressDebuggingFlag:
                 enableAddressDebugging_ = (value.getWholeValue() != 0);
                 break;
             default:
                 break;
         }
+#if 0
         if (updateTimeout) {
             Serial.setTimeout(timeoutCopy_.getWholeValue());
         }
+#endif
     }
 public:
     [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
