@@ -306,17 +306,10 @@ private:
             // But we also need to keep track of proper indexes as well. This is a two layer process
             auto newId = findFreeFile();
             auto& targetFile = files_[newId];
-            Serial.print(F("Trying to open file: \""));
-            Serial.print(sdCardPath_);
-            Serial.println(F("\""));
             if (targetFile.open(sdCardPath_, filePermissions_)) {
-                Serial.println(F("SUCCESS!"));
-                Serial.print(F("TARGET FILE INDEX: "));
-                Serial.println(newId);
                 ++numberOfOpenFiles_;
                 return newId;
             } else {
-                Serial.println(F("FAILURE!"));
                 /// @todo set appropriate error condition for bad file open
             }
         } else {
@@ -502,10 +495,6 @@ public:
             case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
             case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55:
             case 56: case 57: case 58: case 59: case 60: case 61: case 62: case 63:
-                Serial.print(F("READING FROM FILE 0x"));
-                Serial.println(targetPage - 32, HEX);
-                Serial.print(F("Originally 0x"));
-                Serial.println(targetPage, HEX);
                 return files_[targetPage - 32].read(offset, lss);
             default: return 0;
         }
@@ -520,10 +509,6 @@ public:
             case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
             case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55:
             case 56: case 57: case 58: case 59: case 60: case 61: case 62: case 63:
-                Serial.print(F("WRITING TO FILE 0x"));
-                Serial.println(targetPage - 32, HEX);
-                Serial.print(F("Originally 0x"));
-                Serial.println(targetPage, HEX);
                 files_[targetPage - 32].write(offset,lss,value);
                 break;
             default: break;
