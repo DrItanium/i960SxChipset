@@ -184,6 +184,15 @@ public:
         SixteenByteEntry(Path3),
         SixteenByteEntry(Path4),
         TwoByteEntry(Backlight),
+        FourByteEntry(RawButtons),
+        //TwoByteEntry(ButtonUp),
+        //TwoByteEntry(ButtonDown),
+        //TwoByteEntry(ButtonLeft),
+        //TwoByteEntry(ButtonRight),
+        //TwoByteEntry(ButtonIn),
+        //TwoByteEntry(ButtonA),
+        //TwoByteEntry(ButtonB),
+        //TwoByteEntry(ButtonC),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -191,6 +200,8 @@ public:
 #undef TwoByteEntry
         End,
         Backlight = Backlight0,
+        RawButtonsLower = RawButtons00,
+        RawButtonsUpper = RawButtons10,
     };
 
 public:
@@ -443,6 +454,11 @@ private:
         switch (static_cast<DisplayShieldRegisters>(offset)) {
             case DisplayShieldRegisters::Backlight:
                 return backlightIntensity_;
+            case DisplayShieldRegisters::RawButtonsLower:
+                rawButtons_.wholeValue_ = displayShield_.readButtons();
+                return rawButtons_.halves[0];
+            case DisplayShieldRegisters::RawButtonsUpper:
+                return rawButtons_.halves[1];
             default:
                 return 0;
         }
@@ -534,5 +550,6 @@ private:
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
     static inline uint16_t backlightIntensity_ = 0;
+    static inline SplitWord32 rawButtons_{0};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
