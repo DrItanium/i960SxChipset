@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
-    static constexpr auto MaximumNumberOfOpenFiles = 32;
+    static constexpr auto MaximumNumberOfOpenFiles = 16;
     static constexpr Address IOBaseAddress = 0xFE00'0000;
     // each one of these 256 byte pages have a prescribed start and end
     static constexpr Address IOConfigurationSpaceStart = IOBaseAddress;
@@ -53,14 +53,10 @@ public:
     static constexpr byte Serial0Page = Serial0BaseAddress.getTargetPage();
     using SDInterface = SDCardInterface<MaximumNumberOfOpenFiles,
                                         RegisterPage0EndAddress>;
-    static constexpr auto SDCardInterfaceBaseAddress = SDInterface :: StartAddress;
-    static constexpr auto SDCardInterfaceEndAddress = SDInterface :: EndAddress;
-    using DisplayInterface = ::DisplayInterface<SDCardInterfaceEndAddress>;
+    //static constexpr auto SDCardInterfaceBaseAddress = SDInterface :: StartAddress;
+    //static constexpr auto SDCardInterfaceEndAddress = SDInterface :: EndAddress;
+    using DisplayInterface = ::DisplayInterface<SDInterface::EndAddress>;
     // we have a bunch of pages in here that are useful :)
-    static constexpr auto SeesawInterfaceStart = DisplayInterface::SeesawSectionStart;
-    static constexpr auto ST7735DisplayStart = DisplayInterface::DisplaySectionStart;
-    static constexpr auto DisplayShieldAuxPage = DisplayInterface::SeesawPage;
-    static constexpr auto ST7735PAge = DisplayInterface::DisplayPage;
     enum class IOConfigurationSpace0Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -174,8 +170,8 @@ private:
             X(Serial0BaseAddress, RegisterPage0BaseAddress);
             X(SDCardInterfaceBaseAddress, SDInterface::ControlBaseAddress);
             X(SDCardFileBlock0BaseAddress, SDInterface::FilesBaseAddress);
-            X(DisplayShieldBaseAddress, SeesawInterfaceStart);
-            X(ST7735DisplayBaseAddress, ST7735DisplayStart);
+            X(DisplayShieldBaseAddress, DisplayInterface::SeesawSectionStart);
+            X(ST7735DisplayBaseAddress, DisplayInterface::DisplaySectionStart);
 #undef X
 
             default: return 0; // zero is never an io page!
