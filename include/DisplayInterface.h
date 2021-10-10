@@ -98,7 +98,7 @@ public:
             signalHaltState(F("display shield seesaw could not be initialized!")) ;
         }
         Serial.println(F("Display seesaw started"));
-        Serial.print("Version: ");
+        Serial.print(F("Version: "));
         Serial.println(displayShield_.getVersion(), HEX);
 
         displayShield_.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
