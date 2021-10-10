@@ -32,9 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessorSerializer.h"
 #include "OpenFileHandle.h"
 #include <SdFat.h>
-#ifdef USE_DAZZLER
-#include <GD2.h>
-#endif
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
@@ -175,9 +172,6 @@ public:
         clusterCount_ = SplitWord32(SD.clusterCount());
         volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
         bytesPerSector_ = SD.bytesPerSector();
-#ifdef USE_DAZZLER
-        GD.begin(0);
-#endif
 #define X(thing, base, type) Serial.print(F("Address of " #thing ": 0x")); \
         Serial.print(base + static_cast<byte>(type :: thing ), HEX); \
         Serial.print(F(", ("));                                \
@@ -403,7 +397,7 @@ private:
         }
     }
 public:
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept __attribute__((noinline)){
         // force override the default implementation
         switch (targetPage) {
             case 0: return handleFirstPageRegisterReads(offset, lss);
@@ -420,7 +414,7 @@ public:
             default: return 0;
         }
     }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept __attribute__((noinline)){
         switch (targetPage) {
             case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
             case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
