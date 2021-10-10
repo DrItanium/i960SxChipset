@@ -54,7 +54,7 @@ public:
     static constexpr Address ST7735DisplayBaseAddress = DisplayShieldBaseAddressEnd;
     static constexpr Address ST7735DisplayBaseAddressEnd = ST7735DisplayBaseAddress + 0x100;
     // we have a bunch of pages in here that are useful :)
-    static constexpr Address SDCardFileInterfaceBlockBaseAddress = IOConfigurationSpaceEnd + (32 * 0x100);
+    static constexpr Address SDCardFileInterfaceBlockBaseAddress = IOConfigurationSpaceEnd + (16 * 0x100);
     static constexpr Address SDCardFileInterfaceBlockEndAddress = SDCardFileInterfaceBlockBaseAddress + (MaximumNumberOfOpenFiles * 0x100);
     enum class IOConfigurationSpace0Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
@@ -311,6 +311,8 @@ private:
             Serial.println(F("\""));
             if (targetFile.open(sdCardPath_, filePermissions_)) {
                 Serial.println(F("SUCCESS!"));
+                Serial.print(F("TARGET FILE INDEX: "));
+                Serial.println(newId);
                 ++numberOfOpenFiles_;
                 return newId;
             } else {
