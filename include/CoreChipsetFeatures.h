@@ -398,27 +398,30 @@ private:
 public:
     [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
-        if (targetPage >= 2 && targetPage < 34) {
-            return files_[targetPage - 2].read(offset, lss);
-        } else {
-            switch (targetPage) {
-                case 0: return handleFirstPageRegisterReads(offset, lss);
-                case 1: return handleSecondPageRegisterReads(offset, lss);
-                case 34: // here as a placeholder for the next register group
-                default: return 0;
-            }
+        switch (targetPage) {
+            case 0: return handleFirstPageRegisterReads(offset, lss);
+            case 1: return handleSecondPageRegisterReads(offset, lss);
+            case 2: case 3: case 4: case 5: case 6: case 7: case 8: case 9:
+            case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17:
+            case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25:
+            case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
+                return files_[targetPage - 2].read(offset, lss);
+            case 34: // here as a placeholder for the next register group
+            default: return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        if (targetPage >= 2 && targetPage < 34) {
-            files_[targetPage - 2] .write(offset, lss, value);
-        } else {
-            switch (targetPage) {
-                case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
-                case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
-                case 34: // here as a placeholder of the next register group
-                default: break;
-            }
+        switch (targetPage) {
+            case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
+            case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
+            case 2: case 3: case 4: case 5: case 6: case 7: case 8: case 9:
+            case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17:
+            case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25:
+            case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
+                files_[targetPage - 2].write(offset,lss,value);
+                break;
+            case 34: // here as a placeholder of the next register group
+            default: break;
         }
     }
     static bool addressDebuggingEnabled() noexcept { return enableAddressDebugging_; }
