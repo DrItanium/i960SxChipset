@@ -130,7 +130,7 @@ public:
                 return static_cast<uint16_t>(result);
             }
         } else {
-            return 0xFFFF;
+            return EOF;
         }
     }
     void putChar(SplitWord16 value) noexcept {
