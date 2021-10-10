@@ -42,7 +42,11 @@ class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
     static constexpr auto MaximumNumberOfOpenFiles = 32;
     static constexpr Address IOBaseAddress = 0xFE00'0000;
-    static constexpr Address RegisterPage0BaseAddress = IOBaseAddress;
+    // each one of these 256 byte pages have a prescribed start and end
+    static constexpr Address IOConfigurationSpaceStart = IOBaseAddress;
+    static constexpr Address IOConfigurationSpaceEnd = IOConfigurationSpaceStart + (16 * 0x100);
+    // then start our initial designs after this point
+    static constexpr Address RegisterPage0BaseAddress = IOConfigurationSpaceEnd;
     static constexpr Address SDCardInterfaceBaseAddress = RegisterPage0BaseAddress + 0x100;
     static constexpr Address SDCardFileInterfaceBlockBaseAddress = SDCardInterfaceBaseAddress + 0x100;
     static constexpr Address SDCardFileInterfaceBlockEndAddress = SDCardFileInterfaceBlockBaseAddress + (MaximumNumberOfOpenFiles * 0x100);
@@ -50,6 +54,24 @@ public:
     static constexpr Address DisplayShieldBaseAddressEnd = DisplayShieldBaseAddress + 0x100;
     static constexpr Address ST7735DisplayBaseAddress = DisplayShieldBaseAddressEnd;
     static constexpr Address ST7735DisplayBaseAddressEnd = ST7735DisplayBaseAddress + 0x100;
+    enum class IOConfigurationSpace0Registers : uint8_t {
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1), \
+        Prefix ## Lower = Prefix ## 00 , \
+        Prefix ## Upper = Prefix ## 10
+
+        FourByteEntry(Serial0BaseAddress),
+        FourByteEntry(SDCardInterfaceBaseAddress),
+        FourByteEntry(SDCardFileBlock0BaseAddress),
+        FourByteEntry(SDCardFileBlock0EndAddress),
+        FourByteEntry(DisplayShieldBaseAddress),
+        FourByteEntry(ST7735DisplayBaseAddress),
+#undef FourByteEntry
+#undef TwoByteEntry
+        End,
+    };
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -83,15 +105,6 @@ public:
         End,
         ConsoleIO = ConsoleIO0,
         ConsoleFlush = ConsoleFlush0,
-        //ConsoleTimeoutLower = ConsoleTimeout00,
-        //ConsoleTimeoutUpper = ConsoleTimeout10,
-        //ConsoleRXBufferSize = ConsoleRXBufferSize0,
-        //ConsoleTXBufferSize = ConsoleTXBufferSize0,
-        //ChipsetClockSpeedLower = ChipsetClockSpeed00,
-        //ChipsetClockSpeedUpper = ChipsetClockSpeed10,
-        //CacheLineCount = CacheLineCount0,
-        //CacheLineSize = CacheLineSize0,
-        //NumberOfCacheWays = NumberOfCacheWays0,
         TriggerInterrupt = TriggerInterrupt0,
         AddressDebuggingFlag = AddressDebuggingFlag00,
         // we ignore the upper half of the register but reserve it to make sure
@@ -368,26 +381,6 @@ private:
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO:
                 return Serial.read();
-#if 0
-            case Registers::ConsoleTimeoutLower:
-                return timeoutCopy_.halves[0];
-            case Registers::ConsoleTimeoutUpper:
-                return timeoutCopy_.halves[1];
-            case Registers::ConsoleRXBufferSize:
-                return SERIAL_RX_BUFFER_SIZE;
-            case Registers::ConsoleTXBufferSize:
-                return SERIAL_TX_BUFFER_SIZE;
-            case Registers::ChipsetClockSpeedLower:
-                return clockSpeedHolder.halves[0];
-            case Registers::ChipsetClockSpeedUpper:
-                return clockSpeedHolder.halves[1];
-            case Registers::CacheLineCount:
-                return 256;
-            case Registers::CacheLineSize:
-                return 16;
-            case Registers::NumberOfCacheWays:
-                return 2;
-#endif
             case Registers::AddressDebuggingFlag:
                 return static_cast<uint16_t>(enableAddressDebugging_);
             default:
@@ -466,9 +459,6 @@ private:
         }
     }
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
-#if 0
-        bool updateTimeout = false;
-#endif
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
                 pulse<i960Pinout::Int0_>();
@@ -479,55 +469,75 @@ private:
             case Registers::ConsoleIO:
                 Serial.write(static_cast<char>(value.getWholeValue()));
                 break;
-#if 0
-            case Registers::ConsoleTimeoutLower:
-                timeoutCopy_.halves[0] = value.getWholeValue();
-                break;
-            case Registers::ConsoleTimeoutUpper:
-                timeoutCopy_.halves[1] = value.getWholeValue();
-                updateTimeout = true;
-                break;
-#endif
             case Registers::AddressDebuggingFlag:
                 enableAddressDebugging_ = (value.getWholeValue() != 0);
                 break;
             default:
                 break;
         }
-#if 0
-        if (updateTimeout) {
-            Serial.setTimeout(timeoutCopy_.getWholeValue());
-        }
-#endif
     }
+    static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
+            switch (static_cast<IOConfigurationSpace0Registers>(offset)) {
+#define X(title, var) \
+             case IOConfigurationSpace0Registers:: title ## Lower : return static_cast<uint16_t>(var); \
+             case IOConfigurationSpace0Registers:: title ## Upper : return static_cast<uint16_t>(var >> 16)
+                X(Serial0BaseAddress, RegisterPage0BaseAddress);
+                X(SDCardInterfaceBaseAddress, SDCardInterfaceBaseAddress);
+                X(SDCardFileBlock0BaseAddress, SDCardFileInterfaceBlockBaseAddress);
+                X(SDCardFileBlock0EndAddress, SDCardFileInterfaceBlockEndAddress);
+                X(DisplayShieldBaseAddress, DisplayShieldBaseAddress);
+                X(ST7735DisplayBaseAddress, ST7735DisplayBaseAddress);
+#undef X
 
+                default: return 0; // zero is never an io page!
+            }
+    }
 public:
     [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
         switch (targetPage) {
-            case 0: return handleFirstPageRegisterReads(offset, lss);
-            case 1: return handleSecondPageRegisterReads(offset, lss);
-            case 2: case 3: case 4: case 5: case 6: case 7: case 8: case 9:
-            case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17:
+            case 0:
+                return readIOConfigurationSpace0(offset, lss);
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
+            case 11:
+            case 12:
+            case 13:
+            case 14:
+            case 15:
+                return 0;
+            case 16: return handleFirstPageRegisterReads(offset, lss);
+            case 17: return handleSecondPageRegisterReads(offset, lss);
             case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25:
             case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
+            case 34: case 35: case 36: case 37: case 38: case 39: case 40: case 41:
+            case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49:
                 return files_[targetPage - 2].read(offset, lss);
-            case 34:
+            case 50:
                 return handleDisplayShieldReads(offset, lss);
             default: return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (targetPage) {
-            case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
-            case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
-            case 2: case 3: case 4: case 5: case 6: case 7: case 8: case 9:
-            case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17:
+            // ignore writes to configuration space
+            case 16: handleFirstPageRegisterWrites(offset, lss, value); break;
+            case 17: handleSecondPageRegisterWrites(offset, lss, value); break;
             case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25:
             case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
+            case 34: case 35: case 36: case 37: case 38: case 39: case 40: case 41:
+            case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49:
                 files_[targetPage - 2].write(offset,lss,value);
                 break;
-            case 34: // here as a placeholder of the next register group
+            case 50: // here as a placeholder of the next register group
                 handleDisplayShieldWrites(offset, lss, value);
                 break;
             default: break;
