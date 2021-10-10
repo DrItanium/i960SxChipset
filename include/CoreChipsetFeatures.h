@@ -397,7 +397,7 @@ private:
         }
     }
 public:
-    [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept __attribute__((noinline)){
+    [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
         switch (targetPage) {
             case 0: return handleFirstPageRegisterReads(offset, lss);
@@ -414,7 +414,7 @@ public:
             default: return 0;
         }
     }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept __attribute__((noinline)){
+    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (targetPage) {
             case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
             case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
