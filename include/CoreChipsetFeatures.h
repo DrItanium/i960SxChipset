@@ -380,7 +380,6 @@ private:
                 break;
             case Registers::ConsoleTimeoutLower:
                 timeoutCopy_.halves[0] = value.getWholeValue();
-                updateTimeout = true;
                 break;
             case Registers::ConsoleTimeoutUpper:
                 timeoutCopy_.halves[1] = value.getWholeValue();
@@ -399,35 +398,27 @@ private:
 public:
     [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
-        switch (targetPage) {
-            case 0: return handleFirstPageRegisterReads(offset, lss);
-            case 1: return handleSecondPageRegisterReads(offset, lss);
-#define X(index) case (2+ index): return files_[index].read(offset, lss)
-#define Y(base) X(base + 0); X(base + 1); X(base + 2); X(base + 3); X(base + 4); X(base + 5); X(base + 6); X(base + 7)
-            Y(0);
-            Y(8);
-            Y(16);
-            Y(24);
-#undef Y
-#undef X
-            case 34: // here as a placeholder for the next register group
-            default: return 0;
+        if (targetPage >= 2 && targetPage < 34) {
+            return files_[targetPage - 2].read(offset, lss);
+        } else {
+            switch (targetPage) {
+                case 0: return handleFirstPageRegisterReads(offset, lss);
+                case 1: return handleSecondPageRegisterReads(offset, lss);
+                case 34: // here as a placeholder for the next register group
+                default: return 0;
+            }
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        switch (targetPage) {
-            case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
-            case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
-#define X(index) case (2+ index): files_[index].write(offset, lss, value); break
-#define Y(base) X(base + 0); X(base + 1); X(base + 2); X(base + 3); X(base + 4); X(base + 5); X(base + 6); X(base + 7)
-            Y(0);
-            Y(8);
-            Y(16);
-            Y(24);
-#undef Y
-#undef X
-            case 34: // here as a placeholder of the next register group
-            default: break;
+        if (targetPage >= 2 && targetPage < 34) {
+            files_[targetPage - 2] .write(offset, lss, value);
+        } else {
+            switch (targetPage) {
+                case 0: handleFirstPageRegisterWrites(offset, lss, value); break;
+                case 1: handleSecondPageRegisterWrites(offset, lss, value); break;
+                case 34: // here as a placeholder of the next register group
+                default: break;
+            }
         }
     }
     static bool addressDebuggingEnabled() noexcept { return enableAddressDebugging_; }
