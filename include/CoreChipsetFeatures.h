@@ -48,12 +48,13 @@ public:
     // then start our initial designs after this point
     static constexpr Address RegisterPage0BaseAddress = IOConfigurationSpaceEnd;
     static constexpr Address SDCardInterfaceBaseAddress = RegisterPage0BaseAddress + 0x100;
-    static constexpr Address SDCardFileInterfaceBlockBaseAddress = SDCardInterfaceBaseAddress + 0x100;
-    static constexpr Address SDCardFileInterfaceBlockEndAddress = SDCardFileInterfaceBlockBaseAddress + (MaximumNumberOfOpenFiles * 0x100);
-    static constexpr Address DisplayShieldBaseAddress = SDCardFileInterfaceBlockEndAddress;
+    static constexpr Address DisplayShieldBaseAddress = SDCardInterfaceBaseAddress;
     static constexpr Address DisplayShieldBaseAddressEnd = DisplayShieldBaseAddress + 0x100;
     static constexpr Address ST7735DisplayBaseAddress = DisplayShieldBaseAddressEnd;
     static constexpr Address ST7735DisplayBaseAddressEnd = ST7735DisplayBaseAddress + 0x100;
+    // we have a bunch of pages in here that are useful :)
+    static constexpr Address SDCardFileInterfaceBlockBaseAddress = IOConfigurationSpaceEnd + (32 * 0x100);
+    static constexpr Address SDCardFileInterfaceBlockEndAddress = SDCardFileInterfaceBlockBaseAddress + (MaximumNumberOfOpenFiles * 0x100);
     enum class IOConfigurationSpace0Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -477,33 +478,15 @@ public:
     [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
         switch (targetPage) {
-            case 0:
-                return readIOConfigurationSpace0(offset, lss);
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-            case 11:
-            case 12:
-            case 13:
-            case 14:
-            case 15:
-                return 0;
+            case 0: return readIOConfigurationSpace0(offset, lss);
             case 16: return handleFirstPageRegisterReads(offset, lss);
             case 17: return handleSecondPageRegisterReads(offset, lss);
-            case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25:
-            case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
-            case 34: case 35: case 36: case 37: case 38: case 39: case 40: case 41:
-            case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49:
-                return files_[targetPage - 18].read(offset, lss);
-            case 50:
-                return handleDisplayShieldReads(offset, lss);
+            case 18: return handleDisplayShieldReads(offset, lss);
+            case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39:
+            case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
+            case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55:
+            case 56: case 57: case 58: case 59: case 60: case 61: case 62: case 63:
+                return files_[targetPage - 32].read(offset, lss);
             default: return 0;
         }
     }
@@ -512,14 +495,12 @@ public:
             // ignore writes to configuration space
             case 16: handleFirstPageRegisterWrites(offset, lss, value); break;
             case 17: handleSecondPageRegisterWrites(offset, lss, value); break;
-            case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25:
-            case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
-            case 34: case 35: case 36: case 37: case 38: case 39: case 40: case 41:
-            case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49:
-                files_[targetPage - 18].write(offset,lss,value);
-                break;
-            case 50: // here as a placeholder of the next register group
-                handleDisplayShieldWrites(offset, lss, value);
+            case 18: handleDisplayShieldWrites(offset, lss, value); break;
+            case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39:
+            case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
+            case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55:
+            case 56: case 57: case 58: case 59: case 60: case 61: case 62: case 63:
+                files_[targetPage - 32].write(offset,lss,value);
                 break;
             default: break;
         }
