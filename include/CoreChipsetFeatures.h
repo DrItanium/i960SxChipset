@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_GFX.h>
 #include <Adafruit_seesaw.h>
 #include <Adafruit_ST7735.h>
+#include <Adafruit_TFTShield18.h>
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
@@ -167,7 +168,26 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
+        pinMode(i960Pinout::TFT_CS, OUTPUT);
+        pinMode(i960Pinout::SD_EN, OUTPUT);
+        digitalWrite<i960Pinout::TFT_CS, HIGH>();
+        digitalWrite<i960Pinout::SD_EN, HIGH>();
         Wire.begin();
+        if (!displayShield_.begin()) {
+           signalHaltState(F("display shield seesaw could not be initialized!")) ;
+        }
+        Serial.println(F("Display seesaw started"));
+        Serial.print("Version: ");
+        Serial.println(displayShield_.getVersion(), HEX);
+
+        displayShield_.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
+        displayShield_.tftReset();
+        tft.initR(INITR_BLACKTAB);
+
+        Serial.println(F("TFT UP AND OK!"));
+        tft.fillScreen(ST7735_CYAN);
+        delay(1000);
+        tft.fillScreen(ST7735_BLACK);
         while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
             Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
             delay(1000);
@@ -452,5 +472,9 @@ private:
     static inline OpenFileHandle files_[MaximumNumberOfOpenFiles];
     static inline bool makeMissingParentDirectories_ = false;
     static inline uint16_t filePermissions_ = 0;
+    static inline Adafruit_TFTShield18 displayShield_;
+    static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
+                                      static_cast<int>(i960Pinout::TFT_DC),
+                                      -1};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
