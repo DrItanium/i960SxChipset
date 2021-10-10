@@ -65,7 +65,6 @@ public:
         FourByteEntry(Serial0BaseAddress),
         FourByteEntry(SDCardInterfaceBaseAddress),
         FourByteEntry(SDCardFileBlock0BaseAddress),
-        FourByteEntry(SDCardFileBlock0EndAddress),
         FourByteEntry(DisplayShieldBaseAddress),
         FourByteEntry(ST7735DisplayBaseAddress),
 #undef FourByteEntry
@@ -191,21 +190,8 @@ public:
 #define SixteenByteEntry(Prefix) \
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
-        SixteenByteEntry(Path0),
-        SixteenByteEntry(Path1),
-        SixteenByteEntry(Path2),
-        SixteenByteEntry(Path3),
-        SixteenByteEntry(Path4),
         TwoByteEntry(Backlight),
         FourByteEntry(RawButtons),
-        //TwoByteEntry(ButtonUp),
-        //TwoByteEntry(ButtonDown),
-        //TwoByteEntry(ButtonLeft),
-        //TwoByteEntry(ButtonRight),
-        //TwoByteEntry(ButtonIn),
-        //TwoByteEntry(ButtonA),
-        //TwoByteEntry(ButtonB),
-        //TwoByteEntry(ButtonC),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -262,18 +248,8 @@ public:
 #define P0(thing) X(thing, RegisterPage0BaseAddress, Registers)
 #define P1(thing) X(thing, SDCardInterfaceBaseAddress, SDCardFileSystemRegisters)
 #define P34(thing) X(thing, DisplayShieldBaseAddress, DisplayShieldRegisters)
-
         P0(ConsoleIO);
         P0(ConsoleFlush);
-        //P0(ConsoleTimeoutLower);
-        //P0(ConsoleTimeoutUpper);
-        //P0(ConsoleRXBufferSize);
-        //P0(ConsoleTXBufferSize);
-        //P0(ChipsetClockSpeedLower);
-        //P0(ChipsetClockSpeedUpper);
-        //P0(CacheLineCount );
-        //P0(CacheLineSize );
-        //P0(NumberOfCacheWays );
         P0(TriggerInterrupt );
         P0(AddressDebuggingFlag );
         P1(PathStart);
@@ -298,6 +274,12 @@ public:
 #undef P1
 #undef P34
 #undef X
+        for (uint32_t i = SDCardFileInterfaceBlockBaseAddress, j = 0; i < SDCardFileInterfaceBlockEndAddress; i += 0x100, ++j) {
+            Serial.print(F("File "));
+            Serial.print(j);
+            Serial.print(F(" @ 0x"));
+            Serial.println(i, HEX);
+        }
     }
 private:
     static uint16_t findFreeFile() noexcept {
@@ -484,7 +466,6 @@ private:
                 X(Serial0BaseAddress, RegisterPage0BaseAddress);
                 X(SDCardInterfaceBaseAddress, SDCardInterfaceBaseAddress);
                 X(SDCardFileBlock0BaseAddress, SDCardFileInterfaceBlockBaseAddress);
-                X(SDCardFileBlock0EndAddress, SDCardFileInterfaceBlockEndAddress);
                 X(DisplayShieldBaseAddress, DisplayShieldBaseAddress);
                 X(ST7735DisplayBaseAddress, ST7735DisplayBaseAddress);
 #undef X
@@ -520,7 +501,7 @@ public:
             case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
             case 34: case 35: case 36: case 37: case 38: case 39: case 40: case 41:
             case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49:
-                return files_[targetPage - 2].read(offset, lss);
+                return files_[targetPage - 18].read(offset, lss);
             case 50:
                 return handleDisplayShieldReads(offset, lss);
             default: return 0;
@@ -535,7 +516,7 @@ public:
             case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
             case 34: case 35: case 36: case 37: case 38: case 39: case 40: case 41:
             case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49:
-                files_[targetPage - 2].write(offset,lss,value);
+                files_[targetPage - 18].write(offset,lss,value);
                 break;
             case 50: // here as a placeholder of the next register group
                 handleDisplayShieldWrites(offset, lss, value);
