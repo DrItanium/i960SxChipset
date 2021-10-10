@@ -116,11 +116,10 @@ public:
             case SeesawPage:
                 return handleSeesawReads(offset, lss);
             case DisplayPage:
-                return 0;
+                return handleDisplayRead(offset, lss);
             default:
                 return 0;
         }
-        return 0;
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (targetPage) {
@@ -128,12 +127,19 @@ public:
                 handleSeesawWrite(offset, lss, value);
                 break;
             case DisplayPage:
+                handleDisplayWrite(offset, lss, value);
                 break;
             default:
                 break;
         }
     }
 private:
+    static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
+        return 0;
+    }
+    static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+
+    }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<SeesawRegisters>(offset))  {
             case SeesawRegisters::Backlight:
