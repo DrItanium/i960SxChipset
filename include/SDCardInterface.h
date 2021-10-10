@@ -38,13 +38,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_ST7735.h>
 #include <Adafruit_TFTShield18.h>
 extern SdFat SD;
-template<Address maxFiles, Address ctlBaseAddress, Address fileBaseAddress>
+template<Address maxFiles, Address startAddress>
 class SDCardInterface {
 public:
     static constexpr auto MaximumNumberOfOpenFiles = maxFiles;
-    static constexpr auto ControlBaseAddress = ctlBaseAddress;
-    static constexpr auto FilesBaseAddress = fileBaseAddress;
-    static constexpr auto FilesEndAddress = fileBaseAddress + (MaximumNumberOfOpenFiles * 0x100);
+    static constexpr auto StartAddress = startAddress;
+    static constexpr auto ControlBaseAddress = startAddress;
+    static constexpr auto ControlEndAddress = ControlBaseAddress + 0x100;
+    static constexpr auto FilesBaseAddress = ControlEndAddress;
+    static constexpr auto FilesEndAddress = FilesBaseAddress + (MaximumNumberOfOpenFiles * 0x100);
+    static constexpr auto EndAddress = FilesEndAddress;
+    static constexpr SplitWord32 StartAddressDecomposition {StartAddress};
+    static constexpr SplitWord32 EndAddressDecomposition {EndAddress};
+    static constexpr SplitWord32 CTLAddress {StartAddress};
+    static constexpr SplitWord32 DecomposedFilesStart{FilesBaseAddress};
+    static constexpr SplitWord32 DecomposedFilesEnd {FilesEndAddress};
+    static constexpr auto StartPage = StartAddressDecomposition.getTargetPage();
+    static constexpr auto EndPage = EndAddressDecomposition.getTargetPage();
+    static constexpr auto CTLPage = CTLAddress.getTargetPage();
+    static constexpr auto FileStartPage = DecomposedFilesStart.getTargetPage();
+    static constexpr auto FileEndPage = DecomposedFilesEnd.getTargetPage();
     enum class SDCardFileSystemRegisters : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -159,7 +172,25 @@ public:
     static void fileWrite(uint8_t index, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) {
         files_[index].write(offset, lss, value);
     }
-    static uint16_t read(uint8_t offset, LoadStoreStyle lss) noexcept {
+    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+        if (targetPage == CTLPage) {
+            return ctlRead(offset, lss);
+        } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {
+            return fileRead(targetPage - FileStartPage, offset, lss);
+        } else {
+            return 0;
+        }
+    }
+    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+        if (targetPage == CTLPage) {
+            ctlWrite(offset, lss, value);
+        } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {
+            fileWrite(targetPage - FileStartPage, offset, lss, value);
+        } else {
+            // do nothing
+        }
+    }
+    static uint16_t ctlRead(uint8_t offset, LoadStoreStyle lss) noexcept {
         if (offset < 80) {
             if (auto result = SplitWord16(reinterpret_cast<uint16_t*>(sdCardPath_)[offset >> 1]); lss == LoadStoreStyle::Upper8) {
                 return result.bytes[1];
@@ -202,7 +233,7 @@ public:
             }
         }
     }
-    static void write(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    static void ctlWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         if (offset < 80) {
             if (lss == LoadStoreStyle::Upper8) {
                 sdCardPath_[offset + 1] = static_cast<char>(value.bytes[1]);

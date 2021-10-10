@@ -50,6 +50,7 @@ CoreChipsetFeatures::begin() noexcept {
     tft.fillScreen(ST7735_CYAN);
     delay(1000);
     tft.fillScreen(ST7735_BLACK);
+    SDInterface::begin();
 }
 uint16_t
 CoreChipsetFeatures::handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
@@ -112,8 +113,8 @@ CoreChipsetFeatures::readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) n
              case IOConfigurationSpace0Registers:: title ## Lower : return static_cast<uint16_t>(var); \
              case IOConfigurationSpace0Registers:: title ## Upper : return static_cast<uint16_t>(var >> 16)
         X(Serial0BaseAddress, RegisterPage0BaseAddress);
-        X(SDCardInterfaceBaseAddress, SDCardInterfaceBaseAddress);
-        X(SDCardFileBlock0BaseAddress, SDCardFileInterfaceBlockBaseAddress);
+        X(SDCardInterfaceBaseAddress, SDInterface::ControlBaseAddress);
+        X(SDCardFileBlock0BaseAddress, SDInterface::FilesBaseAddress);
         X(DisplayShieldBaseAddress, DisplayShieldBaseAddress);
         X(ST7735DisplayBaseAddress, ST7735DisplayBaseAddress);
 #undef X
@@ -124,32 +125,27 @@ CoreChipsetFeatures::readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) n
 uint16_t
 CoreChipsetFeatures::read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
     // force override the default implementation
-    switch (targetPage) {
-        case 0: return readIOConfigurationSpace0(offset, lss);
-        case 16: return handleFirstPageRegisterReads(offset, lss);
-        case 17: return SDCardInterface::read(offset, lss);
-        case 18: return handleDisplayShieldReads(offset, lss);
-        case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39:
-        case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
-        case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55:
-        case 56: case 57: case 58: case 59: case 60: case 61: case 62: case 63:
-            return SDCardInterface::fileRead(targetPage - 32, offset, lss);
-        default: return 0;
+    if (targetPage == 0) {
+        return readIOConfigurationSpace0(offset, lss);
+    } else if (targetPage == Serial0Page) {
+        return handleFirstPageRegisterReads(offset, lss);
+    } else if (targetPage >= SDInterface::StartPage && targetPage < SDInterface::EndPage) {
+        return SDInterface::read(targetPage, offset, lss);
+    } else if (targetPage == DisplayShieldAuxPage) {
+        return handleDisplayShieldReads(offset, lss);
+    } else {
+        return 0;
     }
 }
 void
 CoreChipsetFeatures::write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-    switch (targetPage) {
-        // ignore writes to configuration space
-        case 16: handleFirstPageRegisterWrites(offset, lss, value); break;
-        case 17: SDCardInterface::write(offset, lss, value); break;
-        case 18: handleDisplayShieldWrites(offset, lss, value); break;
-        case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39:
-        case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
-        case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55:
-        case 56: case 57: case 58: case 59: case 60: case 61: case 62: case 63:
-            SDCardInterface::fileWrite(targetPage - 32, offset, lss, value);
-            break;
-        default: break;
+    if (targetPage == Serial0Page) {
+        handleFirstPageRegisterWrites(offset, lss, value);
+    } else if (targetPage >= SDInterface::StartPage && targetPage < SDInterface::EndPage) {
+        SDInterface::write(targetPage, offset, lss, value);
+    } else if (targetPage == DisplayShieldAuxPage) {
+        handleDisplayShieldWrites(offset, lss, value);
+    } else {
+        // do nothing
     }
 }

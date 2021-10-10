@@ -45,18 +45,24 @@ public:
     // each one of these 256 byte pages have a prescribed start and end
     static constexpr Address IOConfigurationSpaceStart = IOBaseAddress;
     static constexpr Address IOConfigurationSpaceEnd = IOConfigurationSpaceStart + (16 * 0x100);
-    static constexpr Address SDCardFileInterfaceBlockBaseAddress = IOConfigurationSpaceEnd + (16 * 0x100);
     // then start our initial designs after this point
     static constexpr Address RegisterPage0BaseAddress = IOConfigurationSpaceEnd;
-    static constexpr Address SDCardInterfaceBaseAddress = RegisterPage0BaseAddress + 0x100;
+    static constexpr Address RegisterPage0EndAddress = RegisterPage0BaseAddress + 0x100;
+    static constexpr SplitWord32 Serial0BaseAddress {IOConfigurationSpaceEnd};
+    static constexpr byte Serial0Page = Serial0BaseAddress.getTargetPage();
+    using SDInterface = SDCardInterface<MaximumNumberOfOpenFiles,
+                                        RegisterPage0EndAddress>;
+    static constexpr auto SDCardInterfaceBaseAddress = SDInterface :: StartAddress;
+    static constexpr auto SDCardInterfaceEndAddress = SDInterface :: EndAddress;
     // we have a bunch of pages in here that are useful :)
-    using SDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDCardInterfaceBaseAddress, SDCardFileInterfaceBlockBaseAddress>;
-    static constexpr Address SDCardFileInterfaceBlockEndAddress = SDInterface::FilesEndAddress;
-    static constexpr Address SDCardInterfaceBaseAddressEnd = + 0x100;
-    static constexpr Address DisplayShieldBaseAddress = SDCardInterfaceBaseAddressEnd;
+    static constexpr Address DisplayShieldBaseAddress = SDCardInterfaceEndAddress;
     static constexpr Address DisplayShieldBaseAddressEnd = DisplayShieldBaseAddress + 0x100;
+    static constexpr SplitWord32 DisplayShieldAuxBase { DisplayShieldBaseAddress };
+    static constexpr auto DisplayShieldAuxPage = DisplayShieldAuxBase.getTargetPage();
     static constexpr Address ST7735DisplayBaseAddress = DisplayShieldBaseAddressEnd;
     static constexpr Address ST7735DisplayBaseAddressEnd = ST7735DisplayBaseAddress + 0x100;
+    static constexpr SplitWord32 ST7735DisplayBase { ST7735DisplayBaseAddress};
+    static constexpr auto ST7735Page = ST7735DisplayBase.getTargetPage();
     enum class IOConfigurationSpace0Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -168,7 +174,6 @@ public:
     static bool addressDebuggingEnabled() noexcept { return enableAddressDebugging_; }
 private:
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
-    static constexpr SplitWord32 clockSpeedHolder{TargetBoard::getCPUFrequency()};
     static inline bool enableAddressDebugging_ = false;
     static inline Adafruit_TFTShield18 displayShield_;
     static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),

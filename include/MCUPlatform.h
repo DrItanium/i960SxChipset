@@ -135,6 +135,7 @@ union SplitWord32 {
     constexpr SplitWord32(uint8_t lowest, uint8_t lower, uint8_t higher, uint8_t highest) noexcept : bytes{lowest, lower, higher, highest} {}
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     [[nodiscard]] constexpr auto getSignedRepresentation() const noexcept { return signedRepresentation_; }
+    [[nodiscard]] constexpr auto getTargetPage() const noexcept { return static_cast<byte>(wholeValue_ >> 8); }
     uint32_t wholeValue_ = 0;
     int32_t signedRepresentation_;
     byte bytes[sizeof(uint32_t)];
