@@ -279,6 +279,8 @@ public:
         P1(MakeMissingParentDirectories);
         P1(OpenReadWrite);
         P34(Backlight);
+        P34(RawButtonsLower);
+        P34(RawButtonsUpper);
 #undef P0
 #undef P1
 #undef P34
