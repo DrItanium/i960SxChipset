@@ -28,17 +28,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_CORECHIPSETFEATURES_H
 #define I960SXCHIPSET_CORECHIPSETFEATURES_H
-#include "MemoryThing.h"
 #include "ProcessorSerializer.h"
 #include "SDCardInterface.h"
 #include "DisplayInterface.h"
-#include <SdFat.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_seesaw.h>
-#include <Adafruit_ST7735.h>
-#include <Adafruit_TFTShield18.h>
-extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
     static constexpr auto MaximumNumberOfOpenFiles = 16;

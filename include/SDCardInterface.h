@@ -28,15 +28,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_SDCARDINTERFACE_H
 #define SXCHIPSET_SDCARDINTERFACE_H
-#include "MemoryThing.h"
-#include "ProcessorSerializer.h"
+#include "Pinout.h"
 #include "OpenFileHandle.h"
 #include <SdFat.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_seesaw.h>
-#include <Adafruit_ST7735.h>
-#include <Adafruit_TFTShield18.h>
 extern SdFat SD;
 template<Address maxFiles, Address startAddress>
 class SDCardInterface {
