@@ -46,6 +46,10 @@ public:
     static constexpr Address SDCardInterfaceBaseAddress = RegisterPage0BaseAddress + 0x100;
     static constexpr Address SDCardFileInterfaceBlockBaseAddress = SDCardInterfaceBaseAddress + 0x100;
     static constexpr Address SDCardFileInterfaceBlockEndAddress = SDCardFileInterfaceBlockBaseAddress + (MaximumNumberOfOpenFiles * 0x100);
+    static constexpr Address DisplayShieldBaseAddress = SDCardFileInterfaceBlockEndAddress;
+    static constexpr Address DisplayShieldBaseAddressEnd = DisplayShieldBaseAddress + 0x100;
+    static constexpr Address ST7735DisplayBaseAddress = DisplayShieldBaseAddressEnd;
+    static constexpr Address ST7735DisplayBaseAddressEnd = ST7735DisplayBaseAddress + 0x100;
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -160,6 +164,35 @@ public:
         // we ignore the upper half of the register but reserve it to make sure
     };
 
+    enum class DisplayShieldRegisters : uint8_t {
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) \
+        FourByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define TwelveByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        EightByteEntry(Prefix ## 1)
+        SixteenByteEntry(Path0),
+        SixteenByteEntry(Path1),
+        SixteenByteEntry(Path2),
+        SixteenByteEntry(Path3),
+        SixteenByteEntry(Path4),
+        TwoByteEntry(Backlight),
+#undef SixteenByteEntry
+#undef TwelveByteEntry
+#undef EightByteEntry
+#undef FourByteEntry
+#undef TwoByteEntry
+        End,
+        Backlight = Backlight0,
+    };
+
 public:
     CoreChipsetFeatures() = delete;
     ~CoreChipsetFeatures() = delete;
@@ -204,6 +237,7 @@ public:
         Serial.println(F(")"));
 #define P0(thing) X(thing, RegisterPage0BaseAddress, Registers)
 #define P1(thing) X(thing, SDCardInterfaceBaseAddress, SDCardFileSystemRegisters)
+#define P34(thing) X(thing, DisplayShieldBaseAddress, DisplayShieldRegisters)
 
         P0(ConsoleIO);
         P0(ConsoleFlush);
@@ -233,8 +267,10 @@ public:
         P1(ErrorCode);
         P1(MakeMissingParentDirectories);
         P1(OpenReadWrite);
+        P34(Backlight);
 #undef P0
 #undef P1
+#undef P34
 #undef X
     }
 private:
@@ -394,6 +430,23 @@ private:
             }
         }
     }
+    static void handleDisplayShieldWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
+        switch (static_cast<DisplayShieldRegisters>(offset))  {
+            case DisplayShieldRegisters::Backlight:
+                backlightIntensity_ = value.getWholeValue();
+                displayShield_.setBacklight(backlightIntensity_);
+                break;
+            default: break;
+        }
+    }
+    static uint16_t handleDisplayShieldReads(uint8_t offset, LoadStoreStyle) noexcept {
+        switch (static_cast<DisplayShieldRegisters>(offset)) {
+            case DisplayShieldRegisters::Backlight:
+                return backlightIntensity_;
+            default:
+                return 0;
+        }
+    }
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
 #if 0
         bool updateTimeout = false;
@@ -429,6 +482,7 @@ private:
         }
 #endif
     }
+
 public:
     [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
@@ -440,7 +494,8 @@ public:
             case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25:
             case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
                 return files_[targetPage - 2].read(offset, lss);
-            case 34: // here as a placeholder for the next register group
+            case 34:
+                return handleDisplayShieldReads(offset, lss);
             default: return 0;
         }
     }
@@ -455,6 +510,8 @@ public:
                 files_[targetPage - 2].write(offset,lss,value);
                 break;
             case 34: // here as a placeholder of the next register group
+                handleDisplayShieldWrites(offset, lss, value);
+                break;
             default: break;
         }
     }
@@ -476,5 +533,6 @@ private:
     static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
+    static inline uint16_t backlightIntensity_ = 0;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
