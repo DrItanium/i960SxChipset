@@ -48,7 +48,8 @@ public:
     // then start our initial designs after this point
     static constexpr Address RegisterPage0BaseAddress = IOConfigurationSpaceEnd;
     static constexpr Address SDCardInterfaceBaseAddress = RegisterPage0BaseAddress + 0x100;
-    static constexpr Address DisplayShieldBaseAddress = SDCardInterfaceBaseAddress;
+    static constexpr Address SDCardInterfaceBaseAddressEnd = SDCardInterfaceBaseAddress+ 0x100;
+    static constexpr Address DisplayShieldBaseAddress = SDCardInterfaceBaseAddressEnd;
     static constexpr Address DisplayShieldBaseAddressEnd = DisplayShieldBaseAddress + 0x100;
     static constexpr Address ST7735DisplayBaseAddress = DisplayShieldBaseAddressEnd;
     static constexpr Address ST7735DisplayBaseAddressEnd = ST7735DisplayBaseAddress + 0x100;
@@ -59,9 +60,7 @@ public:
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
         TwoByteEntry(Prefix ## 0), \
-        TwoByteEntry(Prefix ## 1), \
-        Prefix ## Lower = Prefix ## 00 , \
-        Prefix ## Upper = Prefix ## 10
+        TwoByteEntry(Prefix ## 1)
 
         FourByteEntry(Serial0BaseAddress),
         FourByteEntry(SDCardInterfaceBaseAddress),
@@ -71,6 +70,16 @@ public:
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
+        Serial0BaseAddressLower = Serial0BaseAddress00,
+        Serial0BaseAddressUpper = Serial0BaseAddress10,
+        SDCardInterfaceBaseAddressLower = SDCardInterfaceBaseAddress00,
+        SDCardInterfaceBaseAddressUpper = SDCardInterfaceBaseAddress10,
+        SDCardFileBlock0BaseAddressLower = SDCardFileBlock0BaseAddress00,
+        SDCardFileBlock0BaseAddressUpper = SDCardFileBlock0BaseAddress10,
+        DisplayShieldBaseAddressLower = DisplayShieldBaseAddress00,
+        DisplayShieldBaseAddressUpper = DisplayShieldBaseAddress10,
+        ST7735DisplayBaseAddressLower = ST7735DisplayBaseAddress00,
+        ST7735DisplayBaseAddressUpper = ST7735DisplayBaseAddress10,
     };
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
@@ -297,10 +306,15 @@ private:
             // But we also need to keep track of proper indexes as well. This is a two layer process
             auto newId = findFreeFile();
             auto& targetFile = files_[newId];
+            Serial.print(F("Trying to open file: \""));
+            Serial.print(sdCardPath_);
+            Serial.println(F("\""));
             if (targetFile.open(sdCardPath_, filePermissions_)) {
+                Serial.println(F("SUCCESS!"));
                 ++numberOfOpenFiles_;
                 return newId;
             } else {
+                Serial.println(F("FAILURE!"));
                 /// @todo set appropriate error condition for bad file open
             }
         } else {
