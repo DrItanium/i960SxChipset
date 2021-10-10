@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MemoryThing.h"
 #include "ProcessorSerializer.h"
 #include "SDCardInterface.h"
+#include "DisplayInterface.h"
 #include <SdFat.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -54,15 +55,12 @@ public:
                                         RegisterPage0EndAddress>;
     static constexpr auto SDCardInterfaceBaseAddress = SDInterface :: StartAddress;
     static constexpr auto SDCardInterfaceEndAddress = SDInterface :: EndAddress;
+    using DisplayInterface = ::DisplayInterface<SDCardInterfaceEndAddress>;
     // we have a bunch of pages in here that are useful :)
-    static constexpr Address DisplayShieldBaseAddress = SDCardInterfaceEndAddress;
-    static constexpr Address DisplayShieldBaseAddressEnd = DisplayShieldBaseAddress + 0x100;
-    static constexpr SplitWord32 DisplayShieldAuxBase { DisplayShieldBaseAddress };
-    static constexpr auto DisplayShieldAuxPage = DisplayShieldAuxBase.getTargetPage();
-    static constexpr Address ST7735DisplayBaseAddress = DisplayShieldBaseAddressEnd;
-    static constexpr Address ST7735DisplayBaseAddressEnd = ST7735DisplayBaseAddress + 0x100;
-    static constexpr SplitWord32 ST7735DisplayBase { ST7735DisplayBaseAddress};
-    static constexpr auto ST7735Page = ST7735DisplayBase.getTargetPage();
+    static constexpr auto SeesawInterfaceStart = DisplayInterface::SeesawSectionStart;
+    static constexpr auto ST7735DisplayStart = DisplayInterface::DisplaySectionStart;
+    static constexpr auto DisplayShieldAuxPage = DisplayInterface::SeesawPage;
+    static constexpr auto ST7735PAge = DisplayInterface::DisplayPage;
     enum class IOConfigurationSpace0Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -127,32 +125,6 @@ public:
     };
     static_assert(static_cast<int>(Registers::End) < 0x100);
 
-    enum class DisplayShieldRegisters : uint8_t {
-#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
-#define FourByteEntry(Prefix) \
-        TwoByteEntry(Prefix ## 0), \
-        TwoByteEntry(Prefix ## 1)
-#define EightByteEntry(Prefix) \
-        FourByteEntry(Prefix ## 0), \
-        FourByteEntry(Prefix ## 1)
-#define TwelveByteEntry(Prefix) \
-        EightByteEntry(Prefix ## 0), \
-        FourByteEntry(Prefix ## 1)
-#define SixteenByteEntry(Prefix) \
-        EightByteEntry(Prefix ## 0), \
-        EightByteEntry(Prefix ## 1)
-        TwoByteEntry(Backlight),
-        FourByteEntry(RawButtons),
-#undef SixteenByteEntry
-#undef TwelveByteEntry
-#undef EightByteEntry
-#undef FourByteEntry
-#undef TwoByteEntry
-        End,
-        Backlight = Backlight0,
-        RawButtonsLower = RawButtons00,
-        RawButtonsUpper = RawButtons10,
-    };
 
 public:
     CoreChipsetFeatures() = delete;
@@ -162,26 +134,7 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
-        pinMode(i960Pinout::TFT_CS, OUTPUT);
-        pinMode(i960Pinout::SD_EN, OUTPUT);
-        digitalWrite<i960Pinout::TFT_CS, HIGH>();
-        digitalWrite<i960Pinout::SD_EN, HIGH>();
-        Wire.begin();
-        if (!displayShield_.begin()) {
-            signalHaltState(F("display shield seesaw could not be initialized!")) ;
-        }
-        Serial.println(F("Display seesaw started"));
-        Serial.print("Version: ");
-        Serial.println(displayShield_.getVersion(), HEX);
-
-        displayShield_.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
-        displayShield_.tftReset();
-        tft.initR(INITR_BLACKTAB);
-
-        Serial.println(F("TFT UP AND OK!"));
-        tft.fillScreen(ST7735_CYAN);
-        delay(1000);
-        tft.fillScreen(ST7735_BLACK);
+        DisplayInterface::begin();
         SDInterface::begin();
     }
 private:
@@ -191,28 +144,6 @@ private:
                 return Serial.read();
             case Registers::AddressDebuggingFlag:
                 return static_cast<uint16_t>(enableAddressDebugging_);
-            default:
-                return 0;
-        }
-    }
-    static void handleDisplayShieldWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
-        switch (static_cast<DisplayShieldRegisters>(offset))  {
-            case DisplayShieldRegisters::Backlight:
-                backlightIntensity_ = value.getWholeValue();
-                displayShield_.setBacklight(backlightIntensity_);
-                break;
-            default: break;
-        }
-    }
-    static uint16_t handleDisplayShieldReads(uint8_t offset, LoadStoreStyle) noexcept {
-        switch (static_cast<DisplayShieldRegisters>(offset)) {
-            case DisplayShieldRegisters::Backlight:
-                return backlightIntensity_;
-            case DisplayShieldRegisters::RawButtonsLower:
-                rawButtons_.wholeValue_ = displayShield_.readButtons();
-                return rawButtons_.halves[0];
-            case DisplayShieldRegisters::RawButtonsUpper:
-                return rawButtons_.halves[1];
             default:
                 return 0;
         }
@@ -243,8 +174,8 @@ private:
             X(Serial0BaseAddress, RegisterPage0BaseAddress);
             X(SDCardInterfaceBaseAddress, SDInterface::ControlBaseAddress);
             X(SDCardFileBlock0BaseAddress, SDInterface::FilesBaseAddress);
-            X(DisplayShieldBaseAddress, DisplayShieldBaseAddress);
-            X(ST7735DisplayBaseAddress, ST7735DisplayBaseAddress);
+            X(DisplayShieldBaseAddress, SeesawInterfaceStart);
+            X(ST7735DisplayBaseAddress, ST7735DisplayStart);
 #undef X
 
             default: return 0; // zero is never an io page!
@@ -259,8 +190,8 @@ public:
             return handleFirstPageRegisterReads(offset, lss);
         } else if (SDInterface::respondsTo(targetPage)) {
             return SDInterface::read(targetPage, offset, lss);
-        } else if (targetPage == DisplayShieldAuxPage) {
-            return handleDisplayShieldReads(offset, lss);
+        } else if (DisplayInterface::respondsTo(targetPage)) {
+            return DisplayInterface::read(targetPage, offset, lss);
         } else {
             return 0;
         }
@@ -270,8 +201,8 @@ public:
             handleFirstPageRegisterWrites(offset, lss, value);
         } else if (SDInterface::respondsTo(targetPage)) {
             SDInterface::write(targetPage, offset, lss, value);
-        } else if (targetPage == DisplayShieldAuxPage) {
-            handleDisplayShieldWrites(offset, lss, value);
+        } else if (DisplayInterface::respondsTo(targetPage)) {
+            DisplayInterface::write(targetPage, offset, lss, value);
         } else {
             // do nothing
         }
@@ -280,11 +211,5 @@ public:
 private:
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
     static inline bool enableAddressDebugging_ = false;
-    static inline Adafruit_TFTShield18 displayShield_;
-    static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
-                                      static_cast<int>(i960Pinout::TFT_DC),
-                                      -1};
-    static inline uint16_t backlightIntensity_ = 0;
-    static inline SplitWord32 rawButtons_{0};
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
