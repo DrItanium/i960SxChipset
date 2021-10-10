@@ -32,6 +32,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessorSerializer.h"
 #include "OpenFileHandle.h"
 #include <SdFat.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_seesaw.h>
+#include <Adafruit_ST7735.h>
 extern SdFat SD;
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
@@ -163,6 +167,7 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
+        Wire.begin();
         while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
             Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
             delay(1000);
