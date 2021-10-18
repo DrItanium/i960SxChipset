@@ -44,6 +44,7 @@ constexpr auto Serial0BaseAddress = 0xF900'0000;
 constexpr auto DisplayBaseAddress = 0xFA00'0000;
 constexpr auto SDBaseAddress = 0xFB00'0000;
 constexpr auto EEPROMBaseAddress = 0xFC00'0000;
+constexpr auto DebugBaseAddress = 0xFD00'0000;
 using CoreChipset = CoreChipsetFeatures<
         Serial0BaseAddress,
         DisplayBaseAddress,
@@ -438,6 +439,9 @@ inline void invocationBody() noexcept {
             handleMemoryInterface<inDebugMode>();
             break;
         }
+        case TheConsole::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheConsole>();
+            break;
         case TheEEPROMInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
             break;
@@ -462,7 +466,7 @@ inline void invocationBody() noexcept {
 template<bool allowAddressDebuggingCodePath>
 void doInvocationBody() noexcept {
     if constexpr (allowAddressDebuggingCodePath) {
-        if (CoreChipset::addressDebuggingEnabled())  {
+        if (TheConsole::addressDebuggingEnabled())  {
             invocationBody<true>();
         } else {
             invocationBody<false>();

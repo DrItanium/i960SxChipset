@@ -116,7 +116,7 @@ private:
 #define X(title, var) \
              case IOConfigurationSpace0Registers:: title ## Lower : return static_cast<uint16_t>(var); \
              case IOConfigurationSpace0Registers:: title ## Upper : return static_cast<uint16_t>(var >> 16)
-            X(Serial0BaseAddress, RegisterPage0BaseAddress);
+            X(Serial0BaseAddress, Console::StartAddress);
             X(SDCardInterfaceBaseAddress, SDInterface::ControlBaseAddress);
             X(SDCardFileBlock0BaseAddress, SDInterface::FilesBaseAddress);
             X(DisplayShieldBaseAddress, DisplayInterface::SeesawSectionStart);
