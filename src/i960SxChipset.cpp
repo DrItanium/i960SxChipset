@@ -60,6 +60,7 @@ Adafruit_SI5351 clockgen;
 bool clockgenUp = false;
 RTC_PCF8523 rtc;
 bool rtcUp = false;
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
@@ -486,6 +487,21 @@ void setup() {
                 // not the most accurate but good enough
                 rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
             }
+            DateTime now = rtc.now();
+            Serial.print(now.year(), DEC);
+            Serial.print(F("/"));
+            Serial.print(now.month(), DEC);
+            Serial.print(F("/"));
+            Serial.print(now.day(), DEC);
+            Serial.print(F(" ("));
+            Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
+            Serial.print(F(") "));
+            Serial.print(now.hour(), DEC);
+            Serial.print(F(":"));
+            Serial.print(now.minute(), DEC);
+            Serial.print(F(":"));
+            Serial.print(now.second(), DEC);
+            Serial.println();
 
             rtc.start();
         }
