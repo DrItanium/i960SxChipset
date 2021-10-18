@@ -106,6 +106,7 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
+        Console::begin();
         DisplayInterface::begin();
         SDInterface::begin();
         EEPROMInterface::begin();
