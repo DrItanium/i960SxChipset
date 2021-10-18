@@ -137,10 +137,13 @@ union SplitWord32 {
     [[nodiscard]] constexpr auto getSignedRepresentation() const noexcept { return signedRepresentation_; }
     [[nodiscard]] constexpr auto getTargetPage() const noexcept { return static_cast<byte>(wholeValue_ >> 8); }
     [[nodiscard]] constexpr auto getMostSignificantByte() const noexcept { return static_cast<byte>(wholeValue_ >> 24); }
+    [[nodiscard]] constexpr auto getLowerHalf() const noexcept { return halves[0]; }
+    [[nodiscard]] constexpr auto getUpperHalf() const noexcept { return halves[1]; }
     uint32_t wholeValue_ = 0;
     int32_t signedRepresentation_;
     byte bytes[sizeof(uint32_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     SplitWord16 words_[sizeof(uint32_t) / sizeof(SplitWord16)];
+    float floatingPointRepresentation_;
 };
 #endif //I960SXCHIPSET_MCUPLATFORM_H

@@ -67,6 +67,9 @@ public:
         TwoByteEntry(EEPROMAddress),
         TwoByteEntry(EEPROMValue),
         TwoByteEntry(EEPROMAddressAutoIncrement),
+        FourByteEntry(Temperature),
+        /// @todo implement bulk pin support here
+
         /// @todo implement support for the many pins and their corresponding abilities
 #undef SixteenByteEntry
 #undef TwelveByteEntry
@@ -84,7 +87,8 @@ public:
         VersionUpper = Version10,
         OptionsLower = Options00,
         OptionsUpper = Options10,
-
+        TemperatureLower = Temperature00,
+        TemperatureUpper = Temperature10,
     };
 public:
     SeesawInterface() = delete;
@@ -121,6 +125,11 @@ public:
                 return static_cast<uint16_t>(seesaw0_.getOptions());
             case Registers::OptionsUpper:
                 return static_cast<uint16_t>(seesaw0_.getOptions() >> 16);
+            case Registers::TemperatureLower:
+                sampleTemperature_.floatingPointRepresentation_ = seesaw0_.getTemp();
+                return sampleTemperature_.getLowerHalf();
+            case Registers::TemperatureUpper:
+                return sampleTemperature_.getUpperHalf();
             default:
                 return 0;
         }
@@ -130,6 +139,8 @@ public:
             case Registers::Reset:
                 seesaw0_.SWReset();
                 break;
+            default:
+                break;
         }
     }
 private:
@@ -137,5 +148,6 @@ private:
     static inline bool initialized_ = false;
     static inline bool eepromAutoIncrement_ = false;
     static inline uint8_t eepromAddress_ = 0;
+    static inline SplitWord32 sampleTemperature_ {0};
 };
 #endif //SXCHIPSET_SEESAWINTERFACE_H
