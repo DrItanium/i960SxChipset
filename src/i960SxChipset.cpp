@@ -349,6 +349,13 @@ inline void invocationBody() noexcept {
             handleMemoryInterface<inDebugMode>();
             break;
         }
+        case TheRTCInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheRTCInterface>();
+            break;
+        case TheClockgenInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheClockgenInterface>();
+            break;
+
         case TheConsoleInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheConsoleInterface>();
             break;
