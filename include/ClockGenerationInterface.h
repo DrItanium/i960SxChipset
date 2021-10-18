@@ -59,13 +59,14 @@ public:
 #define SixteenByteEntry(Prefix) \
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
-
+        TwoByteEntry(Available),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
+        Available = Available0,
     };
 public:
     ClockGenerationInterface() = delete;
