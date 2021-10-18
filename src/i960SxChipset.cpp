@@ -32,8 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <SdFat.h>
 #include "Pinout.h"
-#include <Adafruit_SI5351.h>
-#include <RTClib.h>
 
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
@@ -41,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
 #include "TaggedCacheAddress.h"
+#include "ClockGenerationInterface.h"
 
 
 constexpr auto Serial0BaseAddress = 0xF900'0000;
@@ -56,8 +55,6 @@ using TheEEPROMInterface = EEPROMInterface<EEPROMBaseAddress>;
 using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface, TheSDInterface, TheDisplayInterface, TheEEPROMInterface >;
 constexpr auto CompileInAddressDebuggingSupport = false;
 
-Adafruit_SI5351 clockgen;
-bool clockgenUp = false;
 RTC_PCF8523 rtc;
 bool rtcUp = false;
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
@@ -470,12 +467,6 @@ void setup() {
         ConfigurationSpace::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
-        clockgenUp = clockgen.begin() == ERROR_NONE;
-        if (!clockgenUp) {
-            Serial.println(F("Could not bring up clock gen device, disabling"));
-        } else {
-            Serial.println(F("Found a clock generation device!"));
-        }
 
         rtcUp = rtc.begin();
         if (!rtcUp) {
