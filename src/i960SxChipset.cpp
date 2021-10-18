@@ -40,17 +40,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "PSRAMChip.h"
 #include "TaggedCacheAddress.h"
 
-constexpr auto AllowDividedIOSpacePlacement = true;
-constexpr auto DisplayStartAddress = 0xFA00'0000;
-constexpr auto SDStartAddress = 0xFB00'0000;
-constexpr auto EEPROMStartAddress = 0xFC00'0000;
-using CoreChipset = CoreChipsetFeatures<AllowDividedIOSpacePlacement,
-                                        DisplayStartAddress,
-                                        SDStartAddress,
-                                        EEPROMStartAddress>;
+constexpr auto Serial0BaseAddress = 0xF900'0000;
+constexpr auto DisplayBaseAddress = 0xFA00'0000;
+constexpr auto SDBaseAddress = 0xFB00'0000;
+constexpr auto EEPROMBaseAddress = 0xFC00'0000;
+using CoreChipset = CoreChipsetFeatures<
+        Serial0BaseAddress,
+        DisplayBaseAddress,
+        SDBaseAddress,
+        EEPROMBaseAddress>;
 using TheDisplayInterface = CoreChipset::DisplayInterface;
 using TheSDInterface = CoreChipset::SDInterface;
 using TheEEPROMInterface = CoreChipset::EEPROMInterface;
+using TheConsole = CoreChipset::Console;
 constexpr auto CompileInAddressDebuggingSupport = false;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage

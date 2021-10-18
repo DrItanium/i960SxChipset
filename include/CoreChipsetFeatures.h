@@ -33,8 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DisplayInterface.h"
 #include "EEPROMInterface.h"
 #include "Serial0Interface.h"
-template<bool overrideExternalDeviceLocations,
-        Address Serial0Base,
+template<Address Serial0Base,
         Address SDCardBase,
         Address DisplayBase,
         Address EEPROMBase,
@@ -49,16 +48,13 @@ public:
     static constexpr Address IOConfigurationSpaceStart = IOBaseAddress;
     static constexpr Address IOConfigurationSpaceEnd = IOConfigurationSpaceStart + (16 * 0x100);
     // then start our initial designs after this point
-    static constexpr Address RegisterPage0BaseAddress = overrideExternalDeviceLocations ? Serial0Base : IOConfigurationSpaceEnd;
-    static constexpr Address RegisterPage0EndAddress = RegisterPage0BaseAddress + 0x100;
-    static constexpr SplitWord32 Serial0BaseAddress {RegisterPage0BaseAddress};
-    static constexpr byte Serial0Page = Serial0BaseAddress.getTargetPage();
+    using Console = Serial0Interface<Serial0Base>;
     using SDInterface = SDCardInterface<MaximumNumberOfOpenFiles,
-                                        overrideExternalDeviceLocations ? SDCardBase : RegisterPage0EndAddress>;
+                                        SDCardBase>;
     //static constexpr auto SDCardInterfaceBaseAddress = SDInterface :: StartAddress;
     //static constexpr auto SDCardInterfaceEndAddress = SDInterface :: EndAddress;
-    using DisplayInterface = ::DisplayInterface<overrideExternalDeviceLocations ? DisplayBase : SDInterface::EndAddress>;
-    using EEPROMInterface = ::EEPROMInterface<overrideExternalDeviceLocations ? EEPROMBase : DisplayInterface::EndAddress>;
+    using DisplayInterface = ::DisplayInterface<DisplayBase>;
+    using EEPROMInterface = ::EEPROMInterface<EEPROMBase>;
     // we have a bunch of pages in here that are useful :)
     enum class IOConfigurationSpace0Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
@@ -149,39 +145,12 @@ public:
             return readIOConfigurationSpace0(offset, lss);
         } else if (targetPage == 1) {
             return readIOConfigurationSpace1(offset, lss);
-        } else if (targetPage == Serial0Page) {
-            return handleFirstPageRegisterReads(offset, lss);
         } else {
-            if constexpr (!overrideExternalDeviceLocations) {
-                if (SDInterface::respondsTo(targetPage)) {
-                    return SDInterface::read(targetPage, offset, lss);
-                } else if (DisplayInterface::respondsTo(targetPage)) {
-                    return DisplayInterface::read(targetPage, offset, lss);
-                } else if (EEPROMInterface::respondsTo(targetPage)) {
-                    return EEPROMInterface::read(targetPage, offset, lss);
-                } else {
-                    return 0;
-                }
-            } else {
-                return 0;
-            }
+            return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        if (targetPage == Serial0Page) {
-        } else {
-            if constexpr (!overrideExternalDeviceLocations) {
-                if (SDInterface::respondsTo(targetPage)) {
-                    SDInterface::write(targetPage, offset, lss, value);
-                } else if (DisplayInterface::respondsTo(targetPage)) {
-                    DisplayInterface::write(targetPage, offset, lss, value);
-                } else if (EEPROMInterface::respondsTo(targetPage)) {
-                    EEPROMInterface::write(targetPage, offset, lss, value);
-                } else {
-                    // do nothing
-                }
-            }
-        }
+        // do nothing
     }
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H
