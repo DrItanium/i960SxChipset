@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SdFat.h>
 #include "Pinout.h"
 #include <Adafruit_SI5351.h>
+#include <RTClib.h>
 
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
@@ -57,6 +58,8 @@ constexpr auto CompileInAddressDebuggingSupport = false;
 
 Adafruit_SI5351 clockgen;
 bool clockgenUp = false;
+RTC_PCF8523 rtc;
+bool rtcUp = false;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
@@ -471,6 +474,20 @@ void setup() {
             Serial.println(F("Could not bring up clock gen device, disabling"));
         } else {
             Serial.println(F("Found a clock generation device!"));
+        }
+
+        rtcUp = rtc.begin();
+        if (!rtcUp) {
+            Serial.println(F("NO RTC FOUND...DISABLING"));
+        } else {
+            Serial.println(F("RTC FOUND... CHECKING"));
+            if (!rtc.initialized() || rtc.lostPower()) {
+                Serial.println(F("RTC is NOT initialized, setting time from sketch compile"));
+                // not the most accurate but good enough
+                rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+            }
+
+            rtc.start();
         }
         installBootImage();
         delay(100);
