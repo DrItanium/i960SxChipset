@@ -41,7 +41,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 
 constexpr auto AllowDividedIOSpacePlacement = true;
-using CoreChipset = CoreChipsetFeatures<AllowDividedIOSpacePlacement, 0xFA00'0000, 0xFB00'0000, 0xFC00'0000>;
+constexpr auto DisplayStartAddress = 0xFA00'0000;
+constexpr auto SDStartAddress = 0xFB00'0000;
+constexpr auto EEPROMStartAddress = 0xFC00'0000;
+using CoreChipset = CoreChipsetFeatures<AllowDividedIOSpacePlacement,
+                                        DisplayStartAddress,
+                                        SDStartAddress,
+                                        EEPROMStartAddress>;
 using TheDisplayInterface = CoreChipset::DisplayInterface;
 using TheSDInterface = CoreChipset::SDInterface;
 using TheEEPROMInterface = CoreChipset::EEPROMInterface;

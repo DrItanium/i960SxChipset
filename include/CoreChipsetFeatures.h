@@ -32,7 +32,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardInterface.h"
 #include "DisplayInterface.h"
 #include "EEPROMInterface.h"
+#include "Serial0Interface.h"
 template<bool overrideExternalDeviceLocations,
+        Address Serial0Base,
         Address SDCardBase,
         Address DisplayBase,
         Address EEPROMBase,
@@ -47,7 +49,7 @@ public:
     static constexpr Address IOConfigurationSpaceStart = IOBaseAddress;
     static constexpr Address IOConfigurationSpaceEnd = IOConfigurationSpaceStart + (16 * 0x100);
     // then start our initial designs after this point
-    static constexpr Address RegisterPage0BaseAddress = IOConfigurationSpaceEnd;
+    static constexpr Address RegisterPage0BaseAddress = overrideExternalDeviceLocations ? Serial0Base : IOConfigurationSpaceEnd;
     static constexpr Address RegisterPage0EndAddress = RegisterPage0BaseAddress + 0x100;
     static constexpr SplitWord32 Serial0BaseAddress {RegisterPage0BaseAddress};
     static constexpr byte Serial0Page = Serial0BaseAddress.getTargetPage();
@@ -98,44 +100,6 @@ public:
         EEPROMSizeLower = EEPROMSize00,
         EEPROMSizeUpper = EEPROMSize10,
     };
-    enum class Registers : uint8_t {
-#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
-#define FourByteEntry(Prefix) \
-        TwoByteEntry(Prefix ## 0), \
-        TwoByteEntry(Prefix ## 1)
-#define EightByteEntry(Prefix) \
-        FourByteEntry(Prefix ## 0), \
-        FourByteEntry(Prefix ## 1)
-#define TwelveByteEntry(Prefix) \
-        EightByteEntry(Prefix ## 0), \
-        FourByteEntry(Prefix ## 1)
-#define SixteenByteEntry(Prefix) \
-        EightByteEntry(Prefix ## 0), \
-        EightByteEntry(Prefix ## 1)
-        TwoByteEntry(ConsoleIO),
-        TwoByteEntry(ConsoleFlush),
-        //FourByteEntry(ConsoleTimeout),
-        //TwoByteEntry(ConsoleRXBufferSize),
-        //TwoByteEntry(ConsoleTXBufferSize),
-        //FourByteEntry(ChipsetClockSpeed),
-        //TwoByteEntry(CacheLineCount),
-        //TwoByteEntry(CacheLineSize),
-        //TwoByteEntry(NumberOfCacheWays),
-        TwoByteEntry(TriggerInterrupt),
-        FourByteEntry(AddressDebuggingFlag),
-#undef SixteenByteEntry
-#undef TwelveByteEntry
-#undef EightByteEntry
-#undef FourByteEntry
-#undef TwoByteEntry
-        End,
-        ConsoleIO = ConsoleIO0,
-        ConsoleFlush = ConsoleFlush0,
-        TriggerInterrupt = TriggerInterrupt0,
-        AddressDebuggingFlag = AddressDebuggingFlag00,
-        // we ignore the upper half of the register but reserve it to make sure
-    };
-    static_assert(static_cast<int>(Registers::End) < 0x100);
 
 
 public:
@@ -151,34 +115,6 @@ public:
         EEPROMInterface::begin();
     }
 private:
-    static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
-        switch (static_cast<Registers>(offset)) {
-            case Registers::ConsoleIO:
-                return Serial.read();
-            case Registers::AddressDebuggingFlag:
-                return static_cast<uint16_t>(enableAddressDebugging_);
-            default:
-                return 0;
-        }
-    }
-    static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
-        switch (static_cast<Registers>(offset)) {
-            case Registers::TriggerInterrupt:
-                pulse<i960Pinout::Int0_>();
-                break;
-            case Registers::ConsoleFlush:
-                Serial.flush();
-                break;
-            case Registers::ConsoleIO:
-                Serial.write(static_cast<char>(value.getWholeValue()));
-                break;
-            case Registers::AddressDebuggingFlag:
-                enableAddressDebugging_ = (value.getWholeValue() != 0);
-                break;
-            default:
-                break;
-        }
-    }
     static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<IOConfigurationSpace0Registers>(offset)) {
 #define X(title, var) \
@@ -216,7 +152,7 @@ public:
         } else if (targetPage == Serial0Page) {
             return handleFirstPageRegisterReads(offset, lss);
         } else {
-            if constexpr (overrideExternalDeviceLocations) {
+            if constexpr (!overrideExternalDeviceLocations) {
                 if (SDInterface::respondsTo(targetPage)) {
                     return SDInterface::read(targetPage, offset, lss);
                 } else if (DisplayInterface::respondsTo(targetPage)) {
@@ -233,9 +169,8 @@ public:
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         if (targetPage == Serial0Page) {
-            handleFirstPageRegisterWrites(offset, lss, value);
         } else {
-            if constexpr (overrideExternalDeviceLocations) {
+            if constexpr (!overrideExternalDeviceLocations) {
                 if (SDInterface::respondsTo(targetPage)) {
                     SDInterface::write(targetPage, offset, lss, value);
                 } else if (DisplayInterface::respondsTo(targetPage)) {
@@ -248,9 +183,5 @@ public:
             }
         }
     }
-    static bool addressDebuggingEnabled() noexcept { return enableAddressDebugging_; }
-private:
-    // 257th char is always zero and not accessible, prevent crap from going beyond the cache
-    static inline bool enableAddressDebugging_ = false;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

@@ -49,6 +49,8 @@ public:
     static constexpr auto EndPage = EndAddressSplit.getTargetPage();
     static constexpr auto SectionID = StartAddressSplit.getMostSignificantByte();
 public:
+    EEPROMInterface() = delete;
+    ~EEPROMInterface() = delete;
     static constexpr bool respondsTo(byte targetPage) noexcept {
         return targetPage >= StartPage && targetPage < EndPage;
     }
