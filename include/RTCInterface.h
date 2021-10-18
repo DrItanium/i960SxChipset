@@ -60,13 +60,19 @@ public:
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(Available),
         TwoByteEntry(NowRequest),
-        FourByteEntry(Unixtime),
         TwoByteEntry(Seconds),
         TwoByteEntry(Minutes),
+
         TwoByteEntry(Hours),
         TwoByteEntry(Day),
+
         TwoByteEntry(Month),
         TwoByteEntry(Year),
+
+        TwoByteEntry(DayOfTheWeek),
+        TwoByteEntry(Reserved),
+        FourByteEntry(Secondstime),
+        FourByteEntry(Unixtime),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -77,12 +83,15 @@ public:
         NowRequest = NowRequest0,
         UnixtimeLower = Unixtime00,
         UnixtimeUpper = Unixtime10,
+        SecondstimeLower = Secondstime00,
+        SecondstimeUpper = Secondstime10,
         Seconds = Seconds0,
         Minutes = Minutes0,
         Hours = Hours0,
         Day = Day0,
         Month = Month0,
         Year = Year0,
+        DayOfTheWeek = DayOfTheWeek0,
     };
 public:
     RTCInterface() = delete;
@@ -128,23 +137,19 @@ public:
             case Registers::Day: return static_cast<uint16_t>(now_.day());
             case Registers::Month: return static_cast<uint16_t>(now_.month());
             case Registers::Year: return static_cast<uint16_t>(now_.year());
+            case Registers::DayOfTheWeek: return static_cast<uint16_t>(now_.dayOfTheWeek());
             case Registers::Available:
                 return rtcUp_ ? 0xFFFF : 0;
-            case Registers::UnixtimeLower: {
-                if (rtcUp_) {
-                    unixtime_ = rtc_.now().unixtime();
-                    return static_cast<uint16_t>(unixtime_);
-                } else {
-                    return 0;
-                }
-            }
-            case Registers::UnixtimeUpper: {
-                if (rtcUp_) {
-                    return static_cast<uint16_t>(unixtime_ >> 16);
-                } else {
-                    return 0;
-                }
-            }
+            case Registers::UnixtimeLower:
+                unixtime_ = now_.unixtime();
+                return static_cast<uint16_t>(unixtime_);
+            case Registers::UnixtimeUpper:
+                return static_cast<uint16_t>(unixtime_ >> 16);
+            case Registers::SecondstimeLower:
+                secondstime_ = now_.secondstime();
+                return static_cast<uint16_t>(secondstime_);
+            case Registers::SecondstimeUpper:
+                return static_cast<uint16_t>(secondstime_ >> 16);
             default:
                 return 0;
         }
@@ -166,6 +171,7 @@ private:
     static inline RTC_PCF8523 rtc_;
     static inline bool rtcUp_ = false;
     static inline uint32_t unixtime_{0};
+    static inline uint32_t secondstime_{0};
     static inline DateTime now_;
 };
 
