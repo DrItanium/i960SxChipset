@@ -74,6 +74,13 @@ public:
         return targetPage >= StartPage && targetPage < EndPage;
     }
     static void begin() noexcept {
+        initialized_ = seesaw0_.begin();
+        if (!initialized_) {
+            Serial.println(F("SEESAW0 NOT FOUND! DISABLING!"));
+        } else {
+            Serial.println(F("SEESAW 0 FOUND!"));
+        }
+
     }
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         return 0;
@@ -81,6 +88,7 @@ public:
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
     }
 private:
+    static inline Adafruit_seesaw seesaw0_;
     static inline bool initialized_ = false;
 };
 #endif //SXCHIPSET_SEESAWINTERFACE_H
