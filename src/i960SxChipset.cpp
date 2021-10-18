@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "PSRAMChip.h"
 #include "TaggedCacheAddress.h"
 #include "ClockGenerationInterface.h"
+#include "RTCInterface.h"
 
 constexpr auto RTCBaseAddress = 0xF800'0000;
 constexpr auto ClockgenBaseAddress = 0xF700'0000;
@@ -57,9 +58,6 @@ using TheClockgenInterface = ClockGenerationInterface<ClockgenBaseAddress>;
 using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface, TheSDInterface, TheDisplayInterface, TheEEPROMInterface, TheClockgenInterface>;
 constexpr auto CompileInAddressDebuggingSupport = false;
 
-RTC_PCF8523 rtc;
-bool rtcUp = false;
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
@@ -470,34 +468,6 @@ void setup() {
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
 
-        rtcUp = rtc.begin();
-        if (!rtcUp) {
-            Serial.println(F("NO RTC FOUND...DISABLING"));
-        } else {
-            Serial.println(F("RTC FOUND... CHECKING"));
-            if (!rtc.initialized() || rtc.lostPower()) {
-                Serial.println(F("RTC is NOT initialized, setting time from sketch compile"));
-                // not the most accurate but good enough
-                rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-            }
-            DateTime now = rtc.now();
-            Serial.print(now.year(), DEC);
-            Serial.print(F("/"));
-            Serial.print(now.month(), DEC);
-            Serial.print(F("/"));
-            Serial.print(now.day(), DEC);
-            Serial.print(F(" ("));
-            Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
-            Serial.print(F(") "));
-            Serial.print(now.hour(), DEC);
-            Serial.print(F(":"));
-            Serial.print(now.minute(), DEC);
-            Serial.print(F(":"));
-            Serial.print(now.second(), DEC);
-            Serial.println();
-
-            rtc.start();
-        }
         installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
