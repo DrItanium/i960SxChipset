@@ -126,6 +126,11 @@ public:
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+        switch (static_cast<Registers>(offset)) {
+            case Registers::Reset:
+                seesaw0_.SWReset();
+                break;
+        }
     }
 private:
     static inline Adafruit_seesaw seesaw0_;
