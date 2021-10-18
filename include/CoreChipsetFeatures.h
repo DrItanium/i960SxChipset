@@ -36,7 +36,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<typename TheConsoleInterface,
          typename TheSDInterface,
          typename TheDisplayInterface,
-         typename TheEEPROMInterface>
+         typename TheEEPROMInterface,
+         typename TheClockgenInterface,
+         typename TheRTCInterface>
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
     static constexpr Address IOBaseAddress = 0xFE00'0000;
@@ -57,6 +59,8 @@ public:
         FourByteEntry(DisplayShieldBaseAddress),
         FourByteEntry(ST7735DisplayBaseAddress),
         FourByteEntry(EEPROMBaseAddress),
+        FourByteEntry(ClockgenBaseAddress),
+        FourByteEntry(RTCBaseAddress),
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
@@ -72,6 +76,10 @@ public:
         ST7735DisplayBaseAddressUpper = ST7735DisplayBaseAddress10,
         EEPROMBaseAddressLower = EEPROMBaseAddress00,
         EEPROMBaseAddressUpper = EEPROMBaseAddress10,
+        ClockgenBaseAddressLower = ClockgenBaseAddress00,
+        ClockgenBaseAddressUpper = ClockgenBaseAddress10,
+        RTCBaseAddressLower = RTCBaseAddress00,
+        RTCBaseAddressUpper = RTCBaseAddress10,
     };
     enum class IOConfigurationSpace1Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
@@ -99,6 +107,7 @@ public:
         TheDisplayInterface::begin();
         TheSDInterface::begin();
         TheEEPROMInterface::begin();
+        TheClockgenInterface::begin();
     }
 private:
     static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
@@ -112,6 +121,8 @@ private:
             X(DisplayShieldBaseAddress, TheDisplayInterface::SeesawSectionStart);
             X(ST7735DisplayBaseAddress, TheDisplayInterface::DisplaySectionStart);
             X(EEPROMBaseAddress, TheEEPROMInterface::StartAddress);
+            X(ClockgenBaseAddress, TheClockgenInterface::StartAddress);
+            X(RTCBaseAddress, TheRTCInterface::StartAddress);
 #undef X
 
             default: return 0; // zero is never an io page!
