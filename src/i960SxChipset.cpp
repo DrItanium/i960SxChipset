@@ -458,7 +458,7 @@ void setup() {
         SPI.begin();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
-        CoreChipset::begin();
+        ConfigurationSpace::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
         installBootImage();
