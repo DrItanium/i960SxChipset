@@ -59,6 +59,15 @@ public:
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(Available),
+        TwoByteEntry(Enable),
+        /// @todo add PLL A configuration
+        /// @todo add PLL B configuration
+        /// @todo add Channel 0 Multisynth
+        /// @todo add Channel 0 RDIV
+        /// @todo add Channel 1 Multisynth
+        /// @todo add Channel 1 RDIV
+        /// @todo add Channel 2 Multisynth
+        /// @todo add Channel 2 RDIV
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -66,6 +75,7 @@ public:
 #undef TwoByteEntry
         End,
         Available = Available0,
+        Enable = Enable0,
     };
 public:
     ClockGenerationInterface() = delete;
@@ -79,15 +89,32 @@ public:
             Serial.println(F("Could not bring up clock gen device, disabling"));
         } else {
             Serial.println(F("Found a clock generation device!"));
+            clockgen_.enableOutputs(enabled_);
         }
     }
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        return 0;
+        switch (static_cast<Registers>(offset)) {
+            case Registers::Available:
+                return static_cast<uint16_t>(clockgenUp_ ? 0xFFFF : 0);
+            case Registers::Enable:
+                return static_cast<uint16_t>(enabled_ ? 0xFFFF : 0);
+            default:
+                return 0;
+        }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+        switch (static_cast<Registers>(offset)) {
+            case Registers::Enable:
+                enabled_ = value.getWholeValue() != 0;
+                clockgen_.enableOutputs(enabled_);
+                break;
+            default:
+                break;
+        }
     }
 private:
     static inline Adafruit_SI5351 clockgen_;
     static inline bool clockgenUp_ = false;
+    static inline bool enabled_ = false;
 };
 #endif //SXCHIPSET_CLOCKGENERATIONINTERFACE_H
