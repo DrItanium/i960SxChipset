@@ -59,8 +59,14 @@ public:
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(Available),
-        TwoByteEntry(Reserved0),
+        TwoByteEntry(NowRequest),
         FourByteEntry(Unixtime),
+        TwoByteEntry(Seconds),
+        TwoByteEntry(Minutes),
+        TwoByteEntry(Hours),
+        TwoByteEntry(Day),
+        TwoByteEntry(Month),
+        TwoByteEntry(Year),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -68,8 +74,15 @@ public:
 #undef TwoByteEntry
         End,
         Available = Available0,
+        NowRequest = NowRequest0,
         UnixtimeLower = Unixtime00,
         UnixtimeUpper = Unixtime10,
+        Seconds = Seconds0,
+        Minutes = Minutes0,
+        Hours = Hours0,
+        Day = Day0,
+        Month = Month0,
+        Year = Year0,
     };
 public:
     RTCInterface() = delete;
@@ -109,6 +122,12 @@ public:
     }
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         switch (static_cast<Registers>(offset)) {
+            case Registers::Seconds: return static_cast<uint16_t>(now_.second());
+            case Registers::Hours: return static_cast<uint16_t>(now_.hour());
+            case Registers::Minutes: return static_cast<uint16_t>(now_.minute());
+            case Registers::Day: return static_cast<uint16_t>(now_.day());
+            case Registers::Month: return static_cast<uint16_t>(now_.month());
+            case Registers::Year: return static_cast<uint16_t>(now_.year());
             case Registers::Available:
                 return rtcUp_ ? 0xFFFF : 0;
             case Registers::UnixtimeLower: {
@@ -131,12 +150,23 @@ public:
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+        switch (static_cast<Registers>(offset)) {
+            case Registers::NowRequest: {
+                if (rtcUp_) {
+                    now_ = rtc_.now();
+                }
+                break;
+            }
+            default:
+                break;
+        }
     }
     static constexpr auto available() noexcept { return rtcUp_; }
 private:
     static inline RTC_PCF8523 rtc_;
     static inline bool rtcUp_ = false;
-    static inline uint32_t unixtime_;
+    static inline uint32_t unixtime_{0};
+    static inline DateTime now_;
 };
 
 #endif //SXCHIPSET_RTCINTERFACE_H
