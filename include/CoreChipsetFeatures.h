@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessorSerializer.h"
 #include "SDCardInterface.h"
 #include "DisplayInterface.h"
+#include "EEPROMInterface.h"
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
     static constexpr auto MaximumNumberOfOpenFiles = 16;
@@ -48,6 +49,7 @@ public:
     //static constexpr auto SDCardInterfaceBaseAddress = SDInterface :: StartAddress;
     //static constexpr auto SDCardInterfaceEndAddress = SDInterface :: EndAddress;
     using DisplayInterface = ::DisplayInterface<SDInterface::EndAddress>;
+    using EEPROMInterface = ::EEPROMInterface<DisplayInterface::EndAddress>;
     // we have a bunch of pages in here that are useful :)
     enum class IOConfigurationSpace0Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
@@ -60,6 +62,7 @@ public:
         FourByteEntry(SDCardFileBlock0BaseAddress),
         FourByteEntry(DisplayShieldBaseAddress),
         FourByteEntry(ST7735DisplayBaseAddress),
+        FourByteEntry(EEPROMBaseAddress),
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
@@ -73,6 +76,20 @@ public:
         DisplayShieldBaseAddressUpper = DisplayShieldBaseAddress10,
         ST7735DisplayBaseAddressLower = ST7735DisplayBaseAddress00,
         ST7735DisplayBaseAddressUpper = ST7735DisplayBaseAddress10,
+        EEPROMBaseAddressLower = EEPROMBaseAddress00,
+        EEPROMBaseAddressUpper = EEPROMBaseAddress10,
+    };
+    enum class IOConfigurationSpace1Registers : uint8_t {
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1)
+        FourByteEntry(EEPROMSize),
+#undef FourByteEntry
+#undef TwoByteEntry
+        End,
+        EEPROMSizeLower = EEPROMSize00,
+        EEPROMSizeUpper = EEPROMSize10,
     };
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
@@ -169,11 +186,25 @@ private:
             default: return 0; // zero is never an io page!
         }
     }
+
+    static uint16_t readIOConfigurationSpace1(uint8_t offset, LoadStoreStyle) noexcept {
+        switch (static_cast<IOConfigurationSpace1Registers>(offset)) {
+#define X(title, var) \
+             case IOConfigurationSpace1Registers:: title ## Lower : return static_cast<uint16_t>(var); \
+             case IOConfigurationSpace1Registers:: title ## Upper : return static_cast<uint16_t>(var >> 16)
+            X(EEPROMSize, EEPROMInterface::Size);
+#undef X
+
+            default: return 0; // zero is never an io page!
+        }
+    }
 public:
     [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
         if (targetPage == 0) {
             return readIOConfigurationSpace0(offset, lss);
+        } else if (targetPage == 1) {
+            return readIOConfigurationSpace1(offset, lss);
         } else if (targetPage == Serial0Page) {
             return handleFirstPageRegisterReads(offset, lss);
         } else if (SDInterface::respondsTo(targetPage)) {
