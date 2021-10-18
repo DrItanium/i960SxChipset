@@ -55,12 +55,28 @@ public:
         Serial.println(F("EEPROM INTERFACE UP"));
     }
 
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-
+    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle) noexcept {
+        SplitWord16 address{offset, targetPage - StartPage}; // normalize it
+        uint16_t result = 0;
+        EEPROM.get(address.getWholeValue(), result);
+        return result;
     }
 
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-
+        SplitWord16 address{offset, targetPage - StartPage};
+        switch (lss) {
+            case LoadStoreStyle::Lower8:
+                EEPROM.update(address.getWholeValue(), value.bytes[0]);
+                break;
+            case LoadStoreStyle::Upper8:
+                EEPROM.update(address.getWholeValue() + 1, value.bytes[1]);
+                break;
+            case LoadStoreStyle::Full16:
+                EEPROM.put(address.getWholeValue(), value.getWholeValue());
+                break;
+            default:
+                break;
+        }
     }
 };
 
