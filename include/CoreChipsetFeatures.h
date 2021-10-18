@@ -141,6 +141,7 @@ public:
     static void begin() noexcept {
         DisplayInterface::begin();
         SDInterface::begin();
+        EEPROMInterface::begin();
     }
 private:
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
@@ -211,6 +212,8 @@ public:
             return SDInterface::read(targetPage, offset, lss);
         } else if (DisplayInterface::respondsTo(targetPage)) {
             return DisplayInterface::read(targetPage, offset, lss);
+        } else if (EEPROMInterface::respondsTo(targetPage)) {
+            return EEPROMInterface::read(targetPage, offset, lss);
         } else {
             return 0;
         }
@@ -222,6 +225,8 @@ public:
             SDInterface::write(targetPage, offset, lss, value);
         } else if (DisplayInterface::respondsTo(targetPage)) {
             DisplayInterface::write(targetPage, offset, lss, value);
+        } else if (EEPROMInterface::respondsTo(targetPage)) {
+            EEPROMInterface::write(targetPage, offset, lss, value);
         } else {
             // do nothing
         }
