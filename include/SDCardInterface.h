@@ -52,6 +52,7 @@ public:
     static constexpr auto CTLPage = CTLAddress.getTargetPage();
     static constexpr auto FileStartPage = DecomposedFilesStart.getTargetPage();
     static constexpr auto FileEndPage = DecomposedFilesEnd.getTargetPage();
+    static constexpr auto SectionID = StartAddressDecomposition.getMostSignificantByte();
     enum class SDCardFileSystemRegisters : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \

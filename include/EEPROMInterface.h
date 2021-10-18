@@ -47,6 +47,7 @@ public:
     static constexpr auto EndAddress = StartAddress + Size;
     static constexpr SplitWord32 EndAddressSplit{EndAddress};
     static constexpr auto EndPage = EndAddressSplit.getTargetPage();
+    static constexpr auto SectionID = StartAddressSplit.getMostSignificantByte();
 public:
     static constexpr bool respondsTo(byte targetPage) noexcept {
         return targetPage >= StartPage && targetPage < EndPage;
