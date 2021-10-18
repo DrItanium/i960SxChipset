@@ -55,7 +55,13 @@ using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress>;
 using TheEEPROMInterface = EEPROMInterface<EEPROMBaseAddress>;
 using TheClockgenInterface = ClockGenerationInterface<ClockgenBaseAddress>;
-using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface, TheSDInterface, TheDisplayInterface, TheEEPROMInterface, TheClockgenInterface>;
+using TheRTCInterface = RTCInterface<RTCBaseAddress>
+using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
+        TheSDInterface,
+        TheDisplayInterface,
+        TheEEPROMInterface,
+        TheClockgenInterface,
+        TheRTCInterface>;
 constexpr auto CompileInAddressDebuggingSupport = false;
 
 /**

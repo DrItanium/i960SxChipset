@@ -31,7 +31,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_SI5351.h>
-#include <RTClib.h>
 
 #include "Pinout.h"
 

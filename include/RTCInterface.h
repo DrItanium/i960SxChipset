@@ -30,7 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SXCHIPSET_RTCINTERFACE_H
 #include <Arduino.h>
 #include <Wire.h>
-#include <Adafruit_SI5351.h>
 #include <RTClib.h>
 
 #include "Pinout.h"
@@ -38,6 +37,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<Address baseAddress>
 class RTCInterface {
 public:
+    static constexpr auto StartAddress = baseAddress;
+    static constexpr SplitWord32 StartAddressSplit { StartAddress };
+    static constexpr auto EndAddress = StartAddress + 0x100;
+    static constexpr SplitWord32 EndAddressSplit{EndAddress};
+    static constexpr auto StartPage = StartAddressSplit.getTargetPage();
+    static constexpr auto EndPage = EndAddressSplit.getTargetPage();
+    static constexpr auto SectionID = StartAddressSplit.getMostSignificantByte();
+    enum class Registers : uint8_t {
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) \
+        FourByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define TwelveByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        EightByteEntry(Prefix ## 1)
+        TwoByteEntry(Available),
+#undef SixteenByteEntry
+#undef TwelveByteEntry
+#undef EightByteEntry
+#undef FourByteEntry
+#undef TwoByteEntry
+        End,
+        Available = Available0,
+    };
 public:
     RTCInterface() = delete;
     ~RTCInterface() = delete;
@@ -45,24 +74,24 @@ public:
         return targetPage >= StartPage && targetPage < EndPage;
     }
     static void begin() noexcept {
-        rtcUp = rtc.begin();
-        if (!rtcUp) {
+        rtcUp_ = rtc_.begin();
+        if (!rtcUp_) {
             Serial.println(F("NO RTC FOUND...DISABLING"));
         } else {
             Serial.println(F("RTC FOUND... CHECKING"));
-            if (!rtc.initialized() || rtc.lostPower()) {
+            if (!rtc_.initialized() || rtc_.lostPower()) {
                 Serial.println(F("RTC is NOT initialized, setting time from sketch compile"));
                 // not the most accurate but good enough
-                rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+                rtc_.adjust(DateTime(F(__DATE__), F(__TIME__)));
             }
-            DateTime now = rtc.now();
+            DateTime now = rtc_.now();
             Serial.print(now.year(), DEC);
             Serial.print(F("/"));
             Serial.print(now.month(), DEC);
             Serial.print(F("/"));
             Serial.print(now.day(), DEC);
             Serial.print(F(" ("));
-            Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
+            Serial.print(daysOfTheWeek_[now.dayOfTheWeek()]);
             Serial.print(F(") "));
             Serial.print(now.hour(), DEC);
             Serial.print(F(":"));
@@ -71,7 +100,7 @@ public:
             Serial.print(now.second(), DEC);
             Serial.println();
 
-            rtc.start();
+            rtc_.start();
         }
     }
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
@@ -79,6 +108,7 @@ public:
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
     }
+    static constexpr auto available() noexcept { return rtcUp_; }
 private:
     static inline RTC_PCF8523 rtc_;
     static inline bool rtcUp_ = false;
