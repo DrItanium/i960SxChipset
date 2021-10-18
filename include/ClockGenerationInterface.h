@@ -87,7 +87,7 @@ public:
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
     }
 private:
-    static Adafruit_SI5351 clockgen_;
-    static bool clockgenUp_ = false;
+    static inline Adafruit_SI5351 clockgen_;
+    static inline bool clockgenUp_ = false;
 };
 #endif //SXCHIPSET_CLOCKGENERATIONINTERFACE_H

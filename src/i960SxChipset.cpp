@@ -41,7 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 #include "ClockGenerationInterface.h"
 
-
+constexpr auto RTCBaseAddress = 0xF800'0000;
+constexpr auto ClockgenBaseAddress = 0xF700'0000;
 constexpr auto Serial0BaseAddress = 0xF900'0000;
 constexpr auto DisplayBaseAddress = 0xFA00'0000;
 constexpr auto SDBaseAddress = 0xFB00'0000;
@@ -52,7 +53,8 @@ using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress>;
 using TheEEPROMInterface = EEPROMInterface<EEPROMBaseAddress>;
-using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface, TheSDInterface, TheDisplayInterface, TheEEPROMInterface >;
+using TheClockgenInterface = ClockGenerationInterface<ClockgenBaseAddress>;
+using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface, TheSDInterface, TheDisplayInterface, TheEEPROMInterface, TheClockgenInterface>;
 constexpr auto CompileInAddressDebuggingSupport = false;
 
 RTC_PCF8523 rtc;
