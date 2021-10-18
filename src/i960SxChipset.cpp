@@ -46,9 +46,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_Sensor.h>
 #include <Adafruit_MCP9808.h>
 
-constexpr auto SeesawBaseAddress = 0xF700'0000;
-constexpr auto RTCBaseAddress = 0xF800'0000;
+constexpr auto SeesawBaseAddress = 0xF600'0000;
 constexpr auto ClockgenBaseAddress = 0xF700'0000;
+constexpr auto RTCBaseAddress = 0xF800'0000;
 constexpr auto Serial0BaseAddress = 0xF900'0000;
 constexpr auto DisplayBaseAddress = 0xFA00'0000;
 constexpr auto SDBaseAddress = 0xFB00'0000;
@@ -67,7 +67,8 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheDisplayInterface,
         TheEEPROMInterface,
         TheClockgenInterface,
-        TheRTCInterface>;
+        TheRTCInterface,
+        TheSeesawInterface>;
 constexpr auto CompileInAddressDebuggingSupport = false;
 
 /**
@@ -361,7 +362,9 @@ inline void invocationBody() noexcept {
         case TheClockgenInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheClockgenInterface>();
             break;
-
+        case TheSeesawInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheSeesawInterface>();
+            break;
         case TheConsoleInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheConsoleInterface>();
             break;

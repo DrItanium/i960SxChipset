@@ -38,7 +38,8 @@ template<typename TheConsoleInterface,
          typename TheDisplayInterface,
          typename TheEEPROMInterface,
          typename TheClockgenInterface,
-         typename TheRTCInterface>
+         typename TheRTCInterface,
+         typename TheSeesawInterface>
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
     static constexpr Address IOBaseAddress = 0xFE00'0000;
@@ -61,6 +62,7 @@ public:
         FourByteEntry(EEPROMBaseAddress),
         FourByteEntry(ClockgenBaseAddress),
         FourByteEntry(RTCBaseAddress),
+        FourByteEntry(SeesawBaseAddress),
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
@@ -80,6 +82,8 @@ public:
         ClockgenBaseAddressUpper = ClockgenBaseAddress10,
         RTCBaseAddressLower = RTCBaseAddress00,
         RTCBaseAddressUpper = RTCBaseAddress10,
+        SeesawBaseAddressLower = SeesawBaseAddress00,
+        SeesawBaseAddressUpper = SeesawBaseAddress10,
     };
     enum class IOConfigurationSpace1Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
@@ -87,11 +91,14 @@ public:
         TwoByteEntry(Prefix ## 0), \
         TwoByteEntry(Prefix ## 1)
         FourByteEntry(EEPROMSize),
+        FourByteEntry(SeesawCount),
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
         EEPROMSizeLower = EEPROMSize00,
         EEPROMSizeUpper = EEPROMSize10,
+        SeesawCountLower = SeesawCount00,
+        SeesawCountUpper = SeesawCount10,
     };
 
 
@@ -124,6 +131,7 @@ private:
             X(EEPROMBaseAddress, TheEEPROMInterface::StartAddress);
             X(ClockgenBaseAddress, TheClockgenInterface::StartAddress);
             X(RTCBaseAddress, TheRTCInterface::StartAddress);
+            X(SeesawBaseAddress, TheSeesawInterface::StartAddress);
 #undef X
 
             default: return 0; // zero is never an io page!
@@ -136,6 +144,7 @@ private:
              case IOConfigurationSpace1Registers:: title ## Lower : return static_cast<uint16_t>(var); \
              case IOConfigurationSpace1Registers:: title ## Upper : return static_cast<uint16_t>(var >> 16)
             X(EEPROMSize, TheEEPROMInterface::Size);
+            X(SeesawCount, TheSeesawInterface::Count);
 #undef X
 
             default: return 0; // zero is never an io page!

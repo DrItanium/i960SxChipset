@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<Address baseAddress>
 class SeesawInterface {
 public:
+    static constexpr Address Count = 1;
     static constexpr auto StartAddress = baseAddress;
     static constexpr SplitWord32 StartAddressSplit { StartAddress };
     static constexpr auto EndAddress = StartAddress + 0x100;
@@ -59,6 +60,14 @@ public:
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(Available),
+        TwoByteEntry(Reset),
+        FourByteEntry(Version),
+        FourByteEntry(Options),
+        TwoByteEntry(I2CAddress),
+        TwoByteEntry(EEPROMAddress),
+        TwoByteEntry(EEPROMValue),
+        TwoByteEntry(EEPROMAddressAutoIncrement),
+        /// @todo implement support for the many pins and their corresponding abilities
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -66,6 +75,16 @@ public:
 #undef TwoByteEntry
         End,
         Available = Available0,
+        Reset = Reset0,
+        I2CAddress = I2CAddress0,
+        EEPROMAddress = EEPROMAddress0,
+        EEPROMValue = EEPROMValue0,
+        EEPROMAddressAutoIncrement = EEPROMAddressAutoIncrement0,
+        VersionLower = Version00,
+        VersionUpper = Version10,
+        OptionsLower = Options00,
+        OptionsUpper = Options10,
+
     };
 public:
     SeesawInterface() = delete;
@@ -82,13 +101,36 @@ public:
         }
 
     }
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        return 0;
+    static uint16_t read(uint8_t, uint8_t offset, LoadStoreStyle) noexcept {
+        switch (static_cast<Registers>(offset)) {
+            case Registers::Available:
+                return static_cast<uint16_t>(initialized_ ? 0xFFFF : 0);
+            case Registers::I2CAddress:
+                return static_cast<uint16_t>(seesaw0_.getI2CAddr());
+            case Registers::EEPROMAddress:
+                return static_cast<uint16_t>(eepromAddress_);
+            case Registers::EEPROMAddressAutoIncrement:
+                return static_cast<uint16_t>(eepromAutoIncrement_);
+            case Registers::EEPROMValue:
+                return static_cast<uint16_t>(seesaw0_.EEPROMRead8(eepromAddress_));
+            case Registers::VersionLower:
+                return static_cast<uint16_t>(seesaw0_.getVersion());
+            case Registers::VersionUpper:
+                return static_cast<uint16_t>(seesaw0_.getVersion() >> 16);
+            case Registers::OptionsLower:
+                return static_cast<uint16_t>(seesaw0_.getOptions());
+            case Registers::OptionsUpper:
+                return static_cast<uint16_t>(seesaw0_.getOptions() >> 16);
+            default:
+                return 0;
+        }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
     }
 private:
     static inline Adafruit_seesaw seesaw0_;
     static inline bool initialized_ = false;
+    static inline bool eepromAutoIncrement_ = false;
+    static inline uint8_t eepromAddress_ = 0;
 };
 #endif //SXCHIPSET_SEESAWINTERFACE_H
