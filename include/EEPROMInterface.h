@@ -52,7 +52,9 @@ public:
         return targetPage >= StartPage && targetPage < EndPage;
     }
     static void begin() noexcept {
-        Serial.println(F("EEPROM INTERFACE UP"));
+        Serial.print(F("EEPROM INTERFACE UP, HAVE ACCESS TO "));
+        Serial.print(Size);
+        Serial.println(F(" BYTES"));
     }
 
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle) noexcept {
