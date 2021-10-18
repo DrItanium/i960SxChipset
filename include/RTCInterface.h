@@ -59,6 +59,8 @@ public:
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(Available),
+        TwoByteEntry(Reserved0),
+        FourByteEntry(Unixtime),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -66,6 +68,8 @@ public:
 #undef TwoByteEntry
         End,
         Available = Available0,
+        UnixtimeLower = Unixtime00,
+        UnixtimeUpper = Unixtime10,
     };
 public:
     RTCInterface() = delete;
@@ -84,6 +88,8 @@ public:
                 // not the most accurate but good enough
                 rtc_.adjust(DateTime(F(__DATE__), F(__TIME__)));
             }
+            // make sure that all timers are shutoff on startup
+            rtc_.deconfigureAllTimers();
             DateTime now = rtc_.now();
             Serial.print(now.year(), DEC);
             Serial.print(F("/"));
@@ -104,7 +110,27 @@ public:
         }
     }
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        return 0;
+        switch (static_cast<Registers>(offset)) {
+            case Registers::Available:
+                return rtcUp_ ? 0xFFFF : 0;
+            case Registers::UnixtimeLower: {
+                if (rtcUp_) {
+                    unixtime_ = rtc_.now().unixtime();
+                    return static_cast<uint16_t>(unixtime_);
+                } else {
+                    return 0;
+                }
+            }
+            case Registers::UnixtimeUpper: {
+                if (rtcUp_) {
+                    return static_cast<uint16_t>(unixtime_ >> 16);
+                } else {
+                    return 0;
+                }
+            }
+            default:
+                return 0;
+        }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
     }
@@ -113,6 +139,7 @@ private:
     static inline RTC_PCF8523 rtc_;
     static inline bool rtcUp_ = false;
     static inline char daysOfTheWeek_[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+    static inline uint32_t unixtime_;
 };
 
 #endif //SXCHIPSET_RTCINTERFACE_H

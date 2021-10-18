@@ -104,10 +104,13 @@ public:
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (static_cast<Registers>(offset)) {
-            case Registers::Enable:
-                enabled_ = value.getWholeValue() != 0;
-                clockgen_.enableOutputs(enabled_);
+            case Registers::Enable: {
+                if (clockgenUp_) {
+                    enabled_ = value.getWholeValue() != 0;
+                    clockgen_.enableOutputs(enabled_);
+                }
                 break;
+            }
             default:
                 break;
         }
