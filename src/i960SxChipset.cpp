@@ -356,8 +356,11 @@ inline void handleDisplayFeatures() noexcept {
     }
 }
 
-template<bool inDebugMode>
-inline void handleSDInterface() noexcept {
+template<bool inDebugMode, typename T>
+inline void handleExternalDeviceRequest() noexcept {
+    if constexpr (inDebugMode) {
+        displayRequestedAddress();
+    }
     // with burst transactions in the core chipset, we do not have access to a cache line to write into.
     // instead we need to do the old style infinite iteration design
     if (ProcessorInterface::isReadOperation()) {
@@ -368,7 +371,7 @@ inline void handleSDInterface() noexcept {
                 Serial.print(F("\tPage Offset: 0x")) ;
                 Serial.println(ProcessorInterface::getPageOffset(), HEX);
             }
-            auto result = TheSDInterface::read(ProcessorInterface::getPageIndex(),
+            auto result = T::read(ProcessorInterface::getPageIndex(),
                                                     ProcessorInterface::getPageOffset(),
                                                     ProcessorInterface::getStyle());
             if constexpr (inDebugMode) {
@@ -392,10 +395,10 @@ inline void handleSDInterface() noexcept {
                 Serial.print(F("\tData To Write: 0x"));
                 Serial.println(dataBits.getWholeValue(), HEX);
             }
-            TheSDInterface ::write(ProcessorInterface::getPageIndex(),
-                                   ProcessorInterface::getPageOffset(),
-                                   ProcessorInterface::getStyle(),
-                                   dataBits);
+            T::write(ProcessorInterface::getPageIndex(),
+                     ProcessorInterface::getPageOffset(),
+                     ProcessorInterface::getStyle(),
+                     dataBits);
             if (informCPU()) {
                 break;
             }
@@ -427,27 +430,18 @@ inline void invocationBody() noexcept {
             handleMemoryInterface<inDebugMode>();
             break;
         }
-        case TheSDInterface::SectionID: {
-            if constexpr (inDebugMode) {
-                displayRequestedAddress();
-            }
-            handleSDRequest<inDebugMode>();
+        case TheEEPROMInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
             break;
-        }
-        case TheDisplayInterface::SectionID: {
-            if constexpr (inDebugMode) {
-                displayRequestedAddress();
-            }
-            handleDisplayFeatures<inDebugMode>();
+        case TheSDInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
             break;
-        }
-        case CoreChipset::SectionID: {
-            if constexpr (inDebugMode) {
-                displayRequestedAddress();
-            }
-            handleCoreChipsetLoop<inDebugMode>();
+        case TheDisplayInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheDisplayInterface>();
             break;
-        }
+        case CoreChipset::SectionID:
+            handleExternalDeviceRequest<inDebugMode, CoreChipset>();
+            break;
         default: {
             if constexpr (inDebugMode) {
                 displayRequestedAddress();
@@ -554,7 +548,7 @@ void setup() {
         SPI.begin();
         Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
-        CoreChipsetFeatures::begin();
+        CoreChipset::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
         installBootImage();
