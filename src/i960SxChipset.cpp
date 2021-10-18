@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include <SdFat.h>
 #include "Pinout.h"
+#include <Adafruit_SI5351.h>
 
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
@@ -39,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
 #include "TaggedCacheAddress.h"
+
 
 constexpr auto Serial0BaseAddress = 0xF900'0000;
 constexpr auto DisplayBaseAddress = 0xFA00'0000;
@@ -52,6 +54,9 @@ using TheConsoleInterface = Serial0Interface<Serial0BaseAddress>;
 using TheEEPROMInterface = EEPROMInterface<EEPROMBaseAddress>;
 using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface, TheSDInterface, TheDisplayInterface, TheEEPROMInterface >;
 constexpr auto CompileInAddressDebuggingSupport = false;
+
+Adafruit_SI5351 clockgen;
+bool clockgenUp = false;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
@@ -461,6 +466,12 @@ void setup() {
         ConfigurationSpace::begin();
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
+        clockgenUp = clockgen.begin() == ERROR_NONE;
+        if (!clockgenUp) {
+            Serial.println(F("Could not bring up clock gen device, disabling"));
+        } else {
+            Serial.println(F("Found a clock generation device!"));
+        }
         installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
