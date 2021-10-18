@@ -96,9 +96,7 @@ public:
             Serial.print(now.month(), DEC);
             Serial.print(F("/"));
             Serial.print(now.day(), DEC);
-            Serial.print(F(" ("));
-            Serial.print(daysOfTheWeek_[now.dayOfTheWeek()]);
-            Serial.print(F(") "));
+            Serial.print(F(" "));
             Serial.print(now.hour(), DEC);
             Serial.print(F(":"));
             Serial.print(now.minute(), DEC);
@@ -138,7 +136,6 @@ public:
 private:
     static inline RTC_PCF8523 rtc_;
     static inline bool rtcUp_ = false;
-    static inline char daysOfTheWeek_[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
     static inline uint32_t unixtime_;
 };
 
