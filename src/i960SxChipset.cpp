@@ -45,15 +45,12 @@ constexpr auto DisplayBaseAddress = 0xFA00'0000;
 constexpr auto SDBaseAddress = 0xFB00'0000;
 constexpr auto EEPROMBaseAddress = 0xFC00'0000;
 constexpr auto DebugBaseAddress = 0xFD00'0000;
-using CoreChipset = CoreChipsetFeatures<
-        Serial0BaseAddress,
-        DisplayBaseAddress,
-        SDBaseAddress,
-        EEPROMBaseAddress>;
-using TheDisplayInterface = CoreChipset::DisplayInterface;
-using TheSDInterface = CoreChipset::SDInterface;
-using TheEEPROMInterface = CoreChipset::EEPROMInterface;
-using TheConsole = CoreChipset::Console;
+constexpr auto MaximumNumberOfOpenFiles = 16;
+using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
+using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
+using TheConsoleInterface = Serial0Interface<Serial0BaseAddress>;
+using TheEEPROMInterface = EEPROMInterface<EEPROMBaseAddress>;
+using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface, TheSDInterface, TheDisplayInterface, TheEEPROMInterface >;
 constexpr auto CompileInAddressDebuggingSupport = false;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
@@ -265,105 +262,6 @@ inline void handleMemoryInterface() noexcept {
         }
     }
 }
-template<bool inDebugMode>
-inline void handleCoreChipsetLoop() noexcept {
-    // with burst transactions in the core chipset, we do not have access to a cache line to write into.
-    // instead we need to do the old style infinite iteration design
-    if (ProcessorInterface::isReadOperation()) {
-        for(;;) {
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x")) ;
-                Serial.println(ProcessorInterface::getPageIndex(), HEX);
-                Serial.print(F("\tPage Offset: 0x")) ;
-                Serial.println(ProcessorInterface::getPageOffset(), HEX);
-            }
-            auto result = CoreChipset::read(ProcessorInterface::getPageIndex(),
-                                            ProcessorInterface::getPageOffset(),
-                                            ProcessorInterface::getStyle());
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tRead Value: 0x"));
-                Serial.println(result, HEX);
-            }
-            ProcessorInterface::setDataBits(result);
-            if (informCPU()) {
-                break;
-            }
-            ProcessorInterface::burstNext<IncrementAddress>();
-        }
-    } else {
-        for (;;) {
-            auto dataBits = ProcessorInterface::getDataBits();
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x")) ;
-                Serial.println(ProcessorInterface::getPageIndex(), HEX);
-                Serial.print(F("\tPage Offset: 0x")) ;
-                Serial.println(ProcessorInterface::getPageOffset(), HEX);
-                Serial.print(F("\tData To Write: 0x"));
-                Serial.println(dataBits.getWholeValue(), HEX);
-            }
-            CoreChipset::write(ProcessorInterface::getPageIndex(),
-                               ProcessorInterface::getPageOffset(),
-                               ProcessorInterface::getStyle(),
-                               dataBits);
-            if (informCPU()) {
-                break;
-            }
-            // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
-            // so you may still be reading the previous i960 cycle state!
-            ProcessorInterface::burstNext<IncrementAddress>();
-        }
-    }
-}
-
-template<bool inDebugMode>
-inline void handleDisplayFeatures() noexcept {
-    // with burst transactions in the core chipset, we do not have access to a cache line to write into.
-    // instead we need to do the old style infinite iteration design
-    if (ProcessorInterface::isReadOperation()) {
-        for(;;) {
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x")) ;
-                Serial.println(ProcessorInterface::getPageIndex(), HEX);
-                Serial.print(F("\tPage Offset: 0x")) ;
-                Serial.println(ProcessorInterface::getPageOffset(), HEX);
-            }
-            auto result = TheDisplayInterface::read(ProcessorInterface::getPageIndex(),
-                                                    ProcessorInterface::getPageOffset(),
-                                                    ProcessorInterface::getStyle());
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tRead Value: 0x"));
-                Serial.println(result, HEX);
-            }
-            ProcessorInterface::setDataBits(result);
-            if (informCPU()) {
-                break;
-            }
-            ProcessorInterface::burstNext<IncrementAddress>();
-        }
-    } else {
-        for (;;) {
-            auto dataBits = ProcessorInterface::getDataBits();
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x")) ;
-                Serial.println(ProcessorInterface::getPageIndex(), HEX);
-                Serial.print(F("\tPage Offset: 0x")) ;
-                Serial.println(ProcessorInterface::getPageOffset(), HEX);
-                Serial.print(F("\tData To Write: 0x"));
-                Serial.println(dataBits.getWholeValue(), HEX);
-            }
-            TheDisplayInterface::write(ProcessorInterface::getPageIndex(),
-                                       ProcessorInterface::getPageOffset(),
-                                       ProcessorInterface::getStyle(),
-                                       dataBits);
-            if (informCPU()) {
-                break;
-            }
-            // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
-            // so you may still be reading the previous i960 cycle state!
-            ProcessorInterface::burstNext<IncrementAddress>();
-        }
-    }
-}
 
 template<bool inDebugMode, typename T>
 inline void handleExternalDeviceRequest() noexcept {
@@ -439,8 +337,8 @@ inline void invocationBody() noexcept {
             handleMemoryInterface<inDebugMode>();
             break;
         }
-        case TheConsole::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheConsole>();
+        case TheConsoleInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheConsoleInterface>();
             break;
         case TheEEPROMInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
@@ -451,8 +349,8 @@ inline void invocationBody() noexcept {
         case TheDisplayInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheDisplayInterface>();
             break;
-        case CoreChipset::SectionID:
-            handleExternalDeviceRequest<inDebugMode, CoreChipset>();
+        case ConfigurationSpace::SectionID:
+            handleExternalDeviceRequest<inDebugMode, ConfigurationSpace>();
             break;
         default: {
             if constexpr (inDebugMode) {
@@ -466,7 +364,7 @@ inline void invocationBody() noexcept {
 template<bool allowAddressDebuggingCodePath>
 void doInvocationBody() noexcept {
     if constexpr (allowAddressDebuggingCodePath) {
-        if (TheConsole::addressDebuggingEnabled())  {
+        if (TheConsoleInterface::addressDebuggingEnabled())  {
             invocationBody<true>();
         } else {
             invocationBody<false>();

@@ -33,29 +33,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DisplayInterface.h"
 #include "EEPROMInterface.h"
 #include "Serial0Interface.h"
-template<Address Serial0Base,
-        Address SDCardBase,
-        Address DisplayBase,
-        Address EEPROMBase,
-        byte maximumNumberOfOpenFiles = 16>
+template<typename TheConsoleInterface,
+         typename TheSDInterface,
+         typename TheDisplayInterface,
+         typename TheEEPROMInterface>
 class CoreChipsetFeatures /* : public IOSpaceThing */ {
 public:
-    static constexpr auto MaximumNumberOfOpenFiles = maximumNumberOfOpenFiles;
     static constexpr Address IOBaseAddress = 0xFE00'0000;
     static constexpr SplitWord32 IOBaseSplit { IOBaseAddress };
     static constexpr byte SectionID = IOBaseSplit.getMostSignificantByte();
     // each one of these 256 byte pages have a prescribed start and end
     static constexpr Address IOConfigurationSpaceStart = IOBaseAddress;
     static constexpr Address IOConfigurationSpaceEnd = IOConfigurationSpaceStart + (16 * 0x100);
-    // then start our initial designs after this point
-    using Console = Serial0Interface<Serial0Base>;
-    using SDInterface = SDCardInterface<MaximumNumberOfOpenFiles,
-                                        SDCardBase>;
-    //static constexpr auto SDCardInterfaceBaseAddress = SDInterface :: StartAddress;
-    //static constexpr auto SDCardInterfaceEndAddress = SDInterface :: EndAddress;
-    using DisplayInterface = ::DisplayInterface<DisplayBase>;
-    using EEPROMInterface = ::EEPROMInterface<EEPROMBase>;
-    // we have a bunch of pages in here that are useful :)
     enum class IOConfigurationSpace0Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -106,10 +95,10 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
-        Console::begin();
-        DisplayInterface::begin();
-        SDInterface::begin();
-        EEPROMInterface::begin();
+        TheConsoleInterface::begin();
+        TheDisplayInterface::begin();
+        TheSDInterface::begin();
+        TheEEPROMInterface::begin();
     }
 private:
     static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
@@ -117,11 +106,12 @@ private:
 #define X(title, var) \
              case IOConfigurationSpace0Registers:: title ## Lower : return static_cast<uint16_t>(var); \
              case IOConfigurationSpace0Registers:: title ## Upper : return static_cast<uint16_t>(var >> 16)
-            X(Serial0BaseAddress, Console::StartAddress);
-            X(SDCardInterfaceBaseAddress, SDInterface::ControlBaseAddress);
-            X(SDCardFileBlock0BaseAddress, SDInterface::FilesBaseAddress);
-            X(DisplayShieldBaseAddress, DisplayInterface::SeesawSectionStart);
-            X(ST7735DisplayBaseAddress, DisplayInterface::DisplaySectionStart);
+            X(Serial0BaseAddress, TheConsoleInterface::StartAddress);
+            X(SDCardInterfaceBaseAddress, TheSDInterface::ControlBaseAddress);
+            X(SDCardFileBlock0BaseAddress, TheSDInterface::FilesBaseAddress);
+            X(DisplayShieldBaseAddress, TheDisplayInterface::SeesawSectionStart);
+            X(ST7735DisplayBaseAddress, TheDisplayInterface::DisplaySectionStart);
+            X(EEPROMBaseAddress, TheEEPROMInterface::StartAddress);
 #undef X
 
             default: return 0; // zero is never an io page!
@@ -133,7 +123,7 @@ private:
 #define X(title, var) \
              case IOConfigurationSpace1Registers:: title ## Lower : return static_cast<uint16_t>(var); \
              case IOConfigurationSpace1Registers:: title ## Upper : return static_cast<uint16_t>(var >> 16)
-            X(EEPROMSize, EEPROMInterface::Size);
+            X(EEPROMSize, TheEEPROMInterface::Size);
 #undef X
 
             default: return 0; // zero is never an io page!
