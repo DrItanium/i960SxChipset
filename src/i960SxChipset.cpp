@@ -41,7 +41,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 #include "ClockGenerationInterface.h"
 #include "RTCInterface.h"
+#include "SeesawInterface.h"
 
+#include <Adafruit_Sensor.h>
+#include <Adafruit_MCP9808.h>
+
+constexpr auto SeesawBaseAddress = 0xF700'0000;
 constexpr auto RTCBaseAddress = 0xF800'0000;
 constexpr auto ClockgenBaseAddress = 0xF700'0000;
 constexpr auto Serial0BaseAddress = 0xF900'0000;
@@ -56,6 +61,7 @@ using TheConsoleInterface = Serial0Interface<Serial0BaseAddress>;
 using TheEEPROMInterface = EEPROMInterface<EEPROMBaseAddress>;
 using TheClockgenInterface = ClockGenerationInterface<ClockgenBaseAddress>;
 using TheRTCInterface = RTCInterface<RTCBaseAddress>;
+using TheSeesawInterface = SeesawInterface<SeesawBaseAddress>;
 using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheSDInterface,
         TheDisplayInterface,
