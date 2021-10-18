@@ -116,6 +116,7 @@ public:
         TheEEPROMInterface::begin();
         TheClockgenInterface::begin();
         TheRTCInterface::begin();
+        TheSeesawInterface::begin();
     }
 private:
     static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
