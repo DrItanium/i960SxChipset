@@ -333,16 +333,14 @@ inline void handleExternalDeviceRequest() noexcept {
     // instead we need to do the old style infinite iteration design
     if (ProcessorInterface::isReadOperation()) {
         for(;;) {
+            auto result = T::read(ProcessorInterface::getPageIndex(),
+                                  ProcessorInterface::getPageOffset(),
+                                  ProcessorInterface::getStyle());
             if constexpr (inDebugMode) {
                 Serial.print(F("\tPage Index: 0x")) ;
                 Serial.println(ProcessorInterface::getPageIndex(), HEX);
                 Serial.print(F("\tPage Offset: 0x")) ;
                 Serial.println(ProcessorInterface::getPageOffset(), HEX);
-            }
-            auto result = T::read(ProcessorInterface::getPageIndex(),
-                                                    ProcessorInterface::getPageOffset(),
-                                                    ProcessorInterface::getStyle());
-            if constexpr (inDebugMode) {
                 Serial.print(F("\tRead Value: 0x"));
                 Serial.println(result, HEX);
             }
