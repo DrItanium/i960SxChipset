@@ -249,7 +249,7 @@ inline void digitalWrite() noexcept {
     }
 }
 template<i960Pinout pin>
-inline void digitalWrite(decltype(HIGH) value) noexcept {
+inline __attribute__((always_inline)) void digitalWrite(decltype(HIGH) value) noexcept {
     // don't disable interrupts, that should be done outside this method
     if (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
@@ -258,12 +258,8 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
     }
 }
 template<i960Pinout pin>
-inline void digitalWrite(bool level) noexcept {
-    if (auto& thePort = getAssociatedOutputPort<pin>(); level) {
-        thePort |= getPinMask<pin>();
-    } else {
-        thePort &= ~getPinMask<pin>();
-    }
+inline __attribute__((always_inline)) void digitalWrite(bool level) noexcept {
+    digitalWrite<pin>(level ? HIGH : LOW);
 }
 
 template<i960Pinout pin, decltype(HIGH) switchTo = LOW>
