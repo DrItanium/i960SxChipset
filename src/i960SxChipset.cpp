@@ -159,7 +159,7 @@ public:
         return isValid() && isDirty();
     }
 private:
-    SplitWord16 data[NumWordsCached]; // 32 bytes
+    SplitWord16 data[NumWordsCached]; // 16 bytes
     TaggedAddress tag { 0}; // 4 bytes
     bool valid_ = false;
     bool dirty_ = false;
