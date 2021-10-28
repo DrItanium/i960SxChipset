@@ -257,6 +257,14 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
         thePort |= getPinMask<pin>();
     }
 }
+template<i960Pinout pin>
+inline void digitalWrite(bool level) noexcept {
+    if (auto& thePort = getAssociatedOutputPort<pin>(); level) {
+        thePort |= getPinMask<pin>();
+    } else {
+        thePort &= ~getPinMask<pin>();
+    }
+}
 
 template<i960Pinout pin, decltype(HIGH) switchTo = LOW>
 inline void pulse() noexcept {
