@@ -261,10 +261,7 @@ inline void fallbackBody() noexcept {
     } else {
         for (;;) {
             // put four cycles worth of delay into this to make damn sure we are ready with the i960
-            asm volatile ("nop");
-            asm volatile ("nop");
-            asm volatile ("nop");
-            asm volatile ("nop");
+            __builtin_avr_nops(4);
             // need to introduce some delay
             if (informCPU()) {
                 break;
