@@ -109,14 +109,38 @@ public:
     }
     [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
+    template<bool extendedDirtyAnalysis = false>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
-        auto& target = data[offset];
-        if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
+        if constexpr (auto &target = data[offset]; extendedDirtyAnalysis) {
+            if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
+                switch (style) {
+                    case LoadStoreStyle::Full16:
+                        target = value;
+                        break;
+                    case LoadStoreStyle::Lower8:
+                        target.bytes[0] = value.bytes[0];
+                        break;
+                    case LoadStoreStyle::Upper8:
+                        target.bytes[1] = value.bytes[1];
+                        break;
+                    default:
+                        signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
+                }
+                // do a comparison at the end to see if we actually changed anything
+                // the idea is that if the values don't change don't mark the cache line as dirty again
+                // it may already be dirty but don't force the matter on any write
+                // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
+                if (oldValue != target.getWholeValue()) {
+                    // consumes more flash to do it this way but we only update ram when we have something to change
+                    dirty_ = true;
+                }
+            }
+        } else {
+            dirty_ = true;
             switch (style) {
                 case LoadStoreStyle::Full16:
-                    target.bytes[0] = value.bytes[0];
-                    target.bytes[1] = value.bytes[1];
+                    target = value;
                     break;
                 case LoadStoreStyle::Lower8:
                     target.bytes[0] = value.bytes[0];
@@ -126,14 +150,6 @@ public:
                     break;
                 default:
                     signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
-            }
-            // do a comparison at the end to see if we actually changed anything
-            // the idea is that if the values don't change don't mark the cache line as dirty again
-            // it may already be dirty but don't force the matter on any write
-            // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
-            if (oldValue != target.getWholeValue()) {
-                // consumes more flash to do it this way but we only update ram when we have something to change
-                dirty_ = true;
             }
         }
     }
@@ -148,6 +164,7 @@ private:
     bool valid_ = false;
     bool dirty_ = false;
 };
+
 class CacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
