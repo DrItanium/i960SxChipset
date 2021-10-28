@@ -165,7 +165,7 @@ private:
     bool dirty_ = false;
 };
 
-class CacheWay {
+class CacheWay2 {
 public:
     static constexpr auto NumberOfWays = 2;
 public:
@@ -181,7 +181,7 @@ private:
     bool mostRecentlyUsed_ = false;
 };
 CacheEntry&
-CacheWay::getLine(TaggedAddress theAddress) noexcept {
+CacheWay2::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
     constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
@@ -201,6 +201,25 @@ CacheWay::getLine(TaggedAddress theAddress) noexcept {
     ways_[index].reset(theAddress);
     return ways_[index];
 }
+
+class CacheWay1 {
+public:
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    void clear() noexcept {
+        way_.clear();
+    }
+private:
+    CacheEntry way_;
+};
+CacheEntry&
+CacheWay1::getLine(TaggedAddress theAddress) noexcept {
+    if (!way_.matches(theAddress)) {
+        way_.reset(theAddress);
+    }
+    return way_;
+}
+
+using CacheWay = CacheWay1;
 
 CacheWay entries[256];
 // inlining actually causes a large amount of overhead
