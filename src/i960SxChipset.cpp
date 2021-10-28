@@ -109,7 +109,7 @@ public:
     }
     [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
-    template<bool extendedDirtyAnalysis = false>
+    template<bool extendedDirtyAnalysis = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         if constexpr (auto &target = data[offset]; extendedDirtyAnalysis) {
