@@ -112,7 +112,7 @@
  *
  * 3 - An external SPI driver derived from SdSpiBaseClass is always used.
  */
-#define SPI_DRIVER_SELECT 0
+#define SPI_DRIVER_SELECT 3
 /**
  * If USE_SPI_ARRAY_TRANSFER is non-zero and the standard SPI library is
  * use, the array transfer function, transfer(buf, size), will be used.
@@ -134,7 +134,7 @@
  *
  * 2 - No internal definition and must be defined in the application.
  */
-#define SD_CHIP_SELECT_MODE 0
+#define SD_CHIP_SELECT_MODE 2
 /** Type for card chip select pin. */
 typedef uint8_t SdCsPin_t;
 //------------------------------------------------------------------------------
