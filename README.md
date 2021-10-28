@@ -19,3 +19,6 @@ to act as the intermediary.
 
 The core of this sketch is the system bringup functionality and the bus state
 machine diagram as shown in the i960SA/SB reference manual. 
+
+The lib directory contains a copy of SdFat because I needed to improve the performance of enabling access to the SdCard
+beyond what digitalWrite provides.
