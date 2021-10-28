@@ -238,8 +238,16 @@ auto& getLine() noexcept {
 constexpr auto IncrementAddress = true;
 constexpr auto LeaveAddressAlone = false;
 constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
+inline void displayRequestedAddress() noexcept {
+    auto address = ProcessorInterface::getAddress();
+    Serial.print(F("ADDRESS: 0x"));
+    Serial.println(address, HEX);
+}
 template<bool inDebugMode>
 inline void fallbackBody() noexcept {
+    if constexpr (inDebugMode) {
+        displayRequestedAddress();
+    }
     // fallback, be consistent to make sure we don't run faster than the i960
     if (ProcessorInterface::isReadOperation()) {
         for (;;) {
@@ -266,13 +274,11 @@ inline void fallbackBody() noexcept {
     }
 }
 
-inline void displayRequestedAddress() noexcept {
-    auto address = ProcessorInterface::getAddress();
-    Serial.print(F("ADDRESS: 0x"));
-    Serial.println(address, HEX);
-}
 template<bool inDebugMode>
 inline void handleMemoryInterface() noexcept {
+    if constexpr (inDebugMode) {
+        displayRequestedAddress();
+    }
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
     if (auto& theEntry = getLine(); ProcessorInterface::isReadOperation()) {
@@ -385,13 +391,9 @@ inline void invocationBody() noexcept {
         case 0:
         case 1:
         case 2:
-        case 3: {
-            if constexpr (inDebugMode) {
-                displayRequestedAddress();
-            }
+        case 3:
             handleMemoryInterface<inDebugMode>();
             break;
-        }
         case TheRTCInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheRTCInterface>();
             break;
@@ -416,13 +418,9 @@ inline void invocationBody() noexcept {
         case ConfigurationSpace::SectionID:
             handleExternalDeviceRequest<inDebugMode, ConfigurationSpace>();
             break;
-        default: {
-            if constexpr (inDebugMode) {
-                displayRequestedAddress();
-            }
+        default:
             fallbackBody<inDebugMode>();
             break;
-        }
     }
 }
 template<bool allowAddressDebuggingCodePath>
