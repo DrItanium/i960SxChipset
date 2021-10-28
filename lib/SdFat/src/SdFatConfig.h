@@ -112,7 +112,7 @@
  *
  * 3 - An external SPI driver derived from SdSpiBaseClass is always used.
  */
-#define SPI_DRIVER_SELECT 3
+#define SPI_DRIVER_SELECT 0
 /**
  * If USE_SPI_ARRAY_TRANSFER is non-zero and the standard SPI library is
  * use, the array transfer function, transfer(buf, size), will be used.
