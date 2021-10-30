@@ -82,40 +82,18 @@ public:
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
-        if (valid_) {
-            if (highestUpdated_ == dirty_) {
-                // if only one word is dirty then that should be the only place to write to in ram
-                // This can be further expanded to compute a range starting at the dirty_ location
-                // and going up to the highestUpdated_ position (inclusive).
-                //
-                // This change is more expensive but will result in massive time savings when writing back
-                // to ram
-                OnboardPSRAMBlock::write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
-                                         reinterpret_cast<byte *>(data + dirty_),
-                                         sizeof(SplitWord16));
+        if (valid_ && (dirty_ < 8)) {
+            // compute the number of words that will be in the commit range
+            // dirty_ is the start position
+            // highestUpdated_ is the end position (inclusive)
+            // Add one to get the inclusive capacity
+            if (auto capacity = ((highestUpdated_ - dirty_) + 1); capacity == 8) {
+                // just dump the cache line itself if we can't
+                OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte *>(data));
             } else {
-                // check which element is the lowest dirty value
-                switch (dirty_) {
-#define X(index) \
-                case index: \
-                    OnboardPSRAMBlock::write(tag.getAddress() + (index * sizeof (SplitWord16)), \
-                                             reinterpret_cast<byte*>(data + index), \
-                                             sizeof(data) - (index * sizeof(SplitWord16))); \
-                    break
-                    X(1);
-                    X(2);
-                    X(3);
-                    X(4);
-                    X(5);
-                    X(6);
-                    X(7);
-#undef X
-                    case 0:
-                        OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
-                        break;
-                    default:
-                        break;
-                }
+                OnboardPSRAMBlock :: write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
+                                           reinterpret_cast<byte*>(data + dirty_),
+                                           sizeof(SplitWord16) * capacity);
             }
         }
         valid_ = true;
