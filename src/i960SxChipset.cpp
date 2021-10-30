@@ -206,85 +206,38 @@ CacheWay2::getLine(TaggedAddress theAddress) noexcept {
 class CacheWay4 {
 public:
     static constexpr auto NumberOfWays = 4;
-    /**
-     * @brief Not really invalid, but if we hit this age limit then just stop incrementing the age all together
-     */
-    static constexpr byte InvalidCacheWay = 0xFF;
     using CacheEntry = ::CacheEntry<7>;
     using TaggedAddress = CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
     void clear() noexcept {
-        for (int i = 0; i < NumberOfWays; ++i) {
-            ways_[i].clear();
-            ages_[i] = InvalidCacheWay;
+        for (auto& way : ways_) {
+            way.clear();
         }
-    }
-private:
-    void updateAges(byte newest) noexcept {
-        for (byte i = 0; i < NumberOfWays; ++i) {
-            if (auto& currentAge = ages_[i]; i == newest) {
-                currentAge = 0;
-            } else {
-                if (currentAge != InvalidCacheWay) {
-                    ++currentAge;
-                }
-            }
-        }
-    }
-    byte findOldest() noexcept {
-        byte oldest = 0;
-        byte targetIndex = 0;
-        for (byte i = 0; i < NumberOfWays; ++i) {
-            // if we hit invalid cache way then just return it because it is old as hell or never been used
-            if (auto& currentAge = ages_[i]; currentAge == InvalidCacheWay) {
-                return i;
-            } else {
-                if (oldest < currentAge)  {
-                    targetIndex = i;
-                    oldest = currentAge;
-                }
-            }
-        }
-        return targetIndex;
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    byte ages_[NumberOfWays];
 };
 CacheWay4::CacheEntry&
 CacheWay4::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
-    int8_t lastInvalid = -1;
-    int8_t oldest = -1;
-    uint8_t highestAge = 0;
-    for (int8_t i = 0; i < NumberOfWays; ++i) {
-        if (auto& currentWay = ways_[i]; !currentWay.isValid()) {
-            lastInvalid = i;
+    CacheEntry* lastInvalid = nullptr;
+    for (auto& currentWay: ways_) {
+        if (!currentWay.isValid()) {
+            lastInvalid = &currentWay;
         } else if (currentWay.matches(theAddress)) {
             // age everything else in the list and zero out the age of this one
-            updateAges(i);
             return currentWay;
-        } else {
-            if (highestAge < ages_[i]) {
-                oldest = i;
-                highestAge = ages_[i];
-            }
         }
     }
-    // okay we did not find an existing match so lets find a suitable target
-    int ind = lastInvalid;
-    if (lastInvalid < 0) {
-        if (oldest < 0) {
-            ind = findOldest();
-        } else {
-            ind = oldest;
-        }
+    if (lastInvalid) {
+        lastInvalid->reset(theAddress);
+        return *lastInvalid;
+    } else {
+        auto& theTarget = ways_[random() & 0b11];
+        theTarget.reset(theAddress);
+        return theTarget;
     }
-    auto &theTarget = ways_[ind];
-    updateAges(ind);
-    theTarget.reset(theAddress);
-    return theTarget;
 }
 
 using CacheWay = CacheWay4;
