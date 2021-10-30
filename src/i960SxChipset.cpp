@@ -205,6 +205,8 @@ CacheWay2::getLine(TaggedAddress theAddress) noexcept {
     return ways_[index];
 }
 byte randomReplacementTable[256] { 0 };
+byte randomReplacementIndex = 0;
+
 class CacheWay4 {
 public:
     static constexpr auto NumberOfWays = 4;
@@ -221,7 +223,6 @@ public:
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    byte replacementIndex_ = 0;
 };
 CacheWay4::CacheEntry&
 CacheWay4::getLine(TaggedAddress theAddress) noexcept {
@@ -239,7 +240,8 @@ CacheWay4::getLine(TaggedAddress theAddress) noexcept {
         lastInvalid->reset(theAddress);
         return *lastInvalid;
     } else {
-        auto index = randomReplacementTable[replacementIndex_];
+        auto index = randomReplacementTable[randomReplacementIndex];
+        ++randomReplacementIndex;
         auto& theTarget = ways_[index];
         theTarget.reset(theAddress);
         return theTarget;
