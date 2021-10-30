@@ -167,6 +167,8 @@ private:
 class CacheWay2 {
 public:
     static constexpr auto NumberOfWays = 2;
+    static constexpr auto WayMask = NumberOfWays - 1;
+    static constexpr auto UsesRandomReplacement = false;
     using CacheEntry = ::CacheEntry<8>;
     using TaggedAddress = CacheEntry::TaggedAddress;
 public:
@@ -202,10 +204,12 @@ CacheWay2::getLine(TaggedAddress theAddress) noexcept {
     ways_[index].reset(theAddress);
     return ways_[index];
 }
-
+byte randomReplacementTable[256] { 0 };
 class CacheWay4 {
 public:
     static constexpr auto NumberOfWays = 4;
+    static constexpr auto WayMask = NumberOfWays - 1;
+    static constexpr auto UsesRandomReplacement = true;
     using CacheEntry = ::CacheEntry<7>;
     using TaggedAddress = CacheEntry::TaggedAddress;
 public:
@@ -217,6 +221,7 @@ public:
     }
 private:
     CacheEntry ways_[NumberOfWays];
+    byte replacementIndex_ = 0;
 };
 CacheWay4::CacheEntry&
 CacheWay4::getLine(TaggedAddress theAddress) noexcept {
@@ -234,7 +239,8 @@ CacheWay4::getLine(TaggedAddress theAddress) noexcept {
         lastInvalid->reset(theAddress);
         return *lastInvalid;
     } else {
-        auto& theTarget = ways_[random() & 0b11];
+        auto index = randomReplacementTable[replacementIndex_];
+        auto& theTarget = ways_[index];
         theTarget.reset(theAddress);
         return theTarget;
     }
@@ -540,6 +546,12 @@ void setup() {
         OnboardPSRAMBlock::begin();
 
         installBootImage();
+        if constexpr (CacheWay::UsesRandomReplacement) {
+            // setup the random replacement table if our cache way setup requires it
+            for (auto &entry: randomReplacementTable) {
+                entry = random() & CacheWay::WayMask;
+            }
+        }
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
