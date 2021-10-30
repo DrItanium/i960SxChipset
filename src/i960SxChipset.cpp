@@ -201,7 +201,7 @@ CacheWay2::getLine(TaggedAddress theAddress) noexcept {
 
 using CacheWay = CacheWay2;
 
-CacheWay entries[256];
+CacheWay entries[512 / CacheWay::NumberOfWays];
 // inlining actually causes a large amount of overhead
 auto& getLine() noexcept {
     // only align if we need to reset the chip
