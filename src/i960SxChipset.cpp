@@ -153,7 +153,7 @@ private:
     SplitWord16 data[NumWordsCached]; // 16 bytes
     TaggedAddress tag { 0}; // 4 bytes
     /**
-     * @brief The lowest position dirty bit
+     * @brief Describes lowest dirty word in a valid cache line; also denotes if the cache line is valid or not
      */
     byte dirty_ = InvalidCacheLineState;
     /**
