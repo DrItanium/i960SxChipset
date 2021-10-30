@@ -74,14 +74,14 @@ constexpr auto CompileInAddressDebuggingSupport = false;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
-template<byte numTagBits>
+template<byte numTagBits, typename T = byte>
 class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = 16;
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr byte InvalidCacheLineState = 0xFF;
     static constexpr byte CleanCacheLineState = 0xFE;
-    using TaggedAddress = ::TaggedAddress<numTagBits>;
+    using TaggedAddress = ::TaggedAddress<numTagBits, T>;
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
@@ -227,18 +227,20 @@ private:
 CacheWay4::CacheEntry&
 CacheWay4::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
-    CacheEntry* lastInvalid = nullptr;
+    CacheEntry* firstInvalid = nullptr;
     for (auto& currentWay: ways_) {
         if (!currentWay.isValid()) {
-            lastInvalid = &currentWay;
+            if (!firstInvalid) {
+                firstInvalid = &currentWay;
+            }
         } else if (currentWay.matches(theAddress)) {
             // age everything else in the list and zero out the age of this one
             return currentWay;
         }
     }
-    if (lastInvalid) {
-        lastInvalid->reset(theAddress);
-        return *lastInvalid;
+    if (firstInvalid) {
+        firstInvalid->reset(theAddress);
+        return *firstInvalid;
     } else {
         auto index = randomReplacementTable[randomReplacementIndex];
         ++randomReplacementIndex;
@@ -247,6 +249,30 @@ CacheWay4::getLine(TaggedAddress theAddress) noexcept {
         return theTarget;
     }
 }
+
+class CacheWay1 {
+public:
+    static constexpr auto NumberOfWays = 1;
+    static constexpr auto WayMask = NumberOfWays - 1;
+    static constexpr auto UsesRandomReplacement = false;
+    using CacheEntry = ::CacheEntry<9, uint16_t>;
+    using TaggedAddress = CacheEntry::TaggedAddress;
+public:
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    void clear() noexcept { way_.clear(); }
+private:
+    CacheEntry way_;
+};
+CacheWay1::CacheEntry&
+CacheWay1::getLine(TaggedAddress theAddress) noexcept {
+    // okay first we need to see if we hit any matches
+    if (!way_.matches(theAddress)) {
+        way_.reset(theAddress);
+    }
+    return way_;
+}
+
+
 
 using CacheWay = CacheWay4;
 

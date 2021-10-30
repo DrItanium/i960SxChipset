@@ -5,12 +5,12 @@
 #ifndef SXCHIPSET_TAGGEDCACHEADDRESS_H
 #define SXCHIPSET_TAGGEDCACHEADDRESS_H
 #include "MCUPlatform.h"
-template<byte tagIndexBits>
+template<byte tagIndexBits, typename T = byte>
 union TaggedAddress {
     static constexpr auto NumLowestBits = 4;
     static constexpr auto NumTagBits = tagIndexBits;
-    static_assert(NumTagBits <= 8, "Can't have more than 8 bits devoted to tag right now");
     static constexpr auto NumRestBits = 32 - (NumTagBits + NumLowestBits);
+    using TagType = T;
     constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
     void clear() noexcept { base = 0; }
     [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
@@ -33,7 +33,7 @@ private:
     Address base;
     struct {
         byte lowest : NumLowestBits;
-        byte tagIndex : NumTagBits;
+        TagType tagIndex : NumTagBits;
         Address rest : NumRestBits;
     };
     struct {

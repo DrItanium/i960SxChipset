@@ -194,8 +194,8 @@ private:
         return capacity;
     }
 public:
-    template<byte numTagBits>
-    static void writeCacheLine(TaggedAddress<numTagBits> address, const byte* buf) noexcept {
+    template<byte numTagBits, typename T>
+    static void writeCacheLine(TaggedAddress<numTagBits, T> address, const byte* buf) noexcept {
         //return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
@@ -212,8 +212,8 @@ public:
         digitalWrite<EnablePin, HIGH>();
         SPI.endTransaction();
     }
-    template<byte numTagBits>
-    static void readCacheLine(TaggedAddress<numTagBits> address, byte* buf) noexcept {
+    template<byte numTagBits, typename T>
+    static void readCacheLine(TaggedAddress<numTagBits, T> address, byte* buf) noexcept {
         // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
         // need to do the offset calculation
         setChipId(address.getPSRAMChipId());
