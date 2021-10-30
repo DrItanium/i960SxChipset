@@ -84,7 +84,7 @@ public:
         // no match so pull the data in from main memory
         if (valid_ && (dirty_ < 8)) {
             // So the
-            auto end = ((highestUpdated_ - dirty_) + 1);
+            byte end = ((highestUpdated_ - dirty_) + 1);
             //Serial.print(F("end offset: "));
             //Serial.println(end);
             OnboardPSRAMBlock :: write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
