@@ -114,16 +114,6 @@ public:
     }
     [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
-    static constexpr byte MaskTable [8] {
-            1 << 0,
-            1 << 1,
-            1 << 2,
-            1 << 3,
-            1 << 4,
-            1 << 5,
-            1 << 6,
-            1 << 7,
-    };
     template<bool extendedDirtyAnalysis = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
