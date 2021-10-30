@@ -83,18 +83,13 @@ public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
         if (valid_ && (dirty_ < 8)) {
-            // compute the number of words that will be in the commit range
-            // dirty_ is the start position
-            // highestUpdated_ is the end position (inclusive)
-            // Add one to get the inclusive capacity
-            if (auto capacity = ((highestUpdated_ - dirty_) + 1); capacity == 8) {
-                // just dump the cache line itself if we can't
-                OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte *>(data));
-            } else {
-                OnboardPSRAMBlock :: write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
-                                           reinterpret_cast<byte*>(data + dirty_),
-                                           sizeof(SplitWord16) * capacity);
-            }
+            // So the
+            auto end = ((highestUpdated_ - dirty_) + 1);
+            //Serial.print(F("end offset: "));
+            //Serial.println(end);
+            OnboardPSRAMBlock :: write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
+                                       reinterpret_cast<byte*>(data + dirty_),
+                                       sizeof(SplitWord16) * end);
         }
         valid_ = true;
         dirty_ = 0xFF;
