@@ -78,11 +78,12 @@ class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = 16;
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
-
+    static constexpr byte InvalidCacheLineState = 0xFF;
+    static constexpr byte CleanCacheLineState = 0xFE;
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
-        if (valid_ && (dirty_ < NumWordsCached)) {
+        if (dirty_ < NumWordsCached) {
             // we compute the overall range as we go through this stuff
             byte end = ((highestUpdated_ - dirty_) + 1);
             //Serial.print(F("end offset: "));
@@ -91,8 +92,7 @@ public:
                                      reinterpret_cast<byte *>(data + dirty_),
                                      sizeof(SplitWord16) * end);
         }
-        valid_ = true;
-        dirty_ = 0xFF;
+        dirty_ = CleanCacheLineState;
         highestUpdated_ = 0;
         // since we have called reset, now align the new address internally
         tag = newTag.aligned();
@@ -104,8 +104,7 @@ public:
      */
     void clear() noexcept {
         // clear all flags
-        valid_ = false;
-        dirty_ = 0xFF;
+        dirty_ = InvalidCacheLineState;
         highestUpdated_ = 0;
         tag.clear();
         for (auto& a : data) {
@@ -147,15 +146,11 @@ public:
             }
         }
     }
-    [[nodiscard]] constexpr bool isValid() const noexcept { return valid_; }
-    [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_; }
-    [[nodiscard]] constexpr bool needsFlushing() const noexcept {
-        return isValid() && isDirty();
-    }
+    [[nodiscard]] constexpr bool isValid() const noexcept { return dirty_ == InvalidCacheLineState; }
+    [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_ < NumWordsCached; }
 private:
     SplitWord16 data[NumWordsCached]; // 16 bytes
     TaggedAddress tag { 0}; // 4 bytes
-    bool valid_ = false;
     /**
      * @brief The lowest position dirty bit
      */
