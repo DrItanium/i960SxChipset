@@ -146,7 +146,7 @@ public:
             }
         }
     }
-    [[nodiscard]] constexpr bool isValid() const noexcept { return dirty_ == InvalidCacheLineState; }
+    [[nodiscard]] constexpr bool isValid() const noexcept { return dirty_ != InvalidCacheLineState; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_ < NumWordsCached; }
     [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
 private:
