@@ -74,12 +74,14 @@ constexpr auto CompileInAddressDebuggingSupport = false;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
+template<byte numTagBits>
 class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = 16;
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr byte InvalidCacheLineState = 0xFF;
     static constexpr byte CleanCacheLineState = 0xFE;
+    using TaggedAddress = ::TaggedAddress<numTagBits>;
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
@@ -97,7 +99,7 @@ public:
         // since we have called reset, now align the new address internally
         tag = newTag.aligned();
         // this is a _very_ expensive operation
-        OnboardPSRAMBlock ::readCacheLine(tag, reinterpret_cast<byte*>(data));
+        OnboardPSRAMBlock::readCacheLine(tag, reinterpret_cast<byte*>(data));
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
@@ -165,6 +167,8 @@ private:
 class CacheWay2 {
 public:
     static constexpr auto NumberOfWays = 2;
+    using CacheEntry = ::CacheEntry<8>;
+    using TaggedAddress = CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
     void clear() noexcept {
@@ -177,7 +181,7 @@ private:
     CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
-CacheEntry&
+CacheWay2::CacheEntry&
 CacheWay2::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
@@ -199,13 +203,80 @@ CacheWay2::getLine(TaggedAddress theAddress) noexcept {
     return ways_[index];
 }
 
-using CacheWay = CacheWay2;
+class CacheWay4 {
+public:
+    static constexpr auto NumberOfWays = 4;
+    /**
+     * @brief Not really invalid, but if we hit this age limit then just stop incrementing the age all together
+     */
+    static constexpr byte InvalidCacheWay = 0xFF;
+    using CacheEntry = ::CacheEntry<7>;
+    using TaggedAddress = CacheEntry::TaggedAddress;
+public:
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    void clear() noexcept {
+        for (int i = 0; i < NumberOfWays; ++i) {
+            ways_[i].clear();
+            ages_[i] = InvalidCacheWay;
+        }
+    }
+private:
+    void updateAges(byte newest) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i) {
+            if (auto& currentAge = ages_[i]; i == newest) {
+                currentAge = 0;
+            } else {
+                if (currentAge != InvalidCacheWay) {
+                    ++currentAge;
+                }
+            }
+        }
+    }
+    byte findOldest() noexcept {
+        byte oldest = 0;
+        byte targetIndex = 0;
+        for (byte i = 0; i < NumberOfWays; ++i) {
+            // if we hit invalid cache way then just return it because it is old as hell or never been used
+            if (auto& currentAge = ages_[i]; currentAge == InvalidCacheWay) {
+                return i;
+            } else {
+                if (oldest < currentAge)  {
+                    targetIndex = i;
+                    oldest = currentAge;
+                }
+            }
+        }
+        return targetIndex;
+    }
+private:
+    CacheEntry ways_[NumberOfWays];
+    byte ages_[NumberOfWays];
+};
+CacheWay4::CacheEntry&
+CacheWay4::getLine(TaggedAddress theAddress) noexcept {
+    // okay first we need to see if we hit any matches
+    for (int i = 0; i < NumberOfWays; ++i) {
+        if (auto& currentWay = ways_[i]; currentWay.matches(theAddress)) {
+            // age everything else in the list and zero out the age of this one
+            updateAges(i);
+            return currentWay;
+        }
+    }
+    // okay we did not find an existing match so lets find a suitable target
+    auto ind = findOldest();
+    auto& theTarget = ways_[ind];
+    updateAges(ind);
+    theTarget.reset(theAddress);
+    return theTarget;
+}
+
+using CacheWay = CacheWay4;
 
 CacheWay entries[512 / CacheWay::NumberOfWays];
 // inlining actually causes a large amount of overhead
-auto& getLine() noexcept {
+CacheWay::CacheEntry& getLine() noexcept {
     // only align if we need to reset the chip
-    TaggedAddress theAddress(ProcessorInterface::getAddress());
+    CacheWay::TaggedAddress theAddress(ProcessorInterface::getAddress());
     return entries[theAddress.getTagIndex()].getLine(theAddress);
 }
 
