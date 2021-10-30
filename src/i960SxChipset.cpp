@@ -83,7 +83,7 @@ public:
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
-        if (dirty_ < NumWordsCached) {
+        if (isDirty()) {
             // we compute the overall range as we go through this stuff
             byte end = ((highestUpdated_ - dirty_) + 1);
             //Serial.print(F("end offset: "));
