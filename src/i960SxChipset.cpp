@@ -82,37 +82,16 @@ public:
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
-        if (valid_ && (dirty_ < 8)) {
-            // check which element is the lowest dirty value
-            switch (dirty_) {
-#define X(index) \
-                case index: \
-                    OnboardPSRAMBlock::write(tag.getAddress() + (index * sizeof (SplitWord16)), \
-                                             reinterpret_cast<byte*>(data + index), \
-                                             sizeof(data) - (index * sizeof(SplitWord16))); \
-                    break
-                X(1);
-                X(2);
-                X(3);
-                X(4);
-                X(5);
-                X(6);
-                X(7);
-#undef X
-                case 0:
-                    OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
-                    break;
-                default:
-                    break;
-            }
+        if (valid_) {
+           if (dirty_ == 0)  {
+               OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
+           } else if (dirty_ < 8) {
+               OnboardPSRAMBlock ::write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
+                                         reinterpret_cast<byte*>(data + dirty_),
+                                         sizeof(data) - (dirty_ * sizeof(SplitWord16)));
+           }
+           // no need to save back to ram
         }
-#if 0
-        if (needsFlushing()) {
-            // just do the write out to disk to save time
-            // still an expensive operation
-            //OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
-        }
-#endif
         valid_ = true;
         dirty_ = 0xFF;
         // since we have called reset, now align the new address internally
@@ -172,11 +151,19 @@ public:
                     if (offset < dirty_) {
                         dirty_ = offset;
                     }
-                    //dirty_ = true;
+#if 0
+                    // compute the highest updated entry, useful for computing an upper transfer range
+                    if (offset > highestUpdated_) {
+                        highestUpdated_ = offset;
+                    }
+#endif
                 }
             }
         } else {
             dirty_ = 0;
+#if 0
+            highestUpdated_ = 0b111;
+#endif
             switch (style) {
                 case LoadStoreStyle::Full16:
                     target = value;
@@ -201,13 +188,12 @@ private:
     SplitWord16 data[NumWordsCached]; // 16 bytes
     TaggedAddress tag { 0}; // 4 bytes
     bool valid_ = false;
-#if 0
-    bool dirty_ = false;
-#else
     /**
      * @brief The lowest position dirty bit
      */
     byte dirty_ = 0xFF;
+#if 0
+    byte highestUpdated_ = 0;
 #endif
 };
 
