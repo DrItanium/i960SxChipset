@@ -83,31 +83,44 @@ public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
         if (valid_) {
-            // check which element is the lowest dirty value
-            switch (dirty_) {
+            if (highestUpdated_ == dirty_) {
+                // if only one word is dirty then that should be the only place to write to in ram
+                // This can be further expanded to compute a range starting at the dirty_ location
+                // and going up to the highestUpdated_ position (inclusive).
+                //
+                // This change is more expensive but will result in massive time savings when writing back
+                // to ram
+                OnboardPSRAMBlock::write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
+                                         reinterpret_cast<byte *>(data + dirty_),
+                                         sizeof(SplitWord16));
+            } else {
+                // check which element is the lowest dirty value
+                switch (dirty_) {
 #define X(index) \
                 case index: \
                     OnboardPSRAMBlock::write(tag.getAddress() + (index * sizeof (SplitWord16)), \
                                              reinterpret_cast<byte*>(data + index), \
                                              sizeof(data) - (index * sizeof(SplitWord16))); \
                     break
-                X(1);
-                X(2);
-                X(3);
-                X(4);
-                X(5);
-                X(6);
-                X(7);
+                    X(1);
+                    X(2);
+                    X(3);
+                    X(4);
+                    X(5);
+                    X(6);
+                    X(7);
 #undef X
-                case 0:
-                    OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
-                    break;
-                default:
-                    break;
+                    case 0:
+                        OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         valid_ = true;
         dirty_ = 0xFF;
+        highestUpdated_ = 0;
         // since we have called reset, now align the new address internally
         tag = newTag.aligned();
         // this is a _very_ expensive operation
@@ -120,6 +133,7 @@ public:
         // clear all flags
         valid_ = false;
         dirty_ = 0xFF;
+        highestUpdated_ = 0;
         tag.clear();
         for (auto& a : data) {
             a.wholeValue_ = 0;
@@ -165,19 +179,16 @@ public:
                     if (offset < dirty_) {
                         dirty_ = offset;
                     }
-#if 0
                     // compute the highest updated entry, useful for computing an upper transfer range
                     if (offset > highestUpdated_) {
                         highestUpdated_ = offset;
                     }
-#endif
                 }
             }
         } else {
+            // force full range commits
             dirty_ = 0;
-#if 0
             highestUpdated_ = 0b111;
-#endif
             switch (style) {
                 case LoadStoreStyle::Full16:
                     target = value;
@@ -206,9 +217,10 @@ private:
      * @brief The lowest position dirty bit
      */
     byte dirty_ = 0xFF;
-#if 0
+    /**
+     * @brief The highest updated word in the cache line
+     */
     byte highestUpdated_ = 0;
-#endif
 };
 
 class CacheWay2 {
