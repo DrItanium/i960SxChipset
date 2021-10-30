@@ -207,13 +207,16 @@ CacheWay2::getLine(TaggedAddress theAddress) noexcept {
 byte randomReplacementTable[256] { 0 };
 byte randomReplacementIndex = 0;
 
-class CacheWay4 {
+template<byte wayCount, byte numTagBits>
+class RandomReplacementCacheWay {
 public:
-    static constexpr auto NumberOfWays = 4;
+    static constexpr auto NumberOfWays = wayCount;
+    static_assert(wayCount >= 2, "Must have at least two ways for this random replacement implementation");
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = true;
-    using CacheEntry = ::CacheEntry<7>;
-    using TaggedAddress = CacheEntry::TaggedAddress;
+    using CacheEntry = ::CacheEntry<numTagBits>;
+    static_assert(numTagBits <= 8, "Cannot have more than 256 entries in the cache, reduce numTagBits and increase wayCount");
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
     void clear() noexcept {
@@ -224,8 +227,9 @@ public:
 private:
     CacheEntry ways_[NumberOfWays];
 };
-CacheWay4::CacheEntry&
-CacheWay4::getLine(TaggedAddress theAddress) noexcept {
+template<byte wayCount, byte tagBits>
+typename RandomReplacementCacheWay<wayCount, tagBits>::CacheEntry&
+RandomReplacementCacheWay<wayCount, tagBits>::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
     CacheEntry* firstInvalid = nullptr;
     for (auto& currentWay: ways_) {
@@ -274,9 +278,9 @@ CacheWay1::getLine(TaggedAddress theAddress) noexcept {
 
 using DirectMappedCacheWay = CacheWay1;
 using TwoWayLRUCacheWay = CacheWay2;
-using FourWayRandomReplacementCacheWay = CacheWay4;
+using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7>;
 
-using CacheWay = DirectMappedCacheWay;
+using CacheWay = TwoWayLRUCacheWay;
 
 CacheWay entries[512 / CacheWay::NumberOfWays];
 // inlining actually causes a large amount of overhead
