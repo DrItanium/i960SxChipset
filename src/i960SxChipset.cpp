@@ -549,6 +549,7 @@ void setup() {
 
         installBootImage();
         if constexpr (CacheWay::UsesRandomReplacement) {
+            Serial.println(F("Setting up random replacement table!"));
             // setup the random replacement table if our cache way setup requires it
             for (auto &entry: randomReplacementTable) {
                 entry = random() & CacheWay::WayMask;
