@@ -83,14 +83,28 @@ public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
         if (valid_) {
-           if (dirty_ == 0)  {
-               OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
-           } else if (dirty_ < 8) {
-               OnboardPSRAMBlock ::write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
-                                         reinterpret_cast<byte*>(data + dirty_),
-                                         sizeof(data) - (dirty_ * sizeof(SplitWord16)));
-           }
-           // no need to save back to ram
+            // check which element is the lowest dirty value
+            switch (dirty_) {
+#define X(index) \
+                case index: \
+                    OnboardPSRAMBlock::write(tag.getAddress() + (index * sizeof (SplitWord16)), \
+                                             reinterpret_cast<byte*>(data + index), \
+                                             sizeof(data) - (index * sizeof(SplitWord16))); \
+                    break
+                X(1);
+                X(2);
+                X(3);
+                X(4);
+                X(5);
+                X(6);
+                X(7);
+#undef X
+                case 0:
+                    OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
+                    break;
+                default:
+                    break;
+            }
         }
         valid_ = true;
         dirty_ = 0xFF;
