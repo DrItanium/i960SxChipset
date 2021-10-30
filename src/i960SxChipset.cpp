@@ -256,17 +256,31 @@ CacheWay4::CacheEntry&
 CacheWay4::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
     int8_t lastInvalid = -1;
+    int8_t oldest = -1;
+    uint8_t highestAge = 0;
     for (int8_t i = 0; i < NumberOfWays; ++i) {
-        if (auto& currentWay = ways_[i]; currentWay.matches(theAddress)) {
+        if (auto& currentWay = ways_[i]; !currentWay.isValid()) {
+            lastInvalid = i;
+        } else if (currentWay.matches(theAddress)) {
             // age everything else in the list and zero out the age of this one
             updateAges(i);
             return currentWay;
-        } else if (!currentWay.isValid()) {
-            lastInvalid = i;
+        } else {
+            if (highestAge < ages_[i]) {
+                oldest = i;
+                highestAge = ages_[i];
+            }
         }
     }
     // okay we did not find an existing match so lets find a suitable target
-    auto ind = lastInvalid < 0 ? findOldest() : lastInvalid;
+    int ind = lastInvalid;
+    if (lastInvalid < 0) {
+        if (oldest < 0) {
+            ind = findOldest();
+        } else {
+            ind = oldest;
+        }
+    }
     auto &theTarget = ways_[ind];
     updateAges(ind);
     theTarget.reset(theAddress);
