@@ -54,7 +54,7 @@ constexpr auto DisplayBaseAddress = 0xFA00'0000;
 constexpr auto SDBaseAddress = 0xFB00'0000;
 constexpr auto EEPROMBaseAddress = 0xFC00'0000;
 constexpr auto DebugBaseAddress = 0xFD00'0000;
-constexpr auto MaximumNumberOfOpenFiles = 64;
+constexpr auto MaximumNumberOfOpenFiles = 16;
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress>;
@@ -265,7 +265,7 @@ CacheWay1::getLine(TaggedAddress theAddress) noexcept {
     return way_;
 }
 
-using CacheWay = CacheWay1;
+using CacheWay = CacheWay2;
 
 CacheWay entries[256];
 // inlining actually causes a large amount of overhead
