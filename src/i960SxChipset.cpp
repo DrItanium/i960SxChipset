@@ -274,7 +274,7 @@ CacheWay1::getLine(TaggedAddress theAddress) noexcept {
 
 
 
-using CacheWay = CacheWay4;
+using CacheWay = CacheWay1;
 
 CacheWay entries[512 / CacheWay::NumberOfWays];
 // inlining actually causes a large amount of overhead
