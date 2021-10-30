@@ -84,12 +84,18 @@ public:
         // no match so pull the data in from main memory
         if (valid_ && (dirty_ < 8)) {
             // So the
-            byte end = ((highestUpdated_ - dirty_) + 1);
-            //Serial.print(F("end offset: "));
-            //Serial.println(end);
-            OnboardPSRAMBlock :: write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
-                                       reinterpret_cast<byte*>(data + dirty_),
-                                       sizeof(SplitWord16) * end);
+            if (highestUpdated_ == dirty_) {
+                OnboardPSRAMBlock::write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
+                                         reinterpret_cast<byte *>(data + dirty_),
+                                         sizeof(SplitWord16));
+            } else {
+                byte end = ((highestUpdated_ - dirty_) + 1);
+                //Serial.print(F("end offset: "));
+                //Serial.println(end);
+                OnboardPSRAMBlock::write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
+                                         reinterpret_cast<byte *>(data + dirty_),
+                                         sizeof(SplitWord16) * end);
+            }
         }
         valid_ = true;
         dirty_ = 0xFF;
