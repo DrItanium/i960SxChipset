@@ -82,14 +82,39 @@ public:
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
+        if (valid_ && (dirty_ < 8)) {
+            // check which element is the lowest dirty value
+            switch (dirty_) {
+#define X(index) \
+                case index: \
+                    OnboardPSRAMBlock::write(tag.getAddress() + (index * sizeof (SplitWord16)), \
+                                             reinterpret_cast<byte*>(data + index), \
+                                             sizeof(data) - (index * sizeof(SplitWord16))); \
+                    break
+                X(1);
+                X(2);
+                X(3);
+                X(4);
+                X(5);
+                X(6);
+                X(7);
+#undef X
+                case 0:
+                    OnboardPSRAMBlock::writeCacheLine(getPurgeBaseAddress(), reinterpret_cast<byte*>(data));
+                    break;
+                default:
+                    break;
+            }
+        }
+#if 0
         if (needsFlushing()) {
             // just do the write out to disk to save time
             // still an expensive operation
-            OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
             //OnboardPSRAMBlock::write(tag.getAddress(), reinterpret_cast<byte*>(data), sizeof(data));
         }
+#endif
         valid_ = true;
-        dirty_ = false;
+        dirty_ = 0xFF;
         // since we have called reset, now align the new address internally
         tag = newTag.aligned();
         // this is a _very_ expensive operation
@@ -101,7 +126,7 @@ public:
     void clear() noexcept {
         // clear all flags
         valid_ = false;
-        dirty_ = false;
+        dirty_ = 0xFF;
         tag.clear();
         for (auto& a : data) {
             a.wholeValue_ = 0;
@@ -109,10 +134,37 @@ public:
     }
     [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
+    static constexpr byte MaskTable [8] {
+            1 << 0,
+            1 << 1,
+            1 << 2,
+            1 << 3,
+            1 << 4,
+            1 << 5,
+            1 << 6,
+            1 << 7,
+    };
+    [[nodiscard]] constexpr TaggedAddress getPurgeBaseAddress() const noexcept {
+            switch (dirty_) {
+                case MaskTable[1]:
+                case MaskTable[2]:
+                case MaskTable[3]:
+                case MaskTable[4]:
+                case MaskTable[5]:
+                case MaskTable[6]:
+                case MaskTable[7]:
+                    return tag.
+                default:
+                    return tag;
+
+            }
+            return tag;
+    }
     template<bool extendedDirtyAnalysis = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         if constexpr (auto &target = data[offset]; extendedDirtyAnalysis) {
+
             if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
                 switch (style) {
                     case LoadStoreStyle::Full16:
@@ -133,11 +185,14 @@ public:
                 // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
                 if (oldValue != target.getWholeValue()) {
                     // consumes more flash to do it this way but we only update ram when we have something to change
-                    dirty_ = true;
+                    if (offset < dirty_) {
+                        dirty_ = offset;
+                    }
+                    //dirty_ = true;
                 }
             }
         } else {
-            dirty_ = true;
+            dirty_ = 0;
             switch (style) {
                 case LoadStoreStyle::Full16:
                     target = value;
@@ -162,7 +217,14 @@ private:
     SplitWord16 data[NumWordsCached]; // 16 bytes
     TaggedAddress tag { 0}; // 4 bytes
     bool valid_ = false;
+#if 0
     bool dirty_ = false;
+#else
+    /**
+     * @brief The lowest position dirty bit
+     */
+    byte dirty_ = 0xFF;
+#endif
 };
 
 class CacheWay2 {
