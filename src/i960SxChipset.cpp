@@ -100,7 +100,7 @@ public:
                 X(7);
 #undef X
                 case 0:
-                    OnboardPSRAMBlock::writeCacheLine(getPurgeBaseAddress(), reinterpret_cast<byte*>(data));
+                    OnboardPSRAMBlock::writeCacheLine(tag, reinterpret_cast<byte*>(data));
                     break;
                 default:
                     break;
@@ -144,22 +144,6 @@ public:
             1 << 6,
             1 << 7,
     };
-    [[nodiscard]] constexpr TaggedAddress getPurgeBaseAddress() const noexcept {
-            switch (dirty_) {
-                case MaskTable[1]:
-                case MaskTable[2]:
-                case MaskTable[3]:
-                case MaskTable[4]:
-                case MaskTable[5]:
-                case MaskTable[6]:
-                case MaskTable[7]:
-                    return tag.
-                default:
-                    return tag;
-
-            }
-            return tag;
-    }
     template<bool extendedDirtyAnalysis = true>
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
