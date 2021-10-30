@@ -255,16 +255,19 @@ private:
 CacheWay4::CacheEntry&
 CacheWay4::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
-    for (int i = 0; i < NumberOfWays; ++i) {
+    int8_t lastInvalid = -1;
+    for (int8_t i = 0; i < NumberOfWays; ++i) {
         if (auto& currentWay = ways_[i]; currentWay.matches(theAddress)) {
             // age everything else in the list and zero out the age of this one
             updateAges(i);
             return currentWay;
+        } else if (!currentWay.isValid()) {
+            lastInvalid = i;
         }
     }
     // okay we did not find an existing match so lets find a suitable target
-    auto ind = findOldest();
-    auto& theTarget = ways_[ind];
+    auto ind = lastInvalid < 0 ? findOldest() : lastInvalid;
+    auto &theTarget = ways_[ind];
     updateAges(ind);
     theTarget.reset(theAddress);
     return theTarget;
