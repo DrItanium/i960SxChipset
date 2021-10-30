@@ -199,23 +199,6 @@ CacheWay2::getLine(TaggedAddress theAddress) noexcept {
     return ways_[index];
 }
 
-class CacheWay1 {
-public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
-    void clear() noexcept {
-        way_.clear();
-    }
-private:
-    CacheEntry way_;
-};
-CacheEntry&
-CacheWay1::getLine(TaggedAddress theAddress) noexcept {
-    if (!way_.matches(theAddress)) {
-        way_.reset(theAddress);
-    }
-    return way_;
-}
-
 using CacheWay = CacheWay2;
 
 CacheWay entries[256];
