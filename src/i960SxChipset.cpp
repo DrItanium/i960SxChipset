@@ -148,13 +148,14 @@ public:
     }
     [[nodiscard]] constexpr bool isValid() const noexcept { return dirty_ == InvalidCacheLineState; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_ < NumWordsCached; }
+    [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
 private:
     SplitWord16 data[NumWordsCached]; // 16 bytes
     TaggedAddress tag { 0}; // 4 bytes
     /**
      * @brief The lowest position dirty bit
      */
-    byte dirty_ = 0xFF;
+    byte dirty_ = InvalidCacheLineState;
     /**
      * @brief The highest updated word in the cache line
      */
