@@ -206,6 +206,7 @@ TwoWayLRUCacheWay<totalBitCount, R>::getLine(TaggedAddress theAddress) noexcept 
     ways_[index].reset(theAddress);
     return ways_[index];
 }
+
 byte randomReplacementTable[256] { 0 };
 byte randomReplacementIndex = 0;
 
@@ -256,6 +257,7 @@ RandomReplacementCacheWay<wayCount, tagBits, numAddressBits, R>::getLine(TaggedA
     }
 }
 
+
 template<byte totalBitCount = 32, typename R = Address>
 class DirectMappedCacheWay {
 public:
@@ -279,6 +281,7 @@ DirectMappedCacheWay<totalBitCount, R>::getLine(TaggedAddress theAddress) noexce
     }
     return way_;
 }
+
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 using SixtyFourWayRandomReplacementCacheWay = RandomReplacementCacheWay<64, 3, NumAddressBitsForPSRAMCache>;
 using ThirtyTwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<32, 4, NumAddressBitsForPSRAMCache>;
