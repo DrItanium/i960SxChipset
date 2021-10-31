@@ -58,6 +58,13 @@ static_assert(2_KHz == 2'000);
 static_assert(2_MHz == 2'000'000);
 static_assert(20_MHz == 20'000'000);
 
+constexpr byte pow2(byte value) noexcept {
+    if (value == 0) {
+        return 1;
+    } else {
+        return pow2(value - 1) * 2;
+    }
+}
 
 enum class TargetMCU {
     ATmega1284p_Type1,
