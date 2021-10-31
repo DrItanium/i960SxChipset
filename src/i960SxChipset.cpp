@@ -376,7 +376,10 @@ inline void displayRequestedAddress() noexcept {
     Serial.println(address, HEX);
 }
 using BodyFunction = void (*)();
-BodyFunction lookupTable[256] = { nullptr };
+using DispatchTable = BodyFunction[256];
+DispatchTable lookupTable = { nullptr };
+DispatchTable lookupTable_Debug = { nullptr };
+
 template<bool inDebugMode>
 inline void fallbackBody() noexcept {
     if constexpr (inDebugMode) {
@@ -515,37 +518,11 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-#if 0
-    switch (ProcessorInterface::newDataCycle()) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-            handleMemoryInterface<inDebugMode>();
-            break;
-        case TheRTCInterface::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheRTCInterface>();
-            break;
-        case TheConsoleInterface::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheConsoleInterface>();
-            break;
-        case TheSDInterface::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
-            break;
-        case TheDisplayInterface::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheDisplayInterface>();
-            break;
-        case ConfigurationSpace::SectionID:
-            handleExternalDeviceRequest<inDebugMode, ConfigurationSpace>();
-            break;
-        default:
-            fallbackBody<inDebugMode>();
-            break;
+    if constexpr (auto targetIndex = ProcessorInterface::newDataCycle(); inDebugMode) {
+        lookupTable_Debug[targetIndex]();
+    } else {
+        lookupTable[targetIndex]();
     }
-#else
-    lookupTable[ProcessorInterface::newDataCycle()]();
-#endif
-
 }
 template<bool allowAddressDebuggingCodePath>
 void doInvocationBody() noexcept {
@@ -653,6 +630,20 @@ void setup() {
             lookupTable[TheSDInterface ::SectionID] = handleExternalDeviceRequest<false, TheSDInterface>;
             lookupTable[TheConsoleInterface :: SectionID] = handleExternalDeviceRequest<false, TheConsoleInterface >;
             lookupTable[ConfigurationSpace :: SectionID] = handleExternalDeviceRequest<false, ConfigurationSpace >;
+            if constexpr (CompileInAddressDebuggingSupport) {
+                for (auto &entry: lookupTable_Debug) {
+                    entry = fallbackBody<true>;
+                }
+                lookupTable_Debug[0] = handleMemoryInterface<true>;
+                lookupTable_Debug[1] = handleMemoryInterface<true>;
+                lookupTable_Debug[2] = handleMemoryInterface<true>;
+                lookupTable_Debug[3] = handleMemoryInterface<true>;
+                lookupTable_Debug[TheRTCInterface::SectionID] = handleExternalDeviceRequest<true, TheRTCInterface>;
+                lookupTable_Debug[TheDisplayInterface::SectionID] = handleExternalDeviceRequest<true, TheDisplayInterface>;
+                lookupTable_Debug[TheSDInterface::SectionID] = handleExternalDeviceRequest<true, TheSDInterface>;
+                lookupTable_Debug[TheConsoleInterface::SectionID] = handleExternalDeviceRequest<true, TheConsoleInterface>;
+                lookupTable_Debug[ConfigurationSpace::SectionID] = handleExternalDeviceRequest<true, ConfigurationSpace>;
+            }
         }
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
