@@ -288,16 +288,37 @@ using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7, NumAddr
 using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8, NumAddressBitsForPSRAMCache, uint16_t>;
 using ReducedDirectMappedCacheWay = DirectMappedCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
 using ReducedTwoWayLRUCacheWay = TwoWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
+using FullAddress_TwoWayLRUCacheWay = TwoWayLRUCacheWay<>;
+using FullAddress_DirecMappedCacheWay = DirectMappedCacheWay<>;
 
-using CacheWay = ReducedTwoWayLRUCacheWay;
-
-CacheWay entries[512 / CacheWay::NumberOfWays];
-// inlining actually causes a large amount of overhead
-CacheWay::CacheEntry& getLine() noexcept {
-    // only align if we need to reset the chip
-    CacheWay::TaggedAddress theAddress(ProcessorInterface::getAddress());
-    return entries[theAddress.getTagIndex()].getLine(theAddress);
-}
+template<typename T>
+class Cache {
+public:
+    using CacheWay = T;
+    static constexpr auto UsesRandomReplacement = CacheWay::UsesRandomReplacement;
+    static constexpr auto WayMask = CacheWay::WayMask;
+    static constexpr auto MaximumNumberOfEntries = 512;
+    using CacheEntry = typename CacheWay::CacheEntry;
+    using TaggedAddress = typename CacheWay::TaggedAddress;
+public:
+    [[nodiscard]] CacheEntry& getLine() noexcept {
+        // only align if we need to reset the chip
+        TaggedAddress theAddress(ProcessorInterface::getAddress());
+        return entries_[theAddress.getTagIndex()].getLine(theAddress);
+    }
+    void clear() {
+        for (auto& a : entries_) {
+            a.clear();
+        }
+    }
+    byte* viewAsStorage() noexcept {
+        return reinterpret_cast<byte*>(entries_);
+    }
+    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
+private:
+    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
+};
+Cache<FullAddress_TwoWayLRUCacheWay> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
@@ -348,7 +369,7 @@ inline void handleMemoryInterface() noexcept {
     }
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
-    if (auto& theEntry = getLine(); ProcessorInterface::isReadOperation()) {
+    if (auto& theEntry = theCache.getLine(); ProcessorInterface::isReadOperation()) {
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
@@ -511,10 +532,10 @@ void installBootImage() noexcept {
     } else {
         // okay we were successful in opening the file, now copy the image into psram
         Address size = theFile.size();
-        static constexpr auto CacheSize = sizeof(entries);
+        static constexpr auto CacheSize = theCache.getCacheSize();
         //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
         // use the cache as a buffer since it won't be in use at this point in time
-        auto* storage = reinterpret_cast<byte*>(entries);
+        auto* storage = theCache.viewAsStorage();
         Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
         for (Address addr = 0; addr < size; addr += CacheSize) {
             // do a linear read from the start to the end of storage
@@ -532,9 +553,7 @@ void installBootImage() noexcept {
         Serial.println(F("Transfer complete!"));
         // make sure we close the file before destruction
         theFile.close();
-        for (auto& way : entries) {
-            way.clear();
-        }
+        theCache.clear();
     }
 }
 // the setup routine runs once when you press reset:
@@ -589,11 +608,11 @@ void setup() {
         OnboardPSRAMBlock::begin();
 
         installBootImage();
-        if constexpr (CacheWay::UsesRandomReplacement) {
+        if constexpr (decltype(theCache)::UsesRandomReplacement) {
             Serial.println(F("Setting up random replacement table!"));
             // setup the random replacement table if our cache way setup requires it
             for (auto &entry: randomReplacementTable) {
-                entry = random() & CacheWay::WayMask;
+                entry = random() & decltype(theCache)::WayMask;
             }
         }
         delay(100);
