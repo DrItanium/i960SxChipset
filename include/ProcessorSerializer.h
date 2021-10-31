@@ -236,7 +236,7 @@ private:
     static void setupDataLinesForRead() noexcept;
 public:
     template<bool inDebugMode>
-    static void newDataCycle() noexcept {
+    static BodyFunction newDataCycle() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -298,7 +298,7 @@ public:
         } else {
             setupDataLinesForWrite();
         }
-        getBody<inDebugMode>(highest)();
+        return getBody<inDebugMode>(highest);
     }
     template<bool advanceAddress = true>
     static void burstNext() noexcept {
