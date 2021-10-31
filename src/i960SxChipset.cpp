@@ -209,14 +209,14 @@ TwoWayLRUCacheWay<totalBitCount, R>::getLine(TaggedAddress theAddress) noexcept 
 byte randomReplacementTable[256] { 0 };
 byte randomReplacementIndex = 0;
 
-template<byte wayCount, byte numTagBits>
+template<byte wayCount, byte numTagBits, byte numAddressBits = 32, typename R = Address>
 class RandomReplacementCacheWay {
 public:
     static constexpr auto NumberOfWays = wayCount;
     static_assert(wayCount >= 2, "Must have at least two ways for this random replacement implementation");
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = true;
-    using CacheEntry = ::CacheEntry<numTagBits>;
+    using CacheEntry = ::CacheEntry<numTagBits, byte, numAddressBits, R>;
     static_assert(numTagBits <= 8, "Cannot have more than 256 entries in the cache, reduce numTagBits and increase wayCount");
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
@@ -229,9 +229,9 @@ public:
 private:
     CacheEntry ways_[NumberOfWays];
 };
-template<byte wayCount, byte tagBits>
-typename RandomReplacementCacheWay<wayCount, tagBits>::CacheEntry&
-RandomReplacementCacheWay<wayCount, tagBits>::getLine(TaggedAddress theAddress) noexcept {
+template<byte wayCount, byte tagBits, byte numAddressBits, typename R>
+typename RandomReplacementCacheWay<wayCount, tagBits, numAddressBits, R>::CacheEntry&
+RandomReplacementCacheWay<wayCount, tagBits, numAddressBits, R>::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
     CacheEntry* firstInvalid = nullptr;
     for (auto& currentWay: ways_) {
@@ -256,36 +256,40 @@ RandomReplacementCacheWay<wayCount, tagBits>::getLine(TaggedAddress theAddress) 
     }
 }
 
+template<byte totalBitCount = 32, typename R = Address>
 class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<9, uint16_t>;
-    using TaggedAddress = CacheEntry::TaggedAddress;
+    using CacheEntry = ::CacheEntry<9, uint16_t, totalBitCount, R>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
     void clear() noexcept { way_.clear(); }
 private:
     CacheEntry way_;
 };
-DirectMappedCacheWay::CacheEntry&
-DirectMappedCacheWay::getLine(TaggedAddress theAddress) noexcept {
+template<byte totalBitCount, typename R>
+typename DirectMappedCacheWay<totalBitCount, R>::CacheEntry&
+DirectMappedCacheWay<totalBitCount, R>::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
     if (!way_.matches(theAddress)) {
         way_.reset(theAddress);
     }
     return way_;
 }
+constexpr auto NumAddressBits = 28;
+using SixtyFourWayRandomReplacementCacheWay = RandomReplacementCacheWay<64, 3, NumAddressBits>;
+using ThirtyTwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<32, 4, NumAddressBits>;
+using SixteenWayRandomReplacementCacheWay = RandomReplacementCacheWay<16, 5, NumAddressBits>;
+using EightWayRandomReplacementCacheWay = RandomReplacementCacheWay<8, 6, NumAddressBits>;
+using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7, NumAddressBits>;
+using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8, NumAddressBits, uint16_t>;
+using ReducedDirectMappedCacheWay = DirectMappedCacheWay<NumAddressBits, uint16_t>;
+using ReducedTwoWayLRUCacheWay = TwoWayLRUCacheWay<NumAddressBits, uint16_t>;
 
-using SixtyFourWayRandomReplacementCacheWay = RandomReplacementCacheWay<64, 3>;
-using ThirtyTwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<32, 4>;
-using SixteenWayRandomReplacementCacheWay = RandomReplacementCacheWay<16, 5>;
-using EightWayRandomReplacementCacheWay = RandomReplacementCacheWay<8, 6>;
-using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7>;
-using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8>;
-
-using CacheWay = TwoWayLRUCacheWay<>;
+using CacheWay = ReducedTwoWayLRUCacheWay;
 
 CacheWay entries[512 / CacheWay::NumberOfWays];
 // inlining actually causes a large amount of overhead
