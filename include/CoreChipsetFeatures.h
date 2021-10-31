@@ -82,6 +82,7 @@ public:
     CoreChipsetFeatures& operator=(const CoreChipsetFeatures&) = delete;
     CoreChipsetFeatures& operator=(CoreChipsetFeatures&&) = delete;
     static void begin() noexcept {
+        // console always comes first
         TheConsoleInterface::begin();
         TheDisplayInterface::begin();
         TheSDInterface::begin();
