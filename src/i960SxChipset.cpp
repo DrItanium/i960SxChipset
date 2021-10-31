@@ -375,6 +375,8 @@ inline void displayRequestedAddress() noexcept {
     Serial.print(F("ADDRESS: 0x"));
     Serial.println(address, HEX);
 }
+using BodyFunction = void (*)();
+BodyFunction lookupTable[256] = { nullptr };
 template<bool inDebugMode>
 inline void fallbackBody() noexcept {
     if constexpr (inDebugMode) {
@@ -513,6 +515,7 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
+#if 0
     switch (ProcessorInterface::newDataCycle()) {
         case 0:
         case 1:
@@ -539,6 +542,10 @@ inline void invocationBody() noexcept {
             fallbackBody<inDebugMode>();
             break;
     }
+#else
+    lookupTable[ProcessorInterface::newDataCycle()]();
+#endif
+
 }
 template<bool allowAddressDebuggingCodePath>
 void doInvocationBody() noexcept {
@@ -632,6 +639,21 @@ void setup() {
         // purge the cache pages
         ConfigurationSpace::begin();
         Serial.println(F("i960Sx chipset bringup"));
+        Serial.println(F("Setting up the lookup table"));
+        {
+            for (auto& entry : lookupTable) {
+                entry = fallbackBody<false>;
+            }
+            lookupTable[0] = handleMemoryInterface<false>;
+            lookupTable[1] = handleMemoryInterface<false>;
+            lookupTable[2] = handleMemoryInterface<false>;
+            lookupTable[3] = handleMemoryInterface<false>;
+            lookupTable[TheRTCInterface ::SectionID] = handleExternalDeviceRequest<false, TheRTCInterface >;
+            lookupTable[TheDisplayInterface ::SectionID] = handleExternalDeviceRequest<false, TheDisplayInterface>;
+            lookupTable[TheSDInterface ::SectionID] = handleExternalDeviceRequest<false, TheSDInterface>;
+            lookupTable[TheConsoleInterface :: SectionID] = handleExternalDeviceRequest<false, TheConsoleInterface >;
+            lookupTable[ConfigurationSpace :: SectionID] = handleExternalDeviceRequest<false, ConfigurationSpace >;
+        }
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
 
