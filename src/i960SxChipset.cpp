@@ -207,14 +207,14 @@ TwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress the
     return ways_[index];
 }
 
-template<byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
-class HalvedTwoWayLRUCacheWay {
+template<byte numWays, byte numWayBits, byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+class TwoWayLRUCache_DifferentExposedWayCount {
 public:
-    static constexpr auto NumberOfWays = 4;
+    static constexpr auto NumberOfWays = numWays;
     static constexpr auto ActualWaysStored = 2;
     static constexpr auto WayMask = ActualWaysStored - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<7, byte, totalBitCount, R, numLowestBits, L>;
+    using CacheEntry = ::CacheEntry<numWayBits, byte, totalBitCount, R, numLowestBits, L>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
@@ -228,14 +228,14 @@ private:
     CacheEntry ways_[ActualWaysStored];
     bool mostRecentlyUsed_ = false;
 };
-template<byte totalBitCount, typename R, byte numLowestBits, typename L>
-typename HalvedTwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::CacheEntry&
-HalvedTwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+template<byte numWays, byte numWayBits, byte totalBitCount, typename R, byte numLowestBits, typename L>
+typename TwoWayLRUCache_DifferentExposedWayCount<numWays, numWayBits, totalBitCount, R, numLowestBits, L>::CacheEntry&
+TwoWayLRUCache_DifferentExposedWayCount<numWays, numWayBits, totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
     constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
     int invalidWay = -1;
-    for (int i = 0; i < NumberOfWays; ++i) {
+    for (int i = 0; i < ActualWaysStored; ++i) {
         if (ways_[i].matches(theAddress)) {
             mostRecentlyUsed_ = computeMostRecentlyUsed(i);
             return ways_[i];
@@ -335,12 +335,15 @@ using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7, NumAddr
 using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8, NumAddressBitsForPSRAMCache, uint16_t>;
 using ReducedDirectMappedCacheWay = DirectMappedCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
 using ReducedTwoWayLRUCacheWay = TwoWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
-using ReducedHalvedTwoWayLRUCacheWay = HalvedTwoWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
+using ReducedHalvedTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<4, 7, NumAddressBitsForPSRAMCache, uint16_t>;
+using ReducedQuarteredTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<8, 6, NumAddressBitsForPSRAMCache, uint16_t>;
 using FullAddress_TwoWayLRUCacheWay = TwoWayLRUCacheWay<>;
-using FullAddress_HalvedTwoWayLRUCacheWay = HalvedTwoWayLRUCacheWay<>;
-using FullAddress_DirecMappedCacheWay = DirectMappedCacheWay<>;
+using FullAddress_HalvedTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<4, 7>;
+using FullAddress_QuarteredTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<8, 6>;
+using FullAddress_DirectMappedCacheWay = DirectMappedCacheWay<>;
+using DefaultCacheWay = FullAddress_TwoWayLRUCacheWay;
 
-template<typename T>
+template<typename T = DefaultCacheWay>
 class Cache {
 public:
     using CacheWay = T;
@@ -369,7 +372,7 @@ private:
 };
 
 
-Cache<FullAddress_HalvedTwoWayLRUCacheWay> theCache;
+Cache theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
