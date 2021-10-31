@@ -39,36 +39,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
 #include "TaggedCacheAddress.h"
-#include "ClockGenerationInterface.h"
 #include "RTCInterface.h"
-#include "SeesawInterface.h"
 
 #include <Adafruit_Sensor.h>
 #include <Adafruit_MCP9808.h>
 
-constexpr auto SeesawBaseAddress = 0xF600'0000;
-constexpr auto ClockgenBaseAddress = 0xF700'0000;
-constexpr auto RTCBaseAddress = 0xF800'0000;
-constexpr auto Serial0BaseAddress = 0xF900'0000;
-constexpr auto DisplayBaseAddress = 0xFA00'0000;
-constexpr auto SDBaseAddress = 0xFB00'0000;
-constexpr auto EEPROMBaseAddress = 0xFC00'0000;
-constexpr auto DebugBaseAddress = 0xFD00'0000;
+constexpr auto RTCBaseAddress = 0xFA00'0000;
+constexpr auto Serial0BaseAddress = 0xFB00'0000;
+constexpr auto DisplayBaseAddress = 0xFC00'0000;
+constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress>;
-using TheEEPROMInterface = EEPROMInterface<EEPROMBaseAddress>;
-using TheClockgenInterface = ClockGenerationInterface<ClockgenBaseAddress>;
 using TheRTCInterface = RTCInterface<RTCBaseAddress>;
-using TheSeesawInterface = SeesawInterface<SeesawBaseAddress>;
 using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheSDInterface,
         TheDisplayInterface,
-        TheEEPROMInterface,
-        TheClockgenInterface,
-        TheRTCInterface,
-        TheSeesawInterface>;
+        TheRTCInterface>;
 constexpr auto CompileInAddressDebuggingSupport = false;
 
 /**
@@ -538,17 +526,8 @@ inline void invocationBody() noexcept {
         case TheRTCInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheRTCInterface>();
             break;
-        case TheClockgenInterface::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheClockgenInterface>();
-            break;
-        case TheSeesawInterface::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheSeesawInterface>();
-            break;
         case TheConsoleInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheConsoleInterface>();
-            break;
-        case TheEEPROMInterface::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheEEPROMInterface>();
             break;
         case TheSDInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
