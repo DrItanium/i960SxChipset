@@ -279,15 +279,15 @@ DirectMappedCacheWay<totalBitCount, R>::getLine(TaggedAddress theAddress) noexce
     }
     return way_;
 }
-constexpr auto NumAddressBits = 28;
-using SixtyFourWayRandomReplacementCacheWay = RandomReplacementCacheWay<64, 3, NumAddressBits>;
-using ThirtyTwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<32, 4, NumAddressBits>;
-using SixteenWayRandomReplacementCacheWay = RandomReplacementCacheWay<16, 5, NumAddressBits>;
-using EightWayRandomReplacementCacheWay = RandomReplacementCacheWay<8, 6, NumAddressBits>;
-using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7, NumAddressBits>;
-using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8, NumAddressBits, uint16_t>;
-using ReducedDirectMappedCacheWay = DirectMappedCacheWay<NumAddressBits, uint16_t>;
-using ReducedTwoWayLRUCacheWay = TwoWayLRUCacheWay<NumAddressBits, uint16_t>;
+constexpr auto NumAddressBitsForPSRAMCache = 26;
+using SixtyFourWayRandomReplacementCacheWay = RandomReplacementCacheWay<64, 3, NumAddressBitsForPSRAMCache>;
+using ThirtyTwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<32, 4, NumAddressBitsForPSRAMCache>;
+using SixteenWayRandomReplacementCacheWay = RandomReplacementCacheWay<16, 5, NumAddressBitsForPSRAMCache>;
+using EightWayRandomReplacementCacheWay = RandomReplacementCacheWay<8, 6, NumAddressBitsForPSRAMCache,uint16_t>;
+using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7, NumAddressBitsForPSRAMCache, uint16_t>;
+using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8, NumAddressBitsForPSRAMCache, uint16_t>;
+using ReducedDirectMappedCacheWay = DirectMappedCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
+using ReducedTwoWayLRUCacheWay = TwoWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
 
 using CacheWay = ReducedTwoWayLRUCacheWay;
 
