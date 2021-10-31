@@ -74,14 +74,14 @@ constexpr auto CompileInAddressDebuggingSupport = false;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
-template<byte numTagBits, typename T = byte>
+template<byte numTagBits, typename T = byte, byte maxAddressBits = 32, typename R = Address>
 class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = 16;
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr byte InvalidCacheLineState = 0xFF;
     static constexpr byte CleanCacheLineState = 0xFE;
-    using TaggedAddress = ::TaggedAddress<numTagBits, T>;
+    using TaggedAddress = ::TaggedAddress<numTagBits, T, maxAddressBits, R>;
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
@@ -164,13 +164,14 @@ private:
     byte highestUpdated_ = 0;
 };
 
+template<byte totalBitCount = 32, typename R = Address>
 class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<8>;
-    using TaggedAddress = CacheEntry::TaggedAddress;
+    using CacheEntry = ::CacheEntry<8, byte, totalBitCount, R>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
     void clear() noexcept {
@@ -183,8 +184,9 @@ private:
     CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
-TwoWayLRUCacheWay::CacheEntry&
-TwoWayLRUCacheWay::getLine(TaggedAddress theAddress) noexcept {
+template<byte totalBitCount, typename R>
+typename TwoWayLRUCacheWay<totalBitCount, R>::CacheEntry&
+TwoWayLRUCacheWay<totalBitCount, R>::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
     constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
@@ -283,7 +285,7 @@ using EightWayRandomReplacementCacheWay = RandomReplacementCacheWay<8, 6>;
 using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7>;
 using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8>;
 
-using CacheWay = TwoWayLRUCacheWay;
+using CacheWay = TwoWayLRUCacheWay<>;
 
 CacheWay entries[512 / CacheWay::NumberOfWays];
 // inlining actually causes a large amount of overhead
