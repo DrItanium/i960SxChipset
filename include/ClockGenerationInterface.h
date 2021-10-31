@@ -115,6 +115,7 @@ public:
                 break;
         }
     }
+    static constexpr auto available() noexcept { return enabled_; }
 private:
     static inline Adafruit_SI5351 clockgen_;
     static inline bool clockgenUp_ = false;

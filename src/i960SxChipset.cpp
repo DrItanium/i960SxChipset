@@ -254,6 +254,10 @@ TwoWayLRUCache_DifferentExposedWayCount<numWays, numWayBits, totalBitCount, R, n
 byte randomReplacementTable[256] { 0 };
 byte randomReplacementIndex = 0;
 
+byte getReplacementIndex() noexcept {
+    return randomReplacementTable[randomReplacementIndex++];
+}
+
 template<byte wayCount, byte numTagBits, byte numAddressBits = 32, typename R = Address, byte numBitsLowest = 4, typename L = byte>
 class RandomReplacementCacheWay {
 public:
@@ -293,9 +297,7 @@ RandomReplacementCacheWay<wayCount, numTagBits, numAddressBits, R, numBitsLowest
         firstInvalid->reset(theAddress);
         return *firstInvalid;
     } else {
-        auto index = randomReplacementTable[randomReplacementIndex];
-        ++randomReplacementIndex;
-        auto& theTarget = ways_[index];
+        auto& theTarget = ways_[getReplacementIndex()];
         theTarget.reset(theAddress);
         return theTarget;
     }
@@ -546,7 +548,7 @@ inline void invocationBody() noexcept {
             handleExternalDeviceRequest<inDebugMode, TheConsoleInterface>();
             break;
         case TheEEPROMInterface::SectionID:
-            handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
+            handleExternalDeviceRequest<inDebugMode, TheEEPROMInterface>();
             break;
         case TheSDInterface::SectionID:
             handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
