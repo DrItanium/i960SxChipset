@@ -207,6 +207,50 @@ TwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress the
     return ways_[index];
 }
 
+template<byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+class HalvedTwoWayLRUCacheWay {
+public:
+    static constexpr auto NumberOfWays = 4;
+    static constexpr auto ActualWaysStored = 2;
+    static constexpr auto WayMask = ActualWaysStored - 1;
+    static constexpr auto UsesRandomReplacement = false;
+    using CacheEntry = ::CacheEntry<7, byte, totalBitCount, R, numLowestBits, L>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
+public:
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    void clear() noexcept {
+        for (auto& way : ways_) {
+            way.clear();
+        }
+        mostRecentlyUsed_ = false;
+    }
+private:
+    CacheEntry ways_[ActualWaysStored];
+    bool mostRecentlyUsed_ = false;
+};
+template<byte totalBitCount, typename R, byte numLowestBits, typename L>
+typename HalvedTwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::CacheEntry&
+HalvedTwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+    static constexpr bool Way0MostRecentlyUsed = false;
+    static constexpr bool Way1MostRecentlyUsed = true;
+    constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
+    int invalidWay = -1;
+    for (int i = 0; i < NumberOfWays; ++i) {
+        if (ways_[i].matches(theAddress)) {
+            mostRecentlyUsed_ = computeMostRecentlyUsed(i);
+            return ways_[i];
+        } else if (!ways_[i].isValid()) {
+            if (invalidWay < 0)  {
+                invalidWay = i;
+            }
+        }
+    }
+    auto index = invalidWay >= 0 ? invalidWay : (mostRecentlyUsed_ == Way0MostRecentlyUsed ? 1 : 0);
+    mostRecentlyUsed_ = computeMostRecentlyUsed(index);
+    ways_[index].reset(theAddress);
+    return ways_[index];
+}
+
 byte randomReplacementTable[256] { 0 };
 byte randomReplacementIndex = 0;
 
@@ -291,7 +335,9 @@ using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7, NumAddr
 using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8, NumAddressBitsForPSRAMCache, uint16_t>;
 using ReducedDirectMappedCacheWay = DirectMappedCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
 using ReducedTwoWayLRUCacheWay = TwoWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
+using ReducedHalvedTwoWayLRUCacheWay = HalvedTwoWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
 using FullAddress_TwoWayLRUCacheWay = TwoWayLRUCacheWay<>;
+using FullAddress_HalvedTwoWayLRUCacheWay = HalvedTwoWayLRUCacheWay<>;
 using FullAddress_DirecMappedCacheWay = DirectMappedCacheWay<>;
 
 template<typename T>
@@ -323,7 +369,7 @@ private:
 };
 
 
-Cache<FullAddress_TwoWayLRUCacheWay> theCache;
+Cache<FullAddress_HalvedTwoWayLRUCacheWay> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
