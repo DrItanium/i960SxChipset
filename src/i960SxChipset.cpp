@@ -321,6 +321,8 @@ public:
 private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
+
+
 Cache<FullAddress_TwoWayLRUCacheWay> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
