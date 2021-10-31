@@ -590,10 +590,6 @@ void installBootImage() noexcept {
 }
 // the setup routine runs once when you press reset:
 void setup() {
-    Serial.begin(250'000);
-    while(!Serial) {
-        delay(10);
-    }
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
@@ -633,9 +629,9 @@ void setup() {
                   i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         SPI.begin();
-        Serial.println(F("i960Sx chipset bringup"));
         // purge the cache pages
         ConfigurationSpace::begin();
+        Serial.println(F("i960Sx chipset bringup"));
         ProcessorInterface::begin();
         OnboardPSRAMBlock::begin();
 

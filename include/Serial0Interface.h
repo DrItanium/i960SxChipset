@@ -114,6 +114,10 @@ public:
         return targetPage >= StartPage && targetPage < EndPage;
     }
     static void begin() noexcept {
+        Serial.begin(250'000);
+        while(!Serial) {
+            delay(10);
+        }
         Serial.println(F("CONSOLE UP!"));
     }
 
