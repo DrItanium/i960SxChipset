@@ -314,6 +314,101 @@ DirectMappedCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress 
     return way_;
 }
 
+template<byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+class FourWayLRUCacheWay {
+public:
+    static constexpr auto NumberOfWays = 4;
+    static constexpr auto WayMask = NumberOfWays - 1;
+    static constexpr auto UsesRandomReplacement = false;
+    using CacheEntry = ::CacheEntry<7, byte, totalBitCount, R, numLowestBits, L>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
+public:
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    void clear() noexcept {
+        for (auto& way : ways_) {
+            way.clear();
+        }
+        mostRecentlyUsedHalf_ = false;
+        leftMostRecentlyUsed_ = false;
+        rightMostRecentlyUsed_ = false;
+    }
+private:
+    static constexpr bool LeftHalf = false;
+    static constexpr bool RightHalf = true;
+    void updateFlags(int index) noexcept {
+        // 00 -> left of left half
+        // 01 -> right of left half
+        // 10 -> left of right half
+        // 11 -> right of right half
+        switch (index) {
+            case 0:
+                mostRecentlyUsedHalf_ = LeftHalf;
+                leftMostRecentlyUsed_ = LeftHalf;
+                break;
+            case 1:
+                mostRecentlyUsedHalf_ = LeftHalf;
+                leftMostRecentlyUsed_ = RightHalf;
+                break;
+            case 2:
+                mostRecentlyUsedHalf_ = RightHalf;
+                rightMostRecentlyUsed_ = LeftHalf;
+                break;
+            case 3:
+                mostRecentlyUsedHalf_ = RightHalf;
+                rightMostRecentlyUsed_ = RightHalf;
+                break;
+            default:
+                break;
+        }
+    }
+    int getLeastRecentlyUsed() noexcept {
+        if (mostRecentlyUsedHalf_)  {
+           // do the left side
+           if (leftMostRecentlyUsed_) {
+                // do the left side
+               return 0;
+           } else {
+               return 1;
+               // do the right side
+           }
+        } else {
+            // do the right side
+            if (rightMostRecentlyUsed_) {
+                // do the left side
+                return 2;
+            } else {
+                // do the right side
+                return 3;
+            }
+        }
+    }
+private:
+    CacheEntry ways_[NumberOfWays];
+    bool mostRecentlyUsedHalf_ = false;
+    bool leftMostRecentlyUsed_ = false;
+    bool rightMostRecentlyUsed_ = false;
+};
+template<byte totalBitCount, typename R, byte numLowestBits, typename L>
+typename FourWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::CacheEntry&
+FourWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+    int invalidWay = -1;
+    for (int i = 0; i < NumberOfWays; ++i) {
+        if (ways_[i].matches(theAddress)) {
+            updateFlags(i);
+            return ways_[i];
+        } else if (!ways_[i].isValid()) {
+            if (invalidWay < 0)  {
+                invalidWay = i;
+            }
+        }
+    }
+    // find the inverse of the most recently used
+    auto index = invalidWay >= 0 ? invalidWay : getLeastRecentlyUsed();
+    updateFlags(index);
+    ways_[index].reset(theAddress);
+    return ways_[index];
+}
+
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 using SixtyFourWayRandomReplacementCacheWay = RandomReplacementCacheWay<64, 3, NumAddressBitsForPSRAMCache>;
 using ThirtyTwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<32, 4, NumAddressBitsForPSRAMCache>;
@@ -329,7 +424,10 @@ using FullAddress_TwoWayLRUCacheWay = TwoWayLRUCacheWay<>;
 using FullAddress_HalvedTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<4, 7>;
 using FullAddress_QuarteredTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<8, 6>;
 using FullAddress_DirectMappedCacheWay = DirectMappedCacheWay<>;
-using DefaultCacheWay = FullAddress_TwoWayLRUCacheWay;
+using FullAddress_FourWayPsuedoLRUWay = FourWayLRUCacheWay<>;
+using ReducedFourWayPsuedoLRUWay = FourWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
+//using DefaultCacheWay = FullAddress_TwoWayLRUCacheWay;
+using DefaultCacheWay = FullAddress_FourWayPsuedoLRUWay;
 
 template<typename T = DefaultCacheWay>
 class Cache {
