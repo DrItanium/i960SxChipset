@@ -164,7 +164,7 @@ private:
     byte highestUpdated_ = 0;
 };
 
-class CacheWay2 {
+class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
     static constexpr auto WayMask = NumberOfWays - 1;
@@ -183,8 +183,8 @@ private:
     CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
-CacheWay2::CacheEntry&
-CacheWay2::getLine(TaggedAddress theAddress) noexcept {
+TwoWayLRUCacheWay::CacheEntry&
+TwoWayLRUCacheWay::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
     constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
@@ -254,7 +254,7 @@ RandomReplacementCacheWay<wayCount, tagBits>::getLine(TaggedAddress theAddress) 
     }
 }
 
-class CacheWay1 {
+class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
     static constexpr auto WayMask = NumberOfWays - 1;
@@ -267,8 +267,8 @@ public:
 private:
     CacheEntry way_;
 };
-CacheWay1::CacheEntry&
-CacheWay1::getLine(TaggedAddress theAddress) noexcept {
+DirectMappedCacheWay::CacheEntry&
+DirectMappedCacheWay::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
     if (!way_.matches(theAddress)) {
         way_.reset(theAddress);
@@ -276,8 +276,6 @@ CacheWay1::getLine(TaggedAddress theAddress) noexcept {
     return way_;
 }
 
-using DirectMappedCacheWay = CacheWay1;
-using TwoWayLRUCacheWay = CacheWay2;
 using SixteenWayRandomReplacementCacheWay = RandomReplacementCacheWay<16, 5>;
 using EightWayRandomReplacementCacheWay = RandomReplacementCacheWay<8, 6>;
 using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7>;
