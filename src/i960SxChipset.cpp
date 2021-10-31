@@ -616,8 +616,8 @@ void setup() {
         // purge the cache pages
         ConfigurationSpace::begin();
         Serial.println(F("i960Sx chipset bringup"));
-        Serial.println(F("Setting up the lookup table"));
         {
+            Serial.println(F("Setting up the initial lookup table"));
             for (auto& entry : lookupTable) {
                 entry = fallbackBody<false>;
             }
