@@ -276,12 +276,14 @@ DirectMappedCacheWay::getLine(TaggedAddress theAddress) noexcept {
     return way_;
 }
 
+using SixtyFourWayRandomReplacementCacheWay = RandomReplacementCacheWay<64, 3>;
+using ThirtyTwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<32, 4>;
 using SixteenWayRandomReplacementCacheWay = RandomReplacementCacheWay<16, 5>;
 using EightWayRandomReplacementCacheWay = RandomReplacementCacheWay<8, 6>;
 using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7>;
 using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8>;
 
-using CacheWay = SixteenWayRandomReplacementCacheWay;
+using CacheWay = TwoWayLRUCacheWay;
 
 CacheWay entries[512 / CacheWay::NumberOfWays];
 // inlining actually causes a large amount of overhead
