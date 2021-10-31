@@ -129,7 +129,7 @@ public:
             rtc_.start();
         }
     }
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    static uint16_t read(uint8_t, uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::Seconds: return static_cast<uint16_t>(now_.second());
             case Registers::Hours: return static_cast<uint16_t>(now_.hour());
@@ -154,7 +154,7 @@ public:
                 return 0;
         }
     }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    static void write(uint8_t, uint8_t offset, LoadStoreStyle, SplitWord16) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::NowRequest: {
                 if (rtcUp_) {

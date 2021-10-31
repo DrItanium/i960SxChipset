@@ -37,7 +37,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
 #define PACKED_ATTRIBUTE __attribute__((packed))
 #endif
-
+#ifdef __AVR__
+using int24_t = __int24;
+using uint24_t = __uint24;
+#endif
 
 
 template<typename E>
