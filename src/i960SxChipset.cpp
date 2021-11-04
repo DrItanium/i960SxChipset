@@ -150,13 +150,13 @@ private:
     byte highestUpdated_ = 0;
 };
 
-template<byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+template<byte numTagBits = 8, typename T = byte, byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
 class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<8, byte, totalBitCount, R, numLowestBits, L>;
+    using CacheEntry = ::CacheEntry<numTagBits, T, totalBitCount, R, numLowestBits, L>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
@@ -170,9 +170,9 @@ private:
     CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
-template<byte totalBitCount, typename R, byte numLowestBits, typename L>
-typename TwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::CacheEntry&
-TwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+template<byte numTagBits, typename T, byte totalBitCount, typename R, byte numLowestBits, typename L>
+typename TwoWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::CacheEntry&
+TwoWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
     constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
@@ -193,110 +193,14 @@ TwoWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress the
     return ways_[index];
 }
 
-template<byte numWays, byte numWayBits, byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
-class TwoWayLRUCache_DifferentExposedWayCount {
-public:
-    static constexpr auto NumberOfWays = numWays;
-    static constexpr auto ActualWaysStored = 2;
-    static constexpr auto WayMask = ActualWaysStored - 1;
-    static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<numWayBits, byte, totalBitCount, R, numLowestBits, L>;
-    using TaggedAddress = typename CacheEntry::TaggedAddress;
-public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
-    void clear() noexcept {
-        for (auto& way : ways_) {
-            way.clear();
-        }
-        mostRecentlyUsed_ = false;
-    }
-private:
-    CacheEntry ways_[ActualWaysStored];
-    bool mostRecentlyUsed_ = false;
-};
-template<byte numWays, byte numWayBits, byte totalBitCount, typename R, byte numLowestBits, typename L>
-typename TwoWayLRUCache_DifferentExposedWayCount<numWays, numWayBits, totalBitCount, R, numLowestBits, L>::CacheEntry&
-TwoWayLRUCache_DifferentExposedWayCount<numWays, numWayBits, totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
-    static constexpr bool Way0MostRecentlyUsed = false;
-    static constexpr bool Way1MostRecentlyUsed = true;
-    constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
-    int invalidWay = -1;
-    for (int i = 0; i < ActualWaysStored; ++i) {
-        if (ways_[i].matches(theAddress)) {
-            mostRecentlyUsed_ = computeMostRecentlyUsed(i);
-            return ways_[i];
-        } else if (!ways_[i].isValid()) {
-            if (invalidWay < 0)  {
-                invalidWay = i;
-            }
-        }
-    }
-    auto index = invalidWay >= 0 ? invalidWay : (mostRecentlyUsed_ == Way0MostRecentlyUsed ? 1 : 0);
-    mostRecentlyUsed_ = computeMostRecentlyUsed(index);
-    ways_[index].reset(theAddress);
-    return ways_[index];
-}
 
-byte randomReplacementTable[256] { 0 };
-byte randomReplacementIndex = 0;
-
-byte getReplacementIndex() noexcept {
-    return randomReplacementTable[randomReplacementIndex++];
-}
-
-template<byte wayCount, byte numTagBits, byte numAddressBits = 32, typename R = Address, byte numBitsLowest = 4, typename L = byte>
-class RandomReplacementCacheWay {
-public:
-    static constexpr auto NumberOfWays = wayCount;
-    static_assert(wayCount >= 2, "Must have at least two ways for this random replacement implementation");
-    static constexpr auto WayMask = NumberOfWays - 1;
-    static constexpr auto UsesRandomReplacement = true;
-    using CacheEntry = ::CacheEntry<numTagBits, byte, numAddressBits, R, numBitsLowest, L>;
-    static_assert(numTagBits <= 8, "Cannot have more than 256 entries in the cache, reduce numTagBits and increase wayCount");
-    using TaggedAddress = typename CacheEntry::TaggedAddress;
-public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
-    void clear() noexcept {
-        for (auto& way : ways_) {
-            way.clear();
-        }
-    }
-private:
-    CacheEntry ways_[NumberOfWays];
-};
-template<byte wayCount, byte numTagBits, byte numAddressBits, typename R, byte numBitsLowest, typename L>
-typename RandomReplacementCacheWay<wayCount, numTagBits, numAddressBits, R, numBitsLowest, L>::CacheEntry&
-RandomReplacementCacheWay<wayCount, numTagBits, numAddressBits, R, numBitsLowest, L>::getLine(TaggedAddress theAddress) noexcept {
-    // okay first we need to see if we hit any matches
-    CacheEntry* firstInvalid = nullptr;
-    for (auto& currentWay: ways_) {
-        if (!currentWay.isValid()) {
-            if (!firstInvalid) {
-                firstInvalid = &currentWay;
-            }
-        } else if (currentWay.matches(theAddress)) {
-            // age everything else in the list and zero out the age of this one
-            return currentWay;
-        }
-    }
-    if (firstInvalid) {
-        firstInvalid->reset(theAddress);
-        return *firstInvalid;
-    } else {
-        auto& theTarget = ways_[getReplacementIndex()];
-        theTarget.reset(theAddress);
-        return theTarget;
-    }
-}
-
-
-template<byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+template<byte numTagBits = 9, typename T = uint16_t, byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
 class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<9, uint16_t, totalBitCount, R, numLowestBits, L>;
+    using CacheEntry = ::CacheEntry<numTagBits, T, totalBitCount, R, numLowestBits, L>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
@@ -304,9 +208,9 @@ public:
 private:
     CacheEntry way_;
 };
-template<byte totalBitCount, typename R, byte numLowestBits, typename L>
-typename DirectMappedCacheWay<totalBitCount, R, numLowestBits, L>::CacheEntry&
-DirectMappedCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+template<byte numTagBits, typename T, byte totalBitCount, typename R, byte numLowestBits, typename L>
+typename DirectMappedCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::CacheEntry&
+DirectMappedCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
     if (!way_.matches(theAddress)) {
         way_.reset(theAddress);
@@ -314,13 +218,13 @@ DirectMappedCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress 
     return way_;
 }
 
-template<byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+template<byte numTagBits = 7, typename T = byte, byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
 class FourWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 4;
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<7, byte, totalBitCount, R, numLowestBits, L>;
+    using CacheEntry = ::CacheEntry<numTagBits, T, totalBitCount, R, numLowestBits, L>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
@@ -388,9 +292,9 @@ private:
     bool leftMostRecentlyUsed_ = false;
     bool rightMostRecentlyUsed_ = false;
 };
-template<byte totalBitCount, typename R, byte numLowestBits, typename L>
-typename FourWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::CacheEntry&
-FourWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+template<byte numTagBits, typename T, byte totalBitCount, typename R, byte numLowestBits, typename L>
+typename FourWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::CacheEntry&
+FourWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
     int invalidWay = -1;
     for (int i = 0; i < NumberOfWays; ++i) {
         if (ways_[i].matches(theAddress)) {
@@ -410,32 +314,22 @@ FourWayLRUCacheWay<totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress th
 }
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
-using SixtyFourWayRandomReplacementCacheWay = RandomReplacementCacheWay<64, 3, NumAddressBitsForPSRAMCache>;
-using ThirtyTwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<32, 4, NumAddressBitsForPSRAMCache>;
-using SixteenWayRandomReplacementCacheWay = RandomReplacementCacheWay<16, 5, NumAddressBitsForPSRAMCache>;
-using EightWayRandomReplacementCacheWay = RandomReplacementCacheWay<8, 6, NumAddressBitsForPSRAMCache,uint16_t>;
-using FourWayRandomReplacementCacheWay = RandomReplacementCacheWay<4, 7, NumAddressBitsForPSRAMCache, uint16_t>;
-using TwoWayRandomReplacementCacheWay = RandomReplacementCacheWay<2, 8, NumAddressBitsForPSRAMCache, uint16_t>;
 using ReducedDirectMappedCacheWay = DirectMappedCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
 using ReducedTwoWayLRUCacheWay = TwoWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
-using ReducedHalvedTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<4, 7, NumAddressBitsForPSRAMCache, uint16_t>;
-using ReducedQuarteredTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<8, 6, NumAddressBitsForPSRAMCache, uint16_t>;
 using FullAddress_TwoWayLRUCacheWay = TwoWayLRUCacheWay<>;
-using FullAddress_HalvedTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<4, 7>;
-using FullAddress_QuarteredTwoWayLRUCacheWay = TwoWayLRUCache_DifferentExposedWayCount<8, 6>;
 using FullAddress_DirectMappedCacheWay = DirectMappedCacheWay<>;
 using FullAddress_FourWayPsuedoLRUWay = FourWayLRUCacheWay<>;
 using ReducedFourWayPsuedoLRUWay = FourWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
 //using DefaultCacheWay = FullAddress_TwoWayLRUCacheWay;
 using DefaultCacheWay = FullAddress_FourWayPsuedoLRUWay;
 
-template<typename T = DefaultCacheWay>
+template<uint16_t numEntries, typename T>
 class Cache {
 public:
     using CacheWay = T;
     static constexpr auto UsesRandomReplacement = CacheWay::UsesRandomReplacement;
     static constexpr auto WayMask = CacheWay::WayMask;
-    static constexpr auto MaximumNumberOfEntries = 512;
+    static constexpr auto MaximumNumberOfEntries = numEntries;
     using CacheEntry = typename CacheWay::CacheEntry;
     using TaggedAddress = typename CacheWay::TaggedAddress;
 public:
@@ -458,7 +352,7 @@ private:
 };
 
 
-Cache theCache;
+Cache<512, FourWayLRUCacheWay<7>> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
@@ -744,13 +638,6 @@ void setup() {
         OnboardPSRAMBlock::begin();
 
         installBootImage();
-        if constexpr (decltype(theCache)::UsesRandomReplacement) {
-            Serial.println(F("Setting up random replacement table!"));
-            // setup the random replacement table if our cache way setup requires it
-            for (auto &entry: randomReplacementTable) {
-                entry = random() & decltype(theCache)::WayMask;
-            }
-        }
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
