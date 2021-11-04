@@ -323,9 +323,34 @@ using ReducedFourWayPsuedoLRUWay = FourWayLRUCacheWay<NumAddressBitsForPSRAMCach
 //using DefaultCacheWay = FullAddress_TwoWayLRUCacheWay;
 using DefaultCacheWay = FullAddress_FourWayPsuedoLRUWay;
 
+template<bool result, typename T, typename F> class conditional { using type = T; };
+template<typename T, typename F> class conditional<false, T, F>{ using type = F; };
+template<bool B, typename T, typename F>
+using conditional_t = typename conditional<B, T, F>::type;
 template<uint16_t numEntries, typename T>
 class Cache {
 public:
+    static constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept {
+        switch (count) {
+            case 2: return 1;
+            case 4: return 2;
+            case 8: return 3;
+            case 16: return 4;
+            case 32: return 5;
+            case 64: return 6;
+            case 128: return 7;
+            case 256: return 8;
+            case 512: return 9;
+            case 1024: return 10;
+            case 2048: return 11;
+            case 4096: return 12;
+            case 8192: return 13;
+            case 16384: return 14;
+            default: return 0;
+        }
+    }
+    static constexpr auto NumTagBits = getNumberOfBitsForNumberOfEntries(numEntries);
+    using TagType = conditional_t<NumTagBits <= 8, byte, uint16_t>;
     using CacheWay = T;
     static constexpr auto UsesRandomReplacement = CacheWay::UsesRandomReplacement;
     static constexpr auto WayMask = CacheWay::WayMask;
@@ -352,7 +377,7 @@ private:
 };
 
 
-Cache<512, FourWayLRUCacheWay<7>> theCache;
+Cache<256, FourWayLRUCacheWay<6>> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
