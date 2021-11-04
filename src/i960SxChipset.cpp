@@ -61,14 +61,14 @@ constexpr auto CompileInAddressDebuggingSupport = false;
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
-template<byte numTagBits, typename T = byte, byte maxAddressBits = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+template<byte numTagBits, byte maxAddressBits = 32, byte numLowestBits = 4>
 class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = pow2(numLowestBits);
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr byte InvalidCacheLineState = 0xFF;
     static constexpr byte CleanCacheLineState = 0xFE;
-    using TaggedAddress = ::TaggedAddress<numTagBits, T, maxAddressBits, R, numLowestBits, L>;
+    using TaggedAddress = ::TaggedAddress<numTagBits, maxAddressBits, numLowestBits>;
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
@@ -151,13 +151,13 @@ private:
     byte highestUpdated_ = 0;
 };
 
-template<byte numTagBits = 8, typename T = byte, byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+template<byte numTagBits = 8, byte totalBitCount = 32, byte numLowestBits = 4>
 class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<numTagBits, T, totalBitCount, R, numLowestBits, L>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
@@ -171,9 +171,9 @@ private:
     CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
-template<byte numTagBits, typename T, byte totalBitCount, typename R, byte numLowestBits, typename L>
-typename TwoWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::CacheEntry&
-TwoWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+typename TwoWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::CacheEntry&
+TwoWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::getLine(TaggedAddress theAddress) noexcept {
     static constexpr bool Way0MostRecentlyUsed = false;
     static constexpr bool Way1MostRecentlyUsed = true;
     constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
@@ -195,13 +195,13 @@ TwoWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine(Ta
 }
 
 
-template<byte numTagBits = 9, typename T = uint16_t, byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+template<byte numTagBits = 9, byte totalBitCount = 32, byte numLowestBits = 4>
 class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<numTagBits, T, totalBitCount, R, numLowestBits, L>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
@@ -209,9 +209,9 @@ public:
 private:
     CacheEntry way_;
 };
-template<byte numTagBits, typename T, byte totalBitCount, typename R, byte numLowestBits, typename L>
-typename DirectMappedCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::CacheEntry&
-DirectMappedCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+typename DirectMappedCacheWay<numTagBits, totalBitCount, numLowestBits>::CacheEntry&
+DirectMappedCacheWay<numTagBits, totalBitCount, numLowestBits>::getLine(TaggedAddress theAddress) noexcept {
     // okay first we need to see if we hit any matches
     if (!way_.matches(theAddress)) {
         way_.reset(theAddress);
@@ -219,13 +219,13 @@ DirectMappedCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine
     return way_;
 }
 
-template<byte numTagBits = 7, typename T = byte, byte totalBitCount = 32, typename R = Address, byte numLowestBits = 4, typename L = byte>
+template<byte numTagBits = 7, byte totalBitCount = 32, byte numLowestBits = 4>
 class FourWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 4;
     static constexpr auto WayMask = NumberOfWays - 1;
     static constexpr auto UsesRandomReplacement = false;
-    using CacheEntry = ::CacheEntry<numTagBits, T, totalBitCount, R, numLowestBits, L>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
@@ -293,9 +293,9 @@ private:
     bool leftMostRecentlyUsed_ = false;
     bool rightMostRecentlyUsed_ = false;
 };
-template<byte numTagBits, typename T, byte totalBitCount, typename R, byte numLowestBits, typename L>
-typename FourWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::CacheEntry&
-FourWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine(TaggedAddress theAddress) noexcept {
+template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+typename FourWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::CacheEntry&
+FourWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::getLine(TaggedAddress theAddress) noexcept {
     int invalidWay = -1;
     for (int i = 0; i < NumberOfWays; ++i) {
         if (ways_[i].matches(theAddress)) {
@@ -315,16 +315,8 @@ FourWayLRUCacheWay<numTagBits, T, totalBitCount, R, numLowestBits, L>::getLine(T
 }
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
-using ReducedDirectMappedCacheWay = DirectMappedCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
-using ReducedTwoWayLRUCacheWay = TwoWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
-using FullAddress_TwoWayLRUCacheWay = TwoWayLRUCacheWay<>;
-using FullAddress_DirectMappedCacheWay = DirectMappedCacheWay<>;
-using FullAddress_FourWayPsuedoLRUWay = FourWayLRUCacheWay<>;
-using ReducedFourWayPsuedoLRUWay = FourWayLRUCacheWay<NumAddressBitsForPSRAMCache, uint16_t>;
-//using DefaultCacheWay = FullAddress_TwoWayLRUCacheWay;
-using DefaultCacheWay = FullAddress_FourWayPsuedoLRUWay;
 
-template<uint16_t numEntries, typename T>
+template<uint16_t numEntries, byte numAddressBits = 32>
 class Cache {
 public:
     static constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept {
@@ -346,9 +338,7 @@ public:
             default: return 0;
         }
     }
-    static constexpr auto NumTagBits = getNumberOfBitsForNumberOfEntries(numEntries);
-    using TagType = conditional_t<NumTagBits <= 8, byte, uint16_t>;
-    using CacheWay = T;
+    using CacheWay = FourWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/4), numAddressBits>;
     static constexpr auto UsesRandomReplacement = CacheWay::UsesRandomReplacement;
     static constexpr auto WayMask = CacheWay::WayMask;
     static constexpr auto MaximumNumberOfEntries = numEntries;
@@ -374,7 +364,7 @@ private:
 };
 
 
-Cache<512, FourWayLRUCacheWay<7>> theCache;
+Cache<512> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
