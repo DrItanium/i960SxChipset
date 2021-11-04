@@ -374,7 +374,7 @@ private:
 };
 
 
-Cache<256, FourWayLRUCacheWay<6>> theCache;
+Cache<512, FourWayLRUCacheWay<7>> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
