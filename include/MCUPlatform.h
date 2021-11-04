@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef I960SXCHIPSET_MCUPLATFORM_H
 #define I960SXCHIPSET_MCUPLATFORM_H
 #include <Arduino.h>
+#include "type_traits.h"
 #include "DependentFalse.h"
 
 // comment this out to disable sram cache support
@@ -65,6 +66,18 @@ constexpr byte pow2(byte value) noexcept {
         return pow2(value - 1) * 2;
     }
 }
+
+template<byte numBits>
+using ClosestBitValue_t = conditional_t<numBits <= 8, byte,
+                                        conditional_t<numBits <= 16, uint16_t,
+                                        conditional_t<numBits <= 24, uint24_t,
+                                        conditional_t<numBits <= 32, uint32_t, uint64_t>>>>;
+
+static_assert(is_same_v<ClosestBitValue_t<1>, ClosestBitValue_t<4>>);
+static_assert(is_same_v<ClosestBitValue_t<4>, byte>);
+static_assert(is_same_v<ClosestBitValue_t<10>, uint16_t>);
+static_assert(!is_same_v<ClosestBitValue_t<10>, ClosestBitValue_t<4>>);
+
 
 enum class TargetMCU {
     ATmega1284p_Type1,
