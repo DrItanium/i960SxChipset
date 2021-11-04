@@ -323,10 +323,6 @@ using ReducedFourWayPsuedoLRUWay = FourWayLRUCacheWay<NumAddressBitsForPSRAMCach
 //using DefaultCacheWay = FullAddress_TwoWayLRUCacheWay;
 using DefaultCacheWay = FullAddress_FourWayPsuedoLRUWay;
 
-template<bool result, typename T, typename F> class conditional { using type = T; };
-template<typename T, typename F> class conditional<false, T, F>{ using type = F; };
-template<bool B, typename T, typename F>
-using conditional_t = typename conditional<B, T, F>::type;
 template<uint16_t numEntries, typename T>
 class Cache {
 public:
