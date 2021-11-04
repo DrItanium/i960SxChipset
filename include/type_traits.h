@@ -29,8 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_TYPE_TRAITS_H
 #define SXCHIPSET_TYPE_TRAITS_H
 
-template<bool result, typename T, typename F> class conditional { using type = T; };
-template<typename T, typename F> class conditional<false, T, F>{ using type = F; };
+template<bool result, typename T, typename F> struct conditional { using type = T; };
+template<typename T, typename F> struct conditional<false, T, F>{ using type = F; };
 template<bool B, typename T, typename F>
 using conditional_t = typename conditional<B, T, F>::type;
 
