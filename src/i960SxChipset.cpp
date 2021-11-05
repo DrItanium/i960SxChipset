@@ -233,9 +233,7 @@ public:
         for (auto& way : ways_) {
             way.clear();
         }
-        mostRecentlyUsedHalf_ = false;
-        leftMostRecentlyUsed_ = false;
-        rightMostRecentlyUsed_ = false;
+        mruInfo_ = 0;
     }
 private:
     static constexpr bool LeftHalf = false;
@@ -289,9 +287,14 @@ private:
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    bool mostRecentlyUsedHalf_ = false;
-    bool leftMostRecentlyUsed_ = false;
-    bool rightMostRecentlyUsed_ = false;
+    union {
+        byte mruInfo_ = 0;
+        struct {
+            bool mostRecentlyUsedHalf_ : 1;
+            bool leftMostRecentlyUsed_ : 1;
+            bool rightMostRecentlyUsed_ : 1;
+        };
+    };
 };
 template<byte numTagBits, byte totalBitCount, byte numLowestBits>
 typename FourWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::CacheEntry&
