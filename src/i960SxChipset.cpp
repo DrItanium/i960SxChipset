@@ -270,11 +270,11 @@ private:
         if (mostRecentlyUsedHalf_)  {
            // do the left side
            if (leftMostRecentlyUsed_) {
-                // do the left side
+                // do the left side because true
                return 0;
            } else {
+               // do the right side because false
                return 1;
-               // do the right side
            }
         } else {
             // do the right side
