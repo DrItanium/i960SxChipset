@@ -156,7 +156,6 @@ class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
     static constexpr auto WayMask = NumberOfWays - 1;
-    static constexpr auto UsesRandomReplacement = false;
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
@@ -200,7 +199,6 @@ class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
     static constexpr auto WayMask = NumberOfWays - 1;
-    static constexpr auto UsesRandomReplacement = false;
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
@@ -224,7 +222,6 @@ class FourWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 4;
     static constexpr auto WayMask = NumberOfWays - 1;
-    static constexpr auto UsesRandomReplacement = false;
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
@@ -344,7 +341,6 @@ public:
     using CacheWay = FourWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/4), numAddressBits>;
     static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
     static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);
-    static constexpr auto UsesRandomReplacement = CacheWay::UsesRandomReplacement;
     static constexpr auto WayMask = CacheWay::WayMask;
     static constexpr auto MaximumNumberOfEntries = numEntries;
     using CacheEntry = typename CacheWay::CacheEntry;
