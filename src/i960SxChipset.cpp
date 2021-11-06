@@ -592,8 +592,8 @@ public:
 private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
-Cache16Way<512, NumAddressBitsForPSRAMCache> theCache;
-//Cache4Way<256, NumAddressBitsForPSRAMCache> theCache;
+Cache4Way<512, NumAddressBitsForPSRAMCache> theCache;
+//Cache16Way<512, NumAddressBitsForPSRAMCache> theCache;
 //Cache8Way<256, NumAddressBitsForPSRAMCache> theCache2;
 
 [[nodiscard]] bool informCPU() noexcept {
