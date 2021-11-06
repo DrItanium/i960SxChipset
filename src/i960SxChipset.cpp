@@ -355,46 +355,45 @@ private:
         }
     }
     int getLeastRecentlyUsed() noexcept {
-        if (!way0Set) {
-            return 7;
-        }
-        if (!way6Set) {
-            return 6;
-        }
-        if (!way5Set) {
-            return 5;
-        }
-        if (!way4Set) {
-            return 4;
-        }
-        if (!way3Set) {
-            return 3;
-        }
-        if (!way2Set) {
-            return 2;
-        }
-        if (!way1Set) {
-            return 1;
-        }
-        return 0;
+        static constexpr byte LookupTable[256] {
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5,
+            4, 4, 4, 4, 4, 4, 4, 4,
+            4, 4, 4, 4, 4, 4, 4, 4,
+            3, 3, 3, 3, 3, 3, 3, 3,
+            2, 2, 2, 2, 1, 1, 0, 0,
+        };
+        return LookupTable[mruBits_];
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    union
-    {
-        byte mruBits_ = 0;
-        struct
-        {
-            bool way0Set: 1;
-            bool way1Set: 1;
-            bool way2Set: 1;
-            bool way3Set: 1;
-            bool way4Set: 1;
-            bool way5Set: 1;
-            bool way6Set: 1;
-            bool way7Set: 1;
-        };
-    };
+    byte mruBits_ = 0;
 };
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
