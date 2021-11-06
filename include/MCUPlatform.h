@@ -87,6 +87,9 @@ static constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept
     }
 }
 
+static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
+static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);
+
 template<byte numBits>
 using ClosestBitValue_t = conditional_t<numBits <= 8, byte,
                                         conditional_t<numBits <= 16, uint16_t,
