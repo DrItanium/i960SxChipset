@@ -392,7 +392,7 @@ private:
         // compute this every time we update information
         leastRecentlyUsed_ = LRUTable[mruBits_];
     }
-    [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
+    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
         return leastRecentlyUsed_;
     }
 private:
