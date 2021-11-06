@@ -48,15 +48,15 @@ constexpr auto Serial0BaseAddress = 0xFB00'0000;
 constexpr auto DisplayBaseAddress = 0xFC00'0000;
 constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
+constexpr auto CompileInAddressDebuggingSupport = false;
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
-using TheConsoleInterface = Serial0Interface<Serial0BaseAddress>;
+using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport>;
 using TheRTCInterface = RTCInterface<RTCBaseAddress>;
 using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheSDInterface,
         TheDisplayInterface,
         TheRTCInterface>;
-constexpr auto CompileInAddressDebuggingSupport = false;
 
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage

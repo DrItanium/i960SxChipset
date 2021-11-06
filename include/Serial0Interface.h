@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_SERIAL0INTERFACE_H
 #define SXCHIPSET_SERIAL0INTERFACE_H
 
-template<Address baseAddress>
+template<Address baseAddress, bool addressDebuggingAllowed>
 class Serial0Interface {
 public:
     static constexpr auto StartAddress = baseAddress;
@@ -39,6 +39,7 @@ public:
     static constexpr SplitWord32 EndAddressSplit{EndAddress};
     static constexpr auto EndPage = EndAddressSplit.getTargetPage();
     static constexpr auto SectionID = StartAddressSplit.getMostSignificantByte();
+    static constexpr auto AddressDebuggingAllowed = addressDebuggingAllowed;
     enum class Registers : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
 #define FourByteEntry(Prefix) \
@@ -128,7 +129,7 @@ public:
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         handleFirstPageRegisterWrites(offset, lss, value);
     }
-    static bool addressDebuggingEnabled() noexcept { return enableAddressDebugging_; }
+    static bool addressDebuggingEnabled() noexcept { return AddressDebuggingAllowed && enableAddressDebugging_; }
 private:
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
     static inline bool enableAddressDebugging_ = false;
