@@ -410,8 +410,8 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 
-
-Cache<512, NumAddressBitsForPSRAMCache> theCache;
+static constexpr auto NumSections = 2;
+Cache<512 / NumSections, NumAddressBitsForPSRAMCache> cacheSections[NumSections];
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
@@ -463,7 +463,7 @@ inline void handleMemoryInterface() noexcept {
     }
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
-    if (auto& theEntry = theCache.getLine(); ProcessorInterface::isReadOperation()) {
+    if (auto& theEntry = cacheSections[0].getLine(); ProcessorInterface::isReadOperation()) {
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
@@ -592,10 +592,10 @@ void installBootImage() noexcept {
     } else {
         // okay we were successful in opening the file, now copy the image into psram
         Address size = theFile.size();
-        static constexpr auto CacheSize = theCache.getCacheSize();
+        static constexpr auto CacheSize = cacheSections[0].getCacheSize();
         //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
         // use the cache as a buffer since it won't be in use at this point in time
-        auto* storage = theCache.viewAsStorage();
+        auto* storage = cacheSections[0].viewAsStorage();
         Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
         for (Address addr = 0; addr < size; addr += CacheSize) {
             // do a linear read from the start to the end of storage
@@ -613,7 +613,7 @@ void installBootImage() noexcept {
         Serial.println(F("Transfer complete!"));
         // make sure we close the file before destruction
         theFile.close();
-        theCache.clear();
+        cacheSections[0].clear();
     }
 }
 
