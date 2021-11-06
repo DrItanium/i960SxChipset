@@ -363,27 +363,8 @@ private:
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 
 template<uint16_t numEntries, byte numAddressBits = 32>
-class Cache {
+class Cache4Way {
 public:
-    static constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept {
-        switch (count) {
-            case 2: return 1;
-            case 4: return 2;
-            case 8: return 3;
-            case 16: return 4;
-            case 32: return 5;
-            case 64: return 6;
-            case 128: return 7;
-            case 256: return 8;
-            case 512: return 9;
-            case 1024: return 10;
-            case 2048: return 11;
-            case 4096: return 12;
-            case 8192: return 13;
-            case 16384: return 14;
-            default: return 0;
-        }
-    }
     using CacheWay = FourWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/4), numAddressBits>;
     static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
     static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);
@@ -410,7 +391,7 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 
-Cache<512, NumAddressBitsForPSRAMCache> theCache;
+Cache4Way<256, NumAddressBitsForPSRAMCache> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
