@@ -314,19 +314,14 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        int invalidWay = -1;
-        for (int i = 0; i < NumberOfWays; ++i) {
+        for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i].matches(theAddress)) {
                 updateFlags(i);
                 return ways_[i];
-            } else if (!ways_[i].isValid()) {
-                if (invalidWay < 0)  {
-                    invalidWay = i;
-                }
             }
         }
         // find the inverse of the most recently used
-        auto index = invalidWay >= 0 ? invalidWay : getLeastRecentlyUsed();
+        auto index = getLeastRecentlyUsed();
         updateFlags(index);
         ways_[index].reset(theAddress);
         return ways_[index];
