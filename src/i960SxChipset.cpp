@@ -339,34 +339,62 @@ public:
     }
 private:
     void updateFlags(int index) noexcept {
-        mruBits_ &= _BV(index & 0b111);
+        static constexpr byte mruBitMask[8] {
+            _BV(0),
+            _BV(1),
+            _BV(2),
+            _BV(3),
+            _BV(4),
+            _BV(5),
+            _BV(6),
+            _BV(7),
+        };
+        mruBits_ &= mruBitMask[index & 0b111];
         if (mruBits_ == 0xFF) {
-            mruBits_ = _BV(index & 0b111);
+            mruBits_ = mruBitMask[index & 0b111];
         }
     }
     int getLeastRecentlyUsed() noexcept {
-        // the leftmost line whose mru-bit is 0 is replaced
-        if (mruBits_ < 0b1000'0000) {
+        if (!way0Set) {
             return 7;
-        } else if (mruBits_ < 0b1100'0000) {
-            return 6;
-        } else if (mruBits_ < 0b1110'0000) {
-            return 5;
-        } else if (mruBits_ < 0b1111'0000) {
-            return 4;
-        } else if (mruBits_ < 0b1111'1000) {
-            return 3;
-        } else if (mruBits_ < 0b1111'1100) {
-            return 2;
-        } else if (mruBits_ < 0b1111'1110) {
-            return 1;
-        } else {
-            return 0;
         }
+        if (!way6Set) {
+            return 6;
+        }
+        if (!way5Set) {
+            return 5;
+        }
+        if (!way4Set) {
+            return 4;
+        }
+        if (!way3Set) {
+            return 3;
+        }
+        if (!way2Set) {
+            return 2;
+        }
+        if (!way1Set) {
+            return 1;
+        }
+        return 0;
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    byte mruBits_ = 0;
+    union
+    {
+        byte mruBits_ = 0;
+        struct
+        {
+            bool way0Set: 1;
+            bool way1Set: 1;
+            bool way2Set: 1;
+            bool way3Set: 1;
+            bool way4Set: 1;
+            bool way5Set: 1;
+            bool way6Set: 1;
+            bool way7Set: 1;
+        };
+    };
 };
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
