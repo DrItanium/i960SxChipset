@@ -609,8 +609,6 @@ void setup() {
         // purge the cache pages
         ConfigurationSpace::begin();
         Serial.println(F("i960Sx chipset bringup"));
-        Serial.print(F("sizeof (const TaggedAddress&) = "));
-        Serial.println(sizeof(const decltype(theCache)::TaggedAddress &));
         {
             Serial.println(F("Setting up the initial lookup table"));
             for (auto& entry : lookupTable) {
