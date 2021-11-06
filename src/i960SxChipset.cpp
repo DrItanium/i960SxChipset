@@ -243,7 +243,7 @@ public:
         }
         mruInfo_ = 0;
     }
-public:
+private:
     static constexpr bool LeftHalf = false;
     static constexpr bool RightHalf = true;
     void updateFlags(int index) noexcept {
@@ -337,9 +337,7 @@ public:
         }
         mruBits_ = 0;
     }
-public:
-    static constexpr bool LeftHalf = false;
-    static constexpr bool RightHalf = true;
+private:
     void updateFlags(int index) noexcept {
         mruBits_ &= _BV(index & 0b111);
         if (mruBits_ == 0xFF) {
@@ -395,7 +393,7 @@ public:
             default: return 0;
         }
     }
-    using CacheWay = FourWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/4), numAddressBits>;
+    using CacheWay = EightWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/8), numAddressBits>;
     static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
     static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);
     static constexpr auto WayMask = CacheWay::WayMask;
