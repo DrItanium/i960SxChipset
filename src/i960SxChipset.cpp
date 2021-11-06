@@ -236,70 +236,36 @@ public:
         for (auto& way : ways_) {
             way.clear();
         }
-        mruInfo_ = 0;
+        mruBits_ = 0;
         leastRecentlyUsed_ = 0;
     }
 private:
-    static constexpr bool LeftHalf = false;
-    static constexpr bool RightHalf = true;
-    void updateFlags(int index) noexcept {
-        // 00 -> left of left half
-        // 01 -> right of left half
-        // 10 -> left of right half
-        // 11 -> right of right half
-        switch (index) {
-            case 0:
-                mostRecentlyUsedHalf_ = LeftHalf;
-                leftMostRecentlyUsed_ = LeftHalf;
-                break;
-            case 1:
-                mostRecentlyUsedHalf_ = LeftHalf;
-                leftMostRecentlyUsed_ = RightHalf;
-                break;
-            case 2:
-                mostRecentlyUsedHalf_ = RightHalf;
-                rightMostRecentlyUsed_ = LeftHalf;
-                break;
-            case 3:
-                mostRecentlyUsedHalf_ = RightHalf;
-                rightMostRecentlyUsed_ = RightHalf;
-                break;
-            default:
-                break;
+    void updateFlags(byte index) noexcept {
+        static constexpr byte LookupTable[4] = {
+                _BV(0),
+                _BV(1),
+                _BV(2),
+                _BV(3),
+        };
+        static constexpr byte LRUTable[16] {
+                3, 3, 3, 3, 3, 3, 3, 3,
+                2, 2, 2, 2,
+                1, 1,
+                0, 0,
+        };
+        mruBits_ |= LookupTable[index & 0b11];
+        if (mruBits_ == 0x0F) {
+            mruBits_ = LookupTable[index & 0b11];
         }
-        if (mostRecentlyUsedHalf_)  {
-            // do the left side
-            if (leftMostRecentlyUsed_) {
-                // do the left side because true
-                leastRecentlyUsed_ = 0;
-            } else {
-                // do the right side because false
-                leastRecentlyUsed_ = 1;
-            }
-        } else {
-            // do the right side
-            if (rightMostRecentlyUsed_) {
-                // do the left side
-                leastRecentlyUsed_ = 2;
-            } else {
-                // do the right side
-                leastRecentlyUsed_ = 3;
-            }
-        }
+        // compute this every time we update information
+        leastRecentlyUsed_ = LRUTable[mruBits_];
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
         return leastRecentlyUsed_;
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    union {
-        byte mruInfo_ = 0;
-        struct {
-            bool mostRecentlyUsedHalf_ : 1;
-            bool leftMostRecentlyUsed_ : 1;
-            bool rightMostRecentlyUsed_ : 1;
-        };
-    };
+    byte mruBits_ = 0;
     byte leastRecentlyUsed_ = 0;
 };
 
