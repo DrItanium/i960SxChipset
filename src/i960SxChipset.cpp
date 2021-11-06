@@ -219,15 +219,15 @@ public:
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        for (int i = 0; i < NumberOfWays; ++i) {
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i].matches(theAddress)) {
                 updateFlags(i);
                 return ways_[i];
             }
         }
         // find the inverse of the most recently used
-        auto index = getLeastRecentlyUsed();
+        auto index = leastRecentlyUsed_;
         updateFlags(index);
         ways_[index].reset(theAddress);
         return ways_[index];
@@ -236,37 +236,32 @@ public:
         for (auto& way : ways_) {
             way.clear();
         }
-        mruBits_ = 0;
-        leastRecentlyUsed_ = 0;
+        flags_ = 0;
     }
 private:
     void updateFlags(byte index) noexcept {
-        static constexpr byte LookupTable[4] = {
-                _BV(0),
-                _BV(1),
-                _BV(2),
-                _BV(3),
-        };
         static constexpr byte LRUTable[16] {
                 3, 3, 3, 3, 3, 3, 3, 3,
-                2, 2, 2, 2,
-                1, 1,
-                0, 0,
+                2, 2, 2, 2, 1, 1, 0, 0,
         };
-        mruBits_ |= LookupTable[index & 0b11];
-        if (mruBits_ == 0x0F) {
-            mruBits_ = LookupTable[index & 0b11];
+        mruBits_ |= _BV(index & 0b11);
+        if (mruBits_ == 0xF) {
+            mruBits_ = _BV(index & 0b11);
         }
         // compute this every time we update information
         leastRecentlyUsed_ = LRUTable[mruBits_];
     }
-    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        return leastRecentlyUsed_;
-    }
 private:
     CacheEntry ways_[NumberOfWays];
-    byte mruBits_ = 0;
-    byte leastRecentlyUsed_ = 0;
+    union {
+        byte flags_ = 0;
+        struct
+        {
+            byte mruBits_: 4;
+            byte leastRecentlyUsed_: 2;
+        };
+    };
+
 };
 
 template<byte numTagBits = 6, byte totalBitCount = 32, byte numLowestBits = 4>
