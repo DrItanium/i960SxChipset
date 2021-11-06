@@ -410,7 +410,7 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 
-static constexpr auto NumSections = 2;
+static constexpr auto NumSections = 8;
 Cache<512 / NumSections, NumAddressBitsForPSRAMCache> cacheSections[NumSections];
 
 [[nodiscard]] bool informCPU() noexcept {
