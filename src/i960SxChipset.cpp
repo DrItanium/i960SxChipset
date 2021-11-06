@@ -360,6 +360,154 @@ private:
     byte leastRecentlyUsed_ = 0;
 };
 
+template<byte numTagBits = 5, byte totalBitCount = 32, byte numLowestBits = 4>
+class SixteenWayLRUCacheWay {
+public:
+    static constexpr auto NumberOfWays = 16;
+    static constexpr auto WayMask = NumberOfWays - 1;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
+public:
+    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i) {
+            if (ways_[i].matches(theAddress)) {
+                updateFlags(i);
+                return ways_[i];
+            }
+        }
+        // find the inverse of the most recently used
+        auto index = getLeastRecentlyUsed();
+        updateFlags(index);
+        ways_[index].reset(theAddress);
+        return ways_[index];
+    }
+    void clear() noexcept {
+        for (auto& way : ways_) {
+            way.clear();
+        }
+        mruBits_ = 0;
+        leastRecentlyUsed_ = 0;
+    }
+private:
+    void updateFlags(byte index) noexcept {
+        static constexpr uint16_t LookupTable[16] = {
+                _BV(0),
+                _BV(1),
+                _BV(2),
+                _BV(3),
+                _BV(4),
+                _BV(5),
+                _BV(6),
+                _BV(7),
+                _BV(8),
+                _BV(9),
+                _BV(10),
+                _BV(11),
+                _BV(12),
+                _BV(13),
+                _BV(14),
+                _BV(15),
+        };
+        static constexpr byte LRUTableLower[256] {
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7,
+
+                6, 6, 6, 6, 6, 6, 6, 6,
+                6, 6, 6, 6, 6, 6, 6, 6,
+                6, 6, 6, 6, 6, 6, 6, 6,
+                6, 6, 6, 6, 6, 6, 6, 6,
+                6, 6, 6, 6, 6, 6, 6, 6,
+                6, 6, 6, 6, 6, 6, 6, 6,
+                6, 6, 6, 6, 6, 6, 6, 6,
+                6, 6, 6, 6, 6, 6, 6, 6,
+
+                5, 5, 5, 5, 5, 5, 5, 5,
+                5, 5, 5, 5, 5, 5, 5, 5,
+                5, 5, 5, 5, 5, 5, 5, 5,
+                5, 5, 5, 5, 5, 5, 5, 5,
+
+                4, 4, 4, 4, 4, 4, 4, 4,
+                4, 4, 4, 4, 4, 4, 4, 4,
+
+                3, 3, 3, 3, 3, 3, 3, 3,
+                2, 2, 2, 2,
+                1, 1,
+                0, 0,
+        };
+        static constexpr byte LRUTableUpper[256] {
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+                15, 15, 15, 15, 15, 15, 15, 15,
+
+                14, 14, 14, 14, 14, 14, 14, 14,
+                14, 14, 14, 14, 14, 14, 14, 14,
+                14, 14, 14, 14, 14, 14, 14, 14,
+                14, 14, 14, 14, 14, 14, 14, 14,
+                14, 14, 14, 14, 14, 14, 14, 14,
+                14, 14, 14, 14, 14, 14, 14, 14,
+                14, 14, 14, 14, 14, 14, 14, 14,
+                14, 14, 14, 14, 14, 14, 14, 14,
+
+                13, 13, 13, 13, 13, 13, 13, 13,
+                13, 13, 13, 13, 13, 13, 13, 13,
+                13, 13, 13, 13, 13, 13, 13, 13,
+                13, 13, 13, 13, 13, 13, 13, 13,
+
+                12, 12, 12, 12, 12, 12, 12, 12,
+                12, 12, 12, 12, 12, 12, 12, 12,
+
+                11, 11, 11, 11, 11, 11, 11, 11,
+                10, 10, 10, 10,
+                9, 9,
+                8, 0xFF,
+        };
+        mruBits_ |= LookupTable[index & 0b1111];
+        if (mruBits_ == 0xFFFF) {
+            mruBits_ = LookupTable[index & 0b1111];
+        }
+        // compute this every time we update information
+        if (auto upper = LRUTableUpper[index & 0b1111]; upper == 0xFF) {
+            leastRecentlyUsed_ = LRUTableLower[mruBits_];
+        } else {
+            leastRecentlyUsed_ = upper;
+        }
+    }
+    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
+        return leastRecentlyUsed_;
+    }
+private:
+    CacheEntry ways_[NumberOfWays];
+    uint16_t mruBits_ = 0;
+    byte leastRecentlyUsed_ = 0;
+};
+
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 
 template<uint16_t numEntries, byte numAddressBits = 32>
