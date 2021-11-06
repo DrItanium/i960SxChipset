@@ -225,7 +225,24 @@ public:
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        int invalidWay = -1;
+        for (int i = 0; i < NumberOfWays; ++i) {
+            if (ways_[i].matches(theAddress)) {
+                updateFlags(i);
+                return ways_[i];
+            } else if (!ways_[i].isValid()) {
+                if (invalidWay < 0)  {
+                    invalidWay = i;
+                }
+            }
+        }
+        // find the inverse of the most recently used
+        auto index = invalidWay >= 0 ? invalidWay : getLeastRecentlyUsed();
+        updateFlags(index);
+        ways_[index].reset(theAddress);
+        return ways_[index];
+    }
     void clear() noexcept {
         for (auto& way : ways_) {
             way.clear();
@@ -293,26 +310,6 @@ private:
         };
     };
 };
-template<byte numTagBits, byte totalBitCount, byte numLowestBits>
-typename FourWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::CacheEntry&
-FourWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::getLine(TaggedAddress theAddress) noexcept {
-    int invalidWay = -1;
-    for (int i = 0; i < NumberOfWays; ++i) {
-        if (ways_[i].matches(theAddress)) {
-            updateFlags(i);
-            return ways_[i];
-        } else if (!ways_[i].isValid()) {
-            if (invalidWay < 0)  {
-                invalidWay = i;
-            }
-        }
-    }
-    // find the inverse of the most recently used
-    auto index = invalidWay >= 0 ? invalidWay : getLeastRecentlyUsed();
-    updateFlags(index);
-    ways_[index].reset(theAddress);
-    return ways_[index];
-}
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 
@@ -618,6 +615,8 @@ void setup() {
         // purge the cache pages
         ConfigurationSpace::begin();
         Serial.println(F("i960Sx chipset bringup"));
+        Serial.print(F("sizeof (const TaggedAddress&) = "));
+        Serial.println(sizeof(const decltype(theCache)::TaggedAddress &));
         {
             Serial.println(F("Setting up the initial lookup table"));
             for (auto& entry : lookupTable) {
