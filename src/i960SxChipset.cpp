@@ -243,7 +243,7 @@ public:
         }
         mruInfo_ = 0;
     }
-private:
+public:
     static constexpr bool LeftHalf = false;
     static constexpr bool RightHalf = true;
     void updateFlags(int index) noexcept {
@@ -303,6 +303,72 @@ private:
             bool rightMostRecentlyUsed_ : 1;
         };
     };
+};
+
+template<byte numTagBits = 6, byte totalBitCount = 32, byte numLowestBits = 4>
+class EightWayLRUCacheWay {
+public:
+    static constexpr auto NumberOfWays = 8;
+    static constexpr auto WayMask = NumberOfWays - 1;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
+public:
+    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        int invalidWay = -1;
+        for (int i = 0; i < NumberOfWays; ++i) {
+            if (ways_[i].matches(theAddress)) {
+                updateFlags(i);
+                return ways_[i];
+            } else if (!ways_[i].isValid()) {
+                if (invalidWay < 0)  {
+                    invalidWay = i;
+                }
+            }
+        }
+        // find the inverse of the most recently used
+        auto index = invalidWay >= 0 ? invalidWay : getLeastRecentlyUsed();
+        updateFlags(index);
+        ways_[index].reset(theAddress);
+        return ways_[index];
+    }
+    void clear() noexcept {
+        for (auto& way : ways_) {
+            way.clear();
+        }
+        mruBits_ = 0;
+    }
+public:
+    static constexpr bool LeftHalf = false;
+    static constexpr bool RightHalf = true;
+    void updateFlags(int index) noexcept {
+        mruBits_ &= _BV(index & 0b111);
+        if (mruBits_ == 0xFF) {
+            mruBits_ = _BV(index & 0b111);
+        }
+    }
+    int getLeastRecentlyUsed() noexcept {
+        // the leftmost line whose mru-bit is 0 is replaced
+        if (mruBits_ < 0b1000'0000) {
+            return 7;
+        } else if (mruBits_ < 0b1100'0000) {
+            return 6;
+        } else if (mruBits_ < 0b1110'0000) {
+            return 5;
+        } else if (mruBits_ < 0b1111'0000) {
+            return 4;
+        } else if (mruBits_ < 0b1111'1000) {
+            return 3;
+        } else if (mruBits_ < 0b1111'1100) {
+            return 2;
+        } else if (mruBits_ < 0b1111'1110) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+private:
+    CacheEntry ways_[NumberOfWays];
+    byte mruBits_ = 0;
 };
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
