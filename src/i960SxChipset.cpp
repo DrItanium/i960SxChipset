@@ -338,30 +338,30 @@ public:
         mruBits_ = 0;
     }
 private:
-    void updateFlags(int index) noexcept {
-        static constexpr byte mruBitMask[8] {
-            _BV(0),
-            _BV(1),
-            _BV(2),
-            _BV(3),
-            _BV(4),
-            _BV(5),
-            _BV(6),
-            _BV(7),
-        };
-        mruBits_ &= mruBitMask[index & 0b111];
+    void updateFlags(byte index) noexcept {
+        mruBits_ |= _BV(index & 0b111);
         if (mruBits_ == 0xFF) {
-            mruBits_ = mruBitMask[index & 0b111];
+            mruBits_ = _BV(index & 0b111);
         }
     }
-    int getLeastRecentlyUsed() noexcept {
-        byte value = mruBits_;
-        for (int i = 7; i >= 0; --i, value <<= 1) {
-            if (!(value & 0b1000'0000))  {
-                return i;
-            }
+    [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
+        if (!way7Set) {
+            return 7;
+        } else if (!way6Set) {
+            return 6;
+        } else if (!way5Set) {
+            return 5;
+        } else if (!way4Set) {
+            return 4;
+        } else if (!way3Set) {
+            return 3;
+        } else if (!way2Set) {
+            return 2;
+        } else if (!way1Set) {
+            return 1;
+        } else {
+            return 0;
         }
-        return 0;
     }
 private:
     CacheEntry ways_[NumberOfWays];
