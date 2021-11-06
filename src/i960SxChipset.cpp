@@ -394,21 +394,7 @@ private:
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    union
-    {
-        byte mruBits_ = 0;
-        struct
-        {
-            bool way0Set: 1;
-            bool way1Set: 1;
-            bool way2Set: 1;
-            bool way3Set: 1;
-            bool way4Set: 1;
-            bool way5Set: 1;
-            bool way6Set: 1;
-            bool way7Set: 1;
-        };
-    };
+    byte mruBits_ = 0;
 };
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
