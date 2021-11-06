@@ -422,7 +422,7 @@ public:
             default: return 0;
         }
     }
-    using CacheWay = EightWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/8), numAddressBits>;
+    using CacheWay = FourWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/4), numAddressBits>;
     static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
     static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);
     static constexpr auto WayMask = CacheWay::WayMask;
