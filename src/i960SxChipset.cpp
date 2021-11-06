@@ -237,6 +237,7 @@ public:
             way.clear();
         }
         mruInfo_ = 0;
+        leastRecentlyUsed_ = 0;
     }
 private:
     static constexpr bool LeftHalf = false;
@@ -297,9 +298,9 @@ private:
             bool mostRecentlyUsedHalf_ : 1;
             bool leftMostRecentlyUsed_ : 1;
             bool rightMostRecentlyUsed_ : 1;
-            byte leastRecentlyUsed_ : 2;
         };
     };
+    byte leastRecentlyUsed_ = 0;
 };
 
 template<byte numTagBits = 6, byte totalBitCount = 32, byte numLowestBits = 4>
