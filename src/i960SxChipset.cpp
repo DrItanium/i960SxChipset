@@ -159,7 +159,26 @@ public:
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        static constexpr bool Way0MostRecentlyUsed = false;
+        static constexpr bool Way1MostRecentlyUsed = true;
+        constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
+        int invalidWay = -1;
+        for (int i = 0; i < NumberOfWays; ++i) {
+            if (ways_[i].matches(theAddress)) {
+                mostRecentlyUsed_ = computeMostRecentlyUsed(i);
+                return ways_[i];
+            } else if (!ways_[i].isValid()) {
+                if (invalidWay < 0)  {
+                    invalidWay = i;
+                }
+            }
+        }
+        auto index = invalidWay >= 0 ? invalidWay : (mostRecentlyUsed_ == Way0MostRecentlyUsed ? 1 : 0);
+        mostRecentlyUsed_ = computeMostRecentlyUsed(index);
+        ways_[index].reset(theAddress);
+        return ways_[index];
+    }
     void clear() noexcept {
         for (auto& way : ways_) {
             way.clear();
@@ -170,28 +189,6 @@ private:
     CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
-template<byte numTagBits, byte totalBitCount, byte numLowestBits>
-typename TwoWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::CacheEntry&
-TwoWayLRUCacheWay<numTagBits, totalBitCount, numLowestBits>::getLine(TaggedAddress theAddress) noexcept {
-    static constexpr bool Way0MostRecentlyUsed = false;
-    static constexpr bool Way1MostRecentlyUsed = true;
-    constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
-    int invalidWay = -1;
-    for (int i = 0; i < NumberOfWays; ++i) {
-        if (ways_[i].matches(theAddress)) {
-            mostRecentlyUsed_ = computeMostRecentlyUsed(i);
-            return ways_[i];
-        } else if (!ways_[i].isValid()) {
-            if (invalidWay < 0)  {
-                invalidWay = i;
-            }
-        }
-    }
-    auto index = invalidWay >= 0 ? invalidWay : (mostRecentlyUsed_ == Way0MostRecentlyUsed ? 1 : 0);
-    mostRecentlyUsed_ = computeMostRecentlyUsed(index);
-    ways_[index].reset(theAddress);
-    return ways_[index];
-}
 
 
 template<byte numTagBits = 9, byte totalBitCount = 32, byte numLowestBits = 4>
@@ -202,20 +199,17 @@ public:
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept __attribute__((noinline));
+    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        // okay first we need to see if we hit any matches
+        if (!way_.matches(theAddress)) {
+            way_.reset(theAddress);
+        }
+        return way_;
+    }
     void clear() noexcept { way_.clear(); }
 private:
     CacheEntry way_;
 };
-template<byte numTagBits, byte totalBitCount, byte numLowestBits>
-typename DirectMappedCacheWay<numTagBits, totalBitCount, numLowestBits>::CacheEntry&
-DirectMappedCacheWay<numTagBits, totalBitCount, numLowestBits>::getLine(TaggedAddress theAddress) noexcept {
-    // okay first we need to see if we hit any matches
-    if (!way_.matches(theAddress)) {
-        way_.reset(theAddress);
-    }
-    return way_;
-}
 
 template<byte numTagBits = 7, byte totalBitCount = 32, byte numLowestBits = 4>
 class FourWayLRUCacheWay {
