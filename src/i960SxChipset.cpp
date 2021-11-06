@@ -355,6 +355,7 @@ private:
         }
     }
     int getLeastRecentlyUsed() noexcept {
+        // the left most bit set to zero
         static constexpr byte LookupTable[256] {
             7, 7, 7, 7, 7, 7, 7, 7,
             7, 7, 7, 7, 7, 7, 7, 7,
