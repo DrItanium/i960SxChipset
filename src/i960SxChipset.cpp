@@ -592,9 +592,9 @@ public:
 private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
-Cache4Way<512, NumAddressBitsForPSRAMCache> theCache;
+//Cache4Way<512, NumAddressBitsForPSRAMCache> theCache;
 //Cache16Way<512, NumAddressBitsForPSRAMCache> theCache;
-//Cache8Way<256, NumAddressBitsForPSRAMCache> theCache2;
+Cache8Way<512, NumAddressBitsForPSRAMCache> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
