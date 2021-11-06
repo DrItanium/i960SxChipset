@@ -294,16 +294,6 @@ public:
     }
 private:
     void updateFlags(byte index) noexcept {
-        static constexpr byte LookupTable[8] = {
-                _BV(0),
-                _BV(1),
-                _BV(2),
-                _BV(3),
-                _BV(4),
-                _BV(5),
-                _BV(6),
-                _BV(7),
-        };
         static constexpr byte LRUTable[256] {
                 7, 7, 7, 7, 7, 7, 7, 7,
                 7, 7, 7, 7, 7, 7, 7, 7,
@@ -344,9 +334,9 @@ private:
                 1, 1,
                 0, 0,
         };
-        mruBits_ |= LookupTable[index & 0b111];
+        mruBits_ |= _BV(index & 0b111);
         if (mruBits_ == 0xFF) {
-            mruBits_ = LookupTable[index & 0b111];
+            mruBits_ = _BV(index & 0b111);
         }
         // compute this every time we update information
         leastRecentlyUsed_ = LRUTable[mruBits_];
@@ -593,9 +583,8 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 //Cache4Way<512, NumAddressBitsForPSRAMCache> theCache;
-//Cache16Way<512, NumAddressBitsForPSRAMCache> theCache;
-//Cache8Way<512, NumAddressBitsForPSRAMCache> theCache;
-Cache8Way<256, NumAddressBitsForPSRAMCache> theCache;
+Cache8Way<512, NumAddressBitsForPSRAMCache> theCache;
+//Cache8Way<256, NumAddressBitsForPSRAMCache> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
