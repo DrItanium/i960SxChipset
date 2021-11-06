@@ -331,6 +331,7 @@ public:
             way.clear();
         }
         mruBits_ = 0;
+        leastRecentlyUsed_ = 0;
     }
 private:
     void updateFlags(byte index) noexcept {
