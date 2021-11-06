@@ -220,19 +220,14 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        int invalidWay = -1;
         for (int i = 0; i < NumberOfWays; ++i) {
             if (ways_[i].matches(theAddress)) {
                 updateFlags(i);
                 return ways_[i];
-            } else if (!ways_[i].isValid()) {
-                if (invalidWay < 0)  {
-                    invalidWay = i;
-                }
             }
         }
         // find the inverse of the most recently used
-        auto index = invalidWay >= 0 ? invalidWay : getLeastRecentlyUsed();
+        auto index = getLeastRecentlyUsed();
         updateFlags(index);
         ways_[index].reset(theAddress);
         return ways_[index];
@@ -271,27 +266,28 @@ private:
             default:
                 break;
         }
-    }
-    int getLeastRecentlyUsed() noexcept {
         if (mostRecentlyUsedHalf_)  {
-           // do the left side
-           if (leftMostRecentlyUsed_) {
+            // do the left side
+            if (leftMostRecentlyUsed_) {
                 // do the left side because true
-               return 0;
-           } else {
-               // do the right side because false
-               return 1;
-           }
+                leastRecentlyUsed_ = 0;
+            } else {
+                // do the right side because false
+                leastRecentlyUsed_ = 1;
+            }
         } else {
             // do the right side
             if (rightMostRecentlyUsed_) {
                 // do the left side
-                return 2;
+                leastRecentlyUsed_ = 2;
             } else {
                 // do the right side
-                return 3;
+                leastRecentlyUsed_ = 3;
             }
         }
+    }
+    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
+        return leastRecentlyUsed_;
     }
 private:
     CacheEntry ways_[NumberOfWays];
@@ -301,6 +297,7 @@ private:
             bool mostRecentlyUsedHalf_ : 1;
             bool leftMostRecentlyUsed_ : 1;
             bool rightMostRecentlyUsed_ : 1;
+            byte leastRecentlyUsed_ : 2;
         };
     };
 };
