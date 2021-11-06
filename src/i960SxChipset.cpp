@@ -355,26 +355,11 @@ private:
         }
     }
     int getLeastRecentlyUsed() noexcept {
-        if (!way0Set) {
-            return 7;
-        }
-        if (!way6Set) {
-            return 6;
-        }
-        if (!way5Set) {
-            return 5;
-        }
-        if (!way4Set) {
-            return 4;
-        }
-        if (!way3Set) {
-            return 3;
-        }
-        if (!way2Set) {
-            return 2;
-        }
-        if (!way1Set) {
-            return 1;
+        byte value = mruBits_;
+        for (int i = 7; i >= 0; --i, value <<= 1) {
+            if (!(value & 0b1000'0000))  {
+                return i;
+            }
         }
         return 0;
     }
