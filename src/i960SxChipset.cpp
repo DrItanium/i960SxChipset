@@ -243,15 +243,9 @@ public:
     }
 private:
     void updateFlags(byte index) noexcept {
-        static constexpr byte MaskTable[4] {
-            _BV(0),
-            _BV(1),
-            _BV(2),
-            _BV(3),
-        };
-        mruBits_ |= MaskTable[index];
+        mruBits_ |= _BV(index);
         if (mruBits_ == 0xF) {
-            mruBits_ = MaskTable[index];
+            mruBits_ = _BV(index);
         }
     }
     constexpr byte getLeastRecentlyUsed() const noexcept {
