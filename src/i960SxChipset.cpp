@@ -277,25 +277,7 @@ private:
         // 1, 0 => left, right => 1
         // 0, 1 => right, left => 2
         // 0, 0 => right, right => 3
-        if (topMRU_) {
-           // go left
-           if (leftMRU_) {
-               // go left
-               return 0;
-           } else {
-               // go right
-               return 1;
-           }
-        } else {
-            // go right
-            if (rightMRU_) {
-                // go left
-                return 2;
-            } else {
-                // go right
-                return 3;
-            }
-        }
+        return LRUTable[mruBits_];
     }
 private:
     CacheEntry ways_[NumberOfWays];
@@ -306,7 +288,13 @@ private:
             bool leftMRU_: 1;
             bool rightMRU_: 1;
         };
+        struct {
+            byte mruBits_ : 3;
+        };
 
+    };
+    static constexpr byte LRUTable[8] {
+            3, 2, 3, 2, 1, 1, 0, 0,
     };
 
 };
