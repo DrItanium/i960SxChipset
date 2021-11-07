@@ -437,9 +437,9 @@ private:
 };
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 16;
-CacheDirect<NumEntries, NumAddressBits> theCache;
+//CacheDirect<NumEntries, NumAddressBits> theCache;
+Cache4Way<NumEntries, NumAddressBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits> theCache;
-//Cache4Way<NumEntries, NumAddressBits> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
