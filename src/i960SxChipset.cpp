@@ -217,7 +217,7 @@ public:
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i].matches(theAddress)) {
                 updateFlags(i);
