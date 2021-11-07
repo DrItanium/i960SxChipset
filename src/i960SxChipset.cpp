@@ -438,8 +438,8 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto NumEntries = 256;
-constexpr auto NumOffsetBits = 5;
+constexpr auto NumEntries = 512;
+constexpr auto NumOffsetBits = 4;
 //CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
