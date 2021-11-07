@@ -48,10 +48,11 @@ constexpr auto Serial0BaseAddress = 0xFB00'0000;
 constexpr auto DisplayBaseAddress = 0xFC00'0000;
 constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
-constexpr auto CompileInAddressDebuggingSupport = true;
+constexpr auto CompileInAddressDebuggingSupport = false;
+constexpr auto AddressDebuggingEnabledOnStartup = false;
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
-using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport>;
+using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport, AddressDebuggingEnabledOnStartup>;
 using TheRTCInterface = RTCInterface<RTCBaseAddress>;
 using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheSDInterface,
@@ -438,8 +439,8 @@ private:
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 256;
 constexpr auto NumOffsetBits = 5;
-CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
-//Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
+//CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
+Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {

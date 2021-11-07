@@ -29,7 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_SERIAL0INTERFACE_H
 #define SXCHIPSET_SERIAL0INTERFACE_H
 
-template<Address baseAddress, bool addressDebuggingAllowed>
+template<Address baseAddress, bool addressDebuggingAllowed, bool defaultAddressDebuggingModeTo = false>
 class Serial0Interface {
 public:
     static constexpr auto StartAddress = baseAddress;
@@ -132,6 +132,6 @@ public:
     static bool addressDebuggingEnabled() noexcept { return AddressDebuggingAllowed && enableAddressDebugging_; }
 private:
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
-    static inline bool enableAddressDebugging_ = true;
+    static inline bool enableAddressDebugging_ = defaultAddressDebuggingModeTo;
 };
 #endif //SXCHIPSET_SERIAL0INTERFACE_H
