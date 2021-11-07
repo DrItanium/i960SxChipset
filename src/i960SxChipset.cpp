@@ -443,6 +443,7 @@ constexpr auto NumOffsetBits = 4;
 //CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
+
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -451,7 +452,8 @@ Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 }
 constexpr auto IncrementAddress = true;
 constexpr auto LeaveAddressAlone = false;
-constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = 8;
+// while the i960 does not allow going beyond 8 words, we can use the number of words cached in all cases to be safe
+constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = decltype(theCache)::CacheEntry::NumWordsCached;
 inline void displayRequestedAddress() noexcept {
     auto address = ProcessorInterface::getAddress();
     Serial.print(F("ADDRESS: 0x"));
@@ -496,7 +498,7 @@ inline void handleMemoryInterface() noexcept {
     if (auto& theEntry = theCache.getLine(); ProcessorInterface::isReadOperation()) {
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
-        for (byte i = ProcessorInterface::getCacheOffsetEntry(), j = 0; j < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i, ++j) {
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
             auto outcome = theEntry.get(i);
             if constexpr (inDebugMode) {
                 Serial.print(F("\tOffset: 0x")) ;
@@ -516,7 +518,7 @@ inline void handleMemoryInterface() noexcept {
         // far as we can go with how the Sx works!
 
         // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
-        for (byte i = ProcessorInterface::getCacheOffsetEntry(), j = 0; j < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i, ++j) {
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
             auto bits = ProcessorInterface::getDataBits();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tOffset: 0x")) ;
