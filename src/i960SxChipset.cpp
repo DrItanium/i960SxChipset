@@ -244,9 +244,9 @@ private:
                 3, 3, 3, 3, 3, 3, 3, 3,
                 2, 2, 2, 2, 1, 1, 0, 0,
         };
-        mruBits_ |= _BV(index & 0b11);
+        mruBits_ |= _BV(index);
         if (mruBits_ == 0xF) {
-            mruBits_ = _BV(index & 0b11);
+            mruBits_ = _BV(index);
         }
         // compute this every time we update information
         leastRecentlyUsed_ = LRUTable[mruBits_];
@@ -582,8 +582,8 @@ public:
 private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
-//Cache4Way<512, NumAddressBitsForPSRAMCache> theCache;
-Cache8Way<512, NumAddressBitsForPSRAMCache> theCache;
+Cache4Way<512, NumAddressBitsForPSRAMCache> theCache;
+//Cache8Way<512, NumAddressBitsForPSRAMCache> theCache;
 //Cache8Way<256, NumAddressBitsForPSRAMCache> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
