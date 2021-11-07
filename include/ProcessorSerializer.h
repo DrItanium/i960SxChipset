@@ -240,6 +240,11 @@ public:
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        if (isReadOperation()) {
+            setupDataLinesForRead();
+        } else {
+            setupDataLinesForWrite();
+        }
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -293,11 +298,6 @@ public:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
-        if (isReadOperation()) {
-            setupDataLinesForRead();
-        } else {
-            setupDataLinesForWrite();
-        }
         return getBody<inDebugMode>(highest);
     }
     template<bool advanceAddress = true>
