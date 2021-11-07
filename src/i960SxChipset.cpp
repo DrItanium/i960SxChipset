@@ -255,10 +255,6 @@ private:
         }
     }
     constexpr byte getLeastRecentlyUsed() const noexcept {
-        constexpr byte LRUTable[16] {
-                3, 3, 3, 3, 3, 3, 3, 3,
-                2, 2, 2, 2, 1, 1, 0, 0,
-        };
         return LRUTable[mruBits_];
     }
 private:
@@ -269,6 +265,10 @@ private:
         {
             byte mruBits_: 4;
         };
+    };
+    static constexpr byte LRUTable[16] {
+            3, 3, 3, 3, 3, 3, 3, 3,
+            2, 2, 2, 2, 1, 1, 0, 0,
     };
 
 };
