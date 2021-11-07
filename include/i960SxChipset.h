@@ -42,5 +42,4 @@ BodyFunction getBody(byte index) noexcept {
     }
 }
 
-byte getCacheOffsetMask() noexcept;
 #endif //SXCHIPSET_I960SXCHIPSET_H

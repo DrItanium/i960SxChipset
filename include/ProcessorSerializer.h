@@ -235,7 +235,7 @@ private:
     static void setupDataLinesForWrite() noexcept;
     static void setupDataLinesForRead() noexcept;
 public:
-    template<bool inDebugMode>
+    template<bool inDebugMode, byte offsetMask>
     static BodyFunction newDataCycle() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -264,7 +264,7 @@ public:
         {
             // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
             // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> 1) & getCacheOffsetMask(); // we want to make this quick to increment
+            cacheOffsetEntry_ = (lowest >> 1) & offsetMask; // we want to make this quick to increment
             address_.bytes[0] = lowest;
         }
         while (!(SPSR & _BV(SPIF))); // wait

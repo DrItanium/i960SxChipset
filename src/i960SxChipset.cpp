@@ -443,9 +443,6 @@ constexpr auto NumOffsetBits = 4;
 //CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
-byte getCacheOffsetMask() noexcept {
-    return decltype(theCache)::CacheEntry::CacheEntryMask;
-}
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -599,7 +596,7 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    ProcessorInterface::newDataCycle<inDebugMode>()();
+    ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntry::CacheEntryMask>()();
 }
 template<bool allowAddressDebuggingCodePath>
 void doInvocationBody() noexcept {
