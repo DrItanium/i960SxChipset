@@ -462,8 +462,8 @@ private:
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 64;
 constexpr auto NumOffsetBits = 7;
-//CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
-Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
+CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
+//Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
