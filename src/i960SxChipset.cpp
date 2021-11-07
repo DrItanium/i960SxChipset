@@ -239,24 +239,74 @@ public:
         for (auto& way : ways_) {
             way.clear();
         }
-        mruBits_ = 0;
+        flags_ = 0;
     }
 private:
+    // left => false
+    // right => true
     void updateFlags(byte index) noexcept {
-        mruBits_ |= _BV(index);
-        if (mruBits_ == 0xF) {
-            mruBits_ = _BV(index);
+        // most recently used table:
+        // 0 => left, left
+        // 1 => left, right
+        // 2 => right, left
+        // 3 => right, right
+        switch (index) {
+            case 0:  // left, left
+                topMRU_ = false; // left
+                leftMRU_ = false; // left
+               break;
+            case 1: // left, right
+                topMRU_ = false; // left
+                leftMRU_ = true; // right
+                break;
+            case 2: // right, left
+                topMRU_ = true; // right
+                rightMRU_ = false; // left
+                break;
+            case 3: // right, right
+                topMRU_ = true; // right
+                rightMRU_ = true; // right
+                break;
+            default:
+                break;
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        return LRUTable[mruBits_];
+        // we walk down the inverse of what MRU is set to
+        // 1, 1 => left, left => 0
+        // 1, 0 => left, right => 1
+        // 0, 1 => right, left => 2
+        // 0, 0 => right, right => 3
+        if (topMRU_) {
+           // go left
+           if (leftMRU_) {
+               // go left
+               return 0;
+           } else {
+               // go right
+               return 1;
+           }
+        } else {
+            // go right
+            if (rightMRU_) {
+                // go left
+                return 2;
+            } else {
+                // go right
+                return 3;
+            }
+        }
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    byte mruBits_ = 0;
-    static constexpr byte LRUTable[16] {
-            3, 3, 3, 3, 3, 3, 3, 3,
-            2, 2, 2, 2, 1, 1, 0, 0,
+    union {
+        byte flags_ = 0;
+        struct {
+            bool topMRU_: 1;
+            bool leftMRU_: 1;
+            bool rightMRU_: 1;
+        };
+
     };
 
 };
