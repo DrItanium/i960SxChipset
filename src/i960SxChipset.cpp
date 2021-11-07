@@ -61,7 +61,7 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
-template<byte numTagBits, byte maxAddressBits = 32, byte numLowestBits = 4>
+template<byte numTagBits, byte maxAddressBits = 32, byte numLowestBits = 5>
 class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = pow2(numLowestBits);
@@ -151,7 +151,7 @@ private:
     byte highestUpdated_ = 0;
 };
 
-template<byte numTagBits = 9, byte totalBitCount = 32, byte numLowestBits = 4>
+template<byte numTagBits = 9, byte totalBitCount = 32, byte numLowestBits = 5>
 class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
@@ -171,7 +171,7 @@ private:
     CacheEntry way_;
 };
 
-template<byte numTagBits = 8, byte totalBitCount = 32, byte numLowestBits = 4>
+template<byte numTagBits = 8, byte totalBitCount = 32, byte numLowestBits = 5>
 class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
@@ -212,7 +212,7 @@ private:
 
 
 
-template<byte numTagBits = 7, byte totalBitCount = 32, byte numLowestBits = 4>
+template<byte numTagBits = 7, byte totalBitCount = 32, byte numLowestBits = 5>
 class FourWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 4;
@@ -265,7 +265,7 @@ private:
 
 };
 
-template<byte numTagBits = 6, byte totalBitCount = 32, byte numLowestBits = 4>
+template<byte numTagBits = 6, byte totalBitCount = 32, byte numLowestBits = 5>
 class EightWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 8;
@@ -436,7 +436,7 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto NumEntries = 512;
+constexpr auto NumEntries = 256;
 //CacheDirect<NumEntries, NumAddressBits> theCache;
 Cache4Way<NumEntries, NumAddressBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits> theCache;
