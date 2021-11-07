@@ -230,7 +230,7 @@ public:
             }
         }
         // find the inverse of the most recently used
-        auto index = leastRecentlyUsed_;
+        auto index = getLeastRecentlyUsed();
         updateFlags(index);
         ways_[index].reset(theAddress);
         return ways_[index];
@@ -243,16 +243,23 @@ public:
     }
 private:
     void updateFlags(byte index) noexcept {
-        static constexpr byte LRUTable[16] {
+        static constexpr byte MaskTable[4] {
+            _BV(0),
+            _BV(1),
+            _BV(2),
+            _BV(3),
+        };
+        mruBits_ |= MaskTable[index];
+        if (mruBits_ == 0xF) {
+            mruBits_ = MaskTable[index];
+        }
+    }
+    constexpr byte getLeastRecentlyUsed() const noexcept {
+        constexpr byte LRUTable[16] {
                 3, 3, 3, 3, 3, 3, 3, 3,
                 2, 2, 2, 2, 1, 1, 0, 0,
         };
-        mruBits_ |= _BV(index);
-        if (mruBits_ == 0xF) {
-            mruBits_ = _BV(index);
-        }
-        // compute this every time we update information
-        leastRecentlyUsed_ = LRUTable[mruBits_];
+        return LRUTable[mruBits_];
     }
 private:
     CacheEntry ways_[NumberOfWays];
@@ -261,7 +268,6 @@ private:
         struct
         {
             byte mruBits_: 4;
-            byte leastRecentlyUsed_: 2;
         };
     };
 
