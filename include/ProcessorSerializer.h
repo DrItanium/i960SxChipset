@@ -242,8 +242,6 @@ public:
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
-        using DataLinesConfigurationOperation = void(*)();
-        DataLinesConfigurationOperation op = nullptr;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
         /*
@@ -253,10 +251,6 @@ public:
          * speeds it is unnoticed.
          */
         asm volatile("nop");
-        {
-            // choose the setup function during interleave
-            op = isReadOperation() ? setupDataLinesForRead : setupDataLinesForWrite;
-        }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
@@ -299,7 +293,11 @@ public:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
-        op();
+        if (isReadOperation()) {
+            setupDataLinesForRead();
+        } else {
+            setupDataLinesForWrite();
+        }
         return getBody<inDebugMode>(highest);
     }
     template<bool advanceAddress = true>
