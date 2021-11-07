@@ -495,7 +495,7 @@ inline void handleMemoryInterface() noexcept {
     if (auto& theEntry = theCache.getLine(); ProcessorInterface::isReadOperation()) {
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
-        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(), j = 0; j < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i, ++j) {
             auto outcome = theEntry.get(i);
             if constexpr (inDebugMode) {
                 Serial.print(F("\tOffset: 0x")) ;
@@ -515,7 +515,7 @@ inline void handleMemoryInterface() noexcept {
         // far as we can go with how the Sx works!
 
         // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
-        for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
+        for (byte i = ProcessorInterface::getCacheOffsetEntry(), j = 0; j < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i, ++j) {
             auto bits = ProcessorInterface::getDataBits();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tOffset: 0x")) ;
