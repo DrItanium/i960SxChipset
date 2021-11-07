@@ -436,9 +436,9 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto NumEntries = 32;
-CacheDirect<NumEntries, NumAddressBits> theCache;
-//Cache4Way<NumEntries, NumAddressBits> theCache;
+constexpr auto NumEntries = 512;
+//CacheDirect<NumEntries, NumAddressBits> theCache;
+Cache4Way<NumEntries, NumAddressBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
