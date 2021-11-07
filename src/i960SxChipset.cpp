@@ -61,7 +61,7 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
-template<byte numTagBits, byte maxAddressBits = 32, byte numLowestBits = 5>
+template<byte numTagBits, byte maxAddressBits, byte numLowestBits>
 class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = pow2(numLowestBits);
@@ -151,7 +151,7 @@ private:
     byte highestUpdated_ = 0;
 };
 
-template<byte numTagBits = 8, byte totalBitCount = 32, byte numLowestBits = 5>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits>
 class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
@@ -171,7 +171,7 @@ private:
     CacheEntry way_;
 };
 
-template<byte numTagBits = 7, byte totalBitCount = 32, byte numLowestBits = 5>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits>
 class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
@@ -212,7 +212,7 @@ private:
 
 
 
-template<byte numTagBits = 6, byte totalBitCount = 32, byte numLowestBits = 5>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits>
 class FourWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 4;
@@ -265,7 +265,7 @@ private:
 
 };
 
-template<byte numTagBits = 5, byte totalBitCount = 32, byte numLowestBits = 5>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits>
 class EightWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 8;
@@ -353,10 +353,10 @@ private:
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 
-template<uint16_t numEntries, byte numAddressBits = 32>
+template<uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
 class Cache4Way {
 public:
-    using CacheWay = FourWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/4), numAddressBits>;
+    using CacheWay = FourWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/4), numAddressBits, numOffsetBits>;
     static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
     static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);
     static constexpr auto WayMask = CacheWay::WayMask;
@@ -382,10 +382,10 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 
-template<uint16_t numEntries, byte numAddressBits = 32>
+template<uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
 class Cache8Way {
 public:
-    using CacheWay = EightWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/8), numAddressBits>;
+    using CacheWay = EightWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/8), numAddressBits, numOffsetBits>;
     static constexpr auto WayMask = CacheWay::WayMask;
     static constexpr auto MaximumNumberOfEntries = numEntries;
     using CacheEntry = typename CacheWay::CacheEntry;
@@ -409,10 +409,10 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 
-template<uint16_t numEntries, byte numAddressBits = 32>
+template<uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
 class CacheDirect {
 public:
-    using CacheWay = DirectMappedCacheWay<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits>;
+    using CacheWay = DirectMappedCacheWay<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits, numOffsetBits>;
     static constexpr auto WayMask = CacheWay::WayMask;
     static constexpr auto MaximumNumberOfEntries = numEntries;
     using CacheEntry = typename CacheWay::CacheEntry;
@@ -437,9 +437,10 @@ private:
 };
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 256;
-CacheDirect<NumEntries, NumAddressBits> theCache;
-//Cache4Way<NumEntries, NumAddressBits> theCache;
-//Cache8Way<NumEntries, NumAddressBits> theCache;
+constexpr auto NumOffsetBits = 5;
+CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
+//Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
+//Cache8Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
