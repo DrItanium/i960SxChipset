@@ -322,9 +322,9 @@ public:
     }
 private:
     void updateFlags(byte index) noexcept {
-        mruBits_ |= _BV(index & 0b111);
+        mruBits_ |= _BV(index);
         if (mruBits_ == 0xFF) {
-            mruBits_ = _BV(index & 0b111);
+            mruBits_ = _BV(index);
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
