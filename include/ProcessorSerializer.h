@@ -255,6 +255,7 @@ public:
          */
         asm volatile("nop");
         {
+            //op = isReadOperation() ? setupDataLinesForRead : setupDataLinesForWrite();
             isReadOp = isReadOperation();
         }
         while (!(SPSR & _BV(SPIF))); // wait
