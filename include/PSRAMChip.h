@@ -206,7 +206,7 @@ public:
         transmitByte(address.getPSRAMAddress_High());
         transmitByte(address.getPSRAMAddress_Middle());
         transmitByte(address.getPSRAMAddress_Low());
-        for (int i = 0; i < 16; ++i) {
+        for (int i = 0; i < pow2(numOffsetBits); ++i) {
             transmitByte(buf[i]);
         }
         digitalWrite<EnablePin, HIGH>();
@@ -223,7 +223,7 @@ public:
         transmitByte(address.getPSRAMAddress_High());
         transmitByte(address.getPSRAMAddress_Middle());
         transmitByte(address.getPSRAMAddress_Low());
-        for (int i = 0; i < 16; ++i) {
+        for (int i = 0; i < pow2(numOffset); ++i) {
             transmitByte(0);
             buf[i] = SPDR;
         }

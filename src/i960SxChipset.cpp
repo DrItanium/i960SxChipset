@@ -48,7 +48,7 @@ constexpr auto Serial0BaseAddress = 0xFB00'0000;
 constexpr auto DisplayBaseAddress = 0xFC00'0000;
 constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
-constexpr auto CompileInAddressDebuggingSupport = false;
+constexpr auto CompileInAddressDebuggingSupport = true;
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport>;
@@ -151,7 +151,7 @@ private:
     byte highestUpdated_ = 0;
 };
 
-template<byte numTagBits = 9, byte totalBitCount = 32, byte numLowestBits = 5>
+template<byte numTagBits = 8, byte totalBitCount = 32, byte numLowestBits = 5>
 class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
@@ -171,7 +171,7 @@ private:
     CacheEntry way_;
 };
 
-template<byte numTagBits = 8, byte totalBitCount = 32, byte numLowestBits = 5>
+template<byte numTagBits = 7, byte totalBitCount = 32, byte numLowestBits = 5>
 class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
@@ -212,7 +212,7 @@ private:
 
 
 
-template<byte numTagBits = 7, byte totalBitCount = 32, byte numLowestBits = 5>
+template<byte numTagBits = 6, byte totalBitCount = 32, byte numLowestBits = 5>
 class FourWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 4;
@@ -265,7 +265,7 @@ private:
 
 };
 
-template<byte numTagBits = 6, byte totalBitCount = 32, byte numLowestBits = 5>
+template<byte numTagBits = 5, byte totalBitCount = 32, byte numLowestBits = 5>
 class EightWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 8;
@@ -437,8 +437,8 @@ private:
 };
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 256;
-//CacheDirect<NumEntries, NumAddressBits> theCache;
-Cache4Way<NumEntries, NumAddressBits> theCache;
+CacheDirect<NumEntries, NumAddressBits> theCache;
+//Cache4Way<NumEntries, NumAddressBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {

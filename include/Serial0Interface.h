@@ -132,6 +132,6 @@ public:
     static bool addressDebuggingEnabled() noexcept { return AddressDebuggingAllowed && enableAddressDebugging_; }
 private:
     // 257th char is always zero and not accessible, prevent crap from going beyond the cache
-    static inline bool enableAddressDebugging_ = false;
+    static inline bool enableAddressDebugging_ = true;
 };
 #endif //SXCHIPSET_SERIAL0INTERFACE_H
