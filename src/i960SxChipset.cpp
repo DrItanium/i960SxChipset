@@ -185,18 +185,13 @@ public:
         static constexpr bool Way0MostRecentlyUsed = false;
         static constexpr bool Way1MostRecentlyUsed = true;
         constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
-        int invalidWay = -1;
         for (int i = 0; i < NumberOfWays; ++i) {
             if (ways_[i].matches(theAddress)) {
                 mostRecentlyUsed_ = computeMostRecentlyUsed(i);
                 return ways_[i];
-            } else if (!ways_[i].isValid()) {
-                if (invalidWay < 0)  {
-                    invalidWay = i;
-                }
             }
         }
-        auto index = invalidWay >= 0 ? invalidWay : (mostRecentlyUsed_ == Way0MostRecentlyUsed ? 1 : 0);
+        auto index = (!mostRecentlyUsed_? 1 : 0);
         mostRecentlyUsed_ = computeMostRecentlyUsed(index);
         ways_[index].reset(theAddress);
         return ways_[index];
@@ -272,11 +267,6 @@ private:
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        // we walk down the inverse of what MRU is set to
-        // 1, 1 => left, left => 0
-        // 1, 0 => left, right => 1
-        // 0, 1 => right, left => 2
-        // 0, 0 => right, right => 3
         return LRUTable[mruBits_];
     }
 private:
@@ -294,6 +284,10 @@ private:
 
     };
     static constexpr byte LRUTable[8] {
+            // 1, 1 => left, left => 0
+            // 1, 0 => left, right => 1
+            // 0, 1 => right, left => 2
+            // 0, 0 => right, right => 3
             3, 2, 3, 2, 1, 1, 0, 0,
     };
 
