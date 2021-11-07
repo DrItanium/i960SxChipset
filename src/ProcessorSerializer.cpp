@@ -58,7 +58,6 @@ void
 ProcessorInterface::begin() noexcept {
     if (!initialized_) {
         initialized_ = true;
-        cacheOffsetMask_ = getCacheOffsetMask(); // cache the cacheOffsetMask
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         pinMode(i960Pinout::GPIOSelect, OUTPUT);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
