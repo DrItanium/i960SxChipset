@@ -243,7 +243,6 @@ public:
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
         using DataLinesConfigurationOperation = void(*)();
-        bool isReadOp = false;
         DataLinesConfigurationOperation op = nullptr;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
@@ -255,25 +254,15 @@ public:
          */
         asm volatile("nop");
         {
-            //op = isReadOperation() ? setupDataLinesForRead : setupDataLinesForWrite();
-            isReadOp = isReadOperation();
+            // choose the setup function during interleave
+            op = isReadOperation() ? setupDataLinesForRead : setupDataLinesForWrite;
         }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
-        {
-            if (isReadOp) {
-                op = setupDataLinesForRead;
-            }
-        }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
-        {
-            if (!isReadOp) {
-                op = setupDataLinesForWrite;
-            }
-        }
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
