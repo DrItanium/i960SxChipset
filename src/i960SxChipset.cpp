@@ -239,7 +239,7 @@ public:
         for (auto& way : ways_) {
             way.clear();
         }
-        flags_ = 0;
+        mruBits_ = 0;
     }
 private:
     void updateFlags(byte index) noexcept {
@@ -248,18 +248,12 @@ private:
             mruBits_ = _BV(index);
         }
     }
-    constexpr byte getLeastRecentlyUsed() const noexcept {
+    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
         return LRUTable[mruBits_];
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    union {
-        byte flags_ = 0;
-        struct
-        {
-            byte mruBits_: 4;
-        };
-    };
+    byte mruBits_ = 0;
     static constexpr byte LRUTable[16] {
             3, 3, 3, 3, 3, 3, 3, 3,
             2, 2, 2, 2, 1, 1, 0, 0,
