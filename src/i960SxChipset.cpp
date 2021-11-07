@@ -67,6 +67,7 @@ class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = pow2(numLowestBits);
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
+    static constexpr byte CacheEntryMask = NumWordsCached - 1;
     static constexpr byte InvalidCacheLineState = 0xFF;
     static constexpr byte CleanCacheLineState = 0xFE;
     using TaggedAddress = ::TaggedAddress<numTagBits, maxAddressBits, numLowestBits>;
@@ -442,7 +443,9 @@ constexpr auto NumOffsetBits = 5;
 //CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
 //Cache8Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
-
+byte getCacheOffsetMask() noexcept {
+    return decltype(theCache)::CacheEntry::CacheEntryMask;
+}
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
