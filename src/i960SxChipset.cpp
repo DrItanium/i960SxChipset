@@ -409,9 +409,37 @@ private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 
-Cache4Way<512, NumAddressBitsForPSRAMCache> theCache;
+template<uint16_t numEntries, byte numAddressBits = 32>
+class CacheDirect {
+public:
+    using CacheWay = DirectMappedCacheWay<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits>;
+    static constexpr auto WayMask = CacheWay::WayMask;
+    static constexpr auto MaximumNumberOfEntries = numEntries;
+    using CacheEntry = typename CacheWay::CacheEntry;
+    using TaggedAddress = typename CacheWay::TaggedAddress;
+public:
+    [[nodiscard]] CacheEntry& getLine() noexcept {
+        // only align if we need to reset the chip
+        TaggedAddress theAddress(ProcessorInterface::getAddress());
+        return entries_[theAddress.getTagIndex()].getLine(theAddress);
+    }
+    void clear() {
+        for (auto& a : entries_) {
+            a.clear();
+        }
+    }
+    byte* viewAsStorage() noexcept {
+        return reinterpret_cast<byte*>(entries_);
+    }
+    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
+private:
+    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
+};
+
+//Cache4Way<512, NumAddressBitsForPSRAMCache> theCache;
 //Cache8Way<512, NumAddressBitsForPSRAMCache> theCache;
 //Cache8Way<256, NumAddressBitsForPSRAMCache> theCache;
+CacheDirect<512, NumAddressBitsForPSRAMCache> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
