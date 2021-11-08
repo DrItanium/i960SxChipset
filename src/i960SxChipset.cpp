@@ -182,17 +182,14 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        static constexpr bool Way0MostRecentlyUsed = false;
-        static constexpr bool Way1MostRecentlyUsed = true;
-        constexpr auto computeMostRecentlyUsed = [](int index) noexcept { return index == 0 ? Way0MostRecentlyUsed : Way1MostRecentlyUsed; };
-        for (int i = 0; i < NumberOfWays; ++i) {
+        for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i].matches(theAddress)) {
-                mostRecentlyUsed_ = computeMostRecentlyUsed(i);
+                mostRecentlyUsed_ = (i != 0);
                 return ways_[i];
             }
         }
         auto index = (!mostRecentlyUsed_? 1 : 0);
-        mostRecentlyUsed_ = computeMostRecentlyUsed(index);
+        mostRecentlyUsed_ = (index != 0);
         ways_[index].reset(theAddress);
         return ways_[index];
     }
@@ -488,10 +485,12 @@ private:
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 512;
 constexpr auto NumOffsetBits = 4;
-//CacheDirect<NumEntries, NumAddressBits, NumOffsetBits> theCache;
-Cache2Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
-//Cache4Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
-//Cache8Way<NumEntries, NumAddressBits, NumOffsetBits> theCache;
+template<template<auto, auto, auto> typename T>
+using Cache_t = T<NumEntries, NumAddressBits, NumOffsetBits>;
+//Cache_t<CacheDirect> theCache;
+//Cache_t<Cache2Way> theCache;
+//Cache_t<Cache4Way> theCache;
+Cache_t<Cache8Way> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
