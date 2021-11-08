@@ -79,16 +79,16 @@ public:
             byte end = ((highestUpdated_ - dirty_) + 1);
             //Serial.print(F("end offset: "));
             //Serial.println(end);
-            OnboardPSRAMBlock::write(tag.getAddress() + (dirty_ * sizeof(SplitWord16)),
+            OnboardPSRAMBlock::write(TaggedAddress{key_, newTag.getTagIndex(), 0}.getAddress() + (dirty_ * sizeof(SplitWord16)),
                                      reinterpret_cast<byte *>(data + dirty_),
                                      sizeof(SplitWord16) * end);
         }
         dirty_ = CleanCacheLineState;
         highestUpdated_ = 0;
         // since we have called reset, now align the new address internally
-        tag = newTag.aligned();
+        key_ = newTag.getRest();
         // this is a _very_ expensive operation
-        OnboardPSRAMBlock::readCacheLine(tag, reinterpret_cast<byte*>(data));
+        OnboardPSRAMBlock::readCacheLine(TaggedAddress{key_, newTag.getTagIndex(), 0}, reinterpret_cast<byte*>(data));
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
@@ -97,12 +97,12 @@ public:
         // clear all flags
         dirty_ = InvalidCacheLineState;
         highestUpdated_ = 0;
-        tag.clear();
+        key_ = 0;
         for (auto& a : data) {
             a.wholeValue_ = 0;
         }
     }
-    [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (tag.restEqual(addr)); }
+    [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (addr.getRest() == key_); }
     [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
     void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
@@ -142,7 +142,7 @@ public:
     [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
 private:
     SplitWord16 data[NumWordsCached]; // 16 bytes
-    TaggedAddress tag { 0}; // 4 bytes
+    typename TaggedAddress::RestType key_ = 0;
     /**
      * @brief Describes lowest dirty word in a valid cache line; also denotes if the cache line is valid or not
      */

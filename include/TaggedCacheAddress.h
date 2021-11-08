@@ -18,6 +18,7 @@ union TaggedAddress {
     using LowerType = ClosestBitValue_t<NumLowestBits>;
     using AddressType = ClosestBitValue_t<MaximumAddressSize>;
     constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
+    constexpr explicit TaggedAddress(RestType key, TagType tag, LowerType offset = 0) noexcept : lowest(offset), tagIndex(tag), rest(key) { }
     void clear() noexcept { base = 0; }
     [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
     [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
