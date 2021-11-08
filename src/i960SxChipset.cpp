@@ -372,125 +372,43 @@ private:
     };
 };
 
+
+template<template<auto, auto, auto> typename C, uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
+class GenericCache {
+private:
+    using FakeCacheType = C<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits, numOffsetBits>;
+public:
+    static constexpr auto NumCacheWays = FakeCacheType::NumberOfWays;
+    using CacheWay = C<getNumberOfBitsForNumberOfEntries(numEntries/NumCacheWays), numAddressBits, numOffsetBits>;
+    static constexpr auto WayMask = CacheWay::WayMask;
+    static constexpr auto MaximumNumberOfEntries = numEntries;
+    using CacheEntry = typename CacheWay::CacheEntry;
+    using TaggedAddress = typename CacheWay::TaggedAddress;
+public:
+    [[nodiscard]] CacheEntry& getLine() noexcept {
+        // only align if we need to reset the chip
+        TaggedAddress theAddress(ProcessorInterface::getAddress());
+        return entries_[theAddress.getTagIndex()].getLine(theAddress);
+    }
+    void clear() {
+        for (auto& a : entries_) {
+            a.clear();
+        }
+    }
+    byte* viewAsStorage() noexcept {
+        return reinterpret_cast<byte*>(entries_);
+    }
+    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
+private:
+    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
+};
 constexpr auto NumAddressBitsForPSRAMCache = 26;
-
-template<uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
-class Cache4Way {
-public:
-    using CacheWay = FourWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/4), numAddressBits, numOffsetBits>;
-    static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
-    static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);
-    static constexpr auto WayMask = CacheWay::WayMask;
-    static constexpr auto MaximumNumberOfEntries = numEntries;
-    using CacheEntry = typename CacheWay::CacheEntry;
-    using TaggedAddress = typename CacheWay::TaggedAddress;
-public:
-    [[nodiscard]] CacheEntry& getLine() noexcept {
-        // only align if we need to reset the chip
-        TaggedAddress theAddress(ProcessorInterface::getAddress());
-        return entries_[theAddress.getTagIndex()].getLine(theAddress);
-    }
-    void clear() {
-        for (auto& a : entries_) {
-            a.clear();
-        }
-    }
-    byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(entries_);
-    }
-    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
-private:
-    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
-};
-
-template<uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
-class Cache8Way {
-public:
-    using CacheWay = EightWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/8), numAddressBits, numOffsetBits>;
-    static constexpr auto WayMask = CacheWay::WayMask;
-    static constexpr auto MaximumNumberOfEntries = numEntries;
-    using CacheEntry = typename CacheWay::CacheEntry;
-    using TaggedAddress = typename CacheWay::TaggedAddress;
-public:
-    [[nodiscard]] CacheEntry& getLine() noexcept {
-        // only align if we need to reset the chip
-        TaggedAddress theAddress(ProcessorInterface::getAddress());
-        return entries_[theAddress.getTagIndex()].getLine(theAddress);
-    }
-    void clear() {
-        for (auto& a : entries_) {
-            a.clear();
-        }
-    }
-    byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(entries_);
-    }
-    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
-private:
-    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
-};
-
-template<uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
-class CacheDirect {
-public:
-    using CacheWay = DirectMappedCacheWay<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits, numOffsetBits>;
-    static constexpr auto WayMask = CacheWay::WayMask;
-    static constexpr auto MaximumNumberOfEntries = numEntries;
-    using CacheEntry = typename CacheWay::CacheEntry;
-    using TaggedAddress = typename CacheWay::TaggedAddress;
-public:
-    [[nodiscard]] CacheEntry& getLine() noexcept {
-        // only align if we need to reset the chip
-        TaggedAddress theAddress(ProcessorInterface::getAddress());
-        return entries_[theAddress.getTagIndex()].getLine(theAddress);
-    }
-    void clear() {
-        for (auto& a : entries_) {
-            a.clear();
-        }
-    }
-    byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(entries_);
-    }
-    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
-private:
-    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
-};
-template<uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
-class Cache2Way {
-public:
-    using CacheWay = TwoWayLRUCacheWay<getNumberOfBitsForNumberOfEntries(numEntries/2), numAddressBits, numOffsetBits>;
-    static constexpr auto WayMask = CacheWay::WayMask;
-    static constexpr auto MaximumNumberOfEntries = numEntries;
-    using CacheEntry = typename CacheWay::CacheEntry;
-    using TaggedAddress = typename CacheWay::TaggedAddress;
-public:
-    [[nodiscard]] CacheEntry& getLine() noexcept {
-        // only align if we need to reset the chip
-        TaggedAddress theAddress(ProcessorInterface::getAddress());
-        return entries_[theAddress.getTagIndex()].getLine(theAddress);
-    }
-    void clear() {
-        for (auto& a : entries_) {
-            a.clear();
-        }
-    }
-    byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(entries_);
-    }
-    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
-private:
-    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
-};
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 512;
 constexpr auto NumOffsetBits = 4;
 template<template<auto, auto, auto> typename T>
-using Cache_t = T<NumEntries, NumAddressBits, NumOffsetBits>;
-//Cache_t<CacheDirect> theCache;
-//Cache_t<Cache2Way> theCache;
-//Cache_t<Cache4Way> theCache;
-Cache_t<Cache8Way> theCache;
+using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits>;
+Cache_t<FourWayLRUCacheWay> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
