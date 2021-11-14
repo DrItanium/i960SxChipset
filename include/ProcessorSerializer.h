@@ -234,6 +234,8 @@ public:
 private:
     static void setupDataLinesForWrite() noexcept;
     static void setupDataLinesForRead() noexcept;
+    static bool shouldReadUpper16Bits() noexcept { return true; }
+    static bool shouldReadLower16Bits() noexcept { return true; }
 public:
     template<bool inDebugMode, byte offsetMask>
     static BodyFunction newDataCycle() noexcept {
