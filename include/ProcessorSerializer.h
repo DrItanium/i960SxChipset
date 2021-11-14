@@ -457,6 +457,7 @@ public:
                 }
             }
         } else {
+            /// @todo condense each operation set into a custom function to maximize throughput
             // look at each byte individually
             switch (getUpdateKind()) {
                 case 0b0001:
