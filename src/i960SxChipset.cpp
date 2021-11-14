@@ -408,7 +408,7 @@ constexpr auto NumEntries = 512;
 constexpr auto NumOffsetBits = 4;
 template<template<auto, auto, auto> typename T>
 using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits>;
-Cache_t<TwoWayLRUCacheWay> theCache;
+Cache_t<FourWayLRUCacheWay> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
