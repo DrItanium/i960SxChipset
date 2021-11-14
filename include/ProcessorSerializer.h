@@ -240,7 +240,7 @@ private:
     static bool shouldReadUpper16Bits() noexcept { return true; }
     static bool shouldReadLower16Bits() noexcept { return true; }
     template<byte offsetMask>
-    static void full32BitUpdate() noexcept {
+    inline static byte full32BitUpdate() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -297,6 +297,7 @@ private:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
+        return highest;
     }
     template<byte offsetMask>
     static void lower16Update() noexcept {
@@ -329,7 +330,7 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[1] = lower;
     }
-    static void upper16Update() noexcept {
+    static byte upper16Update() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // only read the upper 16-bits
@@ -353,8 +354,9 @@ private:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
+        return highest;
     }
-    static void updateHighest8() noexcept {
+    static byte updateHighest8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOB);
         // only read the upper 8 bits
@@ -371,6 +373,7 @@ private:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         address_.bytes[3] = highest;
+        return highest;
     }
     static void updateHigher8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -445,13 +448,13 @@ public:
         if constexpr (onlyDo16BitUpdates) {
             if (shouldReadLower16Bits()) {
                 if (shouldReadUpper16Bits()) {
-                    full32BitUpdate<offsetMask>();
+                    return getBody<inDebugMode>(full32BitUpdate<offsetMask>());
                 } else {
                     lower16Update<offsetMask>();
                 }
             } else {
                 if (shouldReadUpper16Bits()) {
-                    upper16Update();
+                    return getBody<inDebugMode>(upper16Update());
                 } else {
                     // do nothing in this case because none of the address components have changed
                 }
@@ -462,30 +465,23 @@ public:
             switch (getUpdateKind()) {
                 case 0b0001:
                     updateLower8();
-                    upper16Update();
-                    break;
+                    return getBody<inDebugMode>(upper16Update());
                 case 0b0010:
                     updateLowest8<offsetMask>();
-                    upper16Update();
-                    break;
+                    return getBody<inDebugMode>(upper16Update());
                 case 0b0011:
-                    upper16Update();
-                    break;
+                    return getBody<inDebugMode>(upper16Update());
                 case 0b0100:
                     lower16Update<offsetMask>();
-                    updateHighest8();
-                    break;
+                    return getBody<inDebugMode>(updateHighest8());
                 case 0b0101:
                     updateLower8();
-                    updateHighest8();
-                    break;
+                    return getBody<inDebugMode>(updateHighest8());
                 case 0b0110:
                     updateLowest8<offsetMask>();
-                    updateHighest8();
-                    break;
+                    return getBody<inDebugMode>(updateHighest8());
                 case 0b0111:
-                    updateHighest8();
-                    break;
+                    return getBody<inDebugMode>(updateHighest8());
                 case 0b1000:
                     lower16Update<offsetMask>();
                     updateHigher8();
@@ -513,8 +509,7 @@ public:
                 case 0b1111:
                     break;
                 default:
-                    full32BitUpdate<offsetMask>();
-                    break;
+                    return getBody<inDebugMode>(full32BitUpdate<offsetMask>());
             }
         }
         return getBody<inDebugMode>(address_.bytes[3]);
