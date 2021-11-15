@@ -239,32 +239,28 @@ private:
         // bit 0: top
         // bit 1: left
         // bit 2: right
-        static constexpr byte TranslationTable[4][8] {
-                /* index: 0 => 0bx00 */ { 0b000, 0b000, 0b000, 0b000, 0b100, 0b100, 0b100, 0b100, },
-                /* index: 1 => 0bx10 */ { 0b010, 0b010, 0b010, 0b010, 0b110, 0b110, 0b110, 0b110, },
-                /* index: 2 => 0b0x1 */ { 0b001, 0b001, 0b011, 0b011, 0b001, 0b001, 0b011, 0b011, },
-                /* index: 3 => 0b1x1 */ { 0b101, 0b101, 0b111, 0b111, 0b101, 0b101, 0b111, 0b111, },
+        static constexpr byte lookup[4] {
+                _BV(0),
+                _BV(1),
+                _BV(2),
+                _BV(3),
         };
-        mruBits_ = TranslationTable[index & 0b11][mruBits_];
+        flags_ |= lookup[index];
+        if (flags_ >= 0xF) {
+            flags_ = lookup[index];
+        }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        return LRUTable[mruBits_];
+        return LRUTable[flags_];
     }
 private:
     CacheEntry ways_[NumberOfWays];
-    union {
-        byte flags_ = 0;
-        struct {
-            byte mruBits_ : 3;
-        };
-
-    };
-    static constexpr byte LRUTable[8] {
-            // 1, 1 => left, left => 0
-            // 1, 0 => left, right => 1
-            // 0, 1 => right, left => 2
-            // 0, 0 => right, right => 3
-            3, 2, 3, 2, 1, 1, 0, 0,
+    byte flags_ = 0;
+    static constexpr byte LRUTable[16] {
+            3, 3, 3, 3, 3, 3, 3, 3,
+            2, 2, 2, 2,
+            1, 1,
+            0, 0,
     };
 
 };
