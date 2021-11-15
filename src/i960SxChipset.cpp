@@ -239,45 +239,13 @@ private:
     template<bool useLookupTable = true>
     __attribute__ ((noinline)) void updateFlags(byte index) noexcept {
         // we have to take the index and current value into account
-        if constexpr (useLookupTable) {
-            static constexpr byte TranslationTable[4][8] {
-                    /* index: 0 => 0bx00 */ { 0b000, 0b000, 0b000, 0b000, 0b100, 0b100, 0b100, 0b100, },
-                    /* index: 1 => 0bx10 */ { 0b010, 0b010, 0b010, 0b010, 0b110, 0b110, 0b110, 0b110, },
-                    /* index: 2 => 0b0x1 */ { 0b001, 0b001, 0b011, 0b011, 0b001, 0b001, 0b011, 0b011, },
-                    /* index: 3 => 0b1x1 */ { 0b101, 0b101, 0b111, 0b111, 0b101, 0b101, 0b111, 0b111, },
-            };
-            mruBits_ = TranslationTable[index & 0b11][mruBits_];
-        } else {
-            // most recently used table:
-            // 0 => left, left
-            // 1 => left, right
-            // 2 => right, left
-            // 3 => right, right
-            switch (index) {
-                case 0:  // left, left
-                    mruBits_ = rightMRU_ ? 0b100 : 0b000;
-                    //topMRU_ = false; // left
-                    //leftMRU_ = false; // left
-                    break;
-                case 1: // left, right
-                    mruBits_ = rightMRU_ ? 0b110 : 0b010;
-                    //topMRU_ = false; // left
-                    //leftMRU_ = true; // right
-                    break;
-                case 2: // right, left
-                    mruBits_ = leftMRU_ ? 0b011 : 0b001;
-                    //topMRU_ = true; // right
-                    //rightMRU_ = false; // left
-                    break;
-                case 3: // right, right
-                    mruBits_ = leftMRU_ ? 0b111 : 0b011;
-                    //topMRU_ = true; // right
-                    //rightMRU_ = true; // right
-                    break;
-                default:
-                    break;
-            }
-        }
+        static constexpr byte TranslationTable[4][8] {
+                /* index: 0 => 0bx00 */ { 0b000, 0b000, 0b000, 0b000, 0b100, 0b100, 0b100, 0b100, },
+                /* index: 1 => 0bx10 */ { 0b010, 0b010, 0b010, 0b010, 0b110, 0b110, 0b110, 0b110, },
+                /* index: 2 => 0b0x1 */ { 0b001, 0b001, 0b011, 0b011, 0b001, 0b001, 0b011, 0b011, },
+                /* index: 3 => 0b1x1 */ { 0b101, 0b101, 0b111, 0b111, 0b101, 0b101, 0b111, 0b111, },
+        };
+        mruBits_ = TranslationTable[index & 0b11][mruBits_];
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
         return LRUTable[mruBits_];
