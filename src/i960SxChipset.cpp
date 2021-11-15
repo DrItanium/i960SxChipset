@@ -319,9 +319,20 @@ public:
     }
 private:
     void updateFlags(byte index) noexcept {
-        mruBits_ |= _BV(index);
+        // cache the lookup
+        static constexpr byte lookup[8] {
+                _BV(0),
+                _BV(1),
+                _BV(2),
+                _BV(3),
+                _BV(4),
+                _BV(5),
+                _BV(6),
+                _BV(7),
+        };
+        mruBits_ |= lookup[index];
         if (mruBits_ == 0xFF) {
-            mruBits_ = _BV(index);
+            mruBits_ = lookup[index];
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
@@ -398,17 +409,20 @@ public:
     byte* viewAsStorage() noexcept {
         return reinterpret_cast<byte*>(entries_);
     }
+    void begin() noexcept {
+        clear();
+    }
     constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
 private:
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto NumEntries = 512;
+constexpr auto NumEntries = 256;
 constexpr auto NumOffsetBits = 4;
 template<template<auto, auto, auto> typename T>
 using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits>;
-Cache_t<FourWayLRUCacheWay> theCache;
+Cache_t<EightWayLRUCacheWay> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
@@ -658,6 +672,7 @@ void setup() {
                   i960Pinout::DEN_,
                   i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
+        theCache.begin();
         SPI.begin();
         // purge the cache pages
         ConfigurationSpace::begin();
