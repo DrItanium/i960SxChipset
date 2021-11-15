@@ -234,11 +234,11 @@ public:
         flags_ = 0;
     }
 private:
-    // left => false
-    // right => true
-    template<bool useLookupTable = true>
-    __attribute__ ((noinline)) void updateFlags(byte index) noexcept {
+    void updateFlags(byte index) noexcept {
         // we have to take the index and current value into account
+        // bit 0: top
+        // bit 1: left
+        // bit 2: right
         static constexpr byte TranslationTable[4][8] {
                 /* index: 0 => 0bx00 */ { 0b000, 0b000, 0b000, 0b000, 0b100, 0b100, 0b100, 0b100, },
                 /* index: 1 => 0bx10 */ { 0b010, 0b010, 0b010, 0b010, 0b110, 0b110, 0b110, 0b110, },
@@ -254,11 +254,6 @@ private:
     CacheEntry ways_[NumberOfWays];
     union {
         byte flags_ = 0;
-        struct {
-            bool topMRU_: 1;
-            bool leftMRU_: 1;
-            bool rightMRU_: 1;
-        };
         struct {
             byte mruBits_ : 3;
         };
