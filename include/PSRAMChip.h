@@ -237,12 +237,23 @@ public:
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
+    template<byte index>
+    static void doWrites() noexcept {
+        digitalWrite<Select0, (index & (1 << 0)) ? HIGH : LOW>();
+        digitalWrite<Select1, (index & (1 << 1)) ? HIGH : LOW>();
+        digitalWrite<Select2, (index & (1 << 2)) ? HIGH : LOW>();
+    }
     static void setChipId(byte index) noexcept {
-        if (index != currentIndex_) {
-            digitalWrite<Select0>((index & (1 << 0)) ? HIGH : LOW);
-            digitalWrite<Select1>((index & (1 << 1)) ? HIGH : LOW);
-            digitalWrite<Select2>((index & (1 << 2)) ? HIGH : LOW);
-            currentIndex_ = index;
+        using Action = void(*)();
+        static constexpr Action Operations[8] {
+            doWrites<0>, doWrites<1>, doWrites<2>, doWrites<3>,
+            doWrites<4>, doWrites<5>, doWrites<6>, doWrites<7>,
+        };
+        if (index < 8) {
+            if (index != currentIndex_) {
+                Operations[index]();
+                currentIndex_ = index;
+            }
         }
     }
 public:
