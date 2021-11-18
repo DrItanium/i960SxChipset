@@ -249,11 +249,9 @@ private:
             doWrites<0>, doWrites<1>, doWrites<2>, doWrites<3>,
             doWrites<4>, doWrites<5>, doWrites<6>, doWrites<7>,
         };
-        if (index < 8) {
-            if (index != currentIndex_) {
-                Operations[index]();
-                currentIndex_ = index;
-            }
+        if (index != currentIndex_) {
+            Operations[index & 0b111]();
+            currentIndex_ = index & 0b111;
         }
     }
 public:
