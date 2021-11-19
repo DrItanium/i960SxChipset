@@ -393,11 +393,11 @@ private:
 };
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto NumEntries = 256;
-constexpr auto NumOffsetBits = 4;
+constexpr auto NumEntries = 64;
+constexpr auto NumOffsetBits = 7;
 template<template<auto, auto, auto> typename T>
 using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits>;
-Cache_t<FourWayLRUCacheWay> theCache;
+Cache_t<EightWayLRUCacheWay> theCache;
 
 [[nodiscard]] bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
