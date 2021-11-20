@@ -544,7 +544,7 @@ constexpr auto NumEntries = 128;
 constexpr auto NumOffsetBits = 6;
 template<template<auto, auto, auto> typename T>
 using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits>;
-Cache_t<SixteenWayLRUCacheWay> theCache;
+Cache_t<EightWayLRUCacheWay> theCache;
 
 
 [[nodiscard]] bool informCPU() noexcept {
