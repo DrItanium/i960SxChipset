@@ -43,13 +43,17 @@ public:
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         // okay first we need to see if we hit any matches
-        if (!way_.matches(theAddress)) {
-            way_.reset(theAddress);
+        if (!way_->matches(theAddress)) {
+            way_->reset(theAddress);
         }
         return way_;
     }
-    void clear() noexcept { way_.clear(); }
+    void clear() noexcept { way_->clear(); }
+    [[nodiscard]] constexpr bool valid() const noexcept { return way_; }
+    [[nodiscard]] constexpr auto getWay(size_t = 0) const noexcept { return way_; }
+    void setWay(CacheEntry& way, size_t = 0) noexcept { way_ = &way; }
+    [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
-    CacheEntry way_;
+    CacheEntry* way_ = nullptr;
 };
 #endif //SXCHIPSET_DIRECTMAPPEDCACHEWAY_H

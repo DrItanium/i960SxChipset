@@ -43,20 +43,20 @@ public:
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i].matches(theAddress)) {
+            if (ways_[i]->matches(theAddress)) {
                 updateFlags(i);
-                return ways_[i];
+                return *ways_[i];
             }
         }
         // find the inverse of the most recently used
         auto index = getLeastRecentlyUsed();
         updateFlags(index);
-        ways_[index].reset(theAddress);
-        return ways_[index];
+        ways_[index]->reset(theAddress);
+        return *ways_[index];
     }
     void clear() noexcept {
         for (auto& way : ways_) {
-            way.clear();
+            way->clear();
         }
         flags_ = 0;
     }
@@ -80,8 +80,19 @@ private:
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
         return LRUTable[flags_];
     }
+    [[nodiscard]] constexpr bool valid() const noexcept {
+        for (auto *a: ways_) {
+            if (!a) {
+                return false;
+            }
+        }
+        return true;
+    }
+    [[nodiscard]] constexpr auto getWay(size_t index = 0) const noexcept { return ways_[index & WayMask]; }
+    void setWay(CacheEntry& way, size_t index = 0) noexcept { ways_[index & WayMask] = &way; }
+    [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
-    CacheEntry ways_[NumberOfWays];
+    CacheEntry* ways_[NumberOfWays] = { nullptr };
     byte flags_ = 0;
     static constexpr byte LRUTable[16] {
         3, 3, 3, 3, 3, 3, 3, 3,

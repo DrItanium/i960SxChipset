@@ -64,6 +64,7 @@ public:
     }
     constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
 private:
+    CacheEntry backingStorage_[MaximumNumberOfEntries];
     CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
 };
 
