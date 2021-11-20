@@ -410,17 +410,19 @@ private:
         if (mruBits_.wholeValue_ == 0xFFFF) {
             mruBits_.wholeValue_ = lookup[index];
         }
+        if (mruBits_.bytes[1] != 0xFF) {
+            nextLRU_ = LRUTable2[mruBits_.bytes[1]]; // add eight to the position
+        } else {
+            nextLRU_ = LRUTable[mruBits_.bytes[0]];
+        }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        if (mruBits_.bytes[1] != 0xFF) {
-            return LRUTable2[mruBits_.bytes[1]]; // add eight to the position
-        } else {
-            return LRUTable[mruBits_.bytes[0]];
-        }
+        return nextLRU_;
     }
 private:
     CacheEntry ways_[NumberOfWays];
     SplitWord16 mruBits_ {0};
+    byte nextLRU_ = 0;
     static constexpr byte LRUTable[256] {
             7, 7, 7, 7, 7, 7, 7, 7,
             7, 7, 7, 7, 7, 7, 7, 7,
