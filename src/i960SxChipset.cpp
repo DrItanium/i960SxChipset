@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FourWayPseudoLRUEntry.h"
 #include "EightWayPseudoLRUEntry.h"
 #include "SixteenWayPseudoLRUEntry.h"
+#include "SinglePoolCache.h"
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 #include "DisplayInterface.h"
@@ -74,38 +75,6 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 
 
 
-template<template<auto, auto, auto, typename> typename C, uint16_t numEntries, byte numAddressBits, byte numOffsetBits, typename T>
-class GenericCache {
-private:
-    using FakeCacheType = C<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits, numOffsetBits, T>;
-public:
-    static constexpr auto NumCacheWays = FakeCacheType::NumberOfWays;
-    using CacheWay = C<getNumberOfBitsForNumberOfEntries(numEntries/NumCacheWays), numAddressBits, numOffsetBits, T>;
-    static constexpr auto WayMask = CacheWay::WayMask;
-    static constexpr auto MaximumNumberOfEntries = numEntries;
-    using CacheEntry = typename CacheWay::CacheEntry;
-    using TaggedAddress = typename CacheWay::TaggedAddress;
-public:
-    [[nodiscard]] CacheEntry& getLine() noexcept {
-        // only align if we need to reset the chip
-        TaggedAddress theAddress(ProcessorInterface::getAddress());
-        return entries_[theAddress.getTagIndex()].getLine(theAddress);
-    }
-    void clear() {
-        for (auto& a : entries_) {
-            a.clear();
-        }
-    }
-    byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(entries_);
-    }
-    void begin() noexcept {
-        clear();
-    }
-    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
-private:
-    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
-};
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 128;
