@@ -358,6 +358,111 @@ private:
     };
 };
 
+template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+class SixteenWayLRUCacheWay {
+public:
+    static constexpr auto NumberOfWays = 16;
+    static constexpr auto WayMask = NumberOfWays - 1;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
+public:
+    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i) {
+            if (ways_[i].matches(theAddress)) {
+                updateFlags(i);
+                return ways_[i];
+            }
+        }
+        // find the inverse of the most recently used
+        auto index = getLeastRecentlyUsed();
+        updateFlags(index);
+        ways_[index].reset(theAddress);
+        return ways_[index];
+    }
+    void clear() noexcept {
+        for (auto& way : ways_) {
+            way.clear();
+        }
+        mruBits_.wholeValue_ = 0;
+    }
+private:
+    void updateFlags(byte index) noexcept {
+        // cache the lookup
+        static constexpr uint16_t lookup[NumberOfWays] {
+                _BV(0),
+                _BV(1),
+                _BV(2),
+                _BV(3),
+                _BV(4),
+                _BV(5),
+                _BV(6),
+                _BV(7),
+                _BV(8),
+                _BV(9),
+                _BV(10),
+                _BV(11),
+                _BV(12),
+                _BV(13),
+                _BV(14),
+                _BV(15),
+        };
+        mruBits_.wholeValue_ |= lookup[index];
+        if (mruBits_.wholeValue_ == 0xFFFF) {
+            mruBits_.wholeValue_ |= lookup[index];
+        }
+    }
+    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
+        if (mruBits_.bytes[1] != 0xFF) {
+            return LRUTable[mruBits_.bytes[1]] + 8; // add eight to the position
+        } else {
+            return LRUTable[mruBits_.bytes[0]];
+        }
+    }
+private:
+    CacheEntry ways_[NumberOfWays];
+    SplitWord16 mruBits_ {0};
+    static constexpr byte LRUTable[256] {
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+            7, 7, 7, 7, 7, 7, 7, 7,
+
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6,
+
+            5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5,
+
+            4, 4, 4, 4, 4, 4, 4, 4,
+            4, 4, 4, 4, 4, 4, 4, 4,
+
+            3, 3, 3, 3, 3, 3, 3, 3,
+            2, 2, 2, 2,
+            1, 1,
+            0, 0,
+    };
+};
+
 
 template<template<auto, auto, auto> typename C, uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
 class GenericCache {
