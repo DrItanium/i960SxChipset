@@ -413,7 +413,7 @@ private:
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
         if (mruBits_.bytes[1] != 0xFF) {
-            return LRUTable[mruBits_.bytes[1]] + 8; // add eight to the position
+            return LRUTable2[mruBits_.bytes[1]]; // add eight to the position
         } else {
             return LRUTable[mruBits_.bytes[0]];
         }
@@ -461,6 +461,46 @@ private:
             1, 1,
             0, 0,
     };
+    static constexpr byte LRUTable2[256] {
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+            15, 15, 15, 15, 15, 15, 15, 15,
+
+            14, 14, 14, 14, 14, 14, 14, 14,
+            14, 14, 14, 14, 14, 14, 14, 14,
+            14, 14, 14, 14, 14, 14, 14, 14,
+            14, 14, 14, 14, 14, 14, 14, 14,
+            14, 14, 14, 14, 14, 14, 14, 14,
+            14, 14, 14, 14, 14, 14, 14, 14,
+            14, 14, 14, 14, 14, 14, 14, 14,
+            14, 14, 14, 14, 14, 14, 14, 14,
+
+            13, 13, 13, 13, 13, 13, 13, 13,
+            13, 13, 13, 13, 13, 13, 13, 13,
+            13, 13, 13, 13, 13, 13, 13, 13,
+            13, 13, 13, 13, 13, 13, 13, 13,
+
+            12, 12, 12, 12, 12, 12, 12, 12,
+            12, 12, 12, 12, 12, 12, 12, 12,
+
+            11, 11, 11, 11, 11, 11, 11, 11,
+            10, 10, 10, 10,
+            9, 9,
+            8, 0,
+    };
 };
 
 
@@ -498,8 +538,8 @@ private:
 };
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto NumEntries = 256;
-constexpr auto NumOffsetBits = 5;
+constexpr auto NumEntries = 128;
+constexpr auto NumOffsetBits = 6;
 template<template<auto, auto, auto> typename T>
 using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits>;
 Cache_t<SixteenWayLRUCacheWay> theCache;
