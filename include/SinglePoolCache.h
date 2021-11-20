@@ -67,13 +67,13 @@ public:
         }
     }
     byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(entries_);
+        return reinterpret_cast<byte*>(backingStorage_);
     }
     void begin() noexcept {
         clear();
         // set everything up
     }
-    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
+    constexpr auto getCacheSize() const noexcept { return sizeof(backingStorage_); }
 private:
     CacheEntry backingStorage_[ActualNumberOfEntries][CacheWay::NumberOfWays];
     CacheWay entries_[ActualNumberOfEntries];
