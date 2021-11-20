@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "CacheEntry.h"
 #include "DirectMappedCacheWay.h"
+#include "TwoWayLRUCacheEntry.h"
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 #include "DisplayInterface.h"
@@ -63,36 +64,6 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 
 
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
-class TwoWayLRUCacheWay {
-public:
-    static constexpr auto NumberOfWays = 2;
-    static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
-    using TaggedAddress = typename CacheEntry::TaggedAddress;
-public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i].matches(theAddress)) {
-                mostRecentlyUsed_ = (i != 0);
-                return ways_[i];
-            }
-        }
-        auto index = (!mostRecentlyUsed_? 1 : 0);
-        mostRecentlyUsed_ = (index != 0);
-        ways_[index].reset(theAddress);
-        return ways_[index];
-    }
-    void clear() noexcept {
-        for (auto& way : ways_) {
-            way.clear();
-        }
-        mostRecentlyUsed_ = false;
-    }
-private:
-    CacheEntry ways_[NumberOfWays];
-    bool mostRecentlyUsed_ = false;
-};
 
 
 
