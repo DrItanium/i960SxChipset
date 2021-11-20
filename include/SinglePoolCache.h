@@ -61,6 +61,7 @@ public:
                 targetEntry.setWay(way[j], j);
             }
         }
+        // then clear both the way and underlying entries
         for (auto& a : entries_) {
             a.clear();
         }
