@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 
 #include "CacheEntry.h"
+#include "DirectMappedCacheWay.h"
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 #include "DisplayInterface.h"
@@ -61,25 +62,6 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheRTCInterface>;
 
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
-class DirectMappedCacheWay {
-public:
-    static constexpr auto NumberOfWays = 1;
-    static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
-    using TaggedAddress = typename CacheEntry::TaggedAddress;
-public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        // okay first we need to see if we hit any matches
-        if (!way_.matches(theAddress)) {
-            way_.reset(theAddress);
-        }
-        return way_;
-    }
-    void clear() noexcept { way_.clear(); }
-private:
-    CacheEntry way_;
-};
 
 template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
 class TwoWayLRUCacheWay {
