@@ -43,6 +43,7 @@ public:
     using CacheWay = C<getNumberOfBitsForNumberOfEntries(numEntries/NumCacheWays), numAddressBits, numOffsetBits, T>;
     static constexpr auto WayMask = CacheWay::WayMask;
     static constexpr auto MaximumNumberOfEntries = numEntries;
+    static constexpr auto ActualNumberOfEntries = MaximumNumberOfEntries / CacheWay :: NumberOfWays;
     using CacheEntry = typename CacheWay::CacheEntry;
     using TaggedAddress = typename CacheWay::TaggedAddress;
 public:
@@ -52,6 +53,14 @@ public:
         return entries_[theAddress.getTagIndex()].getLine(theAddress);
     }
     void clear() {
+        // populate the lines from a separate block of entries known as the backing storage
+        for (size_t i = 0; i < ActualNumberOfEntries; ++i) {
+            auto& way = backingStorage_[i];
+            CacheWay& targetEntry = entries_[i];
+            for (size_t j = 0; j < CacheWay::NumberOfWays; ++j) {
+                targetEntry.setWay(way[j], j);
+            }
+        }
         for (auto& a : entries_) {
             a.clear();
         }
@@ -61,11 +70,12 @@ public:
     }
     void begin() noexcept {
         clear();
+        // set everything up
     }
     constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
 private:
-    CacheEntry backingStorage_[MaximumNumberOfEntries];
-    CacheWay entries_[MaximumNumberOfEntries / CacheWay::NumberOfWays];
+    CacheEntry backingStorage_[ActualNumberOfEntries][CacheWay::NumberOfWays];
+    CacheWay entries_[ActualNumberOfEntries];
 };
 
 #endif //SXCHIPSET_SINGLEPOOLCACHE_H
