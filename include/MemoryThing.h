@@ -27,7 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define I960SXCHIPSET_MEMORYTHING_H
 #include <Arduino.h>
 #include "Pinout.h"
-[[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
+#include "i960SxChipset.h"
 /**
  * @brief Describes the interface between a component and a memory request, it introduces some latency with the trade off being easier maintenance
  */

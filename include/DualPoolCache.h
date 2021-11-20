@@ -23,24 +23,10 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 //
-// Created by jwscoggins on 10/31/21.
+// Created by jwscoggins on 11/19/21.
 //
 
-#ifndef SXCHIPSET_I960SXCHIPSET_H
-#define SXCHIPSET_I960SXCHIPSET_H
+#ifndef SXCHIPSET_DUALPOOLCACHE_H
+#define SXCHIPSET_DUALPOOLCACHE_H
 
-using BodyFunction = void (*)();
-BodyFunction getNonDebugBody(byte index) noexcept;
-BodyFunction getDebugBody(byte index) noexcept;
-
-template<bool inDebugMode>
-BodyFunction getBody(byte index) noexcept {
-    if constexpr (inDebugMode) {
-        return getDebugBody(index);
-    } else {
-        return getNonDebugBody(index);
-    }
-}
-
-[[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
-#endif //SXCHIPSET_I960SXCHIPSET_H
+#endif //SXCHIPSET_DUALPOOLCACHE_H

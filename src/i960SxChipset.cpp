@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SdFat.h>
 #include "Pinout.h"
 
+#include "CacheEntry.h"
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 #include "DisplayInterface.h"
@@ -59,106 +60,13 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheDisplayInterface,
         TheRTCInterface>;
 
-/**
- * @brief Describes a single cache line which associates an address with 32 bytes of storage
- */
-template<byte numTagBits, byte maxAddressBits, byte numLowestBits>
-class CacheEntry final {
-public:
-    static constexpr size_t NumBytesCached = pow2(numLowestBits);
-    static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
-    static constexpr byte CacheEntryMask = NumWordsCached - 1;
-    static constexpr byte InvalidCacheLineState = 0xFF;
-    static constexpr byte CleanCacheLineState = 0xFE;
-    using TaggedAddress = ::TaggedAddress<numTagBits, maxAddressBits, numLowestBits>;
-public:
-    void reset(TaggedAddress newTag) noexcept {
-        // no match so pull the data in from main memory
-        if (isDirty()) {
-            // we compute the overall range as we go through this stuff
-            byte end = ((highestUpdated_ - dirty_) + 1);
-            //Serial.print(F("end offset: "));
-            //Serial.println(end);
-            OnboardPSRAMBlock::write(TaggedAddress{key_, newTag.getTagIndex(), 0}.getAddress() + (dirty_ * sizeof(SplitWord16)),
-                                     reinterpret_cast<byte *>(data + dirty_),
-                                     sizeof(SplitWord16) * end);
-        }
-        dirty_ = CleanCacheLineState;
-        highestUpdated_ = 0;
-        // since we have called reset, now align the new address internally
-        key_ = newTag.getRest();
-        // this is a _very_ expensive operation
-        OnboardPSRAMBlock::readCacheLine(TaggedAddress{key_, newTag.getTagIndex(), 0}, reinterpret_cast<byte*>(data));
-    }
-    /**
-     * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
-     */
-    void clear() noexcept {
-        // clear all flags
-        dirty_ = InvalidCacheLineState;
-        highestUpdated_ = 0;
-        key_ = 0;
-        for (auto& a : data) {
-            a.wholeValue_ = 0;
-        }
-    }
-    [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (addr.getRest() == key_); }
-    [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
-    void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
-        // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
-        auto &target = data[offset];
-        if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
-            switch (style) {
-                case LoadStoreStyle::Full16:
-                    target = value;
-                    break;
-                case LoadStoreStyle::Lower8:
-                    target.bytes[0] = value.bytes[0];
-                    break;
-                case LoadStoreStyle::Upper8:
-                    target.bytes[1] = value.bytes[1];
-                    break;
-                default:
-                    signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
-            }
-            // do a comparison at the end to see if we actually changed anything
-            // the idea is that if the values don't change don't mark the cache line as dirty again
-            // it may already be dirty but don't force the matter on any write
-            // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
-            if (oldValue != target.getWholeValue()) {
-                // consumes more flash to do it this way but we only update ram when we have something to change
-                if (offset < dirty_) {
-                    dirty_ = offset;
-                }
-                // compute the highest updated entry, useful for computing an upper transfer range
-                if (offset > highestUpdated_) {
-                    highestUpdated_ = offset;
-                }
-            }
-        }
-    }
-    [[nodiscard]] constexpr bool isValid() const noexcept { return dirty_ != InvalidCacheLineState; }
-    [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_ < NumWordsCached; }
-    [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
-private:
-    SplitWord16 data[NumWordsCached]; // 16 bytes
-    typename TaggedAddress::RestType key_ = 0;
-    /**
-     * @brief Describes lowest dirty word in a valid cache line; also denotes if the cache line is valid or not
-     */
-    byte dirty_ = InvalidCacheLineState;
-    /**
-     * @brief The highest updated word in the cache line
-     */
-    byte highestUpdated_ = 0;
-};
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
 class DirectMappedCacheWay {
 public:
     static constexpr auto NumberOfWays = 1;
     static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
@@ -173,12 +81,12 @@ private:
     CacheEntry way_;
 };
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
 class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
     static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
@@ -206,12 +114,12 @@ private:
 
 
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
 class FourWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 4;
     static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
@@ -265,12 +173,12 @@ private:
 
 };
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
 class EightWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 8;
     static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
@@ -358,12 +266,12 @@ private:
     };
 };
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
 class SixteenWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 16;
     static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
@@ -506,13 +414,13 @@ private:
 };
 
 
-template<template<auto, auto, auto> typename C, uint16_t numEntries, byte numAddressBits, byte numOffsetBits>
+template<template<auto, auto, auto, typename> typename C, uint16_t numEntries, byte numAddressBits, byte numOffsetBits, typename T>
 class GenericCache {
 private:
-    using FakeCacheType = C<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits, numOffsetBits>;
+    using FakeCacheType = C<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits, numOffsetBits, T>;
 public:
     static constexpr auto NumCacheWays = FakeCacheType::NumberOfWays;
-    using CacheWay = C<getNumberOfBitsForNumberOfEntries(numEntries/NumCacheWays), numAddressBits, numOffsetBits>;
+    using CacheWay = C<getNumberOfBitsForNumberOfEntries(numEntries/NumCacheWays), numAddressBits, numOffsetBits, T>;
     static constexpr auto WayMask = CacheWay::WayMask;
     static constexpr auto MaximumNumberOfEntries = numEntries;
     using CacheEntry = typename CacheWay::CacheEntry;
@@ -542,8 +450,8 @@ constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 128;
 constexpr auto NumOffsetBits = 6;
-template<template<auto, auto, auto> typename T>
-using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits>;
+template<template<auto, auto, auto, typename> typename T>
+using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits, OnboardPSRAMBlock>;
 Cache_t<EightWayLRUCacheWay> theCache;
 
 
