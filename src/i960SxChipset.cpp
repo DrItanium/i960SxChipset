@@ -389,26 +389,26 @@ private:
     void updateFlags(byte index) noexcept {
         // cache the lookup
         static constexpr uint16_t lookup[NumberOfWays] {
-                _BV(0),
-                _BV(1),
-                _BV(2),
-                _BV(3),
-                _BV(4),
-                _BV(5),
-                _BV(6),
-                _BV(7),
-                _BV(8),
-                _BV(9),
-                _BV(10),
-                _BV(11),
-                _BV(12),
-                _BV(13),
-                _BV(14),
-                _BV(15),
+                _BV(static_cast<uint16_t>(0)),
+                _BV(static_cast<uint16_t>(1)),
+                _BV(static_cast<uint16_t>(2)),
+                _BV(static_cast<uint16_t>(3)),
+                _BV(static_cast<uint16_t>(4)),
+                _BV(static_cast<uint16_t>(5)),
+                _BV(static_cast<uint16_t>(6)),
+                _BV(static_cast<uint16_t>(7)),
+                _BV(static_cast<uint16_t>(8)),
+                _BV(static_cast<uint16_t>(9)),
+                _BV(static_cast<uint16_t>(10)),
+                _BV(static_cast<uint16_t>(11)),
+                _BV(static_cast<uint16_t>(12)),
+                _BV(static_cast<uint16_t>(13)),
+                _BV(static_cast<uint16_t>(14)),
+                _BV(static_cast<uint16_t>(15)),
         };
         mruBits_.wholeValue_ |= lookup[index];
         if (mruBits_.wholeValue_ == 0xFFFF) {
-            mruBits_.wholeValue_ |= lookup[index];
+            mruBits_.wholeValue_ = lookup[index];
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
@@ -498,8 +498,8 @@ private:
 };
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto NumEntries = 512;
-constexpr auto NumOffsetBits = 4;
+constexpr auto NumEntries = 256;
+constexpr auto NumOffsetBits = 5;
 template<template<auto, auto, auto> typename T>
 using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits>;
 Cache_t<SixteenWayLRUCacheWay> theCache;
