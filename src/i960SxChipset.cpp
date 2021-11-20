@@ -66,21 +66,12 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheDisplayInterface,
         TheRTCInterface>;
 
-
-
-
-
-
-
-
-
-
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto NumEntries = 128;
 constexpr auto NumOffsetBits = 6;
 template<template<auto, auto, auto, typename> typename T>
-using Cache_t = GenericCache<T, NumEntries, NumAddressBits, NumOffsetBits, OnboardPSRAMBlock>;
+using Cache_t = SinglePoolCache<T, NumEntries, NumAddressBits, NumOffsetBits, OnboardPSRAMBlock>;
 Cache_t<EightWayLRUCacheWay> theCache;
 
 
