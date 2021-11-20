@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DirectMappedCacheWay.h"
 #include "TwoWayLRUCacheEntry.h"
 #include "FourWayPseudoLRUEntry.h"
+#include "EightWayPseudoLRUEntry.h"
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 #include "DisplayInterface.h"
@@ -69,98 +70,6 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 
 
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
-class EightWayLRUCacheWay {
-public:
-    static constexpr auto NumberOfWays = 8;
-    static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
-    using TaggedAddress = typename CacheEntry::TaggedAddress;
-public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i].matches(theAddress)) {
-                updateFlags(i);
-                return ways_[i];
-            }
-        }
-        // find the inverse of the most recently used
-        auto index = getLeastRecentlyUsed();
-        updateFlags(index);
-        ways_[index].reset(theAddress);
-        return ways_[index];
-    }
-    void clear() noexcept {
-        for (auto& way : ways_) {
-            way.clear();
-        }
-        mruBits_ = 0;
-    }
-private:
-    void updateFlags(byte index) noexcept {
-        // cache the lookup
-        static constexpr byte lookup[8] {
-                _BV(0),
-                _BV(1),
-                _BV(2),
-                _BV(3),
-                _BV(4),
-                _BV(5),
-                _BV(6),
-                _BV(7),
-        };
-        mruBits_ |= lookup[index];
-        if (mruBits_ == 0xFF) {
-            mruBits_ = lookup[index];
-        }
-    }
-    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        return LRUTable[mruBits_];
-    }
-private:
-    CacheEntry ways_[NumberOfWays];
-    byte mruBits_ = 0;
-    static constexpr byte LRUTable[256] {
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7,
-
-            6, 6, 6, 6, 6, 6, 6, 6,
-            6, 6, 6, 6, 6, 6, 6, 6,
-            6, 6, 6, 6, 6, 6, 6, 6,
-            6, 6, 6, 6, 6, 6, 6, 6,
-            6, 6, 6, 6, 6, 6, 6, 6,
-            6, 6, 6, 6, 6, 6, 6, 6,
-            6, 6, 6, 6, 6, 6, 6, 6,
-            6, 6, 6, 6, 6, 6, 6, 6,
-
-            5, 5, 5, 5, 5, 5, 5, 5,
-            5, 5, 5, 5, 5, 5, 5, 5,
-            5, 5, 5, 5, 5, 5, 5, 5,
-            5, 5, 5, 5, 5, 5, 5, 5,
-
-            4, 4, 4, 4, 4, 4, 4, 4,
-            4, 4, 4, 4, 4, 4, 4, 4,
-
-            3, 3, 3, 3, 3, 3, 3, 3,
-            2, 2, 2, 2,
-            1, 1,
-            0, 0,
-    };
-};
 
 template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
 class SixteenWayLRUCacheWay {
