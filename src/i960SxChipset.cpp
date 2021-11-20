@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CacheEntry.h"
 #include "DirectMappedCacheWay.h"
 #include "TwoWayLRUCacheEntry.h"
+#include "FourWayPseudoLRUEntry.h"
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 #include "DisplayInterface.h"
@@ -67,64 +68,6 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 
 
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
-class FourWayLRUCacheWay {
-public:
-    static constexpr auto NumberOfWays = 4;
-    static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
-    using TaggedAddress = typename CacheEntry::TaggedAddress;
-public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i].matches(theAddress)) {
-                updateFlags(i);
-                return ways_[i];
-            }
-        }
-        // find the inverse of the most recently used
-        auto index = getLeastRecentlyUsed();
-        updateFlags(index);
-        ways_[index].reset(theAddress);
-        return ways_[index];
-    }
-    void clear() noexcept {
-        for (auto& way : ways_) {
-            way.clear();
-        }
-        flags_ = 0;
-    }
-private:
-    void updateFlags(byte index) noexcept {
-        // we have to take the index and current value into account
-        // bit 0: top
-        // bit 1: left
-        // bit 2: right
-        static constexpr byte lookup[4] {
-                _BV(0),
-                _BV(1),
-                _BV(2),
-                _BV(3),
-        };
-        flags_ |= lookup[index];
-        if (flags_ >= 0xF) {
-            flags_ = lookup[index];
-        }
-    }
-    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        return LRUTable[flags_];
-    }
-private:
-    CacheEntry ways_[NumberOfWays];
-    byte flags_ = 0;
-    static constexpr byte LRUTable[16] {
-            3, 3, 3, 3, 3, 3, 3, 3,
-            2, 2, 2, 2,
-            1, 1,
-            0, 0,
-    };
-
-};
 
 template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
 class EightWayLRUCacheWay {
