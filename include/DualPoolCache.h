@@ -23,10 +23,17 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 //
+// Define two cache pools that compliment each other
 // Created by jwscoggins on 11/19/21.
 //
 
 #ifndef SXCHIPSET_DUALPOOLCACHE_H
 #define SXCHIPSET_DUALPOOLCACHE_H
+#include "MCUPlatform.h"
+#include "Pinout.h"
+#include "TaggedCacheAddress.h"
+#include "CacheEntry.h"
+
+
 
 #endif //SXCHIPSET_DUALPOOLCACHE_H
