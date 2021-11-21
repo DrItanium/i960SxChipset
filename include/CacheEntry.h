@@ -39,9 +39,10 @@ public:
     static constexpr size_t NumBytesCached = pow2(numLowestBits);
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr byte CacheEntryMask = NumWordsCached - 1;
-    static constexpr byte InvalidCacheLineState = 0xFF;
-    static constexpr byte CleanCacheLineState = 0xFE;
     using TaggedAddress = ::TaggedAddress<numTagBits, maxAddressBits, numLowestBits>;
+    using OffsetType = typename TaggedAddress::LowerType ;
+    static constexpr OffsetType  InvalidCacheLineState = 0xFF;
+    static constexpr OffsetType CleanCacheLineState = 0xFE;
 public:
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
@@ -74,8 +75,8 @@ public:
         }
     }
     [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (addr.getRest() == key_); }
-    [[nodiscard]] constexpr auto get(byte offset) const noexcept { return data[offset].getWholeValue(); }
-    void set(byte offset, LoadStoreStyle style, SplitWord16 value) noexcept {
+    [[nodiscard]] constexpr auto get(OffsetType offset) const noexcept { return data[offset].getWholeValue(); }
+    void set(OffsetType offset, LoadStoreStyle style, SplitWord16 value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         auto &target = data[offset];
         if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
@@ -111,16 +112,42 @@ public:
     [[nodiscard]] constexpr bool isValid() const noexcept { return dirty_ != InvalidCacheLineState; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_ < NumWordsCached; }
     [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
+
+    OffsetType write(OffsetType startingOffset, byte *buf, OffsetType capacity) noexcept {
+        auto* ptr = reinterpret_cast<byte*>(data) + startingOffset;
+        for (OffsetType i = 0; i < capacity; ++i) {
+            // while the comparison slows things down, it will make sure that updates which do not affect the cache will not
+            auto oldPtr = ptr[i];
+            ptr[i] = buf[i];
+            if (oldPtr != ptr[i]) {
+                if (i < dirty_) {
+                    dirty_ = i;
+                }
+                if (i > highestUpdated_) {
+                    highestUpdated_ = startingOffset;
+                }
+            }
+        }
+        return capacity;
+    }
+    OffsetType read(OffsetType startingOffset, byte *buf, OffsetType capacity) noexcept {
+        auto* ptr = reinterpret_cast<byte*>(data) + startingOffset;
+        for (OffsetType i = 0; i < capacity; ++i) {
+            // while the comparison slows things down, it will make sure that updates which do not affect the cache will not
+            buf[i] = ptr[i];
+        }
+        return capacity;
+    }
 private:
     SplitWord16 data[NumWordsCached]; // 16 bytes
     typename TaggedAddress::RestType key_ = 0;
     /**
      * @brief Describes lowest dirty word in a valid cache line; also denotes if the cache line is valid or not
      */
-    byte dirty_ = InvalidCacheLineState;
+    OffsetType dirty_ = InvalidCacheLineState;
     /**
      * @brief The highest updated word in the cache line
      */
-    byte highestUpdated_ = 0;
+    OffsetType highestUpdated_ = 0;
 };
 #endif //SXCHIPSET_CACHEENTRY_H

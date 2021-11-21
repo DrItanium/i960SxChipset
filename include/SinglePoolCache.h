@@ -46,10 +46,14 @@ public:
     static constexpr auto ActualNumberOfEntries = MaximumNumberOfEntries / CacheWay :: NumberOfWays;
     using CacheEntry = typename CacheWay::CacheEntry;
     using TaggedAddress = typename CacheWay::TaggedAddress;
+    static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
     [[nodiscard]] CacheEntry& getLine() noexcept {
         // only align if we need to reset the chip
-        TaggedAddress theAddress(ProcessorInterface::getAddress());
+        return getLine(TaggedAddress(ProcessorInterface::getAddress()));
+    }
+    [[nodiscard]] CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
+        // only align if we need to reset the chip
         return entries_[theAddress.getTagIndex()].getLine(theAddress);
     }
     void clear() {
@@ -74,6 +78,32 @@ public:
         // set everything up
     }
     constexpr auto getCacheSize() const noexcept { return sizeof(backingStorage_); }
+    size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+        // reading and writing to the cache in a linear fashion will be kinda strange.
+        // There are several ways to do this but I think the biggest requirement is that we only honor the portion that spans across one
+        // cache line only!
+        TaggedAddress theAddress{address};
+        auto startingOffset = theAddress.getOffset();
+        auto realCapacity = capacity;
+        if (capacity > NumBytesCached) {
+            realCapacity = NumBytesCached;
+        }
+        realCapacity -= startingOffset;
+        return getLine(theAddress).write(startingOffset, theAddress.getOffset(), realCapacity);
+    }
+    size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+        // reading and writing to the cache in a linear fashion will be kinda strange.
+        // There are several ways to do this but I think the biggest requirement is that we only honor the portion that spans across one
+        // cache line only!
+        TaggedAddress theAddress{address};
+        auto startingOffset = theAddress.getOffset();
+        auto realCapacity = capacity;
+        if (capacity > NumBytesCached) {
+            realCapacity = NumBytesCached;
+        }
+        realCapacity -= startingOffset;
+        return getLine(theAddress).read(startingOffset, buf, realCapacity);
+    }
 private:
     CacheEntry backingStorage_[ActualNumberOfEntries][CacheWay::NumberOfWays];
     CacheWay entries_[ActualNumberOfEntries];
