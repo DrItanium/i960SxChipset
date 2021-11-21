@@ -115,8 +115,10 @@ public:
     byte* viewAsStorage() noexcept {
         return reinterpret_cast<byte*>(&caches_[0]);
     }
-    static constexpr auto RandomTableSize = 256;
+    static constexpr auto RandomTableSize = 16;
+    static constexpr auto NumCounterBits = numberOfBitsForCount(RandomTableSize);
     void begin() noexcept {
+        counter_ = 0;
         for (auto i = 0; i < RandomTableSize; ++i) {
             randomTable[i] = random(NumberOfCaches);
         }
@@ -129,7 +131,7 @@ public:
 private:
     Cache caches_[NumberOfCaches];
     byte mostRecentHit_ = 0;
-    byte counter_ = 0;
+    byte counter_ : NumCounterBits;
     byte randomTable[RandomTableSize] = { 0};
 };
 
@@ -138,7 +140,7 @@ template<template<auto, auto, auto, typename> typename L,
         uint16_t IndividualCacheSize,
         byte CacheLineSize>
 using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
-L1Cache<TwoWayLRUCacheWay, 11, 1024, 6> theCache;
+L1Cache<FourWayLRUCacheWay, 11, 1024, 6> theCache;
 
 
 
