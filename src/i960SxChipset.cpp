@@ -68,11 +68,9 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto L1LineSize = 4;
-constexpr auto L1Size = 2048;
-constexpr auto L2LineSize = 6;
-constexpr auto L2Size = 8192;
-using L1Cache = CacheInstance_t<EightWayLRUCacheWay, L2Size, NumAddressBits, L2LineSize, OnboardPSRAMBlock>;
+constexpr auto CacheLineSize = 6;
+constexpr auto CacheSize = 8192;
+using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
 L1Cache theCache;
 
 
