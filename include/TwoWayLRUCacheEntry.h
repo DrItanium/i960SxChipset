@@ -43,12 +43,23 @@ public:
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        if (auto result = find (theAddress); result) {
+            return *result;
+        } else {
+            return reset(theAddress);
+        }
+    }
+    CacheEntry* find(TaggedAddress theAddress) noexcept {
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i]->matches(theAddress)) {
                 mostRecentlyUsed_ = (i != 0);
                 return *ways_[i];
             }
         }
+        return nullptr;
+    }
+    CacheEntry&
+    reset(TaggedAddress theAddress) noexcept {
         auto index = (!mostRecentlyUsed_? 1 : 0);
         mostRecentlyUsed_ = (index != 0);
         ways_[index]->reset(theAddress);

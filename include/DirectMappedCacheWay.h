@@ -44,9 +44,20 @@ public:
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         // okay first we need to see if we hit any matches
-        if (!way_->matches(theAddress)) {
-            way_->reset(theAddress);
+        if (way_->matches(theAddress)) {
+            return *way_;
         }
+        return reset(theAddress);
+    }
+    CacheEntry* find(TaggedAddress theAddress) noexcept {
+        if (!way_->matches(theAddress))  {
+            return nullptr;
+        } else {
+            return way_;
+        }
+    }
+    CacheEntry& reset(TaggedAddress theAddress) noexcept {
+        way_->reset(theAddress);
         return *way_;
     }
     void clear() noexcept { way_->clear(); }
