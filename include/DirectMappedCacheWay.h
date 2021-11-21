@@ -40,6 +40,7 @@ public:
     static constexpr auto WayMask = NumberOfWays - 1;
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
+    static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         // okay first we need to see if we hit any matches
