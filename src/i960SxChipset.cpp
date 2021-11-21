@@ -68,9 +68,48 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto CacheLineSize = 6;
-constexpr auto CacheSize = 8192;
-using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+//constexpr auto CacheLineSize = 6;
+//constexpr auto CacheSize = 8192;
+//using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+//L1Cache theCache;
+class MirroredTripleCache {
+public:
+    using Cache = CacheInstance_t<EightWayLRUCacheWay, 4096, NumAddressBits, 6, OnboardPSRAMBlock>;
+    using CacheEntry = typename Cache::CacheEntry;
+    using TaggedAddress = typename Cache::TaggedAddress;
+    static constexpr auto NumWordsCached = Cache::NumWordsCached;
+    static constexpr auto CacheEntryMask = Cache::CacheEntryMask;
+
+    [[nodiscard]] CacheEntry& getLine() noexcept {
+        // we have three cache pools to look through so check the first one
+        TaggedAddress theAddress(ProcessorInterface::getAddress());
+        for (auto& cache : caches_) {
+            if (auto* target = cache.find(theAddress); target) {
+                return *target;
+            }
+        }
+        // cache miss, do random replacement
+        return caches_[random(3)].reset(theAddress);
+    }
+    void clear() {
+        for (auto& a : caches_) {
+            a.clear();
+        }
+    }
+    byte* viewAsStorage() noexcept {
+        return reinterpret_cast<byte*>(caches_);
+    }
+    void begin() noexcept {
+        for (auto& a : caches_) {
+            a.begin();
+        }
+        // set everything up
+    }
+    [[nodiscard]] constexpr auto getCacheSize() const noexcept { return sizeof(caches_); }
+private:
+    Cache caches_[3];
+};
+using L1Cache = MirroredTripleCache;
 L1Cache theCache;
 
 
@@ -285,6 +324,7 @@ extern DispatchTable lookupTable;
 extern DispatchTable lookupTable_Debug;
 // the setup routine runs once when you press reset:
 void setup() {
+    randomSeed(analogRead(A0));
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function

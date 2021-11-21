@@ -58,15 +58,13 @@ public:
         // only align if we need to reset the chip
         return entries_[theAddress.getTagIndex()].getLine(theAddress);
     }
+    [[nodiscard]] auto* find(const TaggedAddress& theAddress) noexcept {
+        return entries_[theAddress.getTagIndex()].find(theAddress);
+    }
+    [[nodiscard]] CacheEntry& reset(const TaggedAddress& theAddress) noexcept {
+        return entries_[theAddress.getTagIndex()].reset(theAddress);
+    }
     void clear() {
-        // populate the lines from a separate block of entries known as the backing storage
-        for (size_t i = 0; i < ActualNumberOfEntries; ++i) {
-            auto& way = backingStorage_[i];
-            CacheWay& targetEntry = entries_[i];
-            for (size_t j = 0; j < CacheWay::NumberOfWays; ++j) {
-                targetEntry.setWay(way[j], j);
-            }
-        }
         // then clear both the way and underlying entries
         for (auto& a : entries_) {
             a.clear();
@@ -76,6 +74,14 @@ public:
         return reinterpret_cast<byte*>(backingStorage_);
     }
     void begin() noexcept {
+        // populate the lines from a separate block of entries known as the backing storage
+        for (size_t i = 0; i < ActualNumberOfEntries; ++i) {
+            auto& way = backingStorage_[i];
+            CacheWay& targetEntry = entries_[i];
+            for (size_t j = 0; j < CacheWay::NumberOfWays; ++j) {
+                targetEntry.setWay(way[j], j);
+            }
+        }
         clear();
         // set everything up
     }
