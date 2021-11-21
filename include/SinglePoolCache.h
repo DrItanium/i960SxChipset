@@ -79,6 +79,14 @@ public:
     }
     constexpr auto getCacheSize() const noexcept { return sizeof(backingStorage_); }
     size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+        Serial.print(__FUNCTION__);
+        Serial.print(F("(0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(reinterpret_cast<ptrdiff_t>(buf), HEX);
+        Serial.print(F(", "));
+        Serial.print(capacity);
+        Serial.println(F(")"));
         // reading and writing to the cache in a linear fashion will be kinda strange.
         // There are several ways to do this but I think the biggest requirement is that we only honor the portion that spans across one
         // cache line only!
@@ -92,6 +100,14 @@ public:
         return getLine(theAddress).write(startingOffset, buf, realCapacity);
     }
     size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+        Serial.print(__FUNCTION__);
+        Serial.print(F("(0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(reinterpret_cast<ptrdiff_t>(buf), HEX);
+        Serial.print(F(", "));
+        Serial.print(capacity);
+        Serial.println(F(")"));
         // reading and writing to the cache in a linear fashion will be kinda strange.
         // There are several ways to do this but I think the biggest requirement is that we only honor the portion that spans across one
         // cache line only!

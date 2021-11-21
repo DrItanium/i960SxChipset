@@ -75,7 +75,7 @@ constexpr auto L2Size = 8192;
 template<template<auto, auto, auto, typename> typename C, uint16_t backingStoreSize, byte numOffsetBits, typename T>
 using Cache_t = Cache<C, backingStoreSize, NumAddressBits, numOffsetBits, T>;
 using L2Cache = Cache_t<EightWayLRUCacheWay, L2Size, L2LineSize, OnboardPSRAMBlock>;
-using L1Cache = Cache_t<DirectMappedCacheWay, L1Size, L1LineSize, L2Cache>;
+using L1Cache = Cache_t<TwoWayLRUCacheWay, L1Size, L1LineSize, L2Cache>;
 
 
 
