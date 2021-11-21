@@ -72,13 +72,14 @@ constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 //constexpr auto CacheSize = 8192;
 //using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
 //L1Cache theCache;
-class MirroredTripleCache {
+class MultiCache {
 public:
-    using Cache = CacheInstance_t<FourWayLRUCacheWay, 4096, NumAddressBits, 6, OnboardPSRAMBlock>;
+    using Cache = CacheInstance_t<FourWayLRUCacheWay, 2048, NumAddressBits, 6, OnboardPSRAMBlock>;
     using CacheEntry = typename Cache::CacheEntry;
     using TaggedAddress = typename Cache::TaggedAddress;
     static constexpr auto NumWordsCached = Cache::NumWordsCached;
     static constexpr auto CacheEntryMask = Cache::CacheEntryMask;
+    static constexpr auto NumberOfCaches = 5;
 
     [[nodiscard]] CacheEntry& getLine() noexcept {
         // we have three cache pools to look through so check the first one
@@ -89,7 +90,7 @@ public:
             }
         }
         // cache miss, do random replacement
-        return caches_[random(3)].reset(theAddress);
+        return caches_[random(NumberOfCaches)].reset(theAddress);
     }
     void clear() {
         for (auto& a : caches_) {
@@ -107,9 +108,9 @@ public:
     }
     [[nodiscard]] constexpr auto getCacheSize() const noexcept { return sizeof(caches_); }
 private:
-    Cache caches_[3];
+    Cache caches_[NumberOfCaches];
 };
-using L1Cache = MirroredTripleCache;
+using L1Cache = MultiCache;
 L1Cache theCache;
 
 
