@@ -68,11 +68,15 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto NumEntries = 128;
-constexpr auto NumOffsetBits = 6;
-template<template<auto, auto, auto, typename> typename T>
-using Cache_t = SinglePoolCache<T, NumEntries, NumAddressBits, NumOffsetBits, OnboardPSRAMBlock>;
-Cache_t<EightWayLRUCacheWay> theCache;
+constexpr auto L1LineSize = 6;
+constexpr auto L1Size = 2048;
+constexpr auto L2LineSize = 6;
+constexpr auto L2Size = 8192;
+template<template<auto, auto, auto, typename> typename C, uint16_t backingStoreSize, byte numOffsetBits, typename T>
+using Cache_t = Cache<C, backingStoreSize, NumAddressBits, numOffsetBits, T>;
+using L2Cache = Cache_t<EightWayLRUCacheWay, L2Size, L2LineSize, OnboardPSRAMBlock>;
+using L1Cache = Cache_t<DirectMappedCacheWay, L1Size, L1LineSize, L2Cache>;
+
 
 
 [[nodiscard]] bool informCPU() noexcept {

@@ -109,4 +109,41 @@ private:
     CacheWay entries_[ActualNumberOfEntries];
 };
 
+/**
+ * @brief A wrapper around a single cache pool to make chaining possible
+ * @tparam C The type of the cache line
+ * @tparam backingStoreSize The number of bytes that this cache will use as storage (does not include tag bits only the underlying core storage)
+ * @tparam numAddressBits  the number of address bits that make up the entire tag address
+ * @tparam numOffsetBits  The number of bits that make up the storage within the bytes itself
+ * @tparam T A static class that the cache data is read from and written to
+ */
+template<template<auto, auto, auto, typename> typename C,
+         uint16_t backingStoreSize,
+         byte numAddressBits,
+         byte numOffsetBits,
+         typename T>
+struct Cache {
+public:
+    static constexpr auto NumOffsetBits = numOffsetBits;
+    static constexpr auto NumBackingStoreBytes = backingStoreSize;
+    static constexpr auto TotalEntryCount = NumBackingStoreBytes/ pow2(NumOffsetBits);
+    using UnderlyingCache_t = SinglePoolCache<C, TotalEntryCount, numAddressBits, numOffsetBits, T>;
+    using CacheLine = typename UnderlyingCache_t::CacheEntry;
+public:
+    Cache() = delete;
+    ~Cache() = delete;
+    Cache(const Cache&) = delete;
+    Cache(Cache&&) = delete;
+    /// @todo delete more of the default methods
+    [[nodiscard]] static CacheLine& getLine() noexcept { return theCache_.getLine(); }
+    [[nodiscard]] static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept { return theCache_.read(address, buf, capacity); }
+    [[nodiscard]] static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept { return theCache_.write(address, buf, capacity); }
+    static void begin() noexcept { theCache_.begin(); }
+    static void clear() noexcept { theCache_.clear(); }
+    [[nodiscard]] static constexpr auto getCacheSize() noexcept { return backingStoreSize; }
+    [[nodiscard]] static auto viewAsStorage() noexcept { return theCache_.viewAsStorage(); }
+private:
+    static inline UnderlyingCache_t theCache_;
+};
+
 #endif //SXCHIPSET_SINGLEPOOLCACHE_H
