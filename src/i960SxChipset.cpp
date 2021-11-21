@@ -89,13 +89,23 @@ public:
     [[nodiscard]] CacheEntry& getLine() noexcept {
         // we have three cache pools to look through so check the first one
         TaggedAddress theAddress(ProcessorInterface::getAddress());
-        for (auto& cache : caches_) {
-            if (auto* target = cache.find(theAddress); target) {
-                return *target;
+        if (auto* target = caches_[mostRecentHit_].find(theAddress); target) {
+            ++counter_;
+            return *target;
+        }
+        for (byte i = 0; i < NumberOfCaches; ++i) {
+            if (i != mostRecentHit_) {
+                if (auto* target = caches_[i].find(theAddress); target) {
+                    mostRecentHit_ = i;
+                    ++counter_;
+                    return *target;
+                }
             }
         }
+        auto index = randomTable[counter_];
+        ++counter_;
         // cache miss, do random replacement
-        return caches_[random(NumberOfCaches)].reset(theAddress);
+        return caches_[index].reset(theAddress);
     }
     void clear() {
         for (auto& a : caches_) {
@@ -105,7 +115,11 @@ public:
     byte* viewAsStorage() noexcept {
         return reinterpret_cast<byte*>(&caches_[0]);
     }
+    static constexpr auto RandomTableSize = 256;
     void begin() noexcept {
+        for (auto i = 0; i < RandomTableSize; ++i) {
+            randomTable[i] = random(NumberOfCaches);
+        }
         for (auto& a : caches_) {
             a.begin();
         }
@@ -114,6 +128,9 @@ public:
     [[nodiscard]] constexpr auto getCacheSize() const noexcept { return IndividualCacheSize; }
 private:
     Cache caches_[NumberOfCaches];
+    byte mostRecentHit_ = 0;
+    byte counter_ = 0;
+    byte randomTable[RandomTableSize] = { 0};
 };
 
 template<template<auto, auto, auto, typename> typename L,
