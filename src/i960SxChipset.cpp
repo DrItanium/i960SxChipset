@@ -88,7 +88,7 @@ using L1Cache = Cache_t<DirectMappedCacheWay, L1Size, L1LineSize, L2Cache>;
 constexpr auto IncrementAddress = true;
 constexpr auto LeaveAddressAlone = false;
 // while the i960 does not allow going beyond 8 words, we can use the number of words cached in all cases to be safe
-constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = decltype(theCache)::CacheEntry::NumWordsCached;
+constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = L1Cache::NumWordsCached;
 inline void displayRequestedAddress() noexcept {
     auto address = ProcessorInterface::getAddress();
     Serial.print(F("ADDRESS: 0x"));
@@ -130,7 +130,7 @@ inline void handleMemoryInterface() noexcept {
     }
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
-    if (auto& theEntry = theCache.getLine(); ProcessorInterface::isReadOperation()) {
+    if (auto& theEntry = L1Cache::getLine(); ProcessorInterface::isReadOperation()) {
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
@@ -233,7 +233,7 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntry::CacheEntryMask>()();
+    ProcessorInterface::newDataCycle<inDebugMode, L1Cache::CacheEntryMask>()();
 }
 template<bool allowAddressDebuggingCodePath>
 void doInvocationBody() noexcept {
@@ -259,10 +259,11 @@ void installBootImage() noexcept {
     } else {
         // okay we were successful in opening the file, now copy the image into psram
         Address size = theFile.size();
-        static constexpr auto CacheSize = theCache.getCacheSize();
+        static constexpr auto UseL1Cache = L1Cache ::getCacheSize() > L2Cache ::getCacheSize();
+        static constexpr auto CacheSize = UseL1Cache ? L1Cache ::getCacheSize()  : L2Cache :: getCacheSize();
         //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
         // use the cache as a buffer since it won't be in use at this point in time
-        auto* storage = theCache.viewAsStorage();
+        auto* storage = UseL1Cache ? L1Cache ::viewAsStorage() : L2Cache :: viewAsStorage();
         Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
         for (Address addr = 0; addr < size; addr += CacheSize) {
             // do a linear read from the start to the end of storage
@@ -280,7 +281,9 @@ void installBootImage() noexcept {
         Serial.println(F("Transfer complete!"));
         // make sure we close the file before destruction
         theFile.close();
-        theCache.clear();
+        // clear both caches to be on the safe side
+        L1Cache::clear();
+        L2Cache::clear();
     }
 }
 
@@ -327,7 +330,8 @@ void setup() {
                   i960Pinout::DEN_,
                   i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
-        theCache.begin();
+        L1Cache::begin();
+        L2Cache::begin();
         SPI.begin();
         // purge the cache pages
         ConfigurationSpace::begin();

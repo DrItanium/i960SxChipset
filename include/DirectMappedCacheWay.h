@@ -47,7 +47,7 @@ public:
         if (!way_->matches(theAddress)) {
             way_->reset(theAddress);
         }
-        return way_;
+        return *way_;
     }
     void clear() noexcept { way_->clear(); }
     [[nodiscard]] constexpr bool valid() const noexcept { return way_; }

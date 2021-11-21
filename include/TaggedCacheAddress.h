@@ -23,6 +23,7 @@ union TaggedAddress {
     [[nodiscard]] constexpr auto getTagIndex() const noexcept { return tagIndex; }
     [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
     [[nodiscard]] constexpr auto getLowest() const noexcept { return lowest; }
+    [[nodiscard]] constexpr auto getOffset() const noexcept { return lowest; }
     [[nodiscard]] constexpr auto getRest() const noexcept { return rest; }
     [[nodiscard]] constexpr auto getPSRAMChipId() const noexcept { return offset; }
     [[nodiscard]] constexpr auto getPSRAMIndex() const noexcept { return psramIndex; }

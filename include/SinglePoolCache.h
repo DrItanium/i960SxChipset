@@ -89,7 +89,7 @@ public:
             realCapacity = NumBytesCached;
         }
         realCapacity -= startingOffset;
-        return getLine(theAddress).write(startingOffset, theAddress.getOffset(), realCapacity);
+        return getLine(theAddress).write(startingOffset, buf, realCapacity);
     }
     size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         // reading and writing to the cache in a linear fashion will be kinda strange.
@@ -129,6 +129,8 @@ public:
     static constexpr auto TotalEntryCount = NumBackingStoreBytes/ pow2(NumOffsetBits);
     using UnderlyingCache_t = SinglePoolCache<C, TotalEntryCount, numAddressBits, numOffsetBits, T>;
     using CacheLine = typename UnderlyingCache_t::CacheEntry;
+    static constexpr auto CacheEntryMask = CacheLine::CacheEntryMask;
+    static constexpr auto NumWordsCached = CacheLine::NumWordsCached;
 public:
     Cache() = delete;
     ~Cache() = delete;
