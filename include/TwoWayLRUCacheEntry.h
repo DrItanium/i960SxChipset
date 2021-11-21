@@ -53,7 +53,7 @@ public:
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i]->matches(theAddress)) {
                 mostRecentlyUsed_ = (i != 0);
-                return *ways_[i];
+                return ways_[i];
             }
         }
         return nullptr;
