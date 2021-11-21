@@ -74,7 +74,7 @@ constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 //L1Cache theCache;
 class MirroredTripleCache {
 public:
-    using Cache = CacheInstance_t<EightWayLRUCacheWay, 4096, NumAddressBits, 6, OnboardPSRAMBlock>;
+    using Cache = CacheInstance_t<FourWayLRUCacheWay, 4096, NumAddressBits, 6, OnboardPSRAMBlock>;
     using CacheEntry = typename Cache::CacheEntry;
     using TaggedAddress = typename Cache::TaggedAddress;
     static constexpr auto NumWordsCached = Cache::NumWordsCached;

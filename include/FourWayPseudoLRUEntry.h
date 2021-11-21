@@ -101,6 +101,7 @@ private:
         }
         return true;
     }
+public:
     [[nodiscard]] constexpr auto getWay(size_t index = 0) const noexcept { return ways_[index & WayMask]; }
     void setWay(CacheEntry& way, size_t index = 0) noexcept { ways_[index & WayMask] = &way; }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
