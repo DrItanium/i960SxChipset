@@ -114,7 +114,6 @@ public:
     [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
 
     OffsetType write(OffsetType startingOffset, byte *buf, OffsetType capacity) noexcept {
-        Serial.printf(F("CacheEntry::write(%d, 0x%x, %d)\n"), startingOffset, buf, capacity);
         auto* ptr = reinterpret_cast<byte*>(data) + startingOffset;
         for (OffsetType i = 0; i < capacity; ++i) {
             // while the comparison slows things down, it will make sure that updates which do not affect the cache will not
@@ -132,7 +131,6 @@ public:
         return capacity;
     }
     OffsetType read(OffsetType startingOffset, byte *buf, OffsetType capacity) noexcept {
-        Serial.printf(F("CacheEntry::read(%d, 0x%x, %d)\n"), startingOffset, buf, capacity);
         auto* ptr = reinterpret_cast<byte*>(data) + startingOffset;
         for (OffsetType i = 0; i < capacity; ++i) {
             // while the comparison slows things down, it will make sure that updates which do not affect the cache will not
