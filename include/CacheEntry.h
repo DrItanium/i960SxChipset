@@ -59,7 +59,7 @@ public:
         // since we have called reset, now align the new address internally
         key_ = newTag.getRest();
         // this is a _very_ expensive operation
-        T::readCacheLine(TaggedAddress{key_, newTag.getTagIndex(), 0}, reinterpret_cast<byte*>(data));
+        T::read(TaggedAddress{key_, newTag.getTagIndex(), 0}.getAddress(), reinterpret_cast<byte*>(data), NumBytesCached);
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose
