@@ -72,11 +72,8 @@ constexpr auto L1LineSize = 4;
 constexpr auto L1Size = 2048;
 constexpr auto L2LineSize = 6;
 constexpr auto L2Size = 8192;
-template<template<auto, auto, auto, typename> typename C, uint16_t backingStoreSize, byte numOffsetBits, typename T>
-using Cache_t = Cache<C, backingStoreSize, NumAddressBits, numOffsetBits, T>;
-using L2Cache = Cache_t<EightWayLRUCacheWay, L2Size, L2LineSize, OnboardPSRAMBlock>;
-using L1Cache = L2Cache;
-
+using L1Cache = CacheInstance_t<EightWayLRUCacheWay, L2Size, NumAddressBits, L2LineSize, OnboardPSRAMBlock>;
+L1Cache theCache;
 
 
 [[nodiscard]] bool informCPU() noexcept {
@@ -130,7 +127,7 @@ inline void handleMemoryInterface() noexcept {
     }
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
-    if (auto& theEntry = L1Cache::getLine(); ProcessorInterface::isReadOperation()) {
+    if (auto& theEntry = theCache.getLine(); ProcessorInterface::isReadOperation()) {
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
@@ -259,11 +256,10 @@ void installBootImage() noexcept {
     } else {
         // okay we were successful in opening the file, now copy the image into psram
         Address size = theFile.size();
-        static constexpr auto UseL1Cache = L1Cache ::getCacheSize() > L2Cache ::getCacheSize();
-        static constexpr auto CacheSize = UseL1Cache ? L1Cache ::getCacheSize()  : L2Cache :: getCacheSize();
+        static constexpr auto CacheSize = theCache.getCacheSize();
         //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
         // use the cache as a buffer since it won't be in use at this point in time
-        auto* storage = UseL1Cache ? L1Cache ::viewAsStorage() : L2Cache :: viewAsStorage();
+        auto* storage = theCache.viewAsStorage();
         Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
         for (Address addr = 0; addr < size; addr += CacheSize) {
             // do a linear read from the start to the end of storage
@@ -282,8 +278,7 @@ void installBootImage() noexcept {
         // make sure we close the file before destruction
         theFile.close();
         // clear both caches to be on the safe side
-        L1Cache::clear();
-        L2Cache::clear();
+        theCache.clear();
     }
 }
 
@@ -330,8 +325,7 @@ void setup() {
                   i960Pinout::DEN_,
                   i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
-        L1Cache::begin();
-        L2Cache::begin();
+        theCache.begin();
         SPI.begin();
         // purge the cache pages
         ConfigurationSpace::begin();

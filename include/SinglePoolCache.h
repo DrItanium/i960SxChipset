@@ -47,6 +47,8 @@ public:
     using CacheEntry = typename CacheWay::CacheEntry;
     using TaggedAddress = typename CacheWay::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
+    static constexpr auto NumWordsCached = CacheEntry::NumWordsCached;
+    static constexpr auto CacheEntryMask = CacheEntry::CacheEntryMask;
 public:
     [[nodiscard]] CacheEntry& getLine() noexcept {
         // only align if we need to reset the chip
@@ -149,5 +151,11 @@ public:
 private:
     static inline UnderlyingCache_t theCache_;
 };
+
+template<template<auto, auto, auto, typename> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T>
+using Cache_t = Cache<C, backingStoreSize, numAddressBits, numOffsetBits, T>;
+
+template<template<auto, auto, auto, typename> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T>
+using CacheInstance_t = typename Cache_t<C, backingStoreSize, numAddressBits, numOffsetBits, T>::UnderlyingCache_t;
 
 #endif //SXCHIPSET_SINGLEPOOLCACHE_H
