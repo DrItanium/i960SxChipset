@@ -40,6 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "EightWayPseudoLRUEntry.h"
 #include "SixteenWayPseudoLRUEntry.h"
 #include "SinglePoolCache.h"
+#include "MultiCache.h"
+
 #include "ProcessorSerializer.h"
 #include "MemoryThing.h"
 #include "DisplayInterface.h"
@@ -72,68 +74,6 @@ constexpr auto CacheLineSize = 6;
 constexpr auto CacheSize = 8192;
 using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
 L1Cache theCache;
-template<template<auto, auto, auto, typename> typename L,
-        byte NumberOfCaches,
-        uint16_t IndividualCacheSize,
-        byte NumberOfAddressBits,
-        byte CacheLineSize,
-        typename T>
-class MultiCache {
-public:
-    using Cache = CacheInstance_t<L, IndividualCacheSize, NumberOfAddressBits, CacheLineSize, T>;
-    using CacheEntry = typename Cache::CacheEntry;
-    using TaggedAddress = typename Cache::TaggedAddress;
-    static constexpr auto NumWordsCached = Cache::NumWordsCached;
-    static constexpr auto CacheEntryMask = Cache::CacheEntryMask;
-
-    [[nodiscard]] CacheEntry& getLine() noexcept {
-        // we have three cache pools to look through so check the first one
-        TaggedAddress theAddress(ProcessorInterface::getAddress());
-        if (auto* target = caches_[mostRecentHit_].find(theAddress); target) {
-            ++counter_;
-            return *target;
-        }
-        for (byte i = 0; i < NumberOfCaches; ++i) {
-            if (i != mostRecentHit_) {
-                if (auto* target = caches_[i].find(theAddress); target) {
-                    mostRecentHit_ = i;
-                    ++counter_;
-                    return *target;
-                }
-            }
-        }
-        auto index = randomTable[counter_];
-        ++counter_;
-        // cache miss, do random replacement
-        return caches_[index].reset(theAddress);
-    }
-    void clear() {
-        for (auto& a : caches_) {
-            a.clear();
-        }
-    }
-    byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(&caches_[0]);
-    }
-    static constexpr auto RandomTableSize = 16;
-    static constexpr auto NumCounterBits = numberOfBitsForCount(RandomTableSize);
-    void begin() noexcept {
-        counter_ = 0;
-        for (auto i = 0; i < RandomTableSize; ++i) {
-            randomTable[i] = random(NumberOfCaches);
-        }
-        for (auto& a : caches_) {
-            a.begin();
-        }
-        // set everything up
-    }
-    [[nodiscard]] constexpr auto getCacheSize() const noexcept { return IndividualCacheSize; }
-private:
-    Cache caches_[NumberOfCaches];
-    byte mostRecentHit_ = 0;
-    byte counter_ : NumCounterBits;
-    byte randomTable[RandomTableSize] = { 0};
-};
 
 //template<template<auto, auto, auto, typename> typename L,
 //        byte NumberOfCaches,
