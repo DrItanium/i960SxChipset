@@ -67,7 +67,7 @@ constexpr byte pow2(byte value) noexcept {
     }
 }
 
-static constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept {
+static constexpr byte numberOfBitsForCount(uint16_t count) noexcept {
     switch (count) {
         case 2: return 1;
         case 4: return 2;
@@ -83,9 +83,11 @@ static constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept
         case 4096: return 12;
         case 8192: return 13;
         case 16384: return 14;
+        case 32768: return 15;
         default: return 0;
     }
 }
+static constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept { return numberOfBitsForCount(count); }
 
 static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
 static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);

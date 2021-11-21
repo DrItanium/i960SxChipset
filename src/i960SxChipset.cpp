@@ -72,14 +72,19 @@ constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 //constexpr auto CacheSize = 8192;
 //using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
 //L1Cache theCache;
+template<template<auto, auto, auto, typename> typename L,
+        byte NumberOfCaches,
+        uint16_t IndividualCacheSize,
+        byte NumberOfAddressBits,
+        byte CacheLineSize,
+        typename T>
 class MultiCache {
 public:
-    using Cache = CacheInstance_t<FourWayLRUCacheWay, 2048, NumAddressBits, 6, OnboardPSRAMBlock>;
+    using Cache = CacheInstance_t<L, IndividualCacheSize, NumberOfAddressBits, CacheLineSize, T>;
     using CacheEntry = typename Cache::CacheEntry;
     using TaggedAddress = typename Cache::TaggedAddress;
     static constexpr auto NumWordsCached = Cache::NumWordsCached;
     static constexpr auto CacheEntryMask = Cache::CacheEntryMask;
-    static constexpr auto NumberOfCaches = 5;
 
     [[nodiscard]] CacheEntry& getLine() noexcept {
         // we have three cache pools to look through so check the first one
@@ -98,7 +103,7 @@ public:
         }
     }
     byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(caches_);
+        return reinterpret_cast<byte*>(&caches_[0]);
     }
     void begin() noexcept {
         for (auto& a : caches_) {
@@ -106,12 +111,17 @@ public:
         }
         // set everything up
     }
-    [[nodiscard]] constexpr auto getCacheSize() const noexcept { return sizeof(caches_); }
+    [[nodiscard]] constexpr auto getCacheSize() const noexcept { return IndividualCacheSize; }
 private:
     Cache caches_[NumberOfCaches];
 };
-using L1Cache = MultiCache;
-L1Cache theCache;
+
+template<template<auto, auto, auto, typename> typename L,
+        byte NumberOfCaches,
+        uint16_t IndividualCacheSize,
+        byte CacheLineSize>
+using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+L1Cache<EightWayLRUCacheWay, 3, 4096, 7> theCache;
 
 
 [[nodiscard]] bool informCPU() noexcept {
@@ -123,7 +133,7 @@ L1Cache theCache;
 constexpr auto IncrementAddress = true;
 constexpr auto LeaveAddressAlone = false;
 // while the i960 does not allow going beyond 8 words, we can use the number of words cached in all cases to be safe
-constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = L1Cache::NumWordsCached;
+constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = decltype(theCache)::NumWordsCached;
 inline void displayRequestedAddress() noexcept {
     auto address = ProcessorInterface::getAddress();
     Serial.print(F("ADDRESS: 0x"));
@@ -268,7 +278,7 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    ProcessorInterface::newDataCycle<inDebugMode, L1Cache::CacheEntryMask>()();
+    ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntryMask>()();
 }
 template<bool allowAddressDebuggingCodePath>
 void doInvocationBody() noexcept {
