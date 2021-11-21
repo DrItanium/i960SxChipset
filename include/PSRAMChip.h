@@ -194,42 +194,6 @@ private:
         return capacity;
     }
 public:
-    template<byte numTagBits, byte totalBits, byte numOffsetBits>
-    static void writeCacheLine(TaggedAddress<numTagBits, totalBits, numOffsetBits> address, const byte* buf) noexcept {
-        //return genericCacheLineReadWriteOperation<0x02, OperationKind::Write>(address, buf);
-        // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
-        // need to do the offset calculation
-        setChipId(address.getPSRAMChipId());
-        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        digitalWrite<EnablePin, LOW>();
-        transmitByte(0x02);
-        transmitByte(address.getPSRAMAddress_High());
-        transmitByte(address.getPSRAMAddress_Middle());
-        transmitByte(address.getPSRAMAddress_Low());
-        for (int i = 0; i < pow2(numOffsetBits); ++i) {
-            transmitByte(buf[i]);
-        }
-        digitalWrite<EnablePin, HIGH>();
-        SPI.endTransaction();
-    }
-    template<byte numTagBits, byte totalBits, byte numOffset>
-    static void readCacheLine(TaggedAddress<numTagBits, totalBits, numOffset> address, byte* buf) noexcept {
-        // unlike a generic read/write operation, tagged addresses will never actually span multiple devices so there is no
-        // need to do the offset calculation
-        setChipId(address.getPSRAMChipId());
-        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        digitalWrite<EnablePin, LOW>();
-        transmitByte(0x03);
-        transmitByte(address.getPSRAMAddress_High());
-        transmitByte(address.getPSRAMAddress_Middle());
-        transmitByte(address.getPSRAMAddress_Low());
-        for (int i = 0; i < pow2(numOffset); ++i) {
-            transmitByte(0);
-            buf[i] = SPDR;
-        }
-        digitalWrite<EnablePin, HIGH>();
-        SPI.endTransaction();
-    }
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
     }
