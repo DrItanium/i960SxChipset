@@ -297,7 +297,8 @@ extern DispatchTable lookupTable;
 extern DispatchTable lookupTable_Debug;
 // the setup routine runs once when you press reset:
 void setup() {
-    randomSeed(analogRead(A0));
+    // seed random on startup to be on the safe side from analog pin A0, A1, A2, and A3
+    randomSeed(analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3));
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
@@ -336,10 +337,10 @@ void setup() {
                   i960Pinout::DEN_,
                   i960Pinout::FAIL);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
+        theCache.begin();
         SPI.begin();
         // purge the cache pages
         ConfigurationSpace::begin();
-        theCache.begin();
         Serial.println(F("i960Sx chipset bringup"));
         {
             Serial.println(F("Setting up the initial lookup table"));
