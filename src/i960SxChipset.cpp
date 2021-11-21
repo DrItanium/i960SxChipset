@@ -68,10 +68,10 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-//constexpr auto CacheLineSize = 6;
-//constexpr auto CacheSize = 8192;
-//using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
-//L1Cache theCache;
+constexpr auto CacheLineSize = 6;
+constexpr auto CacheSize = 8192;
+using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+L1Cache theCache;
 template<template<auto, auto, auto, typename> typename L,
         byte NumberOfCaches,
         uint16_t IndividualCacheSize,
@@ -135,12 +135,13 @@ private:
     byte randomTable[RandomTableSize] = { 0};
 };
 
-template<template<auto, auto, auto, typename> typename L,
-        byte NumberOfCaches,
-        uint16_t IndividualCacheSize,
-        byte CacheLineSize>
-using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
-L1Cache<TwoWayLRUCacheWay, 11, 1024, 6> theCache;
+//template<template<auto, auto, auto, typename> typename L,
+//        byte NumberOfCaches,
+//        uint16_t IndividualCacheSize,
+//        byte CacheLineSize>
+//using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+//L1Cache<DirectMappedCacheWay, 11, 1024, 6> theCache;
+
 
 
 
