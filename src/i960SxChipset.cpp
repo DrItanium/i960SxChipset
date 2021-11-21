@@ -140,7 +140,7 @@ template<template<auto, auto, auto, typename> typename L,
         uint16_t IndividualCacheSize,
         byte CacheLineSize>
 using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
-L1Cache<FourWayLRUCacheWay, 11, 1024, 6> theCache;
+L1Cache<TwoWayLRUCacheWay, 11, 1024, 6> theCache;
 
 
 
