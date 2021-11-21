@@ -117,11 +117,60 @@ private:
 };
 
 template<template<auto, auto, auto, typename> typename L,
-        byte NumberOfCaches,
-        uint16_t IndividualCacheSize,
+        size_t CacheSize,
+        byte NumberOfAddressBits,
+        byte CacheLineSize,
+        typename T>
+class Cache12K{
+public:
+    static_assert(CacheSize <= 8_KB, "Cannot allocate more than 8k to the primary cache") ;
+    static constexpr size_t MaximumSize = 12_KB;
+    static constexpr size_t LeftOverSpace = MaximumSize - CacheSize;
+    using Cache = CacheInstance_t<L, CacheSize, NumberOfAddressBits, CacheLineSize, T>;
+    using CacheEntry = typename Cache::CacheEntry;
+    using TaggedAddress = typename Cache::TaggedAddress;
+    static constexpr auto NumWordsCached = Cache::NumWordsCached;
+    static constexpr auto CacheEntryMask = Cache::CacheEntryMask;
+    static constexpr auto NumberOfExtraCacheLinesInLeftOver = LeftOverSpace / sizeof(CacheEntry); // this will never be even!
+
+    [[nodiscard]] CacheEntry& getLine() noexcept {
+        return theCache_.getLine();
+    }
+    void clear() {
+        theCache_.clear();
+        for (auto& a : slop_) {
+            a.clear();
+        }
+    }
+    byte* viewAsStorage() noexcept {
+        return theCache_.viewAsStorage();
+    }
+    void begin() noexcept {
+        Serial.print(F("Number of extra cache entries: "));
+        Serial.println(NumberOfExtraCacheLinesInLeftOver);
+        theCache_.begin();
+        // set everything up
+    }
+    [[nodiscard]] constexpr auto getCacheSize() const noexcept { return theCache_.getCacheSize(); }
+private:
+    Cache theCache_;
+    CacheEntry slop_[NumberOfExtraCacheLinesInLeftOver];
+};
+
+//template<template<auto, auto, auto, typename> typename L,
+//        byte NumberOfCaches,
+//        uint16_t IndividualCacheSize,
+//        byte CacheLineSize>
+//using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+//L1Cache<EightWayLRUCacheWay, 2, 4096, 6> theCache;
+
+template<template<auto, auto, auto, typename> typename L,
+        size_t CacheSize,
         byte CacheLineSize>
-using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
-L1Cache<EightWayLRUCacheWay, 3, 4096, 7> theCache;
+using L1Cache = Cache12K<L, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+
+L1Cache<EightWayLRUCacheWay, 8192, 6> theCache;
+
 
 
 [[nodiscard]] bool informCPU() noexcept {
