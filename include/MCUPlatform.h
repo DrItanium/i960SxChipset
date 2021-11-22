@@ -157,6 +157,9 @@ public:
 #else
         return TargetMCU::Unknown;
 #endif
+#else
+        return TargetMCU::Unknown;
+#endif
     }
     [[nodiscard]] static constexpr auto onAtmega1284p_Type1() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type1; }
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return onAtmega1284p_Type1(); }
