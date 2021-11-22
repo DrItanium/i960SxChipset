@@ -82,6 +82,7 @@ enum class i960Pinout : int {
     PORT_A7,
     Count,
 #ifdef TYPE1_4
+#include "Type1_4Pinout.def"
 #else
 #include "Type1Pinout.def"
 #endif

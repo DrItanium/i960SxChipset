@@ -32,7 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DependentFalse.h"
 
 // comment this out to disable sram cache support
-
 #ifdef ARDUINO_AVR_ATmega1284
 #define PACKED_ATTRIBUTE
 #else
@@ -106,6 +105,7 @@ static_assert(!is_same_v<ClosestBitValue_t<10>, ClosestBitValue_t<4>>);
 
 enum class TargetMCU {
     ATmega1284p_Type1,
+    ATmega1284p_Type1_4,
     Unknown,
 };
 class MCUConfiguration final {
@@ -138,12 +138,22 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         5_MHz // due to the current design, we have to run the psram at 5 Mhz
 };
 
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1_4> = {
+        16_KB,
+        10_MHz,
+        5_MHz // due to the current design, we have to run the psram at 5 Mhz
+};
+
 class TargetBoard {
 public:
     [[nodiscard]] static constexpr auto getCPUFrequency() noexcept { return F_CPU; }
     [[nodiscard]] static constexpr TargetMCU getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
+#ifdef CHIPSET_TYPE1
         return TargetMCU::ATmega1284p_Type1;
+#elif defined(CHIPSET_TYPE1_4)
+        return TargetMCU::ATmega1284p_Type1_4;
 #else
         return TargetMCU::Unknown;
 #endif
