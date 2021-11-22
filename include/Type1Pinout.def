@@ -1,3 +1,4 @@
+    #include "1284pPinout.def"
     Ready = PORT_B0,
     CLOCK_OUT= PORT_B1,
     AS_ = PORT_B2,
