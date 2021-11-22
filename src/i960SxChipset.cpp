@@ -308,9 +308,11 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::Ready,
               i960Pinout::GPIOSelect,
+#ifdef CHIPSET_TYPE1
               i960Pinout::SPI_OFFSET0,
               i960Pinout::SPI_OFFSET1,
               i960Pinout::SPI_OFFSET2,
+#endif
               i960Pinout::Reset960,
               i960Pinout::Int0_);
     digitalWrite<i960Pinout::Reset960, HIGH>();
@@ -322,14 +324,18 @@ void setup() {
         digitalWrite<i960Pinout::SD_EN, HIGH>();
         digitalWrite<i960Pinout::Ready, HIGH>();
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+#ifdef CHIPSET_TYPE1
         digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
         digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
         digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
+#endif
         // setup the pins that could be attached to an io expander separately
         setupPins(INPUT,
+#ifdef CHIPSET_TYPE1
                   i960Pinout::BA1,
                   i960Pinout::BA2,
                   i960Pinout::BA3,
+#endif
                   i960Pinout::BE0,
                   i960Pinout::BE1,
                   i960Pinout::BLAST_,
@@ -348,9 +354,12 @@ void setup() {
                 entry = fallbackBody<false>;
             }
             lookupTable[0] = handleMemoryInterface<false>;
+#ifdef CHIPSET_TYPE1
+            // only chipset type 1 has access to the full 64 megabytes
             lookupTable[1] = handleMemoryInterface<false>;
             lookupTable[2] = handleMemoryInterface<false>;
             lookupTable[3] = handleMemoryInterface<false>;
+#endif
             lookupTable[TheRTCInterface ::SectionID] = handleExternalDeviceRequest<false, TheRTCInterface >;
             lookupTable[TheDisplayInterface ::SectionID] = handleExternalDeviceRequest<false, TheDisplayInterface>;
             lookupTable[TheSDInterface ::SectionID] = handleExternalDeviceRequest<false, TheSDInterface>;

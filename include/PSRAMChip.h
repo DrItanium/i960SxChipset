@@ -21,12 +21,16 @@ template<i960Pinout enablePin>
 class MemoryBlock {
 public:
     static constexpr auto EnablePin = enablePin;
+#ifdef CHIPSET_TYPE1
     static constexpr auto Select0 = i960Pinout::SPI_OFFSET0;
     static constexpr auto Select1 = i960Pinout::SPI_OFFSET1;
     static constexpr auto Select2 = i960Pinout::SPI_OFFSET2;
     static constexpr auto NumChips = 8;
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
+#elif defined(CHIPSET_TYPE1_4)
+    static constexpr auto NumChips = 1;
+#endif
 public:
     MemoryBlock() = delete;
     ~MemoryBlock() = delete;
@@ -201,13 +205,16 @@ public:
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
+#ifdef CHIPSET_TYPE1
     template<byte index>
     static void doWrites() noexcept {
         digitalWrite<Select0, (index & (1 << 0)) ? HIGH : LOW>();
         digitalWrite<Select1, (index & (1 << 1)) ? HIGH : LOW>();
         digitalWrite<Select2, (index & (1 << 2)) ? HIGH : LOW>();
     }
+#endif
     static void setChipId(byte index) noexcept {
+#ifdef CHIPSET_TYPE1
         using Action = void(*)();
         static constexpr Action Operations[8] {
             doWrites<0>, doWrites<1>, doWrites<2>, doWrites<3>,
@@ -217,6 +224,7 @@ private:
             Operations[index & 0b111]();
             currentIndex_ = index & 0b111;
         }
+#endif
     }
 public:
     static void begin() noexcept {
@@ -241,7 +249,9 @@ public:
         }
     }
 private:
+#ifdef CHIPSET_TYPE1
     static inline byte currentIndex_ = 0xFF;
+#endif
 };
 
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;

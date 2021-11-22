@@ -162,7 +162,8 @@ public:
 #endif
     }
     [[nodiscard]] static constexpr auto onAtmega1284p_Type1() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type1; }
-    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return onAtmega1284p_Type1(); }
+    [[nodiscard]] static constexpr auto onAtmega1284p_Type1_4() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type1_4; }
+    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return onAtmega1284p_Type1() || onAtmega1284p_Type1_4(); }
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
     [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept { return BoardDescription<getMCUTarget()>.getSramAmount(); }
     [[nodiscard]] static constexpr auto runIOExpanderSPIInterfaceAt() noexcept { return BoardDescription<getMCUTarget()>.runIOExpanderSPIInterfaceAt(); }

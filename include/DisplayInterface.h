@@ -90,6 +90,7 @@ public:
         return targetPage >= StartPage && targetPage < EndPage;
     }
     static void begin() noexcept {
+#ifdef CHIPSET_TYPE1
         pinMode(i960Pinout::TFT_CS, OUTPUT);
         pinMode(i960Pinout::SD_EN, OUTPUT);
         digitalWrite<i960Pinout::TFT_CS, HIGH>();
@@ -110,7 +111,7 @@ public:
         tft.fillScreen(ST7735_CYAN);
         delay(1000);
         tft.fillScreen(ST7735_BLACK);
-
+#endif
     }
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         switch  (targetPage) {
@@ -142,6 +143,7 @@ private:
 
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
+#ifdef CHIPSET_TYPE1
         switch (static_cast<SeesawRegisters>(offset))  {
             case SeesawRegisters::Backlight:
                 backlightIntensity_ = value.getWholeValue();
@@ -149,8 +151,10 @@ private:
                 break;
             default: break;
         }
+#endif
     }
     static uint16_t handleSeesawReads(uint8_t offset, LoadStoreStyle) noexcept {
+#ifdef CHIPSET_TYPE1
         switch (static_cast<SeesawRegisters>(offset)) {
             case SeesawRegisters::Backlight:
                 return backlightIntensity_;
@@ -162,13 +166,19 @@ private:
             default:
                 return 0;
         }
+#else
+        return 0;
+#endif
+
     }
 private:
+#ifdef CHIPSET_TYPE1
     static inline Adafruit_TFTShield18 displayShield_;
     static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
     static inline uint16_t backlightIntensity_ = 0;
     static inline SplitWord32 rawButtons_{0};
+#endif
 };
 #endif //SXCHIPSET_DISPLAYINTERFACE_H
