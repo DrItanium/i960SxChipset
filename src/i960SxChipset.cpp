@@ -68,12 +68,14 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheSDInterface,
         TheDisplayInterface,
         TheRTCInterface>;
-using BackingMemoryStorage = conditional_t<true || TargetBoard::onAtmega1284p_Type1_4(), SDCardAsRam<TheSDInterface>, OnboardPSRAMBlock>;
+using BackingMemoryStorage = conditional_t<TargetBoard::onAtmega1284p_Type1_4(),
+        SDCardAsRam<TheSDInterface>,
+        OnboardPSRAMBlock>;
 
 //using OnboardPSRAMBlock = ::
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto CacheLineSize = 6;
+constexpr auto CacheLineSize = 4;
 constexpr auto CacheSize = 8192;
 using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage>;
 L1Cache theCache;
