@@ -29,5 +29,29 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_SDCARDASRAM_H
 #define SXCHIPSET_SDCARDASRAM_H
 #include "SDCardInterface.h"
+#include <SdFat.h>
+extern SdFat SD;
+
+template<typename T>
+class SDCardAsRam {
+public:
+    using SDInterface = T;
+    SDCardAsRam() = delete;
+    ~SDCardAsRam() = delete;
+    void begin() noexcept {
+        SDInterface::begin();
+        if (theRam_ = SD.open("ram.bin", FILE_WRITE); !theRam_) {
+            signalHaltState(F("COULD NOT OPEN RAM.BIN FOR READ/WRITE"));
+        }
+        theRam_.seek(0);
+    }
+public:
+    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+    }
+    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+    }
+private:
+    File theRam_;
+};
 
 #endif //SXCHIPSET_SDCARDASRAM_H

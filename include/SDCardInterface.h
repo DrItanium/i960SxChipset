@@ -253,14 +253,17 @@ public:
         return targetPage >= StartPage && targetPage < EndPage;
     }
     static void begin() noexcept {
-        while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
-            Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
-            delay(1000);
+        if (!initialized_) {
+            while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+                Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
+                delay(1000);
+            }
+            Serial.println(F("SD CARD UP!"));
+            clusterCount_ = SplitWord32(SD.clusterCount());
+            volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
+            bytesPerSector_ = SD.bytesPerSector();
+            initialized_ = true;
         }
-        Serial.println(F("SD CARD UP!"));
-        clusterCount_ = SplitWord32(SD.clusterCount());
-        volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
-        bytesPerSector_ = SD.bytesPerSector();
     }
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         if (targetPage == CTLPage) {
@@ -282,6 +285,7 @@ public:
     }
 
 private:
+    static inline bool initialized_ = false;
     static inline SplitWord32 clusterCount_ {0};
     static inline SplitWord32 volumeSectorCount_ {0};
     static inline uint16_t bytesPerSector_ = 0;
