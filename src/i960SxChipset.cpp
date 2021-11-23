@@ -43,7 +43,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MultiCache.h"
 
 #include "ProcessorSerializer.h"
-#include "MemoryThing.h"
 #include "DisplayInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
@@ -68,23 +67,26 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheSDInterface,
         TheDisplayInterface,
         TheRTCInterface>;
-using BackingMemoryStorage = conditional_t<TargetBoard::onAtmega1284p_Type1_4(),
-        SDCardAsRam<TheSDInterface>,
-        OnboardPSRAMBlock>;
+// define the backing memory storage classes via template specialization
+// at this point in time, if no specialization is performed, use SDCard as ram backend
+template<TargetMCU mcu> struct BackingMemoryStorage final { using Type = SDCardAsRam<TheSDInterface>; };
+template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final { using Type = OnboardPSRAMBlock; };
+
+using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
 
 //using OnboardPSRAMBlock = ::
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto CacheLineSize = 4;
 constexpr auto CacheSize = 8192;
-using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage>;
+using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 L1Cache theCache;
 
 //template<template<auto, auto, auto, typename> typename L,
 //        byte NumberOfCaches,
 //        uint16_t IndividualCacheSize,
 //        byte CacheLineSize>
-//using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage>;
+//using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 //L1Cache<DirectMappedCacheWay, 11, 1024, 6> theCache;
 
 
@@ -285,7 +287,7 @@ void installBootImage() noexcept {
                 // something wen't wrong so halt at this point
                 SD.errorHalt();
             }
-            (void) BackingMemoryStorage::write(addr, storage, numRead);
+            (void) BackingMemoryStorage_t::write(addr, storage, numRead);
 
             Serial.print(F("."));
         }
@@ -385,7 +387,7 @@ void setup() {
             }
         }
         ProcessorInterface::begin();
-        BackingMemoryStorage::begin();
+        BackingMemoryStorage_t::begin();
 
         installBootImage();
         delay(100);
