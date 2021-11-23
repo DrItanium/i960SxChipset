@@ -68,19 +68,21 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheSDInterface,
         TheDisplayInterface,
         TheRTCInterface>;
+using BackingMemoryStorage = conditional_t<TargetBoard::onAtmega1284p_Type1_4(), SDCardAsRam<TheSDInterface>, OnboardPSRAMBlock>;
 
+//using OnboardPSRAMBlock = ::
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto CacheLineSize = 6;
 constexpr auto CacheSize = 8192;
-using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage>;
 L1Cache theCache;
 
 //template<template<auto, auto, auto, typename> typename L,
 //        byte NumberOfCaches,
 //        uint16_t IndividualCacheSize,
 //        byte CacheLineSize>
-//using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, OnboardPSRAMBlock>;
+//using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage>;
 //L1Cache<DirectMappedCacheWay, 11, 1024, 6> theCache;
 
 
@@ -265,45 +267,28 @@ void installBootImage() noexcept {
     if (auto theFile = SD.open("boot.sys", FILE_READ); !theFile) {
         signalHaltState(F("Could not open \"boot.sys\"! SD CARD may be corrupt?")) ;
     } else {
-#ifdef CHIPSET_TYPE1_4
-        if (auto theRam = SD.open("ram.bin", FILE_WRITE); !theRam) {
-            signalHaltState(F("Could not open \"ram.bin\"! SD Card may be corrupt?"));
-        } else {
-            theRam.seek(0);
-#endif
             // okay we were successful in opening the file, now copy the image into psram
-            Address size = theFile.size();
-            static constexpr auto CacheSize = theCache.getCacheSize();
-            //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
-            // use the cache as a buffer since it won't be in use at this point in time
-            auto *storage = theCache.viewAsStorage();
-            Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
-            for (Address addr = 0; addr < size; addr += CacheSize) {
-                // do a linear read from the start to the end of storage
-                // wait around to make sure we don't run afoul of the sdcard itself
-                while (theFile.isBusy());
-                auto numRead = theFile.read(storage, CacheSize);
-                if (numRead < 0) {
-                    // something wen't wrong so halt at this point
-                    SD.errorHalt();
-                }
-#ifdef CHIPSET_TYPE1
-                (void) OnboardPSRAMBlock::write(addr, storage, numRead);
-#elif defined(CHIPSET_TYPE1_4)
-                while (theRam.isBusy());
-                (void)theRam.write(storage, numRead);
-#else
-#error "no where to transfer to"
-#endif
-
-                Serial.print(F("."));
+        Address size = theFile.size();
+        static constexpr auto CacheSize = theCache.getCacheSize();
+        //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
+        // use the cache as a buffer since it won't be in use at this point in time
+        auto *storage = theCache.viewAsStorage();
+        Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
+        for (Address addr = 0; addr < size; addr += CacheSize) {
+            // do a linear read from the start to the end of storage
+            // wait around to make sure we don't run afoul of the sdcard itself
+            while (theFile.isBusy());
+            auto numRead = theFile.read(storage, CacheSize);
+            if (numRead < 0) {
+                // something wen't wrong so halt at this point
+                SD.errorHalt();
             }
-            Serial.println();
-            Serial.println(F("Transfer complete!"));
-#ifdef CHIPSET_TYPE1_4
-            theRam.close();
+            (void) BackingMemoryStorage::write(addr, storage, numRead);
+
+            Serial.print(F("."));
         }
-#endif
+        Serial.println();
+        Serial.println(F("Transfer complete!"));
         // make sure we close the file before destruction
         theFile.close();
         // clear both caches to be on the safe side
@@ -398,12 +383,9 @@ void setup() {
             }
         }
         ProcessorInterface::begin();
-        OnboardPSRAMBlock::begin();
+        BackingMemoryStorage::begin();
 
         installBootImage();
-#ifdef CHIPSET_TYPE1_4
-        signalHaltState(F("FORCING A HALT FOR DEBUGGING PURPOSES ON TYPE 1.4"));
-#endif
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
