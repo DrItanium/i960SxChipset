@@ -354,12 +354,10 @@ void setup() {
                 entry = fallbackBody<false>;
             }
             lookupTable[0] = handleMemoryInterface<false>;
-#ifdef CHIPSET_TYPE1
             // only chipset type 1 has access to the full 64 megabytes
             lookupTable[1] = handleMemoryInterface<false>;
             lookupTable[2] = handleMemoryInterface<false>;
             lookupTable[3] = handleMemoryInterface<false>;
-#endif
             lookupTable[TheRTCInterface ::SectionID] = handleExternalDeviceRequest<false, TheRTCInterface >;
             lookupTable[TheDisplayInterface ::SectionID] = handleExternalDeviceRequest<false, TheDisplayInterface>;
             lookupTable[TheSDInterface ::SectionID] = handleExternalDeviceRequest<false, TheSDInterface>;
