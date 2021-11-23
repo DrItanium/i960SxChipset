@@ -38,20 +38,24 @@ public:
     using SDInterface = T;
     SDCardAsRam() = delete;
     ~SDCardAsRam() = delete;
-    void begin() noexcept {
+    static void begin() noexcept {
         SDInterface::begin();
-        if (theRam_ = SD.open("ram.bin", FILE_WRITE); !theRam_) {
+        if (!theRam_.open("ram.bin", FILE_WRITE)) {
             signalHaltState(F("COULD NOT OPEN RAM.BIN FOR READ/WRITE"));
         }
-        theRam_.seek(0);
+        theRam_.seekToBeginning();
     }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+        theRam_.setAbsolutePosition(address);
+        return theRam_.write(buf, capacity);
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+        theRam_.setAbsolutePosition(address);
+        return theRam_.read(buf, capacity);
     }
 private:
-    File theRam_;
+    static inline OpenFileHandle theRam_;
 };
 
 #endif //SXCHIPSET_SDCARDASRAM_H

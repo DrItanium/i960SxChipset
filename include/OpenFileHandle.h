@@ -134,6 +134,8 @@ public:
             backingStore_.write(static_cast<byte>(value.getWholeValue()));
         }
     }
+    [[nodiscard]] size_t read(void* buf, size_t count) noexcept { return backingStore_.read(buf, count); }
+    [[nodiscard]] size_t write(void* buf, size_t count) noexcept { return backingStore_.write(buf, count); }
     [[nodiscard]] uint16_t read(uint8_t offset, LoadStoreStyle lss) noexcept {
         using T = Registers;
         switch (static_cast<T>(offset)) {
