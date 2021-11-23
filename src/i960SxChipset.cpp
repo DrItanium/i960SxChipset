@@ -400,6 +400,9 @@ void setup() {
         OnboardPSRAMBlock::begin();
 
         installBootImage();
+#ifdef CHIPSET_TYPE1_4
+        signalHaltState(F("FORCING A HALT FOR DEBUGGING PURPOSES ON TYPE 1.4"));
+#endif
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
 
