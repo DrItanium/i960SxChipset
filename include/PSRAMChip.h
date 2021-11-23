@@ -32,7 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include "MCUPlatform.h"
 #include "Pinout.h"
-#include "MemoryThing.h"
 #include "TaggedCacheAddress.h"
 /**
  * @brief Interface to the memory connected to the chipset

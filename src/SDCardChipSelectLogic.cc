@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <SdFat.h>
 #include "Pinout.h"
-#include "MemoryThing.h"
+#include "i960SxChipset.h"
 
 /**
  * @brief Hacked sdCsInit that assumes the only pin we care about is SD_EN, otherwise failure
