@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DisplayInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
+#include "SDCardAsRam.h"
 #include "TaggedCacheAddress.h"
 #include "RTCInterface.h"
 #include "i960SxChipset.h"
