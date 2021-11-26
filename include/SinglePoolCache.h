@@ -120,8 +120,6 @@ public:
     Cache(Cache&&) = delete;
     /// @todo delete more of the default methods
     [[nodiscard]] static CacheLine& getLine() noexcept { return theCache_.getLine(); }
-    [[nodiscard]] static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept { return theCache_.read(address, buf, capacity); }
-    [[nodiscard]] static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept { return theCache_.write(address, buf, capacity); }
     static void begin() noexcept { theCache_.begin(); }
     static void clear() noexcept { theCache_.clear(); }
     [[nodiscard]] static constexpr auto getCacheSize() noexcept { return backingStoreSize; }
