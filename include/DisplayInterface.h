@@ -80,28 +80,46 @@ public:
 #define SixteenByteEntry(Prefix) \
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
+        TwoByteEntry(PortIO),
         TwoByteEntry(Invoke),
-        TwoByteEntry(Unused0),
+
         FourByteEntry(Result),
+
         TwoByteEntry(X0),
         TwoByteEntry(Y0),
+
         TwoByteEntry(X1),
         TwoByteEntry(Y1),
+
         TwoByteEntry(X2),
         TwoByteEntry(Y2),
+
+        TwoByteEntry(SX),
+        TwoByteEntry(SY),
+
         TwoByteEntry(W),
         TwoByteEntry(H),
+
         TwoByteEntry(R),
-        TwoByteEntry(Color),
+        TwoByteEntry(Unused1),
+
         TwoByteEntry(ForegroundColor),
         TwoByteEntry(BackgroundColor),
+
+        TwoByteEntry(PerformFill),
         TwoByteEntry(Invert),
+
         TwoByteEntry(Rotation),
         TwoByteEntry(TextWrap),
+
         TwoByteEntry(DisplayWidth),
         TwoByteEntry(DisplayHeight),
+
         TwoByteEntry(CursorX),
         TwoByteEntry(CursorY),
+
+        TwoByteEntry(TreatAsSquare),
+        TwoByteEntry(CurrentCharacter),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -120,7 +138,6 @@ public:
         W = W0,
         H = H0,
         R = R0,
-        Color = Color0,
         ForegroundColor = ForegroundColor0,
         BackgroundColor = BackgroundColor0,
         Invert = Invert0,
@@ -130,7 +147,12 @@ public:
         DisplayHeight = DisplayHeight0,
         CursorX = CursorX0,
         CursorY = CursorY0,
-
+        PortIO = PortIO0,
+        PerformFill = PerformFill0,
+        TreatAsSquare = TreatAsSquare0,
+        SX = SX0,
+        SY = SY0,
+        CurrentCharacter = CurrentCharacter0,
     };
 public:
     static constexpr auto StartAddress = baseAddress;
@@ -214,51 +236,53 @@ private:
         DrawRoundRect, // use the fill flag to use fillRoundRect instead
         SetCursor,
         SetTextColor,
+        SetTextSize,
+        DrawChar,
     };
     static void invoke(SplitWord16 opcode) noexcept {
         returnValue_.wholeValue_ = 0;
         switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
             case InvokeOpcodes::FillScreen:
-                tft.fillScreen(color_);
+                tft.fillScreen(foregroundColor_);
                 break;
             case InvokeOpcodes::DrawPixel:
-                tft.drawPixel(x0_, y0_, color_);
+                tft.drawPixel(x0_, y0_, foregroundColor_);
                 break;
             case InvokeOpcodes::DrawLine:
-                tft.drawLine(x0_, y0_, x1_, y1_, color_);
+                tft.drawLine(x0_, y0_, x1_, y1_, foregroundColor_);
                 break;
             case InvokeOpcodes::DrawFastVLine:
-                tft.drawFastVLine(x0_, y0_, h_, color_);
+                tft.drawFastVLine(x0_, y0_, h_, foregroundColor_);
                 break;
             case InvokeOpcodes::DrawFastHLine:
-                tft.drawFastHLine(x0_, y0_, w_, color_);
+                tft.drawFastHLine(x0_, y0_, w_, foregroundColor_);
                 break;
             case InvokeOpcodes::DrawRect:
                 if (performFill_) {
-                    tft.fillRect(x0_, y0_, w_, h_, color_);
+                    tft.fillRect(x0_, y0_, w_, h_, foregroundColor_);
                 } else {
-                    tft.drawRect(x0_, y0_, w_, h_, color_);
+                    tft.drawRect(x0_, y0_, w_, h_, foregroundColor_);
                 }
                 break;
             case InvokeOpcodes::DrawCircle:
                 if (performFill_) {
-                    tft.fillCircle(x0_, y0_, r_, color_);
+                    tft.fillCircle(x0_, y0_, r_, foregroundColor_);
                 } else {
-                    tft.drawCircle(x0_, y0_, r_, color_);
+                    tft.drawCircle(x0_, y0_, r_, foregroundColor_);
                 }
                 break;
             case InvokeOpcodes::DrawTriangle:
                 if (performFill_) {
-                    tft.fillTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
+                    tft.fillTriangle(x0_, y0_, x1_, y1_, x2_, y2_, foregroundColor_);
                 } else {
-                    tft.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
+                    tft.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, foregroundColor_);
                 }
                 break;
             case InvokeOpcodes::DrawRoundRect:
                 if (performFill_) {
-                    tft.fillRoundRect(x0_, y0_, w_, h_, r_, color_);
+                    tft.fillRoundRect(x0_, y0_, w_, h_, r_, foregroundColor_);
                 } else {
-                    tft.drawRoundRect(x0_, y0_, w_, h_, r_, color_);
+                    tft.drawRoundRect(x0_, y0_, w_, h_, r_, foregroundColor_);
                 }
                 break;
             case InvokeOpcodes::SetCursor:
@@ -266,6 +290,20 @@ private:
                 break;
             case InvokeOpcodes::SetTextColor:
                 tft.setTextColor(foregroundColor_, backgroundColor_);
+                break;
+            case InvokeOpcodes::SetTextSize:
+                if (treatAsSquare_) {
+                    tft.setTextSize(sx_);
+                } else {
+                    tft.setTextSize(sx_, sy_);
+                }
+                break;
+            case InvokeOpcodes::DrawChar:
+                if (treatAsSquare_) {
+                    tft.drawChar(x0_, y0_, currentCharacter_, foregroundColor_, backgroundColor_, sx_);
+                } else {
+                    tft.drawChar(x0_, y0_, currentCharacter_, foregroundColor_, backgroundColor_, sx_, sy_);
+                }
                 break;
             default:
                 returnValue_.wholeValue_ = 0xFFFF'FFFF;
@@ -276,6 +314,8 @@ private:
         switch (static_cast<DisplayInterfaceRegisters>(offset)) {
             case DisplayInterfaceRegisters::Invert: return displayIsInverted_ ? 0xFFFF : 0;
             case DisplayInterfaceRegisters::TextWrap: return textWrapOn_ ? 0xFFFF : 0;
+            case DisplayInterfaceRegisters::PerformFill: return performFill_ ? 0xFFFF : 0;
+            case DisplayInterfaceRegisters::TreatAsSquare: return treatAsSquare_ ? 0xFFFF : 0;
             case DisplayInterfaceRegisters::DisplayWidth: return tft.width();
             case DisplayInterfaceRegisters::DisplayHeight: return tft.height();
             case DisplayInterfaceRegisters::CursorX: return tft.getCursorX();
@@ -292,11 +332,12 @@ private:
             case DisplayInterfaceRegisters::W: return w_ ;
             case DisplayInterfaceRegisters::H: return h_ ;
             case DisplayInterfaceRegisters::R: return r_ ;
-            case DisplayInterfaceRegisters::Color: return color_ ;
             case DisplayInterfaceRegisters::BackgroundColor: return backgroundColor_ ;
             case DisplayInterfaceRegisters::ForegroundColor: return foregroundColor_ ;
-            default:
-                break;
+            case DisplayInterfaceRegisters::SX: return sx_ ;
+            case DisplayInterfaceRegisters::SY: return sy_ ;
+            case DisplayInterfaceRegisters::CurrentCharacter: return currentCharacter_;
+            default: break;
         }
         return 0;
     }
@@ -314,21 +355,27 @@ private:
                 case DisplayInterfaceRegisters::CursorX: tft.setCursor(value.getWholeValue(), tft.getCursorY()); break;
                 case DisplayInterfaceRegisters::CursorY: tft.setCursor(tft.getCursorX(), value.getWholeValue()); break;
                 case DisplayInterfaceRegisters::Invoke: invoke(value); break;
+                case DisplayInterfaceRegisters::PerformFill: performFill_ = value.getWholeValue() != 0; break;
+                case DisplayInterfaceRegisters::TreatAsSquare: treatAsSquare_ = value.getWholeValue() != 0; break;
                 case DisplayInterfaceRegisters::X0: x0_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::Y0: y0_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::X1: x1_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::Y1: y1_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::X2: x2_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::Y2: y2_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::SX: sx_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::SY: sy_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::W: w_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::H: h_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::R: r_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::Color: color_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::BackgroundColor: backgroundColor_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::ForegroundColor: foregroundColor_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::ResultLower: returnValue_.setLowerHalf(value); break;
                 case DisplayInterfaceRegisters::ResultUpper: returnValue_.setUpperHalf(value); break;
+                case DisplayInterfaceRegisters::CurrentCharacter: currentCharacter_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::PortIO: tft.write(value.getLowerHalf()); break;
                 default: break;
+
             }
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
