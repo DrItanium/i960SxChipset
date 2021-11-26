@@ -87,19 +87,9 @@ public:
 private:
     void updateFlags(byte index) noexcept {
         // cache the lookup
-        static constexpr byte lookup[8] {
-            _BV(0),
-                    _BV(1),
-                    _BV(2),
-                    _BV(3),
-                    _BV(4),
-                    _BV(5),
-                    _BV(6),
-                    _BV(7),
-        };
-        mruBits_ |= lookup[index];
+        mruBits_ |= BitMaskTable_Byte[index];
         if (mruBits_ == 0xFF) {
-            mruBits_ = lookup[index];
+            mruBits_ = BitMaskTable_Byte[index];
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {

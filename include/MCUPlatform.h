@@ -58,6 +58,17 @@ static_assert(2_KHz == 2'000);
 static_assert(2_MHz == 2'000'000);
 static_assert(20_MHz == 20'000'000);
 
+static constexpr byte BitMaskTable_Byte[8] {
+        0b0000'0001,
+        0b0000'0010,
+        0b0000'0100,
+        0b0000'1000,
+        0b0001'0000,
+        0b0010'0000,
+        0b0100'0000,
+        0b1000'0000,
+};
+
 constexpr byte pow2(byte value) noexcept {
     if (value == 0) {
         return 1;

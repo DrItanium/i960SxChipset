@@ -75,19 +75,9 @@ public:
     }
 private:
     void updateFlags(byte index) noexcept {
-        // we have to take the index and current value into account
-        // bit 0: top
-        // bit 1: left
-        // bit 2: right
-        static constexpr byte lookup[4] {
-            _BV(0),
-                    _BV(1),
-                    _BV(2),
-                    _BV(3),
-        };
-        flags_ |= lookup[index];
+        flags_ |= BitMaskTable_Byte[index];
         if (flags_ >= 0xF) {
-            flags_ = lookup[index];
+            flags_ = BitMaskTable_Byte[index];
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
