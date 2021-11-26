@@ -66,6 +66,65 @@ public:
         RawButtonsLower = RawButtons00,
         RawButtonsUpper = RawButtons10,
     };
+    enum class DisplayInterfaceRegisters : uint8_t {
+#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
+#define FourByteEntry(Prefix) \
+        TwoByteEntry(Prefix ## 0), \
+        TwoByteEntry(Prefix ## 1)
+#define EightByteEntry(Prefix) \
+        FourByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define TwelveByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        FourByteEntry(Prefix ## 1)
+#define SixteenByteEntry(Prefix) \
+        EightByteEntry(Prefix ## 0), \
+        EightByteEntry(Prefix ## 1)
+        TwoByteEntry(Invoke),
+        TwoByteEntry(Unused0),
+        FourByteEntry(Result),
+        TwoByteEntry(X0),
+        TwoByteEntry(Y0),
+        TwoByteEntry(X1),
+        TwoByteEntry(Y1),
+        TwoByteEntry(X2),
+        TwoByteEntry(Y2),
+        TwoByteEntry(W),
+        TwoByteEntry(H),
+        TwoByteEntry(R),
+        TwoByteEntry(Color),
+        TwoByteEntry(ForegroundColor),
+        TwoByteEntry(BackgroundColor),
+        TwoByteEntry(Invert),
+        TwoByteEntry(Rotation),
+        TwoByteEntry(TextWrap),
+        TwoByteEntry(DisplayWidth),
+        TwoByteEntry(DisplayHeight),
+        TwoByteEntry(CursorX),
+        TwoByteEntry(CursorY),
+#undef SixteenByteEntry
+#undef TwelveByteEntry
+#undef EightByteEntry
+#undef FourByteEntry
+#undef TwoByteEntry
+        End,
+        Invoke= Invoke0,
+        ResultLower = Result00,
+        ResultUpper = Result10,
+        X0 = X00,
+        Y0 = Y00,
+        X1 = X10,
+        Y1 = Y10,
+        X2 = X20,
+        Y2 = Y20,
+        W = W0,
+        H = H0,
+        R = R0,
+        Color = Color0,
+        ForegroundColor = ForegroundColor0,
+        BackgroundColor = BackgroundColor0,
+
+    };
 public:
     static constexpr auto StartAddress = baseAddress;
     static constexpr SplitWord32 StartAddressSplit { StartAddress};
@@ -136,11 +195,115 @@ public:
         }
     }
 private:
+    enum class InvokeOpcodes : uint16_t {
+        DrawPixel,
+        DrawFastVLine,
+        DrawFastHLine,
+        DrawRect, // use the fill flag to use fill rect instead
+        FillScreen,
+        DrawLine,
+        DrawCircle, // use the fill flag to use fillCircle instead
+        DrawTriangle, // use the fill flag to use fillTriangle instead
+        DrawRoundRect, // use the fill flag to use fillRoundRect instead
+        SetCursor,
+        SetTextColor,
+
+
+    };
+    static void invoke(SplitWord16 opcode) noexcept {
+        returnValue_.wholeValue_ = 0;
+        switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
+            case InvokeOpcodes::FillScreen:
+                tft.fillScreen(color_);
+                break;
+            case InvokeOpcodes::DrawPixel:
+                tft.drawPixel(x0_, y0_, color_);
+                break;
+            case InvokeOpcodes::DrawLine:
+                tft.drawLine(x0_, y0_, x1_, y1_, color_);
+                break;
+            case InvokeOpcodes::DrawFastVLine:
+                tft.drawFastVLine(x0_, y0_, h_, color_);
+                break;
+            case InvokeOpcodes::DrawFastHLine:
+                tft.drawFastHLine(x0_, y0_, w_, color_);
+                break;
+            case InvokeOpcodes::DrawRect:
+                if (performFill_) {
+                    tft.fillRect(x0_, y0_, w_, h_, color_);
+                } else {
+                    tft.drawRect(x0_, y0_, w_, h_, color_);
+                }
+                break;
+            case InvokeOpcodes::DrawCircle:
+                if (performFill_) {
+                    tft.fillCircle(x0_, y0_, r_, color_);
+                } else {
+                    tft.drawCircle(x0_, y0_, r_, color_);
+                }
+                break;
+            case InvokeOpcodes::DrawTriangle:
+                if (performFill_) {
+                    tft.fillTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
+                } else {
+                    tft.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, color_);
+                }
+                break;
+            case InvokeOpcodes::DrawRoundRect:
+                if (performFill_) {
+                    tft.fillRoundRect(x0_, y0_, w_, h_, r_, color_);
+                } else {
+                    tft.drawRoundRect(x0_, y0_, w_, h_, r_, color_);
+                }
+                break;
+            case InvokeOpcodes::SetCursor:
+                tft.setCursor(x0_, y0_);
+                break;
+            case InvokeOpcodes::SetTextColor:
+                tft.setTextColor(foregroundColor_, backgroundColor_);
+                break;
+            default:
+                returnValue_.wholeValue_ = 0xFFFF'FFFF;
+                break;
+        }
+    }
     static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
+        switch (static_cast<DisplayInterfaceRegisters>(offset)) {
+            case DisplayInterfaceRegisters::ResultLower: return returnValue_.getLowerHalf();
+            case DisplayInterfaceRegisters::ResultUpper: return returnValue_.getUpperHalf();
+            case DisplayInterfaceRegisters::X0: return x0_ ;
+            case DisplayInterfaceRegisters::Y0: return y0_ ;
+            case DisplayInterfaceRegisters::X1: return x1_ ;
+            case DisplayInterfaceRegisters::Y1: return y1_ ;
+            case DisplayInterfaceRegisters::X2: return x2_ ;
+            case DisplayInterfaceRegisters::Y2: return y2_ ;
+            case DisplayInterfaceRegisters::W: return w_ ;
+            case DisplayInterfaceRegisters::H: return h_ ;
+            case DisplayInterfaceRegisters::R: return r_ ;
+            case DisplayInterfaceRegisters::Color: return color_ ;
+            case DisplayInterfaceRegisters::BackgroundColor: return backgroundColor_ ;
+            case DisplayInterfaceRegisters::ForegroundColor: return foregroundColor_ ;
+            default:
+                break;
+        }
         return 0;
     }
     static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-
+            switch (static_cast<DisplayInterfaceRegisters>(offset)) {
+                case DisplayInterfaceRegisters::Invoke: invoke(value); break;
+                case DisplayInterfaceRegisters::X0: x0_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::Y0: y0_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::X1: x1_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::Y1: y1_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::X2: x2_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::Y2: y2_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::W: w_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::H: h_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::R: r_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::Color: color_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::BackgroundColor: backgroundColor_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::ForegroundColor: foregroundColor_ = value.wholeValue_; break;
+            }
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
 #ifdef CHIPSET_TYPE1
@@ -179,6 +342,7 @@ private:
                                       -1};
     static inline uint16_t backlightIntensity_ = 0;
     static inline SplitWord32 rawButtons_{0};
+    static inline SplitWord32 returnValue_{0};
 #define X(type, name, defaultValue) static inline type name = defaultValue;
 #include "InternalDisplayRegisters.def"
 #undef X
