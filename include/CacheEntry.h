@@ -112,32 +112,6 @@ public:
     [[nodiscard]] constexpr bool isValid() const noexcept { return dirty_ != InvalidCacheLineState; }
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_ < NumWordsCached; }
     [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
-
-    OffsetType write(OffsetType startingOffset, byte *buf, OffsetType capacity) noexcept {
-        auto* ptr = reinterpret_cast<byte*>(data) + startingOffset;
-        for (OffsetType i = 0; i < capacity; ++i) {
-            // while the comparison slows things down, it will make sure that updates which do not affect the cache will not
-            auto oldPtr = ptr[i];
-            ptr[i] = buf[i];
-            if (oldPtr != ptr[i]) {
-                if (i < dirty_) {
-                    dirty_ = i;
-                }
-                if (i > highestUpdated_) {
-                    highestUpdated_ = startingOffset;
-                }
-            }
-        }
-        return capacity;
-    }
-    OffsetType read(OffsetType startingOffset, byte *buf, OffsetType capacity) noexcept {
-        auto* ptr = reinterpret_cast<byte*>(data) + startingOffset;
-        for (OffsetType i = 0; i < capacity; ++i) {
-            // while the comparison slows things down, it will make sure that updates which do not affect the cache will not
-            buf[i] = ptr[i];
-        }
-        return capacity;
-    }
 private:
     SplitWord16 data[NumWordsCached]; // 16 bytes
     typename TaggedAddress::RestType key_ = 0;

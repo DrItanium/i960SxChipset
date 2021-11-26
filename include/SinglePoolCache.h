@@ -86,34 +86,6 @@ public:
         // set everything up
     }
     constexpr auto getCacheSize() const noexcept { return sizeof(backingStorage_); }
-    size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        // reading and writing to the cache in a linear fashion will be kinda strange.
-        // There are several ways to do this but I think the biggest requirement is that we only honor the portion that spans across one
-        // cache line only!
-        TaggedAddress theAddress{address};
-        auto startingOffset = theAddress.getOffset();
-        auto realCapacity = capacity;
-        if (capacity > NumBytesCached) {
-            realCapacity = NumBytesCached;
-            // only decrement the length if we exceeded the size of the line
-            realCapacity -= startingOffset;
-        }
-        return getLine(theAddress).write(startingOffset, buf, realCapacity);
-    }
-    size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        // reading and writing to the cache in a linear fashion will be kinda strange.
-        // There are several ways to do this but I think the biggest requirement is that we only honor the portion that spans across one
-        // cache line only!
-        TaggedAddress theAddress{address};
-        auto startingOffset = theAddress.getOffset();
-        auto realCapacity = capacity;
-        if (capacity > NumBytesCached) {
-            realCapacity = NumBytesCached;
-            // only decrement the length if we exceeded the size of the line
-            realCapacity -= startingOffset;
-        }
-        return getLine(theAddress).read(startingOffset, buf, realCapacity);
-    }
 private:
     CacheEntry backingStorage_[ActualNumberOfEntries][CacheWay::NumberOfWays];
     CacheWay entries_[ActualNumberOfEntries];

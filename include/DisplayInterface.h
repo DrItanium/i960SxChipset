@@ -179,6 +179,9 @@ private:
                                       -1};
     static inline uint16_t backlightIntensity_ = 0;
     static inline SplitWord32 rawButtons_{0};
+#define X(type, name, defaultValue) static inline type name = defaultValue;
+#include "InternalDisplayRegisters.def"
+#undef X
 #endif
 };
 #endif //SXCHIPSET_DISPLAYINTERFACE_H
