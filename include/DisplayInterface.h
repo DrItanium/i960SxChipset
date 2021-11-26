@@ -120,6 +120,13 @@ public:
 
         TwoByteEntry(TreatAsSquare),
         TwoByteEntry(CurrentCharacter),
+
+        TwoByteEntry(Red),
+        TwoByteEntry(Green),
+        TwoByteEntry(Blue),
+        TwoByteEntry(Unused2),
+
+        FourByteEntry(PackedRGB),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -153,6 +160,11 @@ public:
         SX = SX0,
         SY = SY0,
         CurrentCharacter = CurrentCharacter0,
+        Red = Red0,
+        Green = Green0,
+        Blue = Blue0,
+        PackedRGBLower = PackedRGB00,
+        PackedRGBUpper = PackedRGB10,
     };
 public:
     static constexpr auto StartAddress = baseAddress;
@@ -238,10 +250,16 @@ private:
         SetTextColor,
         SetTextSize,
         DrawChar,
+        Color565,
     };
     static void invoke(SplitWord16 opcode) noexcept {
         returnValue_.wholeValue_ = 0;
         switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
+            case InvokeOpcodes::Color565:
+                returnValue_.wholeValue_ = tft.color565(packedRGB_.bytes[0],
+                                                        packedRGB_.bytes[1],
+                                                        packedRGB_.bytes[2]);
+                break;
             case InvokeOpcodes::FillScreen:
                 tft.fillScreen(foregroundColor_);
                 break;
@@ -332,6 +350,11 @@ private:
             case DisplayInterfaceRegisters::W: return w_ ;
             case DisplayInterfaceRegisters::H: return h_ ;
             case DisplayInterfaceRegisters::R: return r_ ;
+            case DisplayInterfaceRegisters::Red: return packedRGB_.bytes[0];
+            case DisplayInterfaceRegisters::Green: return packedRGB_.bytes[1];
+            case DisplayInterfaceRegisters::Blue: return packedRGB_.bytes[2];
+            case DisplayInterfaceRegisters::PackedRGBLower: return packedRGB_.getLowerHalf();
+            case DisplayInterfaceRegisters::PackedRGBUpper: return packedRGB_.getUpperHalf();
             case DisplayInterfaceRegisters::BackgroundColor: return backgroundColor_ ;
             case DisplayInterfaceRegisters::ForegroundColor: return foregroundColor_ ;
             case DisplayInterfaceRegisters::SX: return sx_ ;
@@ -368,6 +391,11 @@ private:
                 case DisplayInterfaceRegisters::W: w_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::H: h_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::R: r_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::Red: packedRGB_.bytes[0] = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::Green: packedRGB_.bytes[1] = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::Blue: packedRGB_.bytes[2]= value.wholeValue_; break;
+                case DisplayInterfaceRegisters::PackedRGBLower: packedRGB_.setLowerHalf(value); break;
+                case DisplayInterfaceRegisters::PackedRGBUpper: packedRGB_.setUpperHalf(value); break;
                 case DisplayInterfaceRegisters::BackgroundColor: backgroundColor_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::ForegroundColor: foregroundColor_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::ResultLower: returnValue_.setLowerHalf(value); break;
@@ -416,6 +444,7 @@ private:
     static inline uint16_t backlightIntensity_ = 0;
     static inline SplitWord32 rawButtons_{0};
     static inline SplitWord32 returnValue_{0};
+    static inline SplitWord32 packedRGB_ { 0};
 #define X(type, name, defaultValue) static inline type name = defaultValue;
 #include "InternalDisplayRegisters.def"
 #undef X
