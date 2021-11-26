@@ -187,6 +187,8 @@ union SplitWord16 {
     explicit constexpr SplitWord16(uint16_t value = 0) noexcept : wholeValue_(value) { }
     constexpr SplitWord16(uint8_t lower, uint8_t upper) noexcept : bytes{lower, upper} { }
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
+    [[nodiscard]] constexpr auto getLowerHalf() const noexcept { return bytes[0]; }
+    [[nodiscard]] constexpr auto getUpperHalf() const noexcept { return bytes[1]; }
     uint16_t wholeValue_ = 0;
     uint8_t bytes[sizeof(uint16_t) / sizeof(uint8_t)];
 };
@@ -201,6 +203,8 @@ union SplitWord32 {
     [[nodiscard]] constexpr auto getMostSignificantByte() const noexcept { return static_cast<byte>(wholeValue_ >> 24); }
     [[nodiscard]] constexpr auto getLowerHalf() const noexcept { return halves[0]; }
     [[nodiscard]] constexpr auto getUpperHalf() const noexcept { return halves[1]; }
+    void setLowerHalf(SplitWord16 value) noexcept { words_[0] = value; }
+    void setUpperHalf(SplitWord16 value) noexcept { words_[1] = value; }
     uint32_t wholeValue_ = 0;
     int32_t signedRepresentation_;
     byte bytes[sizeof(uint32_t)];

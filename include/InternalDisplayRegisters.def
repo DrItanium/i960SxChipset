@@ -14,6 +14,8 @@ UnsignedRegister(color_)
 UnsignedRegister(foregroundColor_)
 UnsignedRegister(backgroundColor_)
 FlagRegister(performFill_)
+FlagRegister(displayIsInverted_);
+FlagRegister(textWrapOn_);
 // cursor caching
 #undef UnsignedRegister
 #undef SignedRegister

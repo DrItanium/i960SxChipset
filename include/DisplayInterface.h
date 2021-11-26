@@ -123,6 +123,13 @@ public:
         Color = Color0,
         ForegroundColor = ForegroundColor0,
         BackgroundColor = BackgroundColor0,
+        Invert = Invert0,
+        Rotation = Rotation0,
+        TextWrap = TextWrap0,
+        DisplayWidth = DisplayWidth0,
+        DisplayHeight = DisplayHeight0,
+        CursorX = CursorX0,
+        CursorY = CursorY0,
 
     };
 public:
@@ -195,7 +202,7 @@ public:
         }
     }
 private:
-    enum class InvokeOpcodes : uint16_t {
+    enum class InvokeOpcodes : uint8_t {
         DrawPixel,
         DrawFastVLine,
         DrawFastHLine,
@@ -207,8 +214,6 @@ private:
         DrawRoundRect, // use the fill flag to use fillRoundRect instead
         SetCursor,
         SetTextColor,
-
-
     };
     static void invoke(SplitWord16 opcode) noexcept {
         returnValue_.wholeValue_ = 0;
@@ -269,6 +274,13 @@ private:
     }
     static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<DisplayInterfaceRegisters>(offset)) {
+            case DisplayInterfaceRegisters::Invert: return displayIsInverted_ ? 0xFFFF : 0;
+            case DisplayInterfaceRegisters::TextWrap: return textWrapOn_ ? 0xFFFF : 0;
+            case DisplayInterfaceRegisters::DisplayWidth: return tft.width();
+            case DisplayInterfaceRegisters::DisplayHeight: return tft.height();
+            case DisplayInterfaceRegisters::CursorX: return tft.getCursorX();
+            case DisplayInterfaceRegisters::CursorY: return tft.getCursorY();
+            case DisplayInterfaceRegisters::Rotation: return tft.getRotation();
             case DisplayInterfaceRegisters::ResultLower: return returnValue_.getLowerHalf();
             case DisplayInterfaceRegisters::ResultUpper: return returnValue_.getUpperHalf();
             case DisplayInterfaceRegisters::X0: return x0_ ;
@@ -290,6 +302,17 @@ private:
     }
     static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
+                case DisplayInterfaceRegisters::Invert:
+                    displayIsInverted_ = value.getWholeValue() != 0;
+                    tft.invertDisplay(displayIsInverted_);
+                    break;
+                case DisplayInterfaceRegisters::TextWrap:
+                    textWrapOn_ = value.getWholeValue() != 0;
+                    tft.setTextWrap(textWrapOn_);
+                    break;
+                case DisplayInterfaceRegisters::Rotation: tft.setRotation(value.getLowerHalf()); break;
+                case DisplayInterfaceRegisters::CursorX: tft.setCursor(value.getWholeValue(), tft.getCursorY()); break;
+                case DisplayInterfaceRegisters::CursorY: tft.setCursor(tft.getCursorX(), value.getWholeValue()); break;
                 case DisplayInterfaceRegisters::Invoke: invoke(value); break;
                 case DisplayInterfaceRegisters::X0: x0_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::Y0: y0_ = value.wholeValue_; break;
@@ -303,6 +326,9 @@ private:
                 case DisplayInterfaceRegisters::Color: color_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::BackgroundColor: backgroundColor_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::ForegroundColor: foregroundColor_ = value.wholeValue_; break;
+                case DisplayInterfaceRegisters::ResultLower: returnValue_.setLowerHalf(value); break;
+                case DisplayInterfaceRegisters::ResultUpper: returnValue_.setUpperHalf(value); break;
+                default: break;
             }
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
