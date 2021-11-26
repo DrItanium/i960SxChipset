@@ -121,11 +121,6 @@ public:
         TwoByteEntry(TreatAsSquare),
         TwoByteEntry(CurrentCharacter),
 
-        TwoByteEntry(Red),
-        TwoByteEntry(Green),
-        TwoByteEntry(Blue),
-        TwoByteEntry(Unused2),
-
         FourByteEntry(PackedRGB),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
@@ -160,9 +155,6 @@ public:
         SX = SX0,
         SY = SY0,
         CurrentCharacter = CurrentCharacter0,
-        Red = Red0,
-        Green = Green0,
-        Blue = Blue0,
         PackedRGBLower = PackedRGB00,
         PackedRGBUpper = PackedRGB10,
     };
@@ -350,9 +342,6 @@ private:
             case DisplayInterfaceRegisters::W: return w_ ;
             case DisplayInterfaceRegisters::H: return h_ ;
             case DisplayInterfaceRegisters::R: return r_ ;
-            case DisplayInterfaceRegisters::Red: return packedRGB_.bytes[0];
-            case DisplayInterfaceRegisters::Green: return packedRGB_.bytes[1];
-            case DisplayInterfaceRegisters::Blue: return packedRGB_.bytes[2];
             case DisplayInterfaceRegisters::PackedRGBLower: return packedRGB_.getLowerHalf();
             case DisplayInterfaceRegisters::PackedRGBUpper: return packedRGB_.getUpperHalf();
             case DisplayInterfaceRegisters::BackgroundColor: return backgroundColor_ ;
@@ -391,9 +380,6 @@ private:
                 case DisplayInterfaceRegisters::W: w_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::H: h_ = value.wholeValue_; break;
                 case DisplayInterfaceRegisters::R: r_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::Red: packedRGB_.bytes[0] = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::Green: packedRGB_.bytes[1] = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::Blue: packedRGB_.bytes[2]= value.wholeValue_; break;
                 case DisplayInterfaceRegisters::PackedRGBLower: packedRGB_.setLowerHalf(value); break;
                 case DisplayInterfaceRegisters::PackedRGBUpper: packedRGB_.setUpperHalf(value); break;
                 case DisplayInterfaceRegisters::BackgroundColor: backgroundColor_ = value.wholeValue_; break;
