@@ -122,12 +122,38 @@ public:
         TwoByteEntry(CurrentCharacter),
 
         FourByteEntry(PackedRGB),
+
+        TwoByteEntry(ColorBlack), // fixed color values
+        TwoByteEntry(ColorWhite), // fixed color values
+
+        TwoByteEntry(ColorRed), // fixed color values
+        TwoByteEntry(ColorGreen), // fixed color values
+
+        TwoByteEntry(ColorBlue), // fixed color values
+        TwoByteEntry(ColorCyan), // fixed color values
+
+        TwoByteEntry(ColorMagenta), // fixed color values
+        TwoByteEntry(ColorYellow), // fixed color values
+
+        TwoByteEntry(ColorOrange), // fixed color values
+        TwoByteEntry(Unused2),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
+#define X(component) Color ## component = Color ## component ## 0
+X(Black),
+X(White),
+X(Red),
+X(Green),
+X(Blue),
+X(Cyan),
+X(Magenta),
+X(Yellow),
+X(Orange),
+#undef X
         Invoke= Invoke0,
         ResultLower = Result00,
         ResultUpper = Result10,
@@ -349,6 +375,14 @@ private:
             case DisplayInterfaceRegisters::SX: return sx_ ;
             case DisplayInterfaceRegisters::SY: return sy_ ;
             case DisplayInterfaceRegisters::CurrentCharacter: return currentCharacter_;
+            case DisplayInterfaceRegisters::ColorBlack: return ST7735_BLACK;
+            case DisplayInterfaceRegisters::ColorWhite: return ST7735_WHITE;
+            case DisplayInterfaceRegisters::ColorRed: return ST7735_RED;
+            case DisplayInterfaceRegisters::ColorGreen: return ST7735_GREEN;
+            case DisplayInterfaceRegisters::ColorBlue: return ST7735_BLUE;
+            case DisplayInterfaceRegisters::ColorMagenta: return ST7735_MAGENTA;
+            case DisplayInterfaceRegisters::ColorYellow: return ST7735_YELLOW;
+            case DisplayInterfaceRegisters::ColorOrange: return ST7735_ORANGE;
             default: break;
         }
         return 0;
