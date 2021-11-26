@@ -221,16 +221,28 @@ public:
         Serial.print(F("Version: "));
         Serial.println(displayShield_.getVersion(), HEX);
 
-        displayShield_.setBacklight(TFTSHIELD_BACKLIGHT_OFF);
+        setBacklightIntensity(TFTSHIELD_BACKLIGHT_OFF);
         displayShield_.tftReset();
         tft.initR(INITR_BLACKTAB);
-
+        setBacklightIntensity(TFTSHIELD_BACKLIGHT_ON);
         Serial.println(F("TFT UP AND OK!"));
         tft.fillScreen(ST7735_CYAN);
         delay(1000);
         tft.fillScreen(ST7735_BLACK);
 #endif
     }
+private:
+    static void turnBacklightOff() noexcept {
+        setBacklightIntensity(TFTSHIELD_BACKLIGHT_OFF);
+    }
+    static void turnBacklightOn() noexcept {
+        setBacklightIntensity(TFTSHIELD_BACKLIGHT_ON);
+    }
+    static void setBacklightIntensity(uint16_t value) noexcept {
+        backlightIntensity_ = value;
+        displayShield_.setBacklight(backlightIntensity_);
+    }
+public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         switch  (targetPage) {
             case SeesawPage:
@@ -430,8 +442,7 @@ private:
 #ifdef CHIPSET_TYPE1
         switch (static_cast<SeesawRegisters>(offset))  {
             case SeesawRegisters::Backlight:
-                backlightIntensity_ = value.getWholeValue();
-                displayShield_.setBacklight(backlightIntensity_);
+                setBacklightIntensity(value.getWholeValue());
                 break;
             default: break;
         }
