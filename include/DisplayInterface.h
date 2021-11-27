@@ -55,6 +55,7 @@ public:
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(Backlight),
+        TwoByteEntry(Reserved0),
         FourByteEntry(RawButtons),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
