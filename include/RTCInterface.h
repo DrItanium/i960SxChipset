@@ -141,12 +141,10 @@ public:
             case Registers::Available:
                 return rtcUp_ ? 0xFFFF : 0;
             case Registers::UnixtimeLower:
-                unixtime_ = now_.unixtime();
                 return static_cast<uint16_t>(unixtime_);
             case Registers::UnixtimeUpper:
                 return static_cast<uint16_t>(unixtime_ >> 16);
             case Registers::SecondstimeLower:
-                secondstime_ = now_.secondstime();
                 return static_cast<uint16_t>(secondstime_);
             case Registers::SecondstimeUpper:
                 return static_cast<uint16_t>(secondstime_ >> 16);
@@ -159,6 +157,8 @@ public:
             case Registers::NowRequest: {
                 if (rtcUp_) {
                     now_ = rtc_.now();
+                    unixtime_ = now_.unixtime();
+                    secondstime_ = now_.secondstime();
                 }
                 break;
             }
