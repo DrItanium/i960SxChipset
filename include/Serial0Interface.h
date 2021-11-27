@@ -115,7 +115,7 @@ public:
         return targetPage >= StartPage && targetPage < EndPage;
     }
     static void begin() noexcept {
-        Serial.begin(250'000);
+        Serial.begin(9600);
         while(!Serial) {
             delay(10);
         }
