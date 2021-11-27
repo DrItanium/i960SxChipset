@@ -275,7 +275,6 @@ private:
         FillScreen,
         DrawLine,
         DrawCircle, // use the fill flag to use fillCircle instead
-        DrawTriangle, // use the fill flag to use fillTriangle instead
         DrawRoundRect, // use the fill flag to use fillRoundRect instead
         SetCursor,
         SetTextColor,
@@ -312,13 +311,6 @@ private:
                     tft.fillCircle(x0_, y0_, r_, foregroundColor_);
                 } else {
                     tft.drawCircle(x0_, y0_, r_, foregroundColor_);
-                }
-                break;
-            case InvokeOpcodes::DrawTriangle:
-                if (performFill_) {
-                    tft.fillTriangle(x0_, y0_, x1_, y1_, x2_, y2_, foregroundColor_);
-                } else {
-                    tft.drawTriangle(x0_, y0_, x1_, y1_, x2_, y2_, foregroundColor_);
                 }
                 break;
             case InvokeOpcodes::DrawRoundRect:
