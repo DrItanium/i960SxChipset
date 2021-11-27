@@ -393,6 +393,7 @@ private:
             case DisplayInterfaceRegisters::ColorRed: return ST7735_RED;
             case DisplayInterfaceRegisters::ColorGreen: return ST7735_GREEN;
             case DisplayInterfaceRegisters::ColorBlue: return ST7735_BLUE;
+            case DisplayInterfaceRegisters::ColorCyan: return ST7735_CYAN;
             case DisplayInterfaceRegisters::ColorMagenta: return ST7735_MAGENTA;
             case DisplayInterfaceRegisters::ColorYellow: return ST7735_YELLOW;
             case DisplayInterfaceRegisters::ColorOrange: return ST7735_ORANGE;
