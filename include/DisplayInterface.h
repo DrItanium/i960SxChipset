@@ -281,16 +281,10 @@ private:
         SetTextColor,
         SetTextSize,
         DrawChar,
-        Color565,
     };
     static void invoke(SplitWord16 opcode) noexcept {
         returnValue_.wholeValue_ = 0;
         switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
-            case InvokeOpcodes::Color565:
-                returnValue_.wholeValue_ = tft.color565(packedRGB_.bytes[0],
-                                                        packedRGB_.bytes[1],
-                                                        packedRGB_.bytes[2]);
-                break;
             case InvokeOpcodes::FillScreen:
                 tft.fillScreen(foregroundColor_);
                 break;
