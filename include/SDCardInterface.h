@@ -124,12 +124,9 @@ public:
     SDCardInterface() = delete;
     ~SDCardInterface() = delete;
 private:
-    static bool primarySDCardMounted() noexcept {
-        return cardsMounted_ & 1;
-    }
     ///@todo make it possible to unmount the sdcard while the i960 is running
     static void unmountSDCard() noexcept {
-        if (primarySDCardMounted()) {
+        if (cardMounted_) {
             // first close all open files
             for (auto &file: files_) {
                 if (file.isOpen()) {
@@ -139,7 +136,7 @@ private:
                 }
             }
             // according to my research this should be enough
-            cardsMounted_ &= ~(0x0001);
+            cardMounted_ = false;
         }
     }
     /**
@@ -147,10 +144,10 @@ private:
      * @return
      */
     static auto tryMountSDCard() noexcept {
-        if (!primarySDCardMounted()) {
-            cardsMounted_ |= SD.begin(static_cast<int>(i960Pinout::SD_EN)) ? 0x0001 : 0x0000;
+        if (!cardMounted_) {
+            cardMounted_ = SD.begin(static_cast<int>(i960Pinout::SD_EN));
         }
-        return primarySDCardMounted();
+        return cardMounted_;
     }
     static uint16_t findFreeFile() noexcept {
         for (uint16_t i = 0; i < MaximumNumberOfOpenFiles; ++i) {
@@ -219,7 +216,7 @@ private:
                 case T::FilePermissions:
                     return filePermissions_;
                 case T::MountCTL:
-                    return cardsMounted_;
+                    return cardMounted_ ? 0xFFFF : 0;
                 default:
                     return 0;
             }
@@ -338,6 +335,6 @@ private:
     static inline OpenFileHandle files_[MaximumNumberOfOpenFiles];
     static inline bool makeMissingParentDirectories_ = false;
     static inline uint16_t filePermissions_ = 0;
-    static inline uint16_t cardsMounted_ = 0;
+    static inline bool cardMounted_ = false;
 };
 #endif //SXCHIPSET_SDCARDINTERFACE_H
