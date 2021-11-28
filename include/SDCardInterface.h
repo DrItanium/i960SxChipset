@@ -89,6 +89,8 @@ public:
         TwoByteEntry(OpenWriteOnly), // O_WRITE
         TwoByteEntry(CreateFileIfMissing), // O_CREAT
         TwoByteEntry(ClearFileContentsOnOpen), // O_TRUNC
+        TwoByteEntry(MountStatus), // Is there a card currently mounted?
+        TwoByteEntry(MountCTL), // controls mount/unmount functionality
 
 #undef SixteenByteEntry
 #undef TwelveByteEntry
@@ -117,11 +119,36 @@ public:
         CreateFileIfMissing = CreateFileIfMissing0,
         ClearFileContentsOnOpen = ClearFileContentsOnOpen0,
         FilePermissions = FilePermissions0,
+        MountStatus = MountStatus0,
+        MountCTL = MountCTL0,
         // we ignore the upper half of the register but reserve it to make sure
     };
     SDCardInterface() = delete;
     ~SDCardInterface() = delete;
 private:
+    ///@todo make it possible to unmount the sdcard while the i960 is running
+    static void unmountSDCard() noexcept {
+        // first close all open files
+        for (auto& file : files_) {
+            if (file.isOpen()) {
+                // flush everything in progress
+                file.flush();
+                file.close();
+            }
+        }
+        // according to my research this should be enough
+        cardMounted_ = false;
+    }
+    /**
+     * @brief Try to mount/remount the sd card
+     * @return
+     */
+    static auto tryMountSDCard() noexcept {
+        if (!cardMounted_) {
+            cardMounted_ = SD.begin(static_cast<int>(i960Pinout::SD_EN));
+        }
+        return cardMounted_;
+    }
     static uint16_t findFreeFile() noexcept {
         for (uint16_t i = 0; i < MaximumNumberOfOpenFiles; ++i) {
             if (!files_[i].isOpen()) {
@@ -254,7 +281,7 @@ public:
     }
     static void begin() noexcept {
         if (!initialized_) {
-            while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+            while (!tryMountSDCard()) {
                 Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
                 delay(1000);
             }
@@ -294,5 +321,6 @@ private:
     static inline OpenFileHandle files_[MaximumNumberOfOpenFiles];
     static inline bool makeMissingParentDirectories_ = false;
     static inline uint16_t filePermissions_ = 0;
+    static inline bool cardMounted_ = false;
 };
 #endif //SXCHIPSET_SDCARDINTERFACE_H
