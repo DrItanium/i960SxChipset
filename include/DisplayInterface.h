@@ -55,8 +55,6 @@ public:
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
         TwoByteEntry(Backlight),
-        TwoByteEntry(Reserved0),
-        FourByteEntry(RawButtons),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
@@ -64,8 +62,6 @@ public:
 #undef TwoByteEntry
         End,
         Backlight = Backlight0,
-        RawButtonsLower = RawButtons00,
-        RawButtonsUpper = RawButtons10,
     };
     enum class DisplayInterfaceRegisters : uint8_t {
 #define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
@@ -81,75 +77,27 @@ public:
 #define SixteenByteEntry(Prefix) \
         EightByteEntry(Prefix ## 0), \
         EightByteEntry(Prefix ## 1)
-        TwoByteEntry(PortIO),
-        TwoByteEntry(Invoke),
-
-        TwoByteEntry(X0),
-        TwoByteEntry(Y0),
-
-        TwoByteEntry(X1),
-        TwoByteEntry(Y1),
-
-        TwoByteEntry(X2),
-        TwoByteEntry(Y2),
-
-        TwoByteEntry(SX),
-        TwoByteEntry(SY),
-
-        TwoByteEntry(W),
-        TwoByteEntry(H),
-
-        TwoByteEntry(R),
-        TwoByteEntry(Unused1),
-
-        TwoByteEntry(ForegroundColor),
-        TwoByteEntry(BackgroundColor),
-
-        TwoByteEntry(Invert),
-        TwoByteEntry(Rotation),
-
-        TwoByteEntry(TextWrap),
-        TwoByteEntry(DisplayWidth),
-
-        TwoByteEntry(DisplayHeight),
-        TwoByteEntry(CursorX),
-
-        TwoByteEntry(CursorY),
-        TwoByteEntry(CurrentCharacter),
-
-        FourByteEntry(PackedRGB),
-
+        SixteenByteEntry(InstructionPort0),
+        TwoByteEntry(Invoke0),
 #undef SixteenByteEntry
 #undef TwelveByteEntry
 #undef EightByteEntry
 #undef FourByteEntry
 #undef TwoByteEntry
         End,
-        Invoke= Invoke0,
-        X0 = X00,
-        Y0 = Y00,
-        X1 = X10,
-        Y1 = Y10,
-        X2 = X20,
-        Y2 = Y20,
-        W = W0,
-        H = H0,
-        R = R0,
-        ForegroundColor = ForegroundColor0,
-        BackgroundColor = BackgroundColor0,
-        Invert = Invert0,
-        Rotation = Rotation0,
-        TextWrap = TextWrap0,
-        DisplayWidth = DisplayWidth0,
-        DisplayHeight = DisplayHeight0,
-        CursorX = CursorX0,
-        CursorY = CursorY0,
-        PortIO = PortIO0,
-        SX = SX0,
-        SY = SY0,
-        CurrentCharacter = CurrentCharacter0,
-        PackedRGBLower = PackedRGB00,
-        PackedRGBUpper = PackedRGB10,
+#define X(index) \
+        InstructionField ## index ## 0 = InstructionPort ## index ## 0000, \
+        InstructionField ## index ## 1 = InstructionPort ## index ## 0010, \
+        InstructionField ## index ## 2 = InstructionPort ## index ## 0100, \
+        InstructionField ## index ## 3 = InstructionPort ## index ## 0110, \
+        InstructionField ## index ## 4 = InstructionPort ## index ## 1000, \
+        InstructionField ## index ## 5 = InstructionPort ## index ## 1010, \
+        InstructionField ## index ## 6 = InstructionPort ## index ## 1100, \
+        InstructionField ## index ## 7 = InstructionPort ## index ## 1110
+
+        X(0),
+#undef X
+        Invoke0 = Invoke00,
     };
 public:
     static constexpr auto StartAddress = baseAddress;
@@ -228,76 +176,68 @@ public:
     }
 private:
     enum class InvokeOpcodes : uint8_t {
-        DrawPixel,
-        DrawFastVLine,
-        DrawFastHLine,
-        DrawRect, // use the fill flag to use fill rect instead
-        FillScreen,
-        DrawLine,
-        DrawCircle, // use the fill flag to use fillCircle instead
-        DrawRoundRect, // use the fill flag to use fillRoundRect instead
-        SetCursor,
-        SetTextColor,
-        SetTextSize,
-        DrawChar,
-        FillRect,
-        FillCircle,
-        FillRoundRect,
-        DrawCharSquare,
-        SetTextSizeSquare,
+        // four bit class, four bit kind
+        // 0 -> Draw
+        // 1 -> Fill
+        // 2 -> Other
+        // 3-15 -> undefined
+        DrawPixel = 0x00,
+        DrawLine = 0x01,
+        DrawFastVLine = 0x02,
+        DrawFastHLine = 0x03,
+        DrawRect = 0x04,
+        DrawTriangle = 0x05, // technically reserved
+        DrawRoundRect = 0x06,
+        DrawCircle = 0x07,
+        // reserved
+        // fill operations
+        // first four positions reserved
+        FillScreen = 0x10,
+        FillRect = 0x14,
+        FillTriangle = 0x15, // technically reserved
+        FillRoundRect = 0x16,
+        FillCircle = 0x17,
     };
     static void invoke(SplitWord16 opcode) noexcept {
         switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
             case InvokeOpcodes::FillScreen:
-                tft.fillScreen(foregroundColor_);
+                tft.fillScreen(fields_[0]);
                 break;
             case InvokeOpcodes::DrawPixel:
-                tft.drawPixel(x0_, y0_, foregroundColor_);
+                tft.drawPixel(fields_[0], fields_[1], fields_[2]);
                 break;
             case InvokeOpcodes::DrawLine:
-                tft.drawLine(x0_, y0_, x1_, y1_, foregroundColor_);
+                tft.drawLine(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
                 break;
             case InvokeOpcodes::DrawFastVLine:
-                tft.drawFastVLine(x0_, y0_, h_, foregroundColor_);
+                tft.drawFastVLine(fields_[0], fields_[1], fields_[2], fields_[3]);
                 break;
             case InvokeOpcodes::DrawFastHLine:
-                tft.drawFastHLine(x0_, y0_, w_, foregroundColor_);
+                tft.drawFastHLine(fields_[0], fields_[1], fields_[2], fields_[3]);
                 break;
             case InvokeOpcodes::DrawRect:
-                tft.drawRect(x0_, y0_, w_, h_, foregroundColor_);
+                tft.drawRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
                 break;
             case InvokeOpcodes::FillRect:
-                tft.fillRect(x0_, y0_, w_, h_, foregroundColor_);
+                tft.fillRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
                 break;
             case InvokeOpcodes::FillCircle:
-                tft.fillCircle(x0_, y0_, r_, foregroundColor_);
+                tft.fillCircle(fields_[0], fields_[1], fields_[2], fields_[3]);
                 break;
             case InvokeOpcodes::DrawCircle:
-                tft.drawCircle(x0_, y0_, r_, foregroundColor_);
+                tft.drawCircle(fields_[0], fields_[1], fields_[2], fields_[3]);
                 break;
             case InvokeOpcodes::FillRoundRect:
-                tft.fillRoundRect(x0_, y0_, w_, h_, r_, foregroundColor_);
+                tft.fillRoundRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5]);
                 break;
             case InvokeOpcodes::DrawRoundRect:
-                tft.drawRoundRect(x0_, y0_, w_, h_, r_, foregroundColor_);
+                tft.drawRoundRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5]);
                 break;
-            case InvokeOpcodes::SetCursor:
-                tft.setCursor(x0_, y0_);
+            case InvokeOpcodes::FillTriangle:
+                tft.fillTriangle(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5], fields_[6]);
                 break;
-            case InvokeOpcodes::SetTextColor:
-                tft.setTextColor(foregroundColor_, backgroundColor_);
-                break;
-            case InvokeOpcodes::SetTextSize:
-                tft.setTextSize(sx_, sy_);
-                break;
-            case InvokeOpcodes::SetTextSizeSquare:
-                tft.setTextSize(sx_);
-                break;
-            case InvokeOpcodes::DrawChar:
-                tft.drawChar(x0_, y0_, currentCharacter_, foregroundColor_, backgroundColor_, sx_, sy_);
-                break;
-            case InvokeOpcodes::DrawCharSquare:
-                tft.drawChar(x0_, y0_, currentCharacter_, foregroundColor_, backgroundColor_, sx_);
+            case InvokeOpcodes::DrawTriangle:
+                tft.drawTriangle(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5], fields_[6]);
                 break;
             default:
                 break;
@@ -305,66 +245,29 @@ private:
     }
     static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<DisplayInterfaceRegisters>(offset)) {
-            case DisplayInterfaceRegisters::Invert: return displayIsInverted_ ? 0xFFFF : 0;
-            case DisplayInterfaceRegisters::TextWrap: return textWrapOn_ ? 0xFFFF : 0;
-            case DisplayInterfaceRegisters::DisplayWidth: return tft.width();
-            case DisplayInterfaceRegisters::DisplayHeight: return tft.height();
-            case DisplayInterfaceRegisters::CursorX: return tft.getCursorX();
-            case DisplayInterfaceRegisters::CursorY: return tft.getCursorY();
-            case DisplayInterfaceRegisters::Rotation: return tft.getRotation();
-            case DisplayInterfaceRegisters::X0: return x0_ ;
-            case DisplayInterfaceRegisters::Y0: return y0_ ;
-            case DisplayInterfaceRegisters::X1: return x1_ ;
-            case DisplayInterfaceRegisters::Y1: return y1_ ;
-            case DisplayInterfaceRegisters::X2: return x2_ ;
-            case DisplayInterfaceRegisters::Y2: return y2_ ;
-            case DisplayInterfaceRegisters::W: return w_ ;
-            case DisplayInterfaceRegisters::H: return h_ ;
-            case DisplayInterfaceRegisters::R: return r_ ;
-            case DisplayInterfaceRegisters::PackedRGBLower: return packedRGB_.getLowerHalf();
-            case DisplayInterfaceRegisters::PackedRGBUpper: return packedRGB_.getUpperHalf();
-            case DisplayInterfaceRegisters::BackgroundColor: return backgroundColor_ ;
-            case DisplayInterfaceRegisters::ForegroundColor: return foregroundColor_ ;
-            case DisplayInterfaceRegisters::SX: return sx_ ;
-            case DisplayInterfaceRegisters::SY: return sy_ ;
-            case DisplayInterfaceRegisters::CurrentCharacter: return currentCharacter_;
-            default: break;
+            case DisplayInterfaceRegisters::InstructionField00: return fields_[0];
+            case DisplayInterfaceRegisters::InstructionField01: return fields_[1];
+            case DisplayInterfaceRegisters::InstructionField02: return fields_[2];
+            case DisplayInterfaceRegisters::InstructionField03: return fields_[3];
+            case DisplayInterfaceRegisters::InstructionField04: return fields_[4];
+            case DisplayInterfaceRegisters::InstructionField05: return fields_[5];
+            case DisplayInterfaceRegisters::InstructionField06: return fields_[6];
+            case DisplayInterfaceRegisters::InstructionField07: return fields_[7];
+            default: return 0;
         }
-        return 0;
     }
     static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
-                case DisplayInterfaceRegisters::Invert:
-                    displayIsInverted_ = value.getWholeValue() != 0;
-                    tft.invertDisplay(displayIsInverted_);
-                    break;
-                case DisplayInterfaceRegisters::TextWrap:
-                    textWrapOn_ = value.getWholeValue() != 0;
-                    tft.setTextWrap(textWrapOn_);
-                    break;
-                case DisplayInterfaceRegisters::Rotation: tft.setRotation(value.getLowerHalf()); break;
-                case DisplayInterfaceRegisters::CursorX: tft.setCursor(value.getWholeValue(), tft.getCursorY()); break;
-                case DisplayInterfaceRegisters::CursorY: tft.setCursor(tft.getCursorX(), value.getWholeValue()); break;
-                case DisplayInterfaceRegisters::Invoke: invoke(value); break;
-                case DisplayInterfaceRegisters::X0: x0_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::Y0: y0_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::X1: x1_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::Y1: y1_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::X2: x2_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::Y2: y2_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::SX: sx_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::SY: sy_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::W: w_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::H: h_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::R: r_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::PackedRGBLower: packedRGB_.setLowerHalf(value); break;
-                case DisplayInterfaceRegisters::PackedRGBUpper: packedRGB_.setUpperHalf(value); break;
-                case DisplayInterfaceRegisters::BackgroundColor: backgroundColor_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::ForegroundColor: foregroundColor_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::CurrentCharacter: currentCharacter_ = value.wholeValue_; break;
-                case DisplayInterfaceRegisters::PortIO: tft.write(value.getLowerHalf()); break;
+                case DisplayInterfaceRegisters::InstructionField00: fields_[0] = value.getWholeValue(); break;
+                case DisplayInterfaceRegisters::InstructionField01: fields_[1] = value.getWholeValue(); break;
+                case DisplayInterfaceRegisters::InstructionField02: fields_[2] = value.getWholeValue(); break;
+                case DisplayInterfaceRegisters::InstructionField03: fields_[3] = value.getWholeValue(); break;
+                case DisplayInterfaceRegisters::InstructionField04: fields_[4] = value.getWholeValue(); break;
+                case DisplayInterfaceRegisters::InstructionField05: fields_[5] = value.getWholeValue(); break;
+                case DisplayInterfaceRegisters::InstructionField06: fields_[6] = value.getWholeValue(); break;
+                case DisplayInterfaceRegisters::InstructionField07: fields_[7] = value.getWholeValue(); break;
+                case DisplayInterfaceRegisters::Invoke0: invoke(value); break;
                 default: break;
-
             }
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
@@ -382,11 +285,6 @@ private:
         switch (static_cast<SeesawRegisters>(offset)) {
             case SeesawRegisters::Backlight:
                 return backlightIntensity_;
-            case SeesawRegisters::RawButtonsLower:
-                rawButtons_.wholeValue_ = displayShield_.readButtons();
-                return rawButtons_.halves[0];
-            case SeesawRegisters::RawButtonsUpper:
-                return rawButtons_.halves[1];
             default:
                 return 0;
         }
@@ -402,11 +300,7 @@ private:
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
     static inline uint16_t backlightIntensity_ = 0;
-    static inline SplitWord32 rawButtons_{0};
-    static inline SplitWord32 packedRGB_ { 0};
-#define X(type, name, defaultValue) static inline type name = defaultValue;
-#include "InternalDisplayRegisters.def"
-#undef X
+    static inline uint16_t fields_[8] { 0 };
 #endif
 };
 #endif //SXCHIPSET_DISPLAYINTERFACE_H
