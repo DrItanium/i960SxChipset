@@ -89,8 +89,7 @@ public:
         TwoByteEntry(OpenWriteOnly), // O_WRITE
         TwoByteEntry(CreateFileIfMissing), // O_CREAT
         TwoByteEntry(ClearFileContentsOnOpen), // O_TRUNC
-        TwoByteEntry(MountStatus), // Is there a card currently mounted?
-        TwoByteEntry(MountCTL), // controls mount/unmount functionality
+        TwoByteEntry(MountCTL), // controls mount/unmount functionality when writing and reading it yields the status
 
 #undef SixteenByteEntry
 #undef TwelveByteEntry
@@ -119,35 +118,39 @@ public:
         CreateFileIfMissing = CreateFileIfMissing0,
         ClearFileContentsOnOpen = ClearFileContentsOnOpen0,
         FilePermissions = FilePermissions0,
-        MountStatus = MountStatus0,
         MountCTL = MountCTL0,
         // we ignore the upper half of the register but reserve it to make sure
     };
     SDCardInterface() = delete;
     ~SDCardInterface() = delete;
 private:
+    static bool primarySDCardMounted() noexcept {
+        return cardsMounted_ & 1;
+    }
     ///@todo make it possible to unmount the sdcard while the i960 is running
     static void unmountSDCard() noexcept {
-        // first close all open files
-        for (auto& file : files_) {
-            if (file.isOpen()) {
-                // flush everything in progress
-                file.flush();
-                file.close();
+        if (primarySDCardMounted()) {
+            // first close all open files
+            for (auto &file: files_) {
+                if (file.isOpen()) {
+                    // flush everything in progress
+                    file.flush();
+                    file.close();
+                }
             }
+            // according to my research this should be enough
+            cardsMounted_ &= ~(0x0001);
         }
-        // according to my research this should be enough
-        cardMounted_ = false;
     }
     /**
-     * @brief Try to mount/remount the sd card
+     * @brief Try to mount/remount the primary SDCard
      * @return
      */
     static auto tryMountSDCard() noexcept {
-        if (!cardMounted_) {
-            cardMounted_ = SD.begin(static_cast<int>(i960Pinout::SD_EN));
+        if (!primarySDCardMounted()) {
+            cardsMounted_ |= SD.begin(static_cast<int>(i960Pinout::SD_EN)) ? 0x0001 : 0x0000;
         }
-        return cardMounted_;
+        return primarySDCardMounted();
     }
     static uint16_t findFreeFile() noexcept {
         for (uint16_t i = 0; i < MaximumNumberOfOpenFiles; ++i) {
@@ -215,6 +218,8 @@ private:
                     return makeMissingParentDirectories_;
                 case T::FilePermissions:
                     return filePermissions_;
+                case T::MountCTL:
+                    return cardsMounted_;
                 default:
                     return 0;
             }
@@ -262,6 +267,18 @@ private:
                 case T::ClearFileContentsOnOpen:
                     if (value.getWholeValue() != 0) {
                         filePermissions_ |= O_TRUNC;
+                    }
+                    break;
+                case T::MountCTL:
+                    // 0 means unmount,
+                    // 1 means mount
+                    // other values are ignored
+                    if (value.getWholeValue() == 0) {
+                        // unmount
+                        unmountSDCard();
+                    } else if (value.getWholeValue() == 1) {
+                        // mount
+                        (void)tryMountSDCard();
                     }
                     break;
                 default:
@@ -321,6 +338,6 @@ private:
     static inline OpenFileHandle files_[MaximumNumberOfOpenFiles];
     static inline bool makeMissingParentDirectories_ = false;
     static inline uint16_t filePermissions_ = 0;
-    static inline bool cardMounted_ = false;
+    static inline uint16_t cardsMounted_ = 0;
 };
 #endif //SXCHIPSET_SDCARDINTERFACE_H
