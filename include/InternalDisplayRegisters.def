@@ -13,10 +13,8 @@ SignedRegister(r_)
 UnsignedRegister(color_)
 UnsignedRegister(foregroundColor_)
 UnsignedRegister(backgroundColor_)
-FlagRegister(performFill_)
 FlagRegister(displayIsInverted_)
 FlagRegister(textWrapOn_)
-FlagRegister(treatAsSquare_)
 UnsignedRegister(currentCharacter_)
 UnsignedRegister(sx_);
 UnsignedRegister(sy_);
