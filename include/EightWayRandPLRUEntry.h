@@ -132,50 +132,83 @@ private:
                 break;
         }
     }
-    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        if (g_) {
-            // right
-            if (f_) {
-               // right (e)
-               if (e_) {
-                  // right
-                  return 7;
-               } else {
-                  // left
-                  return 6;
-               }
-            } else {
-               // left (d)
-               if (d_) {
-                  // right
-                  return 5;
-               } else {
-                  // left
-                  return 4;
-               }
-            }
-        } else {
-            // left
-            if (c_) {
-                // right (b)
-                if (b_) {
-                   return 3;
-                   // right
+    static constexpr byte generateLookupEntry(byte index) noexcept {
+        constexpr auto GMask = 0b0100'0000;
+        constexpr auto FMask = 0b0010'0000;
+        constexpr auto EMask = 0b0001'0000;
+        constexpr auto DMask = 0b0000'1000;
+        constexpr auto CMask = 0b0000'0100;
+        constexpr auto BMask = 0b0000'0010;
+        constexpr auto AMask = 0b0000'0001;
+        auto maskedCorrectly = index & 0b0111'1111;
+        if ((maskedCorrectly & GMask)) {
+            // set to one (right)
+            if (maskedCorrectly & FMask) {
+                if (maskedCorrectly & EMask) {
+                    // it is going to be the inverse
+                    return 6;
                 } else {
-                    return 2;
-                   // left
+                    return 7;
                 }
             } else {
-                // left (a)
-                if (a_) {
-                   // right
-                   return 1;
+                if (maskedCorrectly & DMask) {
+                    return 4;
                 } else {
-                   // left
-                   return 0;
+                    return 5;
+                }
+            }
+        } else {
+            // set to zero (left)
+            if (maskedCorrectly & CMask) {
+                // right
+                if (maskedCorrectly & BMask) {
+                    return 2;
+                } else {
+                    return 3;
+                }
+            } else {
+                // left
+                if (maskedCorrectly & AMask) {
+                    return 0;
+                } else {
+                    return 1;
                 }
             }
         }
+    }
+    static constexpr byte LookupTable[128] {
+            // 0 means left, left, left, left, left, left, left
+            //         6   , 5   , 4   , 3   , 2   , 1   , 0
+            //         g   , f   , e   , d   , c   , b   , a
+#define X(row) \
+            generateLookupEntry((8 * (row)) + 0), \
+            generateLookupEntry((8 * (row)) + 1), \
+            generateLookupEntry((8 * (row)) + 2), \
+            generateLookupEntry((8 * (row)) + 3), \
+            generateLookupEntry((8 * (row)) + 4), \
+            generateLookupEntry((8 * (row)) + 5), \
+            generateLookupEntry((8 * (row)) + 6), \
+            generateLookupEntry((8 * (row)) + 7)
+            X(0),
+            X(1),
+            X(2),
+            X(3),
+            X(4),
+            X(5),
+            X(6),
+            X(7),
+            X(8),
+            X(9),
+            X(10),
+            X(11),
+            X(12),
+            X(13),
+            X(14),
+            X(15),
+#undef X
+    };
+    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
+        return LookupTable[bits_];
     }
 private:
     CacheEntry* ways_[NumberOfWays] = { nullptr };
@@ -193,7 +226,6 @@ private:
             bool g_ : 1; // in a normal tree plru this would be the parent of c_ and f_
         };
     };
-    byte mruBits_ = 0;
 };
 
 #endif //SXCHIPSET_EIGHTWAYPSEUDOLRUENTRY_H
