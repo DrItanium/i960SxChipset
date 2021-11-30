@@ -133,38 +133,50 @@ private:
         constexpr auto CMask = 0b0000'0100;
         constexpr auto BMask = 0b0000'0010;
         constexpr auto AMask = 0b0000'0001;
-        auto maskedCorrectly = index & 0b0111'1111;
+        // invert the bits to make it easy to figure out the target
+        // so an index of 0b000'0000 -> 0b111'1111 which would be G -> F -> E -> 7
+        // 0b111'1111 -> 0b000'0000 which would be G -> C -> A -> 0
+        byte inv = ~index;
+        auto maskedCorrectly = inv & 0b0111'1111;
         if ((maskedCorrectly & GMask)) {
-            // set to one (right)
+            // right
             if (maskedCorrectly & FMask) {
+                // right
                 if (maskedCorrectly & EMask) {
-                    // it is going to be the inverse
-                    return 6;
-                } else {
+                    // right
                     return 7;
+                } else {
+                    return 6;
                 }
             } else {
+                // left
                 if (maskedCorrectly & DMask) {
-                    return 4;
-                } else {
+                    // right
                     return 5;
+                } else {
+                    // left
+                    return 4;
                 }
             }
         } else {
-            // set to zero (left)
+            // left
             if (maskedCorrectly & CMask) {
                // right
                if (maskedCorrectly & BMask) {
-                   return 2;
-               } else {
+                   // right
                    return 3;
+               } else {
+                   // left
+                   return 2;
                }
             } else {
                // left
                if (maskedCorrectly & AMask) {
-                   return 0;
-               } else {
+                   // right
                    return 1;
+               } else {
+                   // left
+                   return 0;
                }
             }
         }
@@ -207,7 +219,7 @@ private:
     CacheEntry* ways_[NumberOfWays] = { nullptr };
     // This is RandPLRU Tree so we need to organize things correctly, I'm going to try four groups of two
     union {
-        byte bits_ = 0;
+        byte bits_ = 0b0111'1111;
         struct {
             // depth first traversal ordering
             bool a_ : 1;  // left pair of left half
