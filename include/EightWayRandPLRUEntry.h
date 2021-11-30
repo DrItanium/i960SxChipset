@@ -50,26 +50,17 @@ public:
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
     __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        if (auto result = find (theAddress); result) {
-            return *result;
-        } else {
-            return reset(theAddress);
-        }
-
-    }
-    CacheEntry* find(TaggedAddress theAddress) noexcept {
-        // find the inverse of the most recently used
+        byte targetIndex = 0xFF;
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i]->matches(theAddress)) {
                 updateFlags(i);
-                return ways_[i];
+                return *ways_[i];
+            } else if (!ways_[i]->isValid() && (targetIndex >= NumberOfWays)) {
+                targetIndex = i;
             }
         }
-        return nullptr;
-    }
-    CacheEntry&
-    reset(TaggedAddress theAddress) noexcept {
-        auto index = getLeastRecentlyUsed();
+
+        auto index = (targetIndex < NumberOfWays) ? targetIndex : getLeastRecentlyUsed();
         updateFlags(index);
         ways_[index]->reset(theAddress);
         return *ways_[index];
@@ -117,11 +108,16 @@ private:
     static constexpr auto NumberOfGroups = 4;
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
         switch (random(0, NumberOfGroups)) {
-            case 0: return (bits_ & 0b0001) ? 0 : 1;
-            case 1: return (bits_ & 0b0010) ? 2 : 3;
-            case 2: return (bits_ & 0b0100) ? 4 : 5;
-            case 3: return (bits_ & 0b1000) ? 6 : 7;
-            default: return 0;
+            case 0:
+                return (bits_ & 0b0001) ? 0 : 1;
+            case 1:
+                return (bits_ & 0b0010) ? 2 : 3;
+            case 2:
+                return (bits_ & 0b0100) ? 4 : 5;
+            case 3:
+                return (bits_ & 0b1000) ? 6 : 7;
+            default:
+                return 0;
         }
     }
 private:
