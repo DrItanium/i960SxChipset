@@ -169,7 +169,6 @@ private:
                 }
             }
         }
-        return LRUTable[mruBits_];
     }
 private:
     CacheEntry* ways_[NumberOfWays] = { nullptr };
