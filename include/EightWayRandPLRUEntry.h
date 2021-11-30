@@ -85,32 +85,30 @@ public:
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     void updateFlags(byte index) noexcept {
-        static constexpr bool ChooseLeft = false;
-        static constexpr bool ChooseRight = true;
         switch (index) {
             case 0:
-                a_ = ChooseLeft;
+                bits_ &= 0b1110;
                 break;
             case 1:
-                a_ = ChooseRight;
+                bits_ |= 0b0001;
                 break;
             case 2:
-                b_ = ChooseLeft;
+                bits_ &= 0b1101;
                 break;
             case 3:
-                b_ = ChooseRight;
+                bits_ |= 0b0010;
                 break;
             case 4:
-                c_ = ChooseLeft;
+                bits_ &= 0b1011;
                 break;
             case 5:
-                c_ = ChooseRight;
+                bits_ |= 0b0100;
                 break;
             case 6:
-                d_ = ChooseLeft;
+                bits_ &= 0b0111;
                 break;
             case 7:
-                d_ = ChooseRight;
+                bits_ |= 0b1000;
                 break;
             default:
                 break;
@@ -119,25 +117,17 @@ private:
     static constexpr auto NumberOfGroups = 4;
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
         switch (random(0, NumberOfGroups)) {
-            case 0: return a_ ? 0 : 1;
-            case 1: return b_ ? 2 : 3;
-            case 2: return c_ ? 4 : 5;
-            case 3: return d_ ? 6 : 7;
+            case 0: return (bits_ & 0b0001) ? 0 : 1;
+            case 1: return (bits_ & 0b0010) ? 2 : 3;
+            case 2: return (bits_ & 0b0100) ? 4 : 5;
+            case 3: return (bits_ & 0b1000) ? 6 : 7;
             default: return 0;
         }
     }
 private:
     // This is RandPLRU Tree so we need to organize things correctly, I'm going to try four groups of two
     CacheEntry* ways_[NumberOfWays] = { nullptr };
-    union {
-        byte bits_ = 0;
-        struct {
-            bool a_ : 1;  // first pair
-            bool b_ : 1;  // second pair
-            bool c_ : 1; // third pair
-            bool d_ : 1; // fourth pair
-        };
-    };
+    byte bits_ = 0;
 };
 
 #endif //SXCHIPSET_EIGHTWAYPSEUDOLRUENTRY_H
