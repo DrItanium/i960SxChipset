@@ -138,15 +138,16 @@ private:
             // set to one (right)
             if (maskedCorrectly & FMask) {
                 if (maskedCorrectly & EMask) {
-                    return 7;
-                } else {
+                    // it is going to be the inverse
                     return 6;
+                } else {
+                    return 7;
                 }
             } else {
                 if (maskedCorrectly & DMask) {
-                   return 5;
+                    return 4;
                 } else {
-                   return 4;
+                    return 5;
                 }
             }
         } else {
@@ -154,16 +155,16 @@ private:
             if (maskedCorrectly & CMask) {
                // right
                if (maskedCorrectly & BMask) {
-                   return 3;
-               } else {
                    return 2;
+               } else {
+                   return 3;
                }
             } else {
                // left
                if (maskedCorrectly & AMask) {
-                   return 1;
-               } else {
                    return 0;
+               } else {
+                   return 1;
                }
             }
         }
