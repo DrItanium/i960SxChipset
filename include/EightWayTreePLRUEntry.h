@@ -219,7 +219,6 @@ private:
             bool g_ : 1; // in a normal tree plru this would be the parent of c_ and f_
         };
     };
-    byte mruBits_ = 0;
 };
 
 #endif //SXCHIPSET_EIGHTWAYPSEUDOLRUENTRY_H
