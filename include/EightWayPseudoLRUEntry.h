@@ -73,14 +73,6 @@ public:
         }
         mruBits_ = 0;
     }
-    [[nodiscard]] constexpr bool valid() const noexcept {
-        for (auto *a : ways_) {
-            if (!a) {
-                return false;
-            }
-        }
-        return true;
-    }
     [[nodiscard]] constexpr auto getWay(size_t index = 0) const noexcept { return ways_[index & WayMask]; }
     void setWay(CacheEntry& way, size_t index = 0) noexcept { ways_[index & WayMask] = &way; }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
