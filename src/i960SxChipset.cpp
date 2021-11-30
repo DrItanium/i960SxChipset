@@ -39,6 +39,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FourWayPseudoLRUEntry.h"
 #include "EightWayPseudoLRUEntry.h"
 #include "SixteenWayPseudoLRUEntry.h"
+#include "EightWayRandPLRUEntry.h"
+#include "EightWayTreePLRUEntry.h"
 #include "SinglePoolCache.h"
 #include "MultiCache.h"
 
@@ -79,7 +81,7 @@ constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto CacheLineSize = 4;
 constexpr auto CacheSize = 8192;
-using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
+using L1Cache = CacheInstance_t<EightWayTreePLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 L1Cache theCache;
 
 //template<template<auto, auto, auto, typename> typename L,
