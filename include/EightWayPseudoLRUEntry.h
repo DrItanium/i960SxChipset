@@ -86,10 +86,13 @@ public:
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     void updateFlags(byte index) noexcept {
-        // cache the lookup
-        mruBits_ |= BitMaskTable_Byte[index];
-        if (mruBits_ == 0xFF) {
-            mruBits_ = BitMaskTable_Byte[index];
+        // when updating flags, invert the mruBits and compare it with the entry from the lookup table.
+        // If it is equal then it means we are about to overflow so just do an assignment. Otherwise do the normal |=
+        // we make an assigment to make sure that the compiler doesn't generate a warning from the invert operation
+        if (byte target = BitMaskTable_Byte[index], inv = ~mruBits_; inv == target) {
+            mruBits_ = target;
+        } else {
+            mruBits_ |= target;
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
