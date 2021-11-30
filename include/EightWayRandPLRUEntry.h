@@ -88,142 +88,54 @@ private:
         static constexpr bool ChooseLeft = false;
         static constexpr bool ChooseRight = true;
         switch (index) {
-            case 0: // left, left, left
+            case 0:
                 a_ = ChooseLeft;
-                c_ = ChooseLeft;
-                g_ = ChooseLeft;
                 break;
-            case 1: // left, left, right
+            case 1:
                 a_ = ChooseRight;
-                c_ = ChooseLeft;
-                g_ = ChooseLeft;
                 break;
-            case 2: // left, right, left
-                b_ = ChooseRight;
-                c_ = ChooseLeft;
-                g_ = ChooseLeft;
+            case 2:
+                b_ = ChooseLeft;
                 break;
-            case 3: // left, right, right
+            case 3:
                 b_ = ChooseRight;
+                break;
+            case 4:
+                c_ = ChooseLeft;
+                break;
+            case 5:
                 c_ = ChooseRight;
-                g_ = ChooseLeft;
                 break;
-            case 4: // right, left, left
+            case 6:
                 d_ = ChooseLeft;
-                f_ = ChooseLeft;
-                g_ = ChooseRight;
                 break;
-            case 5: // right, left, right
+            case 7:
                 d_ = ChooseRight;
-                f_ = ChooseLeft;
-                g_ = ChooseRight;
-                break;
-            case 6: // right, right, left
-                e_ = ChooseLeft;
-                f_ = ChooseRight;
-                g_ = ChooseRight;
-                break;
-            case 7: // right, right, right
-                e_ = ChooseRight;
-                f_ = ChooseRight;
-                g_ = ChooseRight;
                 break;
             default:
                 break;
         }
     }
-    static constexpr byte generateLookupEntry(byte index) noexcept {
-        constexpr auto GMask = 0b0100'0000;
-        constexpr auto FMask = 0b0010'0000;
-        constexpr auto EMask = 0b0001'0000;
-        constexpr auto DMask = 0b0000'1000;
-        constexpr auto CMask = 0b0000'0100;
-        constexpr auto BMask = 0b0000'0010;
-        constexpr auto AMask = 0b0000'0001;
-        auto maskedCorrectly = index & 0b0111'1111;
-        if ((maskedCorrectly & GMask)) {
-            // set to one (right)
-            if (maskedCorrectly & FMask) {
-                if (maskedCorrectly & EMask) {
-                    // it is going to be the inverse
-                    return 6;
-                } else {
-                    return 7;
-                }
-            } else {
-                if (maskedCorrectly & DMask) {
-                    return 4;
-                } else {
-                    return 5;
-                }
-            }
-        } else {
-            // set to zero (left)
-            if (maskedCorrectly & CMask) {
-                // right
-                if (maskedCorrectly & BMask) {
-                    return 2;
-                } else {
-                    return 3;
-                }
-            } else {
-                // left
-                if (maskedCorrectly & AMask) {
-                    return 0;
-                } else {
-                    return 1;
-                }
-            }
+    static constexpr auto NumberOfGroups = 4;
+    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
+        switch (random(0, NumberOfGroups)) {
+            case 0: return a_ ? 0 : 1;
+            case 1: return b_ ? 2 : 3;
+            case 2: return c_ ? 4 : 5;
+            case 3: return d_ ? 6 : 7;
+            default: return 0;
         }
     }
-    static constexpr byte LookupTable[128] {
-            // 0 means left, left, left, left, left, left, left
-            //         6   , 5   , 4   , 3   , 2   , 1   , 0
-            //         g   , f   , e   , d   , c   , b   , a
-#define X(row) \
-            generateLookupEntry((8 * (row)) + 0), \
-            generateLookupEntry((8 * (row)) + 1), \
-            generateLookupEntry((8 * (row)) + 2), \
-            generateLookupEntry((8 * (row)) + 3), \
-            generateLookupEntry((8 * (row)) + 4), \
-            generateLookupEntry((8 * (row)) + 5), \
-            generateLookupEntry((8 * (row)) + 6), \
-            generateLookupEntry((8 * (row)) + 7)
-            X(0),
-            X(1),
-            X(2),
-            X(3),
-            X(4),
-            X(5),
-            X(6),
-            X(7),
-            X(8),
-            X(9),
-            X(10),
-            X(11),
-            X(12),
-            X(13),
-            X(14),
-            X(15),
-#undef X
-    };
-    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        return LookupTable[bits_];
-    }
 private:
-    CacheEntry* ways_[NumberOfWays] = { nullptr };
     // This is RandPLRU Tree so we need to organize things correctly, I'm going to try four groups of two
+    CacheEntry* ways_[NumberOfWays] = { nullptr };
     union {
         byte bits_ = 0;
         struct {
-            // depth first traversal ordering
-            bool a_ : 1;  // left pair of left half
-            bool b_ : 1;  // right pair of left half
-            bool c_ : 1; // parent of a_ and b_ (left half)
-            bool d_ : 1; // left pair of right half
-            bool e_ : 1; // right pair of right half
-            bool f_ : 1; // parent of d_ and e_ (right half)
-            bool g_ : 1; // in a normal tree plru this would be the parent of c_ and f_
+            bool a_ : 1;  // first pair
+            bool b_ : 1;  // second pair
+            bool c_ : 1; // third pair
+            bool d_ : 1; // fourth pair
         };
     };
 };
