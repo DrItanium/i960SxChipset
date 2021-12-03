@@ -239,7 +239,7 @@ private:
         if constexpr (useInterrupts) {
            return 0;
         } else {
-            switch (PORTB & 0b10010000) {
+            switch (PINB & 0b10010000) {
                 case 0b0000'0000: return 0b0000;
                 case 0b0001'0000: return 0b0011;
                 case 0b1000'0000: return 0b1100;
