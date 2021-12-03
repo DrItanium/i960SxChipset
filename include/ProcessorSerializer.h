@@ -238,7 +238,7 @@ private:
         return 0;
     }
     static bool shouldReadUpper16Bits() noexcept {
-        return digitalRead<i960Pinout::INT_EN1>() != LOW;
+        return digitalRead<i960Pinout::INT_EN1>() == LOW;
     }
     static bool shouldReadLower16Bits() noexcept {
         return digitalRead<i960Pinout::INT_EN0>() == LOW;
