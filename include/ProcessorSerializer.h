@@ -236,7 +236,7 @@ private:
     static void setupDataLinesForRead() noexcept;
     template<bool useInterrupts = true>
     static byte getUpdateKind() noexcept {
-        if constexpr (useInterrupts) {
+        if constexpr (!useInterrupts) {
            return 0;
         } else {
             switch (PINB & 0b10010000) {
