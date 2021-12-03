@@ -237,7 +237,7 @@ private:
     template<bool useInterrupts = true>
     static byte getUpdateKind() noexcept {
         if constexpr (!useInterrupts) {
-           return 0;
+            return 0;
         } else {
             switch (PIND & 0b1001'0000) {
                 case 0b0000'0000: return 0b0000;
@@ -454,8 +454,8 @@ public:
         } else {
             setupDataLinesForWrite();
         }
-            /// @todo condense each operation set into a custom function to maximize throughput
-            // look at each byte individually
+        /// @todo condense each operation set into a custom function to maximize throughput
+        // look at each byte individually
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
                 updateLower8();
