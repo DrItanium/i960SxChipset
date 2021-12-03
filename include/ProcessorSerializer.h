@@ -234,8 +234,19 @@ public:
 private:
     static void setupDataLinesForWrite() noexcept;
     static void setupDataLinesForRead() noexcept;
+    template<bool useInterrupts = true>
     static byte getUpdateKind() noexcept {
-        return 0;
+        if constexpr (useInterrupts) {
+           return 0;
+        } else {
+            switch (PORTB & 0b10010000) {
+                case 0b0000'0000: return 0b0000;
+                case 0b0001'0000: return 0b0011;
+                case 0b1000'0000: return 0b1100;
+                case 0b1001'0000: return 0b1111;
+                default: return 0b0000;
+            }
+        }
     }
     static bool shouldReadUpper16Bits() noexcept {
         return digitalRead<i960Pinout::INT_EN1>() == LOW;
@@ -442,79 +453,63 @@ private:
         address_.bytes[1] = lower;
     }
 public:
-    template<bool inDebugMode, byte offsetMask, bool onlyDo16BitUpdates = true>
+    template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
     static BodyFunction newDataCycle() noexcept {
         if (isReadOperation()) {
             setupDataLinesForRead();
         } else {
             setupDataLinesForWrite();
         }
-        if constexpr (onlyDo16BitUpdates) {
-            if (shouldReadLower16Bits()) {
-                if (shouldReadUpper16Bits()) {
-                    return getBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                } else {
-                    lower16Update<offsetMask>();
-                }
-            } else {
-                if (shouldReadUpper16Bits()) {
-                    return getBody<inDebugMode>(upper16Update());
-                } else {
-                    // do nothing in this case because none of the address components have changed
-                }
-            }
-        } else {
             /// @todo condense each operation set into a custom function to maximize throughput
             // look at each byte individually
-            switch (getUpdateKind()) {
-                case 0b0001:
-                    updateLower8();
-                    return getBody<inDebugMode>(upper16Update());
-                case 0b0010:
-                    updateLowest8<offsetMask>();
-                    return getBody<inDebugMode>(upper16Update());
-                case 0b0011:
-                    return getBody<inDebugMode>(upper16Update());
-                case 0b0100:
-                    lower16Update<offsetMask>();
-                    return getBody<inDebugMode>(updateHighest8());
-                case 0b0101:
-                    updateLower8();
-                    return getBody<inDebugMode>(updateHighest8());
-                case 0b0110:
-                    updateLowest8<offsetMask>();
-                    return getBody<inDebugMode>(updateHighest8());
-                case 0b0111:
-                    return getBody<inDebugMode>(updateHighest8());
-                case 0b1000:
-                    lower16Update<offsetMask>();
-                    updateHigher8();
-                    break;
-                case 0b1001:
-                    updateHigher8();
-                    updateLower8();
-                    break;
-                case 0b1010:
-                    updateHigher8();
-                    updateLowest8<offsetMask>();
-                    break;
-                case 0b1011:
-                    updateHigher8();
-                    break;
-                case 0b1100:
-                    lower16Update<offsetMask>();
-                    break;
-                case 0b1101:
-                    updateLower8();
-                    break;
-                case 0b1110:
-                    updateLowest8<offsetMask>();
-                    break;
-                case 0b1111:
-                    break;
-                default:
-                    return getBody<inDebugMode>(full32BitUpdate<offsetMask>());
-            }
+        switch (getUpdateKind<useInterrupts>()) {
+            case 0b0001:
+                updateLower8();
+                return getBody<inDebugMode>(upper16Update());
+            case 0b0010:
+                updateLowest8<offsetMask>();
+                return getBody<inDebugMode>(upper16Update());
+            case 0b0011:
+                return getBody<inDebugMode>(upper16Update());
+            case 0b0100:
+                lower16Update<offsetMask>();
+                return getBody<inDebugMode>(updateHighest8());
+            case 0b0101:
+                updateLower8();
+                return getBody<inDebugMode>(updateHighest8());
+            case 0b0110:
+                updateLowest8<offsetMask>();
+                return getBody<inDebugMode>(updateHighest8());
+            case 0b0111:
+                return getBody<inDebugMode>(updateHighest8());
+            case 0b1000:
+                lower16Update<offsetMask>();
+                updateHigher8();
+                break;
+            case 0b1001:
+                updateHigher8();
+                updateLower8();
+                break;
+            case 0b1010:
+                updateHigher8();
+                updateLowest8<offsetMask>();
+                break;
+            case 0b1011:
+                updateHigher8();
+                break;
+            case 0b1100:
+                lower16Update<offsetMask>();
+                break;
+            case 0b1101:
+                updateLower8();
+                break;
+            case 0b1110:
+                updateLowest8<offsetMask>();
+                break;
+            case 0b1111:
+                break;
+            default:
+                return getBody<inDebugMode>(full32BitUpdate<offsetMask>());
         }
         return getBody<inDebugMode>(address_.bytes[3]);
     }
