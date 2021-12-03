@@ -248,12 +248,6 @@ private:
             }
         }
     }
-    static bool shouldReadUpper16Bits() noexcept {
-        return digitalRead<i960Pinout::INT_EN1>() == LOW;
-    }
-    static bool shouldReadLower16Bits() noexcept {
-        return digitalRead<i960Pinout::INT_EN0>() == LOW;
-    }
     template<byte offsetMask>
     inline static byte full32BitUpdate() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
