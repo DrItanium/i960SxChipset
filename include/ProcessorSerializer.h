@@ -237,8 +237,12 @@ private:
     static byte getUpdateKind() noexcept {
         return 0;
     }
-    static bool shouldReadUpper16Bits() noexcept { return digitalRead<i960Pinout::INT_EN1>() != LOW; }
-    static bool shouldReadLower16Bits() noexcept { return digitalRead<i960Pinout::INT_EN0>() != LOW; }
+    static bool shouldReadUpper16Bits() noexcept {
+        return digitalRead<i960Pinout::INT_EN1>() != LOW;
+    }
+    static bool shouldReadLower16Bits() noexcept {
+        return digitalRead<i960Pinout::INT_EN0>() == LOW;
+    }
     template<byte offsetMask>
     inline static byte full32BitUpdate() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
@@ -448,12 +452,15 @@ public:
         if constexpr (onlyDo16BitUpdates) {
             if (shouldReadLower16Bits()) {
                 if (shouldReadUpper16Bits()) {
+                    Serial.println(F("F32"));
                     return getBody<inDebugMode>(full32BitUpdate<offsetMask>());
                 } else {
+                    Serial.println(F("L16"));
                     lower16Update<offsetMask>();
                 }
             } else {
                 if (shouldReadUpper16Bits()) {
+                    Serial.println(F("U16"));
                     return getBody<inDebugMode>(upper16Update());
                 } else {
                     // do nothing in this case because none of the address components have changed
