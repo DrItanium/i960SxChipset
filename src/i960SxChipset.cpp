@@ -241,7 +241,7 @@ inline void handleExternalDeviceRequest() noexcept {
         }
     }
 }
-template<bool inDebugMode>
+template<bool inDebugMode, bool useInterrupts>
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
@@ -251,18 +251,18 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntryMask>()();
+    ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntryMask, useInterrupts>()();
 }
-template<bool allowAddressDebuggingCodePath>
+template<bool allowAddressDebuggingCodePath, bool useInterrupts>
 void doInvocationBody() noexcept {
     if constexpr (allowAddressDebuggingCodePath) {
         if (TheConsoleInterface::addressDebuggingEnabled())  {
-            invocationBody<true>();
+            invocationBody<true, useInterrupts>();
         } else {
-            invocationBody<false>();
+            invocationBody<false, useInterrupts>();
         }
     } else {
-        invocationBody<false>();
+        invocationBody<false, useInterrupts>();
     }
 }
 void installBootImage() noexcept {
@@ -353,7 +353,9 @@ void setup() {
                   i960Pinout::BLAST_,
                   i960Pinout::W_R_,
                   i960Pinout::DEN_,
-                  i960Pinout::FAIL);
+                  i960Pinout::FAIL,
+                  i960Pinout::INT_EN0,
+                  i960Pinout::INT_EN1);
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         theCache.begin();
         SPI.begin();
@@ -416,8 +418,10 @@ void setup() {
     // at this point, the i960 will request 32-bytes to perform a boot check sum on.
     // If the checksum is successful then execution will continue as normal
     // first set of 16-byte request from memory
-    doInvocationBody<CompileInAddressDebuggingSupport>();
-    doInvocationBody<CompileInAddressDebuggingSupport>();
+
+    // on bootup we need to ignore the interrupt lines for now
+    doInvocationBody<CompileInAddressDebuggingSupport, false>();
+    doInvocationBody<CompileInAddressDebuggingSupport, false>();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
@@ -464,7 +468,7 @@ void loop() {
     // and doesn't seem to impact performance in burst transactions
 
     for (;;) {
-        doInvocationBody<CompileInAddressDebuggingSupport>();
+        doInvocationBody<CompileInAddressDebuggingSupport, true>();
     }
 }
 
