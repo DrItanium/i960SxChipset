@@ -452,15 +452,12 @@ public:
         if constexpr (onlyDo16BitUpdates) {
             if (shouldReadLower16Bits()) {
                 if (shouldReadUpper16Bits()) {
-                    Serial.println(F("F32"));
                     return getBody<inDebugMode>(full32BitUpdate<offsetMask>());
                 } else {
-                    Serial.println(F("L16"));
                     lower16Update<offsetMask>();
                 }
             } else {
                 if (shouldReadUpper16Bits()) {
-                    Serial.println(F("U16"));
                     return getBody<inDebugMode>(upper16Update());
                 } else {
                     // do nothing in this case because none of the address components have changed
