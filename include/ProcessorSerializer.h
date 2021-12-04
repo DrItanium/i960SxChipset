@@ -485,7 +485,7 @@ public:
                         break;
                     case 0b0100:
                         lower16Update<offsetMask>();
-                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
+                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
                         break;
                     case 0b0101:
                         updateLower8();
@@ -543,7 +543,7 @@ public:
                         break;
                     case 0b0100:
                         lower16Update<offsetMask>();
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
+                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
                         break;
                     case 0b0101:
                         updateLower8();
@@ -604,7 +604,7 @@ public:
                         break;
                     case 0b0100:
                         lower16Update<offsetMask>();
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(upper16Update());
+                        lastDebugWrite_ = getWriteBody<inDebugMode>(updateHighest8());
                         break;
                     case 0b0101:
                         updateLower8();
@@ -662,7 +662,7 @@ public:
                         break;
                     case 0b0100:
                         lower16Update<offsetMask>();
-                        lastWrite_ = getWriteBody<inDebugMode>(upper16Update());
+                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
                         break;
                     case 0b0101:
                         updateLower8();
