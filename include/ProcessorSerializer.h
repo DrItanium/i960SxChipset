@@ -470,58 +470,123 @@ public:
     static BodyFunction newDataCycle() noexcept {
         if (isReadOperation()) {
             setupDataLinesForRead();
-            /// @todo condense each operation set into a custom function to maximize throughput
-            // look at each byte individually
-            switch (getUpdateKind<useInterrupts>()) {
-                case 0b0001:
-                    updateLower8();
-                    return getReadBody<inDebugMode>(upper16Update());
-                case 0b0010:
-                    updateLowest8<offsetMask>();
-                    return getReadBody<inDebugMode>(upper16Update());
-                case 0b0011:
-                    return getReadBody<inDebugMode>(upper16Update());
-                case 0b0100:
-                    lower16Update<offsetMask>();
-                    return getReadBody<inDebugMode>(upper16Update());
-                case 0b0101:
-                    updateLower8();
-                    return getReadBody<inDebugMode>(updateHighest8());
-                case 0b0110:
-                    updateLowest8<offsetMask>();
-                    return getReadBody<inDebugMode>(updateHighest8());
-                case 0b0111:
-                    return getReadBody<inDebugMode>(updateHighest8());
-                case 0b1000:
-                    lower16Update<offsetMask>();
-                    updateHigher8();
-                    break;
-                case 0b1001:
-                    updateHigher8();
-                    updateLower8();
-                    break;
-                case 0b1010:
-                    updateHigher8();
-                    updateLowest8<offsetMask>();
-                    break;
-                case 0b1011:
-                    updateHigher8();
-                    break;
-                case 0b1100:
-                    lower16Update<offsetMask>();
-                    break;
-                case 0b1101:
-                    updateLower8();
-                    break;
-                case 0b1110:
-                    updateLowest8<offsetMask>();
-                    break;
-                case 0b1111:
-                    break;
-                default:
-                    return getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
+            if constexpr (inDebugMode) {
+                switch (getUpdateKind<useInterrupts>()) {
+                    case 0b0001:
+                        updateLower8();
+                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
+                        break;
+                    case 0b0010:
+                        updateLowest8<offsetMask>();
+                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
+                        break;
+                    case 0b0011:
+                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
+                        break;
+                    case 0b0100:
+                        lower16Update<offsetMask>();
+                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
+                        break;
+                    case 0b0101:
+                        updateLower8();
+                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
+                        break;
+                    case 0b0110:
+                        updateLowest8<offsetMask>();
+                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
+                        break;
+                    case 0b0111:
+                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
+                        break;
+                    case 0b1000:
+                        lower16Update<offsetMask>();
+                        updateHigher8();
+                        break;
+                    case 0b1001:
+                        updateHigher8();
+                        updateLower8();
+                        break;
+                    case 0b1010:
+                        updateHigher8();
+                        updateLowest8<offsetMask>();
+                        break;
+                    case 0b1011:
+                        updateHigher8();
+                        break;
+                    case 0b1100:
+                        lower16Update<offsetMask>();
+                        break;
+                    case 0b1101:
+                        updateLower8();
+                        break;
+                    case 0b1110:
+                        updateLowest8<offsetMask>();
+                        break;
+                    case 0b1111: break;
+                    default:
+                        lastDebugRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
+                        break;
+                }
+                return lastDebugRead_;
+            } else {
+                switch (getUpdateKind<useInterrupts>()) {
+                    case 0b0001:
+                        updateLower8();
+                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
+                        break;
+                    case 0b0010:
+                        updateLowest8<offsetMask>();
+                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
+                        break;
+                    case 0b0011:
+                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
+                        break;
+                    case 0b0100:
+                        lower16Update<offsetMask>();
+                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
+                        break;
+                    case 0b0101:
+                        updateLower8();
+                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
+                        break;
+                    case 0b0110:
+                        updateLowest8<offsetMask>();
+                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
+                        break;
+                    case 0b0111:
+                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
+                        break;
+                    case 0b1000:
+                        lower16Update<offsetMask>();
+                        updateHigher8();
+                        break;
+                    case 0b1001:
+                        updateHigher8();
+                        updateLower8();
+                        break;
+                    case 0b1010:
+                        updateHigher8();
+                        updateLowest8<offsetMask>();
+                        break;
+                    case 0b1011:
+                        updateHigher8();
+                        break;
+                    case 0b1100:
+                        lower16Update<offsetMask>();
+                        break;
+                    case 0b1101:
+                        updateLower8();
+                        break;
+                    case 0b1110:
+                        updateLowest8<offsetMask>();
+                        break;
+                    case 0b1111: break;
+                    default:
+                        lastRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
+                        break;
+                }
+                return lastRead_;
             }
-            return getReadBody<inDebugMode>(address_.bytes[3]);
         } else {
             setupDataLinesForWrite();
             /// @todo condense each operation set into a custom function to maximize throughput
@@ -599,6 +664,10 @@ private:
     static inline byte dataLinesDirection_ = 0xFF;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
+    static inline BodyFunction lastRead_ = nullptr;
+    static inline BodyFunction lastWrite_ = nullptr;
+    static inline BodyFunction lastDebugRead_ = nullptr;
+    static inline BodyFunction lastDebugWrite_ = nullptr;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
