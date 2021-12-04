@@ -468,33 +468,37 @@ private:
 public:
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
     static BodyFunction newDataCycle() noexcept {
+        using GetBodyFunction = BodyFunction(*)(byte);
+        GetBodyFunction getTheBody = nullptr;
         if (isReadOperation()) {
             setupDataLinesForRead();
+            getTheBody = getReadBody<inDebugMode>;
         } else {
             setupDataLinesForWrite();
+            getTheBody = getWriteBody<inDebugMode>;
         }
         /// @todo condense each operation set into a custom function to maximize throughput
         // look at each byte individually
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
                 updateLower8();
-                return getBody<inDebugMode>(upper16Update());
+                return getTheBody(upper16Update());
             case 0b0010:
                 updateLowest8<offsetMask>();
-                return getBody<inDebugMode>(upper16Update());
+                return getTheBody(upper16Update());
             case 0b0011:
-                return getBody<inDebugMode>(upper16Update());
+                return getTheBody(upper16Update());
             case 0b0100:
                 lower16Update<offsetMask>();
-                return getBody<inDebugMode>(updateHighest8());
+                return getTheBody(upper16Update());
             case 0b0101:
                 updateLower8();
-                return getBody<inDebugMode>(updateHighest8());
+                return getTheBody(updateHighest8());
             case 0b0110:
                 updateLowest8<offsetMask>();
-                return getBody<inDebugMode>(updateHighest8());
+                return getTheBody(updateHighest8());
             case 0b0111:
-                return getBody<inDebugMode>(updateHighest8());
+                return getTheBody(updateHighest8());
             case 0b1000:
                 lower16Update<offsetMask>();
                 updateHigher8();
@@ -522,9 +526,9 @@ public:
             case 0b1111:
                 break;
             default:
-                return getBody<inDebugMode>(full32BitUpdate<offsetMask>());
+                return getTheBody(full32BitUpdate<offsetMask>());
         }
-        return getBody<inDebugMode>(address_.bytes[3]);
+        return getTheBody(address_.bytes[3]);
     }
     template<bool advanceAddress = true>
     static void burstNext() noexcept {
