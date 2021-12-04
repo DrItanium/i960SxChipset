@@ -299,6 +299,63 @@ inline void handleExternalDeviceRequest() noexcept {
         }
     }
 }
+
+template<bool inDebugMode, typename T>
+inline void handleExternalDeviceReads() noexcept {
+    if constexpr (inDebugMode) {
+        displayRequestedAddress();
+    }
+    // with burst transactions in the core chipset, we do not have access to a cache line to write into.
+    // instead we need to do the old style infinite iteration design
+    for(;;) {
+        auto result = T::read(ProcessorInterface::getPageIndex(),
+                              ProcessorInterface::getPageOffset(),
+                              ProcessorInterface::getStyle());
+        if constexpr (inDebugMode) {
+            Serial.print(F("\tPage Index: 0x")) ;
+            Serial.println(ProcessorInterface::getPageIndex(), HEX);
+            Serial.print(F("\tPage Offset: 0x")) ;
+            Serial.println(ProcessorInterface::getPageOffset(), HEX);
+            Serial.print(F("\tRead Value: 0x"));
+            Serial.println(result, HEX);
+        }
+        ProcessorInterface::setDataBits(result);
+        if (informCPU()) {
+            break;
+        }
+        ProcessorInterface::burstNext<IncrementAddress>();
+    }
+}
+
+template<bool inDebugMode, typename T>
+inline void handleExternalDeviceWrites() noexcept {
+    if constexpr (inDebugMode) {
+        displayRequestedAddress();
+    }
+    // with burst transactions in the core chipset, we do not have access to a cache line to write into.
+    // instead we need to do the old style infinite iteration design
+    for (;;) {
+        auto dataBits = ProcessorInterface::getDataBits();
+        if constexpr (inDebugMode) {
+            Serial.print(F("\tPage Index: 0x")) ;
+            Serial.println(ProcessorInterface::getPageIndex(), HEX);
+            Serial.print(F("\tPage Offset: 0x")) ;
+            Serial.println(ProcessorInterface::getPageOffset(), HEX);
+            Serial.print(F("\tData To Write: 0x"));
+            Serial.println(dataBits.getWholeValue(), HEX);
+        }
+        T::write(ProcessorInterface::getPageIndex(),
+                 ProcessorInterface::getPageOffset(),
+                 ProcessorInterface::getStyle(),
+                 dataBits);
+        if (informCPU()) {
+            break;
+        }
+        // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
+        // so you may still be reading the previous i960 cycle state!
+        ProcessorInterface::burstNext<IncrementAddress>();
+    }
+}
 template<bool inDebugMode, bool useInterrupts>
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
@@ -509,28 +566,48 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
         delay(1000);
     }
 }
-
 template<bool debug>
 BodyFunction getExecBody(byte index) noexcept {
-    switch (index) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-            return ProcessorInterface::isReadOperation() ? handleMemoryReads<debug> : handleMemoryWrites<debug>;
-        case TheRTCInterface::SectionID:
-            return handleExternalDeviceRequest<debug, TheRTCInterface>;
-        case TheDisplayInterface::SectionID:
-            return handleExternalDeviceRequest<debug, TheDisplayInterface>;
-        case TheSDInterface::SectionID:
-            return handleExternalDeviceRequest<debug, TheSDInterface>;
-        case TheConsoleInterface::SectionID:
-            return handleExternalDeviceRequest<debug, TheConsoleInterface>;
-        case ConfigurationSpace::SectionID:
-            return handleExternalDeviceRequest<debug, ConfigurationSpace>;
-        default:
-            return fallbackBody<debug>;
+    if (ProcessorInterface::isReadOperation()) {
+        switch (index) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+                return handleMemoryReads<debug>;
+            case TheRTCInterface::SectionID:
+                return handleExternalDeviceReads<debug, TheRTCInterface>;
+            case TheDisplayInterface::SectionID:
+                return handleExternalDeviceReads<debug, TheDisplayInterface>;
+            case TheSDInterface::SectionID:
+                return handleExternalDeviceReads<debug, TheSDInterface>;
+            case TheConsoleInterface::SectionID:
+                return handleExternalDeviceReads<debug, TheConsoleInterface>;
+            case ConfigurationSpace::SectionID:
+                return handleExternalDeviceReads<debug, ConfigurationSpace>;
+            default: break;
+        }
+    } else {
+        switch (index) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+                return handleMemoryWrites<debug>;
+            case TheRTCInterface::SectionID:
+                return handleExternalDeviceWrites<debug, TheRTCInterface>;
+            case TheDisplayInterface::SectionID:
+                return handleExternalDeviceWrites<debug, TheDisplayInterface>;
+            case TheSDInterface::SectionID:
+                return handleExternalDeviceWrites<debug, TheSDInterface>;
+            case TheConsoleInterface::SectionID:
+                return handleExternalDeviceWrites<debug, TheConsoleInterface>;
+            case ConfigurationSpace::SectionID:
+                return handleExternalDeviceWrites<debug, ConfigurationSpace>;
+            default: break;
+        }
     }
+    return fallbackBody<debug>;
 }
 BodyFunction getNonDebugBody(byte index) noexcept {
     return getExecBody<false>(index);
