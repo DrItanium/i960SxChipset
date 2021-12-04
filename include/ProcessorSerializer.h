@@ -226,8 +226,27 @@ public:
 public:
     static void begin() noexcept;
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
-    [[nodiscard]] static SplitWord16 getDataBits() noexcept;
-    static void setDataBits(uint16_t value) noexcept;
+    [[nodiscard]] static SplitWord16 getDataBits() noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
+        } else {
+            // stub out
+            return SplitWord16(0);
+        }
+    }
+    static void setDataBits(uint16_t value) noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            // the latch is preserved in between data line changes
+            // okay we are still pointing as output values
+            // check the latch and see if the output value is the same as what is latched
+            if (latchedDataOutput != value) {
+                latchedDataOutput = value;
+                writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
+            }
+        } else {
+            // do nothing
+        }
+    }
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }

@@ -25,34 +25,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 #include "Pinout.h"
-//#include "PSRAMChip.h"
-SplitWord16
-ProcessorInterface::getDataBits() noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-        return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
-    } else {
-        // stub out
-        return SplitWord16(0);
-    }
-}
-void
-ProcessorInterface::setDataBits(uint16_t value) noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-        // the latch is preserved in between data line changes
-        // okay we are still pointing as output values
-        // check the latch and see if the output value is the same as what is latched
-        if (latchedDataOutput != value) {
-            latchedDataOutput = value;
-            writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
-        }
-    } else {
-       // do nothing
-    }
-}
-
-
-
-
 
 void
 ProcessorInterface::begin() noexcept {
