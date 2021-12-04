@@ -465,32 +465,40 @@ private:
 public:
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
     static BodyFunction newDataCycle() noexcept {
+        bool updateTargetFunctions = false;
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
                 updateLower8();
                 upper16Update();
+                updateTargetFunctions = true;
                 break;
             case 0b0010:
                 updateLowest8<offsetMask>();
                 upper16Update();
+                updateTargetFunctions = true;
                 break;
             case 0b0011:
                 upper16Update();
+                updateTargetFunctions = true;
                 break;
             case 0b0100:
                 lower16Update<offsetMask>();
                 updateHighest8();
+                updateTargetFunctions = true;
                 break;
             case 0b0101:
                 updateLower8();
                 updateHighest8();
+                updateTargetFunctions = true;
                 break;
             case 0b0110:
                 updateLowest8<offsetMask>();
                 updateHighest8();
+                updateTargetFunctions = true;
                 break;
             case 0b0111:
                 updateHighest8();
+                updateTargetFunctions = true;
                 break;
             case 0b1000:
                 lower16Update<offsetMask>();
@@ -519,14 +527,32 @@ public:
             case 0b1111: break;
             default:
                 full32BitUpdate<offsetMask>();
+                updateTargetFunctions = true;
                 break;
+        }
+        if (updateTargetFunctions) {
+            if constexpr (inDebugMode) {
+                lastDebugRead_ = getReadBody<inDebugMode>(address_.bytes[3]);
+                lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
+            } else {
+                lastRead_ = getReadBody<inDebugMode>(address_.bytes[3]);
+                lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
+            }
         }
         if (isReadOperation()) {
             setupDataLinesForRead();
-            return getReadBody<inDebugMode>(address_.bytes[3]);
+            if constexpr (inDebugMode) {
+                return lastDebugRead_;
+            } else {
+                return lastRead_;
+            }
         } else {
             setupDataLinesForWrite();
-            return getWriteBody<inDebugMode>(address_.bytes[3]);
+            if constexpr (inDebugMode) {
+                return lastDebugWrite_;
+            } else {
+                return lastWrite_;
+            }
         }
     }
     template<bool advanceAddress = true>
@@ -550,6 +576,10 @@ private:
     static inline byte dataLinesDirection_ = 0xFF;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
+    static inline BodyFunction lastRead_ = nullptr;
+    static inline BodyFunction lastWrite_ = nullptr;
+    static inline BodyFunction lastDebugWrite_ = nullptr;
+    static inline BodyFunction lastDebugRead_ = nullptr;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
