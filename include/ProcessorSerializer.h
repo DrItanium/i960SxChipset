@@ -239,9 +239,9 @@ public:
             // the latch is preserved in between data line changes
             // okay we are still pointing as output values
             // check the latch and see if the output value is the same as what is latched
-            if (latchedDataOutput != value) {
-                latchedDataOutput = value;
-                writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput);
+            if (latchedDataOutput.getWholeValue() != value) {
+                latchedDataOutput.wholeValue_ = value;
+                writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput.getWholeValue());
             }
         } else {
             // do nothing
@@ -543,7 +543,7 @@ public:
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
 private:
     static inline SplitWord32 address_{0};
-    static inline uint16_t latchedDataOutput = 0;
+    static inline SplitWord16 latchedDataOutput {0};
     static inline byte dataLinesDirection_ = 0xFF;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
