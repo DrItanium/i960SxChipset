@@ -470,240 +470,192 @@ public:
     static BodyFunction newDataCycle() noexcept {
         if (isReadOperation()) {
             setupDataLinesForRead();
-            if constexpr (inDebugMode) {
-                switch (getUpdateKind<useInterrupts>()) {
-                    case 0b0001:
-                        updateLower8();
+            switch (getUpdateKind<useInterrupts>()) {
+                case 0b0001:
+                    updateLower8();
+                    if constexpr (inDebugMode) {
                         lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0010:
-                        updateLowest8<offsetMask>();
+                    } else {
+                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
+                    }
+                    break;
+                case 0b0010:
+                    updateLowest8<offsetMask>();
+                    if constexpr (inDebugMode) {
                         lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0011:
+                    } else {
+                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
+                    }
+                    break;
+                case 0b0011:
+                    if constexpr (inDebugMode) {
                         lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0100:
-                        lower16Update<offsetMask>();
+                    } else {
+                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
+                    }
+                    break;
+                case 0b0100:
+                    lower16Update<offsetMask>();
+                    if constexpr (inDebugMode) {
                         lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0101:
-                        updateLower8();
+                    } else {
+                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
+                    }
+                    break;
+                case 0b0101:
+                    updateLower8();
+                    if constexpr (inDebugMode) {
                         lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0110:
-                        updateLowest8<offsetMask>();
+                    } else {
+                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
+                    }
+                    break;
+                case 0b0110:
+                    updateLowest8<offsetMask>();
+                    if constexpr (inDebugMode) {
                         lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0111:
+                    } else {
+                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
+                    }
+                    break;
+                case 0b0111:
+                    if constexpr (inDebugMode) {
                         lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b1000:
-                        lower16Update<offsetMask>();
-                        updateHigher8();
-                        break;
-                    case 0b1001:
-                        updateHigher8();
-                        updateLower8();
-                        break;
-                    case 0b1010:
-                        updateHigher8();
-                        updateLowest8<offsetMask>();
-                        break;
-                    case 0b1011:
-                        updateHigher8();
-                        break;
-                    case 0b1100:
-                        lower16Update<offsetMask>();
-                        break;
-                    case 0b1101:
-                        updateLower8();
-                        break;
-                    case 0b1110:
-                        updateLowest8<offsetMask>();
-                        break;
-                    case 0b1111: break;
-                    default:
+                    } else {
+                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
+                    }
+                    break;
+                case 0b1000:
+                    lower16Update<offsetMask>();
+                    updateHigher8();
+                    break;
+                case 0b1001:
+                    updateHigher8();
+                    updateLower8();
+                    break;
+                case 0b1010:
+                    updateHigher8();
+                    updateLowest8<offsetMask>();
+                    break;
+                case 0b1011:
+                    updateHigher8();
+                    break;
+                case 0b1100:
+                    lower16Update<offsetMask>();
+                    break;
+                case 0b1101:
+                    updateLower8();
+                    break;
+                case 0b1110:
+                    updateLowest8<offsetMask>();
+                    break;
+                case 0b1111: break;
+                default:
+                    if constexpr (inDebugMode) {
                         lastDebugRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                        break;
-                }
+                    } else {
+                        lastRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
+                    }
+                    break;
+            }
+            if constexpr (inDebugMode) {
                 return lastDebugRead_;
             } else {
-                switch (getUpdateKind<useInterrupts>()) {
-                    case 0b0001:
-                        updateLower8();
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0010:
-                        updateLowest8<offsetMask>();
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0011:
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0100:
-                        lower16Update<offsetMask>();
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0101:
-                        updateLower8();
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0110:
-                        updateLowest8<offsetMask>();
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0111:
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b1000:
-                        lower16Update<offsetMask>();
-                        updateHigher8();
-                        break;
-                    case 0b1001:
-                        updateHigher8();
-                        updateLower8();
-                        break;
-                    case 0b1010:
-                        updateHigher8();
-                        updateLowest8<offsetMask>();
-                        break;
-                    case 0b1011:
-                        updateHigher8();
-                        break;
-                    case 0b1100:
-                        lower16Update<offsetMask>();
-                        break;
-                    case 0b1101:
-                        updateLower8();
-                        break;
-                    case 0b1110:
-                        updateLowest8<offsetMask>();
-                        break;
-                    case 0b1111: break;
-                    default:
-                        lastRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                        break;
-                }
                 return lastRead_;
             }
         } else {
             setupDataLinesForWrite();
-            if constexpr (inDebugMode) {
-                switch (getUpdateKind<useInterrupts>()) {
-                    case 0b0001:
-                        updateLower8();
+            switch (getUpdateKind<useInterrupts>()) {
+                case 0b0001:
+                    updateLower8();
+                    if constexpr (inDebugMode) {
                         lastDebugWrite_ = getWriteBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0010:
-                        updateLowest8<offsetMask>();
+                    } else {
+                        lastWrite_ = getWriteBody<inDebugMode>(upper16Update());
+                    }
+                    break;
+                case 0b0010:
+                    updateLowest8<offsetMask>();
+                    if constexpr (inDebugMode) {
                         lastDebugWrite_ = getWriteBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0011:
+                    } else {
+                        lastWrite_ = getWriteBody<inDebugMode>(upper16Update());
+                    }
+                    break;
+                case 0b0011:
+                    if constexpr (inDebugMode) {
                         lastDebugWrite_ = getWriteBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0100:
-                        lower16Update<offsetMask>();
+                    } else {
+                        lastWrite_ = getWriteBody<inDebugMode>(upper16Update());
+                    }
+                    break;
+                case 0b0100:
+                    lower16Update<offsetMask>();
+                    if constexpr (inDebugMode) {
                         lastDebugWrite_ = getWriteBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0101:
-                        updateLower8();
+                    } else {
+                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
+                    }
+                    break;
+                case 0b0101:
+                    updateLower8();
+                    if constexpr (inDebugMode) {
                         lastDebugWrite_ = getWriteBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0110:
-                        updateLowest8<offsetMask>();
+                    } else {
+                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
+                    }
+                    break;
+                case 0b0110:
+                    updateLowest8<offsetMask>();
+                    if constexpr (inDebugMode) {
                         lastDebugWrite_ = getWriteBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0111:
+                    } else {
+                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
+                    }
+                    break;
+                case 0b0111:
+                    if constexpr (inDebugMode) {
                         lastDebugWrite_ = getWriteBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b1000:
-                        lower16Update<offsetMask>();
-                        updateHigher8();
-                        break;
-                    case 0b1001:
-                        updateHigher8();
-                        updateLower8();
-                        break;
-                    case 0b1010:
-                        updateHigher8();
-                        updateLowest8<offsetMask>();
-                        break;
-                    case 0b1011:
-                        updateHigher8();
-                        break;
-                    case 0b1100:
-                        lower16Update<offsetMask>();
-                        break;
-                    case 0b1101:
-                        updateLower8();
-                        break;
-                    case 0b1110:
-                        updateLowest8<offsetMask>();
-                        break;
-                    case 0b1111: break;
-                    default:
+                    } else {
+                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
+                    }
+                    break;
+                case 0b1000:
+                    lower16Update<offsetMask>();
+                    updateHigher8();
+                    break;
+                case 0b1001:
+                    updateHigher8();
+                    updateLower8();
+                    break;
+                case 0b1010:
+                    updateHigher8();
+                    updateLowest8<offsetMask>();
+                    break;
+                case 0b1011:
+                    updateHigher8();
+                    break;
+                case 0b1100:
+                    lower16Update<offsetMask>();
+                    break;
+                case 0b1101:
+                    updateLower8();
+                    break;
+                case 0b1110:
+                    updateLowest8<offsetMask>();
+                    break;
+                case 0b1111: break;
+                default:
+                    if constexpr (inDebugMode) {
                         lastDebugWrite_ = getWriteBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                        break;
-                }
+                    } else {
+                        lastWrite_ = getWriteBody<inDebugMode>(full32BitUpdate<offsetMask>());
+                    }
+                    break;
+            }
+            if constexpr (inDebugMode) {
                 return lastDebugWrite_;
             } else {
-                switch (getUpdateKind<useInterrupts>()) {
-                    case 0b0001:
-                        updateLower8();
-                        lastWrite_ = getWriteBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0010:
-                        updateLowest8<offsetMask>();
-                        lastWrite_ = getWriteBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0011:
-                        lastWrite_ = getWriteBody<inDebugMode>(upper16Update());
-                        break;
-                    case 0b0100:
-                        lower16Update<offsetMask>();
-                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0101:
-                        updateLower8();
-                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0110:
-                        updateLowest8<offsetMask>();
-                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b0111:
-                        lastWrite_ = getWriteBody<inDebugMode>(updateHighest8());
-                        break;
-                    case 0b1000:
-                        lower16Update<offsetMask>();
-                        updateHigher8();
-                        break;
-                    case 0b1001:
-                        updateHigher8();
-                        updateLower8();
-                        break;
-                    case 0b1010:
-                        updateHigher8();
-                        updateLowest8<offsetMask>();
-                        break;
-                    case 0b1011:
-                        updateHigher8();
-                        break;
-                    case 0b1100:
-                        lower16Update<offsetMask>();
-                        break;
-                    case 0b1101:
-                        updateLower8();
-                        break;
-                    case 0b1110:
-                        updateLowest8<offsetMask>();
-                        break;
-                    case 0b1111: break;
-                    default:
-                        lastWrite_ = getWriteBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                        break;
-                }
                 return lastWrite_;
             }
         }
