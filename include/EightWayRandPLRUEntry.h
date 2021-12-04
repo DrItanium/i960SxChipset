@@ -49,6 +49,7 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
+    __attribute__((noinline))
     CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         byte targetIndex = 0xFF;
         for (byte i = 0; i < NumberOfWays; ++i) {
@@ -91,7 +92,7 @@ private:
         static bool initialized = false;
         static byte counter = 0;
         static byte randomTable[256] = { 0 };
-        static byte secondLookupTable[4][2] {
+        static constexpr byte secondLookupTable[4][2] {
                 { 1, 0 },
                 {3, 2},
                 {5, 4},
