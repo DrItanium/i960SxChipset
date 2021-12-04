@@ -49,13 +49,13 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         byte targetIndex = 0xFF;
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i]->matches(theAddress)) {
                 updateFlags(i);
                 return *ways_[i];
-            } else if (!ways_[i]->isValid() && (targetIndex >= NumberOfWays)) {
+            } else if ((targetIndex >= NumberOfWays) && !ways_[i]->isValid()) {
                 targetIndex = i;
             }
         }
@@ -76,38 +76,29 @@ public:
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     void updateFlags(byte index) noexcept {
-        switch (index) {
-            case 0:
-                bits_ &= 0b1110;
-                break;
-            case 1:
-                bits_ |= 0b0001;
-                break;
-            case 2:
-                bits_ &= 0b1101;
-                break;
-            case 3:
-                bits_ |= 0b0010;
-                break;
-            case 4:
-                bits_ &= 0b1011;
-                break;
-            case 5:
-                bits_ |= 0b0100;
-                break;
-            case 6:
-                bits_ &= 0b0111;
-                break;
-            case 7:
-                bits_ |= 0b1000;
-                break;
-            default:
-                break;
+        constexpr byte masks[8] {
+                0b1110, 0b0001, 0b1101, 0b0010,
+                0b1011, 0b0100, 0b0111, 0b1000,
+        };
+        if (auto rIndex = index & 0b111; (rIndex & 0b1) == 0) {
+            bits_ &= masks[rIndex];
+        } else {
+            bits_ |= masks[rIndex];
         }
     }
     static constexpr auto NumberOfGroups = 4;
-    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        switch (random(0, NumberOfGroups)) {
+    [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
+        static bool initialized = false;
+        static byte counter = 0;
+        static byte randomTable[256] = { 0 };
+        if (!initialized) {
+            initialized = true;
+            counter = 0;
+            for (uint16_t i = 0; i < 256; ++i) {
+                randomTable[i] = random(0, NumberOfGroups);
+            }
+        }
+        switch (randomTable[counter++]) {
             case 0:
                 return (bits_ & 0b0001) ? 0 : 1;
             case 1:
