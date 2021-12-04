@@ -462,43 +462,54 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[1] = lower;
     }
+private:
+    template<bool inDebugMode>
+    inline static void updateTargetFunctions() noexcept {
+        if constexpr (auto a = getReadBody<inDebugMode>(address_.bytes[3]),
+                    b = getWriteBody<inDebugMode>(address_.bytes[3]);
+                inDebugMode) {
+            lastDebugRead_ = a;
+            lastDebugWrite_ = b;
+        } else {
+            lastRead_ = a;
+            lastWrite_ = b;
+        }
+    }
 public:
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
-    static BodyFunction newDataCycle() noexcept {
-        bool updateTargetFunctions = false;
+    static void newDataCycle() noexcept {
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
                 updateLower8();
                 upper16Update();
-                updateTargetFunctions = true;
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0010:
                 updateLowest8<offsetMask>();
                 upper16Update();
-                updateTargetFunctions = true;
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0011:
                 upper16Update();
-                updateTargetFunctions = true;
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0100:
                 lower16Update<offsetMask>();
                 updateHighest8();
-                updateTargetFunctions = true;
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0101:
                 updateLower8();
                 updateHighest8();
-                updateTargetFunctions = true;
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0110:
                 updateLowest8<offsetMask>();
                 updateHighest8();
-                updateTargetFunctions = true;
                 break;
             case 0b0111:
                 updateHighest8();
-                updateTargetFunctions = true;
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b1000:
                 lower16Update<offsetMask>();
@@ -527,31 +538,22 @@ public:
             case 0b1111: break;
             default:
                 full32BitUpdate<offsetMask>();
-                updateTargetFunctions = true;
+                updateTargetFunctions<inDebugMode>();
                 break;
-        }
-        if (updateTargetFunctions) {
-            if constexpr (inDebugMode) {
-                lastDebugRead_ = getReadBody<inDebugMode>(address_.bytes[3]);
-                lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-            } else {
-                lastRead_ = getReadBody<inDebugMode>(address_.bytes[3]);
-                lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-            }
         }
         if (isReadOperation()) {
             setupDataLinesForRead();
             if constexpr (inDebugMode) {
-                return lastDebugRead_;
+                lastDebugRead_();
             } else {
-                return lastRead_;
+                lastRead_();
             }
         } else {
             setupDataLinesForWrite();
             if constexpr (inDebugMode) {
-                return lastDebugWrite_;
+                lastDebugWrite_();
             } else {
-                return lastWrite_;
+                lastWrite_();
             }
         }
     }
