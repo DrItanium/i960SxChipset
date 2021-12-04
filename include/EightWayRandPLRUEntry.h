@@ -91,6 +91,12 @@ private:
         static bool initialized = false;
         static byte counter = 0;
         static byte randomTable[256] = { 0 };
+        static byte secondLookupTable[4][2] {
+                { 1, 0 },
+                {3, 2},
+                {5, 4},
+                {7, 6},
+        };
         if (!initialized) {
             initialized = true;
             counter = 0;
@@ -98,18 +104,7 @@ private:
                 randomTable[i] = random(0, NumberOfGroups);
             }
         }
-        switch (randomTable[counter++]) {
-            case 0:
-                return (bits_ & 0b0001) ? 0 : 1;
-            case 1:
-                return (bits_ & 0b0010) ? 2 : 3;
-            case 2:
-                return (bits_ & 0b0100) ? 4 : 5;
-            case 3:
-                return (bits_ & 0b1000) ? 6 : 7;
-            default:
-                return 0;
-        }
+        return secondLookupTable[randomTable[counter++]][bits_ & 0b0001];
     }
 private:
     // This is RandPLRU Tree so we need to organize things correctly, I'm going to try four groups of two
