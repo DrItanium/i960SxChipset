@@ -268,7 +268,7 @@ private:
         }
     }
     template<byte offsetMask>
-    inline static byte full32BitUpdate() noexcept {
+    inline static void full32BitUpdate() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -325,7 +325,6 @@ private:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
-        return highest;
     }
     template<byte offsetMask>
     static void lower16Update() noexcept {
@@ -358,7 +357,7 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[1] = lower;
     }
-    static byte upper16Update() noexcept {
+    static void upper16Update() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // only read the upper 16-bits
@@ -382,9 +381,8 @@ private:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
-        return highest;
     }
-    static byte updateHighest8() noexcept {
+    static void updateHighest8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOB);
         // only read the upper 8 bits
@@ -401,7 +399,6 @@ private:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         address_.bytes[3] = highest;
-        return highest;
     }
     static void updateHigher8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -468,228 +465,68 @@ private:
 public:
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
     static BodyFunction newDataCycle() noexcept {
+        switch (getUpdateKind<useInterrupts>()) {
+            case 0b0001:
+                updateLower8();
+                upper16Update();
+                break;
+            case 0b0010:
+                updateLowest8<offsetMask>();
+                upper16Update();
+                break;
+            case 0b0011:
+                upper16Update();
+                break;
+            case 0b0100:
+                lower16Update<offsetMask>();
+                updateHighest8();
+                break;
+            case 0b0101:
+                updateLower8();
+                updateHighest8();
+                break;
+            case 0b0110:
+                updateLowest8<offsetMask>();
+                updateHighest8();
+                break;
+            case 0b0111:
+                updateHighest8();
+                break;
+            case 0b1000:
+                lower16Update<offsetMask>();
+                updateHigher8();
+                break;
+            case 0b1001:
+                updateHigher8();
+                updateLower8();
+                break;
+            case 0b1010:
+                updateHigher8();
+                updateLowest8<offsetMask>();
+                break;
+            case 0b1011:
+                updateHigher8();
+                break;
+            case 0b1100:
+                lower16Update<offsetMask>();
+                break;
+            case 0b1101:
+                updateLower8();
+                break;
+            case 0b1110:
+                updateLowest8<offsetMask>();
+                break;
+            case 0b1111: break;
+            default:
+                full32BitUpdate<offsetMask>();
+                break;
+        }
         if (isReadOperation()) {
             setupDataLinesForRead();
-            switch (getUpdateKind<useInterrupts>()) {
-                case 0b0001:
-                    updateLower8();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0010:
-                    updateLowest8<offsetMask>();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0011:
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0100:
-                    lower16Update<offsetMask>();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0101:
-                    updateLower8();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0110:
-                    updateLowest8<offsetMask>();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0111:
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b1000:
-                    lower16Update<offsetMask>();
-                    updateHigher8();
-                    break;
-                case 0b1001:
-                    updateHigher8();
-                    updateLower8();
-                    break;
-                case 0b1010:
-                    updateHigher8();
-                    updateLowest8<offsetMask>();
-                    break;
-                case 0b1011:
-                    updateHigher8();
-                    break;
-                case 0b1100:
-                    lower16Update<offsetMask>();
-                    break;
-                case 0b1101:
-                    updateLower8();
-                    break;
-                case 0b1110:
-                    updateLowest8<offsetMask>();
-                    break;
-                case 0b1111: break;
-                default:
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-            }
-            if constexpr (inDebugMode) {
-                return lastDebugRead_;
-            } else {
-                return lastRead_;
-            }
+            return getReadBody<inDebugMode>(address_.bytes[3]);
         } else {
             setupDataLinesForWrite();
-            switch (getUpdateKind<useInterrupts>()) {
-                case 0b0001:
-                    updateLower8();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0010:
-                    updateLowest8<offsetMask>();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0011:
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(upper16Update());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0100:
-                    lower16Update<offsetMask>();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0101:
-                    updateLower8();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0110:
-                    updateLowest8<offsetMask>();
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b0111:
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(updateHighest8());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-                case 0b1000:
-                    lower16Update<offsetMask>();
-                    updateHigher8();
-                    break;
-                case 0b1001:
-                    updateHigher8();
-                    updateLower8();
-                    break;
-                case 0b1010:
-                    updateHigher8();
-                    updateLowest8<offsetMask>();
-                    break;
-                case 0b1011:
-                    updateHigher8();
-                    break;
-                case 0b1100:
-                    lower16Update<offsetMask>();
-                    break;
-                case 0b1101:
-                    updateLower8();
-                    break;
-                case 0b1110:
-                    updateLowest8<offsetMask>();
-                    break;
-                case 0b1111: break;
-                default:
-                    if constexpr (inDebugMode) {
-                        lastDebugRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                        lastDebugWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    } else {
-                        lastRead_ = getReadBody<inDebugMode>(full32BitUpdate<offsetMask>());
-                        lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]);
-                    }
-                    break;
-            }
-            if constexpr (inDebugMode) {
-                return lastDebugWrite_;
-            } else {
-                return lastWrite_;
-            }
+            return getWriteBody<inDebugMode>(address_.bytes[3]);
         }
     }
     template<bool advanceAddress = true>
@@ -713,10 +550,6 @@ private:
     static inline byte dataLinesDirection_ = 0xFF;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
-    static inline BodyFunction lastRead_ = nullptr;
-    static inline BodyFunction lastWrite_ = nullptr;
-    static inline BodyFunction lastDebugRead_ = nullptr;
-    static inline BodyFunction lastDebugWrite_ = nullptr;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
