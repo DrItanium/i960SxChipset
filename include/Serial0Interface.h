@@ -83,34 +83,31 @@ public:
     ~Serial0Interface() = delete;
 private:
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
-        if (offset == 0) {
-           return Serial.read();
-        } else {
-            switch (static_cast<Registers>(offset)) {
-                case Registers::AddressDebuggingFlag:
-                    return static_cast<uint16_t>(enableAddressDebugging_);
-                default:
-                    return 0;
-            }
+        switch (static_cast<Registers>(offset)) {
+            case Registers::ConsoleIO:
+                return Serial.read();
+            case Registers::AddressDebuggingFlag:
+                return static_cast<uint16_t>(enableAddressDebugging_);
+            default:
+                return 0;
         }
     }
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
-        if (offset == 0) {
-            Serial.write(static_cast<char>(value.getWholeValue()));
-        } else {
-            switch (static_cast<Registers>(offset)) {
-                case Registers::TriggerInterrupt:
-                    pulse<i960Pinout::Int0_>();
-                    break;
-                case Registers::ConsoleFlush:
-                    Serial.flush();
-                    break;
-                case Registers::AddressDebuggingFlag:
-                    enableAddressDebugging_ = (value.getWholeValue() != 0);
-                    break;
-                default:
-                    break;
-            }
+        switch (static_cast<Registers>(offset)) {
+            case Registers::TriggerInterrupt:
+                pulse<i960Pinout::Int0_>();
+                break;
+            case Registers::ConsoleFlush:
+                Serial.flush();
+                break;
+            case Registers::ConsoleIO:
+                Serial.write(static_cast<char>(value.getWholeValue()));
+                break;
+            case Registers::AddressDebuggingFlag:
+                enableAddressDebugging_ = (value.getWholeValue() != 0);
+                break;
+            default:
+                break;
         }
     }
 public:
