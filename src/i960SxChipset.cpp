@@ -609,12 +609,78 @@ BodyFunction getExecBody(byte index) noexcept {
     }
     return fallbackBody<debug>;
 }
+template<bool debug>
+BodyFunction getReadExecBody(byte index) noexcept {
+        switch (index) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+                return handleMemoryReads<debug>;
+            case TheRTCInterface::SectionID:
+                return handleExternalDeviceReads<debug, TheRTCInterface>;
+            case TheDisplayInterface::SectionID:
+                return handleExternalDeviceReads<debug, TheDisplayInterface>;
+            case TheSDInterface::SectionID:
+                return handleExternalDeviceReads<debug, TheSDInterface>;
+            case TheConsoleInterface::SectionID:
+                return handleExternalDeviceReads<debug, TheConsoleInterface>;
+            case ConfigurationSpace::SectionID:
+                return handleExternalDeviceReads<debug, ConfigurationSpace>;
+            default: break;
+        }
+    return fallbackBody<debug>;
+}
+template<bool debug>
+BodyFunction getWriteExecBody(byte index) noexcept {
+    switch (index) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            return handleMemoryWrites<debug>;
+        case TheRTCInterface::SectionID:
+            return handleExternalDeviceWrites<debug, TheRTCInterface>;
+        case TheDisplayInterface::SectionID:
+            return handleExternalDeviceWrites<debug, TheDisplayInterface>;
+        case TheSDInterface::SectionID:
+            return handleExternalDeviceWrites<debug, TheSDInterface>;
+        case TheConsoleInterface::SectionID:
+            return handleExternalDeviceWrites<debug, TheConsoleInterface>;
+        case ConfigurationSpace::SectionID:
+            return handleExternalDeviceWrites<debug, ConfigurationSpace>;
+        default: break;
+    }
+    return fallbackBody<debug>;
+}
 BodyFunction getNonDebugBody(byte index) noexcept {
     return getExecBody<false>(index);
 }
 BodyFunction getDebugBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
         return getExecBody<true>(index);
+    } else {
+        return fallbackBody<true>;
+    }
+}
+
+BodyFunction getNonDebugReadBody(byte index) noexcept {
+    return getReadExecBody<false>(index);
+}
+BodyFunction getDebugReadBody(byte index) noexcept {
+    if constexpr (CompileInAddressDebuggingSupport) {
+        return getReadExecBody<true>(index);
+    } else {
+        return fallbackBody<true>;
+    }
+}
+
+BodyFunction getNonDebugWriteBody(byte index) noexcept {
+    return getWriteExecBody<false>(index);
+}
+BodyFunction getDebugWriteBody(byte index) noexcept {
+    if constexpr (CompileInAddressDebuggingSupport) {
+        return getWriteExecBody<true>(index);
     } else {
         return fallbackBody<true>;
     }

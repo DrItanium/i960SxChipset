@@ -32,6 +32,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using BodyFunction = void (*)();
 BodyFunction getNonDebugBody(byte index) noexcept;
 BodyFunction getDebugBody(byte index) noexcept;
+BodyFunction getNonDebugReadBody(byte index) noexcept;
+BodyFunction getDebugReadBody(byte index) noexcept;
+BodyFunction getNonDebugWriteBody(byte index) noexcept;
+BodyFunction getDebugWriteBody(byte index) noexcept;
 
 template<bool inDebugMode>
 BodyFunction getBody(byte index) noexcept {
@@ -39,6 +43,24 @@ BodyFunction getBody(byte index) noexcept {
         return getDebugBody(index);
     } else {
         return getNonDebugBody(index);
+    }
+}
+
+template<bool inDebugMode>
+BodyFunction getReadBody(byte index) noexcept {
+    if constexpr (inDebugMode) {
+        return getDebugReadBody(index);
+    } else {
+        return getNonDebugReadBody(index);
+    }
+}
+
+template<bool inDebugMode>
+BodyFunction getWriteBody(byte index) noexcept {
+    if constexpr (inDebugMode) {
+        return getDebugWriteBody(index);
+    } else {
+        return getNonDebugWriteBody(index);
     }
 }
 
