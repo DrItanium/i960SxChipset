@@ -245,28 +245,33 @@ private:
     }
     static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<DisplayInterfaceRegisters>(offset)) {
-            case DisplayInterfaceRegisters::InstructionField00: return fields_[0];
-            case DisplayInterfaceRegisters::InstructionField01: return fields_[1];
-            case DisplayInterfaceRegisters::InstructionField02: return fields_[2];
-            case DisplayInterfaceRegisters::InstructionField03: return fields_[3];
-            case DisplayInterfaceRegisters::InstructionField04: return fields_[4];
-            case DisplayInterfaceRegisters::InstructionField05: return fields_[5];
-            case DisplayInterfaceRegisters::InstructionField06: return fields_[6];
-            case DisplayInterfaceRegisters::InstructionField07: return fields_[7];
+            case DisplayInterfaceRegisters::InstructionField00:
+            case DisplayInterfaceRegisters::InstructionField01:
+            case DisplayInterfaceRegisters::InstructionField02:
+            case DisplayInterfaceRegisters::InstructionField03:
+            case DisplayInterfaceRegisters::InstructionField04:
+            case DisplayInterfaceRegisters::InstructionField05:
+            case DisplayInterfaceRegisters::InstructionField06:
+            case DisplayInterfaceRegisters::InstructionField07:
+                return fields_[offset - static_cast<byte>(DisplayInterfaceRegisters::InstructionField00)];
             default: return 0;
         }
     }
     static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
-                case DisplayInterfaceRegisters::InstructionField00: fields_[0] = value.getWholeValue(); break;
-                case DisplayInterfaceRegisters::InstructionField01: fields_[1] = value.getWholeValue(); break;
-                case DisplayInterfaceRegisters::InstructionField02: fields_[2] = value.getWholeValue(); break;
-                case DisplayInterfaceRegisters::InstructionField03: fields_[3] = value.getWholeValue(); break;
-                case DisplayInterfaceRegisters::InstructionField04: fields_[4] = value.getWholeValue(); break;
-                case DisplayInterfaceRegisters::InstructionField05: fields_[5] = value.getWholeValue(); break;
-                case DisplayInterfaceRegisters::InstructionField06: fields_[6] = value.getWholeValue(); break;
-                case DisplayInterfaceRegisters::InstructionField07: fields_[7] = value.getWholeValue(); break;
-                case DisplayInterfaceRegisters::Invoke0: invoke(value); break;
+                case DisplayInterfaceRegisters::InstructionField00:
+                case DisplayInterfaceRegisters::InstructionField01:
+                case DisplayInterfaceRegisters::InstructionField02:
+                case DisplayInterfaceRegisters::InstructionField03:
+                case DisplayInterfaceRegisters::InstructionField04:
+                case DisplayInterfaceRegisters::InstructionField05:
+                case DisplayInterfaceRegisters::InstructionField06:
+                case DisplayInterfaceRegisters::InstructionField07:
+                    fields_[offset - static_cast<byte>(DisplayInterfaceRegisters::InstructionField00)] = value.getWholeValue();
+                    break;
+                case DisplayInterfaceRegisters::Invoke0:
+                    invoke(value);
+                    break;
                 default: break;
             }
     }
