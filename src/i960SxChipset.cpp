@@ -362,38 +362,6 @@ void setup() {
         // purge the cache pages
         ConfigurationSpace::begin();
         Serial.println(F("i960Sx chipset bringup"));
-#if 0
-        {
-            Serial.println(F("Setting up the initial lookup table"));
-            for (auto& entry : lookupTable) {
-                entry = fallbackBody<false>;
-            }
-            lookupTable[0] = handleMemoryInterface<false>;
-            // only chipset type 1 has access to the full 64 megabytes
-            lookupTable[1] = handleMemoryInterface<false>;
-            lookupTable[2] = handleMemoryInterface<false>;
-            lookupTable[3] = handleMemoryInterface<false>;
-            lookupTable[TheRTCInterface ::SectionID] = handleExternalDeviceRequest<false, TheRTCInterface >;
-            lookupTable[TheDisplayInterface ::SectionID] = handleExternalDeviceRequest<false, TheDisplayInterface>;
-            lookupTable[TheSDInterface ::SectionID] = handleExternalDeviceRequest<false, TheSDInterface>;
-            lookupTable[TheConsoleInterface :: SectionID] = handleExternalDeviceRequest<false, TheConsoleInterface >;
-            lookupTable[ConfigurationSpace :: SectionID] = handleExternalDeviceRequest<false, ConfigurationSpace >;
-            if constexpr (CompileInAddressDebuggingSupport) {
-                for (auto &entry: lookupTable_Debug) {
-                    entry = fallbackBody<true>;
-                }
-                lookupTable_Debug[0] = handleMemoryInterface<true>;
-                lookupTable_Debug[1] = handleMemoryInterface<true>;
-                lookupTable_Debug[2] = handleMemoryInterface<true>;
-                lookupTable_Debug[3] = handleMemoryInterface<true>;
-                lookupTable_Debug[TheRTCInterface::SectionID] = handleExternalDeviceRequest<true, TheRTCInterface>;
-                lookupTable_Debug[TheDisplayInterface::SectionID] = handleExternalDeviceRequest<true, TheDisplayInterface>;
-                lookupTable_Debug[TheSDInterface::SectionID] = handleExternalDeviceRequest<true, TheSDInterface>;
-                lookupTable_Debug[TheConsoleInterface::SectionID] = handleExternalDeviceRequest<true, TheConsoleInterface>;
-                lookupTable_Debug[ConfigurationSpace::SectionID] = handleExternalDeviceRequest<true, ConfigurationSpace>;
-            }
-        }
-#endif
         ProcessorInterface::begin();
         BackingMemoryStorage_t::begin();
 
