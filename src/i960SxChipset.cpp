@@ -362,6 +362,7 @@ void setup() {
         // purge the cache pages
         ConfigurationSpace::begin();
         Serial.println(F("i960Sx chipset bringup"));
+#if 0
         {
             Serial.println(F("Setting up the initial lookup table"));
             for (auto& entry : lookupTable) {
@@ -392,6 +393,7 @@ void setup() {
                 lookupTable_Debug[ConfigurationSpace::SectionID] = handleExternalDeviceRequest<true, ConfigurationSpace>;
             }
         }
+#endif
         ProcessorInterface::begin();
         BackingMemoryStorage_t::begin();
 
@@ -482,14 +484,37 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
     }
 }
 
-DispatchTable lookupTable;
-DispatchTable lookupTable_Debug;
-
+template<bool debug>
+BodyFunction getExecBody(byte index) noexcept {
+    switch (index) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            return handleMemoryInterface<debug>;
+        case TheRTCInterface::SectionID:
+            return handleExternalDeviceRequest<debug, TheRTCInterface>;
+        case TheDisplayInterface::SectionID:
+            return handleExternalDeviceRequest<debug, TheDisplayInterface>;
+        case TheSDInterface::SectionID:
+            return handleExternalDeviceRequest<debug, TheSDInterface>;
+        case TheConsoleInterface::SectionID:
+            return handleExternalDeviceRequest<debug, TheConsoleInterface>;
+        case ConfigurationSpace::SectionID:
+            return handleExternalDeviceRequest<debug, ConfigurationSpace>;
+        default:
+            return fallbackBody<debug>;
+    }
+}
 BodyFunction getNonDebugBody(byte index) noexcept {
-    return lookupTable[index];
+    return getExecBody<false>(index);
 }
 BodyFunction getDebugBody(byte index) noexcept {
-    return lookupTable_Debug[index];
+    if constexpr (CompileInAddressDebuggingSupport) {
+        return getExecBody<true>(index);
+    } else {
+        return fallbackBody<true>;
+    }
 }
 
 
