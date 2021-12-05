@@ -231,13 +231,14 @@ public:
 private:
 #ifdef CHIPSET_TYPE1
     template<byte index>
-    static void doWrites() noexcept {
+    inline static void doWrites() noexcept {
         digitalWrite<Select0, (index & (1 << 0)) ? HIGH : LOW>();
         digitalWrite<Select1, (index & (1 << 1)) ? HIGH : LOW>();
         digitalWrite<Select2, (index & (1 << 2)) ? HIGH : LOW>();
     }
 #endif
-    static void setChipId(byte index) noexcept {
+    [[gnu::always_inline]]
+    inline static void setChipId(byte index) noexcept {
 #ifdef CHIPSET_TYPE1
         if (index != currentIndex_) {
             currentIndex_ = index & 0b111;
