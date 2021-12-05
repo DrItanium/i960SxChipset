@@ -574,44 +574,23 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
 }
 template<bool debug>
 BodyFunction getExecBody(byte index) noexcept {
-    if (ProcessorInterface::isReadOperation()) {
-        switch (index) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-                return handleMemoryReads<debug>;
-            case TheRTCInterface::SectionID:
-                return handleExternalDeviceReads<debug, TheRTCInterface>;
-            case TheDisplayInterface::SectionID:
-                return handleExternalDeviceReads<debug, TheDisplayInterface>;
-            case TheSDInterface::SectionID:
-                return handleExternalDeviceReads<debug, TheSDInterface>;
-            case TheConsoleInterface::SectionID:
-                return handleExternalDeviceReads<debug, TheConsoleInterface>;
-            case ConfigurationSpace::SectionID:
-                return handleExternalDeviceReads<debug, ConfigurationSpace>;
-            default: break;
-        }
-    } else {
-        switch (index) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-                return handleMemoryWrites<debug>;
-            case TheRTCInterface::SectionID:
-                return handleExternalDeviceWrites<debug, TheRTCInterface>;
-            case TheDisplayInterface::SectionID:
-                return handleExternalDeviceWrites<debug, TheDisplayInterface>;
-            case TheSDInterface::SectionID:
-                return handleExternalDeviceWrites<debug, TheSDInterface>;
-            case TheConsoleInterface::SectionID:
-                return handleExternalDeviceWrites<debug, TheConsoleInterface>;
-            case ConfigurationSpace::SectionID:
-                return handleExternalDeviceWrites<debug, ConfigurationSpace>;
-            default: break;
-        }
+    switch (index) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            return handleMemoryInterface<debug>;
+        case TheRTCInterface::SectionID:
+            return handleExternalDeviceRequest<debug, TheRTCInterface>;
+        case TheDisplayInterface::SectionID:
+            return handleExternalDeviceRequest<debug, TheDisplayInterface>;
+        case TheSDInterface::SectionID:
+            return handleExternalDeviceRequest<debug, TheSDInterface>;
+        case TheConsoleInterface::SectionID:
+            return handleExternalDeviceRequest<debug, TheConsoleInterface>;
+        case ConfigurationSpace::SectionID:
+            return handleExternalDeviceRequest<debug, ConfigurationSpace>;
+        default: break;
     }
     return fallbackBody<debug>;
 }
