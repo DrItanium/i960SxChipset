@@ -318,6 +318,7 @@ private:
         }
     }
     template<byte offsetMask>
+    [[gnu::always_inline]]
     inline static void full32BitUpdate() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -514,6 +515,7 @@ private:
     }
 private:
     template<bool inDebugMode>
+    [[gnu::always_inline]]
     inline static void updateTargetFunctions() noexcept {
         if constexpr (auto a = getBody<inDebugMode>(address_.bytes[3]); inDebugMode) {
             lastDebug_ = a;
