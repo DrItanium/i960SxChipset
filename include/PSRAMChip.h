@@ -222,6 +222,7 @@ private:
         return capacity;
     }
 public:
+    [[gnu::always_inline]]
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
     }
