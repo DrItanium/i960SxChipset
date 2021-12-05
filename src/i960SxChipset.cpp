@@ -100,9 +100,9 @@ L1Cache theCache;
     // works somewhat but I want to think about a better method going forward.
     // Right now, the compiler is free to do a call to this method if it so desires
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
-    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    auto isBurstLastRaw = DigitalPin<i960Pinout::BLAST_>::isAsserted();
     pulse<i960Pinout::Ready>();
-    return isBurstLast;
+    return isBurstLastRaw;
 }
 constexpr auto IncrementAddress = true;
 constexpr auto LeaveAddressAlone = false;
@@ -158,6 +158,7 @@ inline void handleMemoryInterface() noexcept {
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
             auto outcome = theEntry.get(i);
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tOffset: 0x")) ;
                 Serial.println(i, HEX);
@@ -166,7 +167,8 @@ inline void handleMemoryInterface() noexcept {
             }
             // Only pay for what we need even if it is slower
             ProcessorInterface::setDataBits(outcome);
-            if (informCPU()) {
+            pulse<i960Pinout::Ready>();
+            if (isBurstLast) {
                 break;
             }
             // so if I don't increment the address, I think we run too fast xD based on some experimentation
@@ -180,6 +182,7 @@ inline void handleMemoryInterface() noexcept {
         // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
             auto bits = ProcessorInterface::getDataBits();
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tOffset: 0x")) ;
                 Serial.println(i, HEX);
@@ -187,7 +190,8 @@ inline void handleMemoryInterface() noexcept {
                 Serial.println(bits.getWholeValue(), HEX);
             }
             theEntry.set(i, ProcessorInterface::getStyle(), bits);
-            if (informCPU()) {
+            pulse<i960Pinout::Ready>();
+            if (isBurstLast) {
                 break;
             }
             // the manual doesn't state that the burst transaction will always have BE0 and BE1 pulled low and this is very true, you must
@@ -212,6 +216,7 @@ inline void handleExternalDeviceRequest() noexcept {
             auto result = T::read(ProcessorInterface::getPageIndex(),
                                   ProcessorInterface::getPageOffset(),
                                   ProcessorInterface::getStyle());
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tPage Index: 0x")) ;
                 Serial.println(ProcessorInterface::getPageIndex(), HEX);
@@ -221,7 +226,8 @@ inline void handleExternalDeviceRequest() noexcept {
                 Serial.println(result, HEX);
             }
             ProcessorInterface::setDataBits(result);
-            if (informCPU()) {
+            pulse<i960Pinout::Ready>();
+            if (isBurstLast) {
                 break;
             }
             ProcessorInterface::burstNext<IncrementAddress>();
@@ -230,6 +236,7 @@ inline void handleExternalDeviceRequest() noexcept {
         ProcessorInterface::setupDataLinesForWrite();
         for (;;) {
             auto dataBits = ProcessorInterface::getDataBits();
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tPage Index: 0x")) ;
                 Serial.println(ProcessorInterface::getPageIndex(), HEX);
@@ -242,7 +249,8 @@ inline void handleExternalDeviceRequest() noexcept {
                      ProcessorInterface::getPageOffset(),
                      ProcessorInterface::getStyle(),
                      dataBits);
-            if (informCPU()) {
+            pulse<i960Pinout::Ready>();
+            if (isBurstLast) {
                 break;
             }
             // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
