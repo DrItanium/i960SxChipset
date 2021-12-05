@@ -49,8 +49,7 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    //[[gnu::noinline]]
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+    [[gnu::always_inline]] inline CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         byte targetIndex = 0xFF;
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i]->matches(theAddress)) {
