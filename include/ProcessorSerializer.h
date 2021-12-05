@@ -387,7 +387,8 @@ private:
         address_.bytes[3] = highest;
     }
     template<byte offsetMask>
-    static void lower16Update() noexcept {
+    [[gnu::always_inline]]
+    inline static void lower16Update() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // read only the lower half
