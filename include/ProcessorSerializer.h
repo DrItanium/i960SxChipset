@@ -300,6 +300,7 @@ public:
             // do nothing
         }
     }
+    [[gnu::always_inline]]
     inline static void setupDataLinesForRead() noexcept {
         if constexpr (TargetBoard::onAtmega1284p_Type1()) {
             if (dataLinesDirection_) {
