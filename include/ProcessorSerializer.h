@@ -217,7 +217,6 @@ class ProcessorInterface {
         write16<addr, MCP23x17Registers::GPIO, standalone>(value);
     }
     template<IOExpanderAddress addr, bool standalone = true>
-    [[gnu::always_inline]]
     static inline void writeDirection(uint16_t value) noexcept {
         write16<addr, MCP23x17Registers::IODIR, standalone>(value);
     }
@@ -231,6 +230,7 @@ public:
 public:
     static void begin() noexcept;
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
+    [[gnu::always_inline]]
     [[nodiscard]] static SplitWord16 getDataBits() noexcept {
         if constexpr (TargetBoard::onAtmega1284p_Type1()) {
             return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
@@ -239,6 +239,7 @@ public:
             return SplitWord16(0);
         }
     }
+    [[gnu::always_inline]]
     static void setDataBits(uint16_t value) noexcept {
         if constexpr (TargetBoard::onAtmega1284p_Type1()) {
             // the latch is preserved in between data line changes
