@@ -405,7 +405,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
-        asm volatile("nop");
+        //asm volatile("nop");
         {
             // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
             // put scope ticks to force the matter
