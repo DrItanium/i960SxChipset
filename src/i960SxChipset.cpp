@@ -162,7 +162,8 @@ inline void handleMemoryInterface() noexcept {
                 Serial.print(F("\tRead the value: 0x"));
                 Serial.println(outcome, HEX);
             }
-            ProcessorInterface::setDataBits(outcome);
+            // Only pay for what we need even if it is slower
+            ProcessorInterface::setDataBits(outcome, ProcessorInterface::getStyle());
             if (informCPU()) {
                 break;
             }

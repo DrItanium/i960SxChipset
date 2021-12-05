@@ -247,6 +247,38 @@ public:
             // do nothing
         }
     }
+    /**
+     * @brief A version of setDataBits that takes the LoadStoreStyle into account
+     * @param value the value to assign
+     * @param style The load store style for the given target
+     */
+    static void setDataBits(uint16_t value, LoadStoreStyle style) noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            switch (SplitWord16 tmp(value); style) {
+                case LoadStoreStyle::Lower8:
+                    if (latchedDataOutput.bytes[0] != tmp.bytes[0]) {
+                        latchedDataOutput.bytes[0] = tmp.bytes[0];
+                        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::GPIOA>(latchedDataOutput.bytes[0]);
+                    }
+                    break;
+                case LoadStoreStyle::Upper8:
+                    if (latchedDataOutput.bytes[1] != tmp.bytes[1]) {
+                        latchedDataOutput.bytes[1] = tmp.bytes[1];
+                        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::GPIOB>(latchedDataOutput.bytes[1]);
+                    }
+                    break;
+                default:
+                    setDataBits(value);
+                    break;
+
+            }
+            // the latch is preserved in between data line changes
+            // okay we are still pointing as output values
+            // check the latch and see if the output value is the same as what is latched
+        } else {
+            // do nothing
+        }
+    }
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
