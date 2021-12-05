@@ -250,8 +250,26 @@ public:
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
-    static void setupDataLinesForWrite() noexcept;
-    static void setupDataLinesForRead() noexcept;
+    inline static void setupDataLinesForWrite() noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            if (!dataLinesDirection_) {
+                dataLinesDirection_ = ~dataLinesDirection_;
+                writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
+            }
+        } else {
+            // do nothing
+        }
+    }
+    inline static void setupDataLinesForRead() noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            if (dataLinesDirection_) {
+                dataLinesDirection_ = ~dataLinesDirection_;
+                writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
+            }
+        } else {
+            // do nothing
+        }
+    }
 private:
     template<bool useInterrupts = true>
     static byte getUpdateKind() noexcept {

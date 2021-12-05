@@ -66,26 +66,3 @@ ProcessorInterface::begin() noexcept {
         SPI.endTransaction();
     }
 }
-
-void
-ProcessorInterface::setupDataLinesForWrite() noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-        if (!dataLinesDirection_) {
-            dataLinesDirection_ = ~dataLinesDirection_;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
-        }
-    } else {
-        // do nothing
-    }
-}
-void
-ProcessorInterface::setupDataLinesForRead() noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-        if (dataLinesDirection_) {
-            dataLinesDirection_ = ~dataLinesDirection_;
-            writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
-        }
-    } else {
-        // do nothing
-    }
-}
