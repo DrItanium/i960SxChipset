@@ -207,6 +207,7 @@ class ProcessorInterface {
         }
     }
     template<IOExpanderAddress addr, bool standalone = true>
+    [[gnu::always_inline]]
     static inline SplitWord16 readGPIO16() noexcept {
         return read16<addr, MCP23x17Registers::GPIO, standalone>();
     }
