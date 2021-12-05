@@ -82,19 +82,21 @@ public:
     Serial0Interface() = delete;
     ~Serial0Interface() = delete;
 private:
-    static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
-        switch (static_cast<Registers>(offset)) {
-            case Registers::ConsoleIO:
-                return Serial.read();
-            case Registers::AddressDebuggingFlag:
-                if constexpr (AddressDebuggingAllowed) {
+    static inline uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
+        if constexpr (auto target = static_cast<Registers>(offset); AddressDebuggingAllowed) {
+            switch (target) {
+                case Registers::ConsoleIO:
+                    return Serial.read();
+                case Registers::AddressDebuggingFlag:
                     return static_cast<uint16_t>(enableAddressDebugging_);
-                }
-            default:
-                return 0;
+                default:
+                    return 0;
+            }
+        } else {
+            return target == Registers::ConsoleIO ? Serial.read() : 0;
         }
     }
-    static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
+    static inline void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
                 pulse<i960Pinout::Int0_>();
