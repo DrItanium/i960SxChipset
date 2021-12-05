@@ -313,7 +313,8 @@ public:
     }
 private:
     template<bool useInterrupts = true>
-    static byte getUpdateKind() noexcept {
+    [[gnu::always_inline]] [[nodiscard]]
+    static inline byte getUpdateKind() noexcept {
         if constexpr (!useInterrupts) {
             return 0;
         } else {
@@ -444,7 +445,8 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[3] = highest;
     }
-    static void updateHighest8() noexcept {
+    [[gnu::always_inline]]
+    static inline void updateHighest8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOB);
         // only read the upper 8 bits
@@ -462,7 +464,8 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         address_.bytes[3] = highest;
     }
-    static void updateHigher8() noexcept {
+    [[gnu::always_inline]]
+    static inline void updateHigher8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOA);
         // only read the upper 8 bits
@@ -481,7 +484,8 @@ private:
         address_.bytes[2] = highest;
     }
     template<byte offsetMask>
-    static void updateLowest8() noexcept {
+    [[gnu::always_inline]]
+    static inline void updateLowest8() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOA);
         // read only the lower half
