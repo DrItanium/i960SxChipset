@@ -83,17 +83,15 @@ public:
     ~Serial0Interface() = delete;
 private:
     static inline uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
-        if constexpr (auto target = static_cast<Registers>(offset); AddressDebuggingAllowed) {
-            switch (target) {
-                case Registers::ConsoleIO:
-                    return Serial.read();
-                case Registers::AddressDebuggingFlag:
+        switch (static_cast<Registers>(offset)) {
+            case Registers::ConsoleIO:
+                return Serial.read();
+            case Registers::AddressDebuggingFlag:
+                if constexpr (AddressDebuggingAllowed) {
                     return static_cast<uint16_t>(enableAddressDebugging_);
-                default:
-                    return 0;
-            }
-        } else {
-            return target == Registers::ConsoleIO ? Serial.read() : 0;
+                }
+            default:
+                return 0;
         }
     }
     static inline void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
