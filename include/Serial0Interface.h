@@ -82,16 +82,20 @@ public:
     Serial0Interface() = delete;
     ~Serial0Interface() = delete;
 private:
+    [[gnu::noinline]]
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO:
                 return Serial.read();
             case Registers::AddressDebuggingFlag:
-                return static_cast<uint16_t>(enableAddressDebugging_);
+                if constexpr (AddressDebuggingAllowed) {
+                    return static_cast<uint16_t>(enableAddressDebugging_);
+                }
             default:
                 return 0;
         }
     }
+    [[gnu::noinline]]
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
@@ -104,7 +108,9 @@ private:
                 Serial.write(static_cast<char>(value.getWholeValue()));
                 break;
             case Registers::AddressDebuggingFlag:
-                enableAddressDebugging_ = (value.getWholeValue() != 0);
+                if constexpr (AddressDebuggingAllowed) {
+                    enableAddressDebugging_ = (value.getWholeValue() != 0);
+                }
                 break;
             default:
                 break;
