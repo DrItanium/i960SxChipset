@@ -239,14 +239,21 @@ private:
 #endif
     static void setChipId(byte index) noexcept {
 #ifdef CHIPSET_TYPE1
-        using Action = void(*)();
-        static constexpr Action Operations[8] {
-            doWrites<0>, doWrites<1>, doWrites<2>, doWrites<3>,
-            doWrites<4>, doWrites<5>, doWrites<6>, doWrites<7>,
-        };
         if (index != currentIndex_) {
-            Operations[index & 0b111]();
             currentIndex_ = index & 0b111;
+            switch (currentIndex_) {
+#define X(ind) case ind : doWrites< ind > (); break
+                X(0);
+                X(1);
+                X(2);
+                X(3);
+                X(4);
+                X(5);
+                X(6);
+                X(7);
+#undef X
+                default: break;
+            }
         }
 #endif
     }
