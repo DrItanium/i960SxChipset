@@ -119,7 +119,7 @@ public:
     Cache(const Cache&) = delete;
     Cache(Cache&&) = delete;
     /// @todo delete more of the default methods
-    [[nodiscard]] static CacheLine& getLine() noexcept { return theCache_.getLine(); }
+    [[gnu::always_inline]] [[nodiscard]] inline static CacheLine& getLine() noexcept { return theCache_.getLine(); }
     static void begin() noexcept { theCache_.begin(); }
     static void clear() noexcept { theCache_.clear(); }
     [[nodiscard]] static constexpr auto getCacheSize() noexcept { return backingStoreSize; }
