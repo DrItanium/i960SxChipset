@@ -75,7 +75,7 @@ public:
     void setWay(CacheEntry& way, size_t index = 0) noexcept { ways_[index & WayMask] = &way; }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
-    void updateFlags(byte index) noexcept {
+    [[gnu::always_inline]] inline void updateFlags(byte index) noexcept {
         constexpr byte masks[8] {
                 0b1110, 0b0001, 0b1101, 0b0010,
                 0b1011, 0b0100, 0b0111, 0b1000,
