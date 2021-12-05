@@ -78,6 +78,7 @@ private:
     };
     template<InterleavedMultibyteTransmissionStyle style>
     static constexpr bool ValidTransmissionStyle_v = static_cast<byte>(style) < static_cast<byte>(InterleavedMultibyteTransmissionStyle::Count);
+    [[gnu::always_inline]]
     static inline void transmitByte(byte value) noexcept {
         SPDR = value;
         asm volatile("nop");
@@ -206,7 +207,7 @@ private:
                 for (decltype(count) i = 0; i < count; ++i) {
                     transmitByte(actualBuf[i]);
                 }
-            } else if (kind == OperationKind::Read) {
+            } else if constexpr (kind == OperationKind::Read) {
                 auto count = numBytesToSecondChip;
                 auto actualBuf = buf + numBytesToFirstChip;
                 for (decltype(count) i = 0; i < count; ++i) {
