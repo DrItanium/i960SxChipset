@@ -612,7 +612,7 @@ public:
 #endif
     }
     template<bool advanceAddress = true>
-    static void burstNext() noexcept {
+    [[gnu::always_inline]] inline static void burstNext() noexcept {
         if constexpr (advanceAddress) {
             // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
             // next 16-bit word
