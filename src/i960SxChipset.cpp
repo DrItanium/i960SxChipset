@@ -120,6 +120,7 @@ inline void fallbackBody() noexcept {
     }
     // fallback, be consistent to make sure we don't run faster than the i960
     if (ProcessorInterface::isReadOperation()) {
+        ProcessorInterface::setupDataLinesForRead();
         for (;;) {
             // need to introduce some delay
             ProcessorInterface::setDataBits(0);
@@ -129,6 +130,7 @@ inline void fallbackBody() noexcept {
             ProcessorInterface::burstNext<LeaveAddressAlone>();
         }
     } else {
+        ProcessorInterface::setupDataLinesForWrite();
         for (;;) {
             // put four cycles worth of delay into this to make damn sure we are ready with the i960
             __builtin_avr_nops(4);
@@ -149,6 +151,7 @@ inline void handleMemoryInterface() noexcept {
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
     if (auto& theEntry = theCache.getLine(); ProcessorInterface::isReadOperation()) {
+        ProcessorInterface::setupDataLinesForRead();
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
@@ -167,6 +170,7 @@ inline void handleMemoryInterface() noexcept {
             ProcessorInterface::burstNext<LeaveAddressAlone>();
         }
     } else {
+        ProcessorInterface::setupDataLinesForWrite();
         // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
         // far as we can go with how the Sx works!
 
@@ -257,6 +261,7 @@ inline void handleExternalDeviceRequest() noexcept {
     // with burst transactions in the core chipset, we do not have access to a cache line to write into.
     // instead we need to do the old style infinite iteration design
     if (ProcessorInterface::isReadOperation()) {
+        ProcessorInterface::setupDataLinesForRead();
         for(;;) {
             auto result = T::read(ProcessorInterface::getPageIndex(),
                                   ProcessorInterface::getPageOffset(),
@@ -276,6 +281,7 @@ inline void handleExternalDeviceRequest() noexcept {
             ProcessorInterface::burstNext<IncrementAddress>();
         }
     } else {
+        ProcessorInterface::setupDataLinesForWrite();
         for (;;) {
             auto dataBits = ProcessorInterface::getDataBits();
             if constexpr (inDebugMode) {

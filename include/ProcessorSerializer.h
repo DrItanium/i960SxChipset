@@ -250,9 +250,9 @@ public:
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
-private:
     static void setupDataLinesForWrite() noexcept;
     static void setupDataLinesForRead() noexcept;
+private:
     template<bool useInterrupts = true>
     static byte getUpdateKind() noexcept {
         if constexpr (!useInterrupts) {
@@ -465,14 +465,10 @@ private:
 private:
     template<bool inDebugMode>
     inline static void updateTargetFunctions() noexcept {
-        if constexpr (auto a = getReadBody<inDebugMode>(address_.bytes[3]),
-                    b = getWriteBody<inDebugMode>(address_.bytes[3]);
-                inDebugMode) {
-            lastDebugRead_ = a;
-            lastDebugWrite_ = b;
+        if constexpr (auto a = getBody<inDebugMode>(address_.bytes[3]); inDebugMode) {
+            lastDebug_ = a;
         } else {
-            lastRead_ = a;
-            lastWrite_ = b;
+            last_ = a;
         }
     }
 public:
@@ -541,20 +537,10 @@ public:
                 updateTargetFunctions<inDebugMode>();
                 break;
         }
-        if (isReadOperation()) {
-            setupDataLinesForRead();
-            if constexpr (inDebugMode) {
-                lastDebugRead_();
-            } else {
-                lastRead_();
-            }
+        if constexpr (inDebugMode) {
+            lastDebug_();
         } else {
-            setupDataLinesForWrite();
-            if constexpr (inDebugMode) {
-                lastDebugWrite_();
-            } else {
-                lastWrite_();
-            }
+            last_();
         }
     }
     template<bool advanceAddress = true>
@@ -578,10 +564,8 @@ private:
     static inline byte dataLinesDirection_ = 0xFF;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
-    static inline BodyFunction lastRead_ = nullptr;
-    static inline BodyFunction lastWrite_ = nullptr;
-    static inline BodyFunction lastDebugWrite_ = nullptr;
-    static inline BodyFunction lastDebugRead_ = nullptr;
+    static inline BodyFunction last_ = nullptr;
+    static inline BodyFunction lastDebug_ = nullptr;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
