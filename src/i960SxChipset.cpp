@@ -98,8 +98,9 @@ L1Cache theCache;
 [[gnu::always_inline]] [[nodiscard]] inline bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    asm volatile ("nop"); // also make sure that this doesn't happen before sampling
     pulse<i960Pinout::Ready>();
-    asm volatile ("nop");
+    asm volatile ("nop"); // make sure we do this in the exact order shown here!
     return isBurstLast;
 }
 constexpr auto IncrementAddress = true;
