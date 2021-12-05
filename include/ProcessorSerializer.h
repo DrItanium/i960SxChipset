@@ -83,7 +83,8 @@ class ProcessorInterface {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
-    static SplitWord16 read16() noexcept {
+    [[gnu::always_inline]]
+    inline static SplitWord16 read16() noexcept {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
