@@ -109,7 +109,7 @@ class ProcessorInterface {
         while (!(SPSR & _BV(SPIF))) ; // wait
         auto lower = SPDR;
         SPDR = 0;
-        asm volatile("nop");
+        //asm volatile("nop");
         {
             output.bytes[0] = lower;
         }
