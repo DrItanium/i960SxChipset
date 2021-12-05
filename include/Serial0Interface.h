@@ -122,8 +122,8 @@ public:
         }
         Serial.println(F("CONSOLE UP!"));
     }
-
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[gnu::always_inline]] [[nodiscard]]
+    inline static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         return handleFirstPageRegisterReads(offset, lss);
     }
 
