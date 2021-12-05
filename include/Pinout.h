@@ -258,10 +258,10 @@ struct DigitalPin {
         static constexpr auto getDirection() noexcept { return OUTPUT; } \
         static constexpr auto getAssertionState() noexcept { return asserted; } \
         static constexpr auto getDeassertionState() noexcept { return deasserted; }      \
-        inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState()>(); } \
-        inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
-        inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
-        static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }          \
+        [[gnu::always_inline]] inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState()>(); } \
+        [[gnu::always_inline]] inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
+        [[gnu::always_inline]] inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
+        [[gnu::always_inline]] static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }          \
         template<decltype(LOW) switchTo = LOW>  \
         [[gnu::always_inline]] inline static void pulse() noexcept {   \
             ::pulse<pin, switchTo>();           \
@@ -283,9 +283,9 @@ struct DigitalPin {
         static constexpr auto getDirection() noexcept { return INPUT; } \
         static constexpr auto getAssertionState() noexcept { return asserted; } \
         static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-        inline static auto read() noexcept { return digitalRead<pin>(); } \
-        inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
-        inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
+        [[gnu::always_inline]] inline static auto read() noexcept { return digitalRead<pin>(); } \
+        [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
+        [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
         static constexpr auto valid() noexcept { return isValidPin960_v<pin>; } \
     }
 #define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
