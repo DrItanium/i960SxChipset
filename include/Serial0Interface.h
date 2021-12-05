@@ -82,7 +82,6 @@ public:
     Serial0Interface() = delete;
     ~Serial0Interface() = delete;
 private:
-    [[gnu::noinline]]
     static uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO:
@@ -95,7 +94,6 @@ private:
                 return 0;
         }
     }
-    [[gnu::noinline]]
     static void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
@@ -117,9 +115,6 @@ private:
         }
     }
 public:
-    static constexpr bool respondsTo(byte targetPage) noexcept {
-        return targetPage >= StartPage && targetPage < EndPage;
-    }
     static void begin() noexcept {
         Serial.begin(115200);
         while(!Serial) {
