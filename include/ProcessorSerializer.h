@@ -352,7 +352,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
-        asm volatile("nop");
+        //asm volatile("nop");
         {
             // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
             // put scope ticks to force the matter
@@ -363,7 +363,7 @@ private:
         auto lower = SPDR;
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Upper16Opcode;
-        asm volatile("nop");
+        //asm volatile("nop");
         {
             address_.bytes[1] = lower;
             // interleave this operation in, can't get more complex than this
@@ -377,7 +377,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto higher = SPDR;
         SPDR = 0;
-        asm volatile("nop");
+        //asm volatile("nop");
         {
             address_.bytes[2] = higher;
         }
