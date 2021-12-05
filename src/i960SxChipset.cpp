@@ -95,9 +95,7 @@ L1Cache theCache;
 
 
 
-
-
-[[nodiscard]] bool informCPU() noexcept {
+[[nodiscard]] inline bool informCPU() noexcept {
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
     pulse<i960Pinout::Ready>();
