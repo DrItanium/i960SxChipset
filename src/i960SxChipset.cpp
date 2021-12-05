@@ -251,6 +251,7 @@ inline void handleExternalDeviceRequest() noexcept {
 
 
 template<bool inDebugMode, bool useInterrupts>
+[[gnu::always_inline]]
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
