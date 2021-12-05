@@ -217,6 +217,7 @@ class ProcessorInterface {
         write16<addr, MCP23x17Registers::GPIO, standalone>(value);
     }
     template<IOExpanderAddress addr, bool standalone = true>
+    [[gnu::always_inline]]
     static inline void writeDirection(uint16_t value) noexcept {
         write16<addr, MCP23x17Registers::IODIR, standalone>(value);
     }
