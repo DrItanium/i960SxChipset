@@ -418,7 +418,8 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         address_.bytes[1] = lower;
     }
-    static void upper16Update() noexcept {
+    [[gnu::always_inline]]
+    inline static void upper16Update() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // only read the upper 16-bits
