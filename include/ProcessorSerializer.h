@@ -523,6 +523,7 @@ private:
     }
 public:
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
+    [[gnu::always_inline]]
     static void newDataCycle() noexcept {
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
