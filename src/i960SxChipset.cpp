@@ -263,7 +263,8 @@ inline void invocationBody() noexcept {
     ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntryMask, useInterrupts>();
 }
 template<bool allowAddressDebuggingCodePath, bool useInterrupts>
-void doInvocationBody() noexcept {
+[[gnu::always_inline]]
+inline void doInvocationBody() noexcept {
     if constexpr (allowAddressDebuggingCodePath) {
         if (TheConsoleInterface::addressDebuggingEnabled())  {
             invocationBody<true, useInterrupts>();
