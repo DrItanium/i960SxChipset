@@ -196,6 +196,7 @@ inline void handleMemoryInterface() noexcept {
 }
 
 template<bool inDebugMode, typename T>
+[[gnu::always_inline]]
 inline void handleExternalDeviceRequest() noexcept {
     if constexpr (inDebugMode) {
         displayRequestedAddress();
