@@ -95,12 +95,13 @@ L1Cache theCache;
 
 
 
-[[gnu::always_inline]] [[nodiscard]] inline bool informCPU() noexcept {
+[[nodiscard]] inline bool informCPU() noexcept {
+    // Forcing inline on this method causes the compiler to generate bad code, using volatile nops to gate operations
+    // works somewhat but I want to think about a better method going forward.
+    // Right now, the compiler is free to do a call to this method if it so desires
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-    asm volatile ("nop"); // also make sure that this doesn't happen before sampling
     pulse<i960Pinout::Ready>();
-    asm volatile ("nop"); // make sure we do this in the exact order shown here!
     return isBurstLast;
 }
 constexpr auto IncrementAddress = true;
