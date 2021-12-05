@@ -163,7 +163,7 @@ inline void handleMemoryInterface() noexcept {
                 Serial.println(outcome, HEX);
             }
             // Only pay for what we need even if it is slower
-            ProcessorInterface::setDataBits(outcome, ProcessorInterface::getStyle());
+            ProcessorInterface::setDataBits(outcome);
             if (informCPU()) {
                 break;
             }
