@@ -195,64 +195,6 @@ inline void handleMemoryInterface() noexcept {
     }
 }
 
-template<bool inDebugMode>
-inline void handleMemoryReads() noexcept {
-    if constexpr (inDebugMode) {
-        displayRequestedAddress();
-    }
-    // okay we are dealing with the psram chips
-    // now take the time to compute the cache offset entries
-    auto& theEntry = theCache.getLine();
-    // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
-    // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
-    for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-        auto outcome = theEntry.get(i);
-        if constexpr (inDebugMode) {
-            Serial.print(F("\tOffset: 0x")) ;
-            Serial.println(i, HEX);
-            Serial.print(F("\tRead the value: 0x"));
-            Serial.println(outcome, HEX);
-        }
-        ProcessorInterface::setDataBits(outcome);
-        if (informCPU()) {
-            break;
-        }
-        // so if I don't increment the address, I think we run too fast xD based on some experimentation
-        ProcessorInterface::burstNext<LeaveAddressAlone>();
-    }
-}
-
-template<bool inDebugMode>
-inline void handleMemoryWrites() noexcept {
-    if constexpr (inDebugMode) {
-        displayRequestedAddress();
-    }
-    // okay we are dealing with the psram chips
-    // now take the time to compute the cache offset entries
-    auto& theEntry = theCache.getLine();
-    // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
-    // far as we can go with how the Sx works!
-
-    // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
-    for (byte i = ProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
-        auto bits = ProcessorInterface::getDataBits();
-        if constexpr (inDebugMode) {
-            Serial.print(F("\tOffset: 0x")) ;
-            Serial.println(i, HEX);
-            Serial.print(F("\tWriting the value: 0x"));
-            Serial.println(bits.getWholeValue(), HEX);
-        }
-        theEntry.set(i, ProcessorInterface::getStyle(), bits);
-        if (informCPU()) {
-            break;
-        }
-        // the manual doesn't state that the burst transaction will always have BE0 and BE1 pulled low and this is very true, you must
-        // check the pins because it will do unaligned burst transactions but even that will never span multiple 16-byte entries
-        // so if I don't increment the address, I think we run too fast xD based on some experimentation
-        ProcessorInterface::burstNext<LeaveAddressAlone>();
-    }
-}
-
 template<bool inDebugMode, typename T>
 inline void handleExternalDeviceRequest() noexcept {
     if constexpr (inDebugMode) {
@@ -306,62 +248,7 @@ inline void handleExternalDeviceRequest() noexcept {
     }
 }
 
-template<bool inDebugMode, typename T>
-inline void handleExternalDeviceReads() noexcept {
-    if constexpr (inDebugMode) {
-        displayRequestedAddress();
-    }
-    // with burst transactions in the core chipset, we do not have access to a cache line to write into.
-    // instead we need to do the old style infinite iteration design
-    for(;;) {
-        auto result = T::read(ProcessorInterface::getPageIndex(),
-                              ProcessorInterface::getPageOffset(),
-                              ProcessorInterface::getStyle());
-        if constexpr (inDebugMode) {
-            Serial.print(F("\tPage Index: 0x")) ;
-            Serial.println(ProcessorInterface::getPageIndex(), HEX);
-            Serial.print(F("\tPage Offset: 0x")) ;
-            Serial.println(ProcessorInterface::getPageOffset(), HEX);
-            Serial.print(F("\tRead Value: 0x"));
-            Serial.println(result, HEX);
-        }
-        ProcessorInterface::setDataBits(result);
-        if (informCPU()) {
-            break;
-        }
-        ProcessorInterface::burstNext<IncrementAddress>();
-    }
-}
 
-template<bool inDebugMode, typename T>
-inline void handleExternalDeviceWrites() noexcept {
-    if constexpr (inDebugMode) {
-        displayRequestedAddress();
-    }
-    // with burst transactions in the core chipset, we do not have access to a cache line to write into.
-    // instead we need to do the old style infinite iteration design
-    for (;;) {
-        auto dataBits = ProcessorInterface::getDataBits();
-        if constexpr (inDebugMode) {
-            Serial.print(F("\tPage Index: 0x")) ;
-            Serial.println(ProcessorInterface::getPageIndex(), HEX);
-            Serial.print(F("\tPage Offset: 0x")) ;
-            Serial.println(ProcessorInterface::getPageOffset(), HEX);
-            Serial.print(F("\tData To Write: 0x"));
-            Serial.println(dataBits.getWholeValue(), HEX);
-        }
-        T::write(ProcessorInterface::getPageIndex(),
-                 ProcessorInterface::getPageOffset(),
-                 ProcessorInterface::getStyle(),
-                 dataBits);
-        if (informCPU()) {
-            break;
-        }
-        // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
-        // so you may still be reading the previous i960 cycle state!
-        ProcessorInterface::burstNext<IncrementAddress>();
-    }
-}
 template<bool inDebugMode, bool useInterrupts>
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
@@ -594,50 +481,6 @@ BodyFunction getExecBody(byte index) noexcept {
     }
     return fallbackBody<debug>;
 }
-template<bool debug>
-BodyFunction getReadExecBody(byte index) noexcept {
-        switch (index) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-                return handleMemoryReads<debug>;
-            case TheRTCInterface::SectionID:
-                return handleExternalDeviceReads<debug, TheRTCInterface>;
-            case TheDisplayInterface::SectionID:
-                return handleExternalDeviceReads<debug, TheDisplayInterface>;
-            case TheSDInterface::SectionID:
-                return handleExternalDeviceReads<debug, TheSDInterface>;
-            case TheConsoleInterface::SectionID:
-                return handleExternalDeviceReads<debug, TheConsoleInterface>;
-            case ConfigurationSpace::SectionID:
-                return handleExternalDeviceReads<debug, ConfigurationSpace>;
-            default: break;
-        }
-    return fallbackBody<debug>;
-}
-template<bool debug>
-BodyFunction getWriteExecBody(byte index) noexcept {
-    switch (index) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-            return handleMemoryWrites<debug>;
-        case TheRTCInterface::SectionID:
-            return handleExternalDeviceWrites<debug, TheRTCInterface>;
-        case TheDisplayInterface::SectionID:
-            return handleExternalDeviceWrites<debug, TheDisplayInterface>;
-        case TheSDInterface::SectionID:
-            return handleExternalDeviceWrites<debug, TheSDInterface>;
-        case TheConsoleInterface::SectionID:
-            return handleExternalDeviceWrites<debug, TheConsoleInterface>;
-        case ConfigurationSpace::SectionID:
-            return handleExternalDeviceWrites<debug, ConfigurationSpace>;
-        default: break;
-    }
-    return fallbackBody<debug>;
-}
 BodyFunction getNonDebugBody(byte index) noexcept {
     return getExecBody<false>(index);
 }
@@ -648,28 +491,5 @@ BodyFunction getDebugBody(byte index) noexcept {
         return fallbackBody<true>;
     }
 }
-
-BodyFunction getNonDebugReadBody(byte index) noexcept {
-    return getReadExecBody<false>(index);
-}
-BodyFunction getDebugReadBody(byte index) noexcept {
-    if constexpr (CompileInAddressDebuggingSupport) {
-        return getReadExecBody<true>(index);
-    } else {
-        return fallbackBody<true>;
-    }
-}
-
-BodyFunction getNonDebugWriteBody(byte index) noexcept {
-    return getWriteExecBody<false>(index);
-}
-BodyFunction getDebugWriteBody(byte index) noexcept {
-    if constexpr (CompileInAddressDebuggingSupport) {
-        return getWriteExecBody<true>(index);
-    } else {
-        return fallbackBody<true>;
-    }
-}
-
 
 SdFat SD;
