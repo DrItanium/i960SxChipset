@@ -57,13 +57,16 @@ enum class i960Pinout : int {
 #endif
 };
 
+[[gnu::always_inline]]
 inline void digitalWrite(i960Pinout ip, decltype(HIGH) value) {
     digitalWrite(static_cast<int>(ip), value);
 }
 
+[[gnu::always_inline]]
 inline void pinMode(i960Pinout ip, decltype(INPUT) value) {
     pinMode(static_cast<int>(ip), value);
 }
+[[gnu::always_inline]]
 inline auto digitalRead(i960Pinout ip) {
     return digitalRead(static_cast<int>(ip));
 }
@@ -186,6 +189,7 @@ private:
 
 
 template<i960Pinout pin, decltype(HIGH) value>
+[[gnu::always_inline]]
 inline void digitalWrite() noexcept {
     if constexpr (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
@@ -194,7 +198,8 @@ inline void digitalWrite() noexcept {
     }
 }
 template<i960Pinout pin>
-inline __attribute__((always_inline)) void digitalWrite(decltype(HIGH) value) noexcept {
+[[gnu::always_inline]]
+inline void digitalWrite(decltype(HIGH) value) noexcept {
     // don't disable interrupts, that should be done outside this method
     if (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
         thePort &= ~getPinMask<pin>();
@@ -203,11 +208,13 @@ inline __attribute__((always_inline)) void digitalWrite(decltype(HIGH) value) no
     }
 }
 template<i960Pinout pin>
-inline __attribute__((always_inline)) void digitalWrite(bool level) noexcept {
+[[gnu::always_inline]]
+inline void digitalWrite(bool level) noexcept {
     digitalWrite<pin>(level ? HIGH : LOW);
 }
 
 template<i960Pinout pin, decltype(HIGH) switchTo = LOW>
+[[gnu::always_inline]]
 inline void pulse() noexcept {
     // use the switch to value to compute what to revert to
     digitalWrite<pin, switchTo>();
@@ -215,6 +222,7 @@ inline void pulse() noexcept {
 }
 
 template<i960Pinout pin>
+[[gnu::always_inline]]
 inline auto digitalRead() noexcept {
     return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
 }
