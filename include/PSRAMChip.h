@@ -231,6 +231,7 @@ public:
 private:
 #ifdef CHIPSET_TYPE1
     template<byte index>
+    [[gnu::always_inline]]
     inline static void doWrites() noexcept {
         digitalWrite<Select0, (index & (1 << 0)) ? HIGH : LOW>();
         digitalWrite<Select1, (index & (1 << 1)) ? HIGH : LOW>();
