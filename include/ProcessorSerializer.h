@@ -433,7 +433,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto higher = SPDR;
         SPDR = 0;
-        asm volatile("nop");
+        //asm volatile("nop");
         {
             address_.bytes[2] = higher;
         }
