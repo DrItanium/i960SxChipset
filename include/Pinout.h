@@ -263,7 +263,7 @@ struct DigitalPin {
         inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
         static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }          \
         template<decltype(LOW) switchTo = LOW>  \
-        inline static void pulse() noexcept {   \
+        [[gnu::always_inline]] inline static void pulse() noexcept {   \
             ::pulse<pin, switchTo>();           \
         }                                       \
     }
