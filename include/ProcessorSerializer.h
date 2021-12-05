@@ -535,40 +535,40 @@ private:
 public:
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
     [[gnu::always_inline]]
-    static void newDataCycle() noexcept {
+    static byte newDataCycle() noexcept {
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
                 updateLower8();
                 upper16Update();
-                updateTargetFunctions<inDebugMode>();
+             //   updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0010:
                 updateLowest8<offsetMask>();
                 upper16Update();
-                updateTargetFunctions<inDebugMode>();
+            //    updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0011:
                 upper16Update();
-                updateTargetFunctions<inDebugMode>();
+           //     updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0100:
                 lower16Update<offsetMask>();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+          //      updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0101:
                 updateLower8();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+         //       updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0110:
                 updateLowest8<offsetMask>();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+        //        updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0111:
                 updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+       //         updateTargetFunctions<inDebugMode>();
                 break;
             case 0b1000:
                 lower16Update<offsetMask>();
@@ -597,14 +597,17 @@ public:
             case 0b1111: break;
             default:
                 full32BitUpdate<offsetMask>();
-                updateTargetFunctions<inDebugMode>();
+     //           updateTargetFunctions<inDebugMode>();
                 break;
         }
+        return address_.bytes[3];
+#if 0
         if constexpr (inDebugMode) {
             lastDebug_();
         } else {
             last_();
         }
+#endif
     }
     template<bool advanceAddress = true>
     static void burstNext() noexcept {

@@ -58,8 +58,8 @@ ProcessorInterface::begin() noexcept {
             write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
             // write the default value out to the latch to start with
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
-            updateTargetFunctions<true>();
-            updateTargetFunctions<false>();
+            //updateTargetFunctions<true>();
+            //updateTargetFunctions<false>();
         } else {
             /// @todo implement this
         }

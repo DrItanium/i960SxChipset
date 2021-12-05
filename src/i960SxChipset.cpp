@@ -259,7 +259,32 @@ inline void invocationBody() noexcept {
     // there are only two parts to this code, either we map into ram or chipset functions
     // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
     // and so we are actually continually mirroring the mapping for the sake of simplicity
-    ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntryMask, useInterrupts>();
+    switch (ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntryMask, useInterrupts>()) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            handleMemoryInterface<inDebugMode>();
+            break;
+        case TheRTCInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheRTCInterface>();
+            break;
+        case TheDisplayInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheDisplayInterface>();
+            break;
+        case TheSDInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheSDInterface>();
+            break;
+        case TheConsoleInterface::SectionID:
+            handleExternalDeviceRequest<inDebugMode, TheConsoleInterface>();
+            break;
+        case ConfigurationSpace::SectionID:
+            handleExternalDeviceRequest<inDebugMode, ConfigurationSpace>();
+            break;
+        default:
+            fallbackBody<inDebugMode>();
+            break;
+    }
 }
 template<bool allowAddressDebuggingCodePath, bool useInterrupts>
 [[gnu::always_inline]]
