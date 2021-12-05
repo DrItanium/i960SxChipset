@@ -142,6 +142,7 @@ inline void fallbackBody() noexcept {
 }
 
 template<bool inDebugMode>
+[[gnu::always_inline]]
 inline void handleMemoryInterface() noexcept {
     if constexpr (inDebugMode) {
         displayRequestedAddress();
