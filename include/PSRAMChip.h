@@ -151,6 +151,7 @@ private:
     };
 
     template<byte opcode, OperationKind kind = OperationKind::Generic>
+    [[gnu::always_inline]]
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         if (capacity == 0) {
             return 0;
