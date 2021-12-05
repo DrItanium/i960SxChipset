@@ -149,7 +149,8 @@ class ProcessorInterface {
     }
 
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
-    static void write16(uint16_t value) noexcept {
+    [[gnu::always_inline]]
+    inline static void write16(uint16_t value) noexcept {
         SplitWord16 valueDiv(value);
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
