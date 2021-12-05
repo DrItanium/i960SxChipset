@@ -44,7 +44,7 @@ public:
     static constexpr OffsetType  InvalidCacheLineState = 0xFF;
     static constexpr OffsetType CleanCacheLineState = 0xFE;
 public:
-    void reset(TaggedAddress newTag) noexcept {
+    [[gnu::always_inline]] inline void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
         if (isDirty()) {
             // we compute the overall range as we go through this stuff
