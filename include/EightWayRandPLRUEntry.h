@@ -87,7 +87,7 @@ private:
         }
     }
     static constexpr auto NumberOfGroups = 4;
-    [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
+    [[gnu::always_inline]] [[nodiscard]] inline byte getLeastRecentlyUsed() const noexcept {
         static bool initialized = false;
         static byte counter = 0;
         static byte randomTable[256] = { 0 };
