@@ -50,11 +50,11 @@ public:
     static constexpr auto NumWordsCached = CacheEntry::NumWordsCached;
     static constexpr auto CacheEntryMask = CacheEntry::CacheEntryMask;
 public:
-    [[nodiscard]] CacheEntry& getLine() noexcept {
+    [[gnu::always_inline]] [[nodiscard]] inline CacheEntry& getLine() noexcept {
         // only align if we need to reset the chip
         return getLine(TaggedAddress(ProcessorInterface::getAddress()));
     }
-    [[nodiscard]] CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
+    [[gnu::always_inline]] [[nodiscard]] inline CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
         // only align if we need to reset the chip
         return entries_[theAddress.getTagIndex()].getLine(theAddress);
     }
