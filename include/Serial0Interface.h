@@ -82,6 +82,7 @@ public:
     Serial0Interface() = delete;
     ~Serial0Interface() = delete;
 private:
+    [[gnu::always_inline]] [[nodiscard]]
     static inline uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO:
