@@ -99,6 +99,7 @@ L1Cache theCache;
     // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
     auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
     pulse<i960Pinout::Ready>();
+    asm volatile ("nop");
     return isBurstLast;
 }
 constexpr auto IncrementAddress = true;
