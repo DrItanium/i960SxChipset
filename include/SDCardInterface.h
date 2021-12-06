@@ -125,6 +125,7 @@ public:
     ~SDCardInterface() = delete;
 private:
     ///@todo make it possible to unmount the sdcard while the i960 is running
+    [[gnu::always_inline]]
     static inline void unmountSDCard() noexcept {
         if (cardMounted_) {
             // first close all open files
@@ -144,6 +145,7 @@ private:
      * @return
      */
     [[nodiscard]]
+    [[gnu::always_inline]]
     static inline auto tryMountSDCard() noexcept {
         if (!cardMounted_) {
             cardMounted_ = SD.begin(static_cast<int>(i960Pinout::SD_EN));
@@ -151,6 +153,7 @@ private:
         return cardMounted_;
     }
     [[nodiscard]]
+    [[gnu::always_inline]]
     static inline uint16_t findFreeFile() noexcept {
         for (uint16_t i = 0; i < MaximumNumberOfOpenFiles; ++i) {
             if (!files_[i].isOpen()) {
@@ -160,6 +163,7 @@ private:
         return 0xFFFF;
     }
     [[nodiscard]]
+    [[gnu::always_inline]]
     static inline uint16_t tryOpenFile() noexcept {
         if (numberOfOpenFiles_ < MaximumNumberOfOpenFiles) {
             // when we open a new file we have to make sure that we are less than the number of open files
@@ -177,9 +181,9 @@ private:
         }
         return -1;
     }
-    [[nodiscard]] static inline bool tryMakeDirectory(bool makeMissingParents = false) noexcept { return SD.mkdir(sdCardPath_, makeMissingParents); }
-    [[nodiscard]] static inline bool exists() noexcept { return SD.exists(sdCardPath_); }
-    [[nodiscard]] static inline bool remove() noexcept { return SD.remove(sdCardPath_); }
+    [[nodiscard]] [[gnu::always_inline]] static inline bool tryMakeDirectory(bool makeMissingParents = false) noexcept { return SD.mkdir(sdCardPath_, makeMissingParents); }
+    [[nodiscard]] [[gnu::always_inline]] static inline bool exists() noexcept { return SD.exists(sdCardPath_); }
+    [[nodiscard]] [[gnu::always_inline]] static inline bool remove() noexcept { return SD.remove(sdCardPath_); }
     [[nodiscard]]
     [[gnu::always_inline]]
     static inline uint16_t ctlRead(uint8_t offset, LoadStoreStyle lss) noexcept {
