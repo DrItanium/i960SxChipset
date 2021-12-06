@@ -115,7 +115,7 @@ public:
             return 0;
         }
     }
-    static inline void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    [[gnu::always_inline]] static inline void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         // do nothing
     }
 };

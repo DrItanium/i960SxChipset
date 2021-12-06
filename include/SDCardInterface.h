@@ -321,7 +321,7 @@ public:
     }
     [[nodiscard]]
     [[gnu::always_inline]]
-    static inline uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         if (targetPage == CTLPage) {
             return ctlRead(offset, lss);
         } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {

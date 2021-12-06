@@ -95,6 +95,7 @@ private:
                 return 0;
         }
     }
+    [[gnu::always_inline]]
     static inline void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
@@ -127,8 +128,8 @@ public:
     inline static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         return handleFirstPageRegisterReads(offset, lss);
     }
-
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    [[gnu::always_inline]]
+    static inline void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         handleFirstPageRegisterWrites(offset, lss, value);
     }
     static bool addressDebuggingEnabled() noexcept { return AddressDebuggingAllowed && enableAddressDebugging_; }
