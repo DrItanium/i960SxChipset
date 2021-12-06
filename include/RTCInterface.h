@@ -129,7 +129,9 @@ public:
             rtc_.start();
         }
     }
-    static uint16_t read(uint8_t, uint8_t offset, LoadStoreStyle) noexcept {
+    [[nodiscard]]
+    [[gnu::always_inline]]
+    static inline uint16_t read(uint8_t, uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::Seconds: return static_cast<uint16_t>(now_.second());
             case Registers::Hours: return static_cast<uint16_t>(now_.hour());
@@ -152,7 +154,9 @@ public:
                 return 0;
         }
     }
-    static void write(uint8_t, uint8_t offset, LoadStoreStyle, SplitWord16) noexcept {
+
+    [[gnu::always_inline]]
+    static inline void write(uint8_t, uint8_t offset, LoadStoreStyle, SplitWord16) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::NowRequest: {
                 if (rtcUp_) {
