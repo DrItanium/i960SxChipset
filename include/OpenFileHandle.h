@@ -91,7 +91,7 @@ public:
         End,
     };
 public:
-    bool open(const char* path, uint16_t permissions) noexcept {
+    [[nodiscard]] inline bool open(const char* path, uint16_t permissions) noexcept {
         if (!backingStore_) {
             permissions_ = permissions;
             backingStore_ = SD.open(path, static_cast<byte>(permissions));
@@ -100,7 +100,7 @@ public:
             return false;
         }
     }
-    bool close() noexcept {
+    inline bool close() noexcept {
         if (backingStore_) {
             return backingStore_.close();
         } else {
@@ -108,35 +108,35 @@ public:
         }
     }
 
-    [[nodiscard]] bool isOpen() const noexcept { return backingStore_.isOpen(); }
+    [[nodiscard]] inline bool isOpen() const noexcept { return backingStore_.isOpen(); }
     explicit operator bool() const noexcept { return backingStore_.operator bool(); }
-    [[nodiscard]] auto size() const noexcept { return backingStore_.fileSize(); }
-    [[nodiscard]] auto position() const noexcept { return backingStore_.curPosition(); }
-    bool setAbsolutePosition(uint32_t pos) noexcept { return backingStore_.seekSet(pos); }
-    bool setRelativePosition(int32_t pos) noexcept { return backingStore_.seekCur(pos); }
-    bool seekToEnd() noexcept { return backingStore_.seekEnd(); }
-    bool seekToBeginning() noexcept { return backingStore_.seekSet(0); }
-    bool getWriteError() const noexcept { return backingStore_.getWriteError(); }
-    auto getError() const noexcept { return backingStore_.getError(); }
-    void flush() noexcept { backingStore_.flush(); }
-    void sync() noexcept { backingStore_.sync(); }
-    bool isBusy() noexcept { return backingStore_.isBusy(); }
-    bool isDirectory() noexcept { return backingStore_.isDirectory(); }
-    uint16_t getChar() noexcept {
+    [[nodiscard]] inline auto size() const noexcept { return backingStore_.fileSize(); }
+    [[nodiscard]] inline auto position() const noexcept { return backingStore_.curPosition(); }
+    inline bool setAbsolutePosition(uint32_t pos) noexcept { return backingStore_.seekSet(pos); }
+    inline bool setRelativePosition(int32_t pos) noexcept { return backingStore_.seekCur(pos); }
+    inline bool seekToEnd() noexcept { return backingStore_.seekEnd(); }
+    inline bool seekToBeginning() noexcept { return backingStore_.seekSet(0); }
+    [[nodiscard]] inline bool getWriteError() const noexcept { return backingStore_.getWriteError(); }
+    [[nodiscard]] inline auto getError() const noexcept { return backingStore_.getError(); }
+    inline void flush() noexcept { backingStore_.flush(); }
+    inline void sync() noexcept { backingStore_.sync(); }
+    [[nodiscard]] inline bool isBusy() noexcept { return backingStore_.isBusy(); }
+    [[nodiscard]] inline bool isDirectory() noexcept { return backingStore_.isDirectory(); }
+    [[nodiscard]] inline uint16_t getChar() noexcept {
         if (backingStore_) {
             return static_cast<uint16_t>(backingStore_.read());
         } else {
             return -1;
         }
     }
-    void putChar(SplitWord16 value) noexcept {
+    inline void putChar(SplitWord16 value) noexcept {
         if (backingStore_) {
             backingStore_.write(static_cast<byte>(value.getWholeValue()));
         }
     }
-    [[nodiscard]] size_t read(void* buf, size_t count) noexcept { return backingStore_.read(buf, count); }
-    [[nodiscard]] size_t write(void* buf, size_t count) noexcept { return backingStore_.write(buf, count); }
-    [[nodiscard]] uint16_t read(uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[nodiscard]] inline size_t read(void* buf, size_t count) noexcept { return backingStore_.read(buf, count); }
+    [[nodiscard]] inline size_t write(void* buf, size_t count) noexcept { return backingStore_.write(buf, count); }
+    [[nodiscard]] inline uint16_t read(uint8_t offset, LoadStoreStyle lss) noexcept {
         using T = Registers;
         switch (static_cast<T>(offset)) {
             case T::IOPort: return getChar();
@@ -149,7 +149,7 @@ public:
             default: return 0;
         }
     }
-    void write(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    inline void write(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         using T = Registers;
         bool callSeekAbsolute = false;
         bool callSeekRelative = false;
