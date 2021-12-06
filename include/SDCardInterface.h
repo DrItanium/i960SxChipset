@@ -125,7 +125,7 @@ public:
     ~SDCardInterface() = delete;
 private:
     ///@todo make it possible to unmount the sdcard while the i960 is running
-    static void unmountSDCard() noexcept {
+    static inline void unmountSDCard() noexcept {
         if (cardMounted_) {
             // first close all open files
             for (auto &file: files_) {
@@ -143,13 +143,15 @@ private:
      * @brief Try to mount/remount the primary SDCard
      * @return
      */
-    static auto tryMountSDCard() noexcept {
+    [[nodiscard]]
+    static inline auto tryMountSDCard() noexcept {
         if (!cardMounted_) {
             cardMounted_ = SD.begin(static_cast<int>(i960Pinout::SD_EN));
         }
         return cardMounted_;
     }
-    static uint16_t findFreeFile() noexcept {
+    [[nodiscard]]
+    static inline uint16_t findFreeFile() noexcept {
         for (uint16_t i = 0; i < MaximumNumberOfOpenFiles; ++i) {
             if (!files_[i].isOpen()) {
                 return i;
@@ -157,7 +159,8 @@ private:
         }
         return 0xFFFF;
     }
-    static uint16_t tryOpenFile() noexcept {
+    [[nodiscard]]
+    static inline uint16_t tryOpenFile() noexcept {
         if (numberOfOpenFiles_ < MaximumNumberOfOpenFiles) {
             // when we open a new file we have to make sure that we are less than the number of open files
             // But we also need to keep track of proper indexes as well. This is a two layer process
@@ -174,10 +177,12 @@ private:
         }
         return -1;
     }
-    static bool tryMakeDirectory(bool makeMissingParents = false) noexcept { return SD.mkdir(sdCardPath_, makeMissingParents); }
-    static bool exists() noexcept { return SD.exists(sdCardPath_); }
-    static bool remove() noexcept { return SD.remove(sdCardPath_); }
-    static uint16_t ctlRead(uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[nodiscard]] static inline bool tryMakeDirectory(bool makeMissingParents = false) noexcept { return SD.mkdir(sdCardPath_, makeMissingParents); }
+    [[nodiscard]] static inline bool exists() noexcept { return SD.exists(sdCardPath_); }
+    [[nodiscard]] static inline bool remove() noexcept { return SD.remove(sdCardPath_); }
+    [[nodiscard]]
+    [[gnu::always_inline]]
+    static inline uint16_t ctlRead(uint8_t offset, LoadStoreStyle lss) noexcept {
         if (offset < 80) {
             if (auto result = SplitWord16(reinterpret_cast<uint16_t*>(sdCardPath_)[offset >> 1]); lss == LoadStoreStyle::Upper8) {
                 return result.bytes[1];
@@ -222,7 +227,8 @@ private:
             }
         }
     }
-    static void ctlWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    [[gnu::always_inline]]
+    static inline void ctlWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         if (offset < 80) {
             if (lss == LoadStoreStyle::Upper8) {
                 sdCardPath_[offset + 1] = static_cast<char>(value.bytes[1]);
@@ -283,10 +289,13 @@ private:
             }
         }
     }
-    static uint16_t fileRead(uint8_t index, uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[nodiscard]]
+    [[gnu::always_inline]]
+    static inline uint16_t fileRead(uint8_t index, uint8_t offset, LoadStoreStyle lss) noexcept {
         return files_[index].read(offset, lss);
     }
-    static void fileWrite(uint8_t index, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) {
+    [[gnu::always_inline]]
+    static inline void fileWrite(uint8_t index, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) {
         files_[index].write(offset, lss, value);
     }
 public:
@@ -306,7 +315,9 @@ public:
             initialized_ = true;
         }
     }
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[nodiscard]]
+    [[gnu::always_inline]]
+    static inline uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         if (targetPage == CTLPage) {
             return ctlRead(offset, lss);
         } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {
@@ -315,7 +326,8 @@ public:
             return 0;
         }
     }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    [[gnu::always_inline]]
+    static inline void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         if (targetPage == CTLPage) {
             ctlWrite(offset, lss, value);
         } else if (targetPage >= FileStartPage && targetPage < FileEndPage) {
