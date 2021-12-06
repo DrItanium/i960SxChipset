@@ -93,17 +93,6 @@ L1Cache theCache;
 //using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 //L1Cache<DirectMappedCacheWay, 11, 1024, 6> theCache;
 
-
-
-[[nodiscard]] inline bool informCPU() noexcept {
-    // Forcing inline on this method causes the compiler to generate bad code, using volatile nops to gate operations
-    // works somewhat but I want to think about a better method going forward.
-    // Right now, the compiler is free to do a call to this method if it so desires
-    // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
-    auto isBurstLastRaw = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-    pulse<i960Pinout::Ready>();
-    return isBurstLastRaw;
-}
 constexpr auto IncrementAddress = true;
 constexpr auto LeaveAddressAlone = false;
 // while the i960 does not allow going beyond 8 words, we can use the number of words cached in all cases to be safe
@@ -124,9 +113,11 @@ inline void fallbackBody() noexcept {
     if (ProcessorInterface::isReadOperation()) {
         ProcessorInterface::setupDataLinesForRead();
         for (;;) {
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             // need to introduce some delay
             ProcessorInterface::setDataBits(0);
-            if (informCPU()) {
+            pulse<i960Pinout::Ready>();
+            if (isBurstLast) {
                 break;
             }
             ProcessorInterface::burstNext<LeaveAddressAlone>();
@@ -134,10 +125,12 @@ inline void fallbackBody() noexcept {
     } else {
         ProcessorInterface::setupDataLinesForWrite();
         for (;;) {
+            auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             // put four cycles worth of delay into this to make damn sure we are ready with the i960
             __builtin_avr_nops(4);
             // need to introduce some delay
-            if (informCPU()) {
+            pulse<i960Pinout::Ready>();
+            if (isBurstLast) {
                 break;
             }
             ProcessorInterface::burstNext<LeaveAddressAlone>();
