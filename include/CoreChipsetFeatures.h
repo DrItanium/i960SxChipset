@@ -89,7 +89,7 @@ public:
         TheRTCInterface::begin();
     }
 private:
-    static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
+    [[gnu::always_inline]] [[nodiscard]] static inline uint16_t readIOConfigurationSpace0(uint8_t offset) noexcept {
         switch (static_cast<IOConfigurationSpace0Registers>(offset)) {
 #define X(title, var) \
              case IOConfigurationSpace0Registers:: title ## Lower : return static_cast<uint16_t>(var); \
@@ -107,15 +107,15 @@ private:
     }
 
 public:
-    [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[nodiscard]] [[gnu::always_inline]] inline static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle) noexcept {
         // force override the default implementation
         if (targetPage == 0) {
-            return readIOConfigurationSpace0(offset, lss);
+            return readIOConfigurationSpace0(offset);
         } else {
             return 0;
         }
     }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    static inline void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         // do nothing
     }
 };
