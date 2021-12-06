@@ -91,6 +91,7 @@ public:
         End,
     };
 public:
+    [[gnu::always_inline]]
     [[nodiscard]] inline bool open(const char* path, uint16_t permissions) noexcept {
         if (!backingStore_) {
             permissions_ = permissions;
@@ -100,6 +101,7 @@ public:
             return false;
         }
     }
+    [[gnu::always_inline]]
     inline bool close() noexcept {
         if (backingStore_) {
             return backingStore_.close();
@@ -108,20 +110,34 @@ public:
         }
     }
 
+    [[gnu::always_inline]]
     [[nodiscard]] inline bool isOpen() const noexcept { return backingStore_.isOpen(); }
     explicit operator bool() const noexcept { return backingStore_.operator bool(); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline auto size() const noexcept { return backingStore_.fileSize(); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline auto position() const noexcept { return backingStore_.curPosition(); }
+    [[gnu::always_inline]]
     inline bool setAbsolutePosition(uint32_t pos) noexcept { return backingStore_.seekSet(pos); }
+    [[gnu::always_inline]]
     inline bool setRelativePosition(int32_t pos) noexcept { return backingStore_.seekCur(pos); }
+    [[gnu::always_inline]]
     inline bool seekToEnd() noexcept { return backingStore_.seekEnd(); }
+    [[gnu::always_inline]]
     inline bool seekToBeginning() noexcept { return backingStore_.seekSet(0); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline bool getWriteError() const noexcept { return backingStore_.getWriteError(); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline auto getError() const noexcept { return backingStore_.getError(); }
+    [[gnu::always_inline]]
     inline void flush() noexcept { backingStore_.flush(); }
+    [[gnu::always_inline]]
     inline void sync() noexcept { backingStore_.sync(); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline bool isBusy() noexcept { return backingStore_.isBusy(); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline bool isDirectory() noexcept { return backingStore_.isDirectory(); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline uint16_t getChar() noexcept {
         if (backingStore_) {
             return static_cast<uint16_t>(backingStore_.read());
@@ -129,13 +145,17 @@ public:
             return -1;
         }
     }
+    [[gnu::always_inline]]
     inline void putChar(SplitWord16 value) noexcept {
         if (backingStore_) {
             backingStore_.write(static_cast<byte>(value.getWholeValue()));
         }
     }
+    [[gnu::always_inline]]
     [[nodiscard]] inline size_t read(void* buf, size_t count) noexcept { return backingStore_.read(buf, count); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline size_t write(void* buf, size_t count) noexcept { return backingStore_.write(buf, count); }
+    [[gnu::always_inline]]
     [[nodiscard]] inline uint16_t read(uint8_t offset, LoadStoreStyle lss) noexcept {
         using T = Registers;
         switch (static_cast<T>(offset)) {
@@ -149,6 +169,7 @@ public:
             default: return 0;
         }
     }
+    [[gnu::always_inline]]
     inline void write(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         using T = Registers;
         bool callSeekAbsolute = false;
