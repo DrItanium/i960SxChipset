@@ -147,12 +147,14 @@ public:
 #endif
     }
 private:
-    static void setBacklightIntensity(uint16_t value) noexcept {
+    [[gnu::always_inline]]
+    static inline void setBacklightIntensity(uint16_t value) noexcept {
         backlightIntensity_ = value;
         displayShield_.setBacklight(backlightIntensity_);
     }
 public:
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[gnu::always_inline]]
+    static inline uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         switch  (targetPage) {
             case SeesawPage:
                 return handleSeesawReads(offset, lss);
@@ -162,7 +164,8 @@ public:
                 return 0;
         }
     }
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    [[gnu::always_inline]]
+    static inline void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
         switch (targetPage) {
             case SeesawPage:
                 handleSeesawWrite(offset, lss, value);
@@ -198,7 +201,8 @@ private:
         FillRoundRect = 0x16,
         FillCircle = 0x17,
     };
-    static void invoke(SplitWord16 opcode) noexcept {
+    [[gnu::always_inline]]
+    static inline void invoke(SplitWord16 opcode) noexcept {
         switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
             case InvokeOpcodes::FillScreen:
                 tft.fillScreen(fields_[0]);
@@ -243,7 +247,8 @@ private:
                 break;
         }
     }
-    static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
+    [[gnu::always_inline]]
+    static inline uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
         switch (static_cast<DisplayInterfaceRegisters>(offset)) {
             case DisplayInterfaceRegisters::InstructionField00:
             case DisplayInterfaceRegisters::InstructionField01:
@@ -257,7 +262,8 @@ private:
             default: return 0;
         }
     }
-    static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+    [[gnu::always_inline]]
+    inline static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
                 case DisplayInterfaceRegisters::InstructionField00:
                 case DisplayInterfaceRegisters::InstructionField01:
@@ -275,7 +281,8 @@ private:
                 default: break;
             }
     }
-    static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
+    [[gnu::always_inline]]
+    static inline void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
 #ifdef CHIPSET_TYPE1
         switch (static_cast<SeesawRegisters>(offset))  {
             case SeesawRegisters::Backlight:
@@ -285,7 +292,9 @@ private:
         }
 #endif
     }
-    static uint16_t handleSeesawReads(uint8_t offset, LoadStoreStyle) noexcept {
+
+    [[gnu::always_inline]] [[nodiscard]]
+    static inline uint16_t handleSeesawReads(uint8_t offset, LoadStoreStyle) noexcept {
 #ifdef CHIPSET_TYPE1
         switch (static_cast<SeesawRegisters>(offset)) {
             case SeesawRegisters::Backlight:
