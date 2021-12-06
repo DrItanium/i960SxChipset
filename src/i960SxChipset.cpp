@@ -115,6 +115,7 @@ inline void displayRequestedAddress() noexcept {
 }
 
 template<bool inDebugMode>
+[[gnu::always_inline]]
 inline void fallbackBody() noexcept {
     if constexpr (inDebugMode) {
         displayRequestedAddress();
