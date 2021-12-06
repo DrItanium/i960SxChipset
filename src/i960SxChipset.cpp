@@ -447,7 +447,7 @@ void loop() {
     // and doesn't seem to impact performance in burst transactions
 
     for (;;) {
-        doInvocationBody<CompileInAddressDebuggingSupport, true>();
+        doInvocationBody<CompileInAddressDebuggingSupport, false>();
     }
 }
 
