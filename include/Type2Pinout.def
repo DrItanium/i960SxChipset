@@ -5,7 +5,6 @@
     CLOCK_OUT= PORT_B1,
     Reset960 = PORT_B2,
     SD_EN = PORT_B3,
-    //PSRAM_EN = PORT_B3,
     GPIOSelect = PORT_B4,
     MOSI = PORT_B5,
     MISO = PORT_B6,
@@ -23,8 +22,10 @@
     SCL = PORT_C0,
     SDA = PORT_C1,
     // due to a bug in the current board these pins have to be toggled together at the same time
-    PSRAM_EN0 = PORT_C2,
+    PSRAM_EN = PORT_C2, // left named this way for compatibility purposes
     PSRAM_EN1 = PORT_C3,
+    TFT_CS = PORT_C4,
+    TFT_DC = PORT_C5,
     // PC4-PC7 unused
     // PORT A
     ADDR_INT0 = PORT_A0,
@@ -35,4 +36,4 @@
     BE1 = PORT_A5,
     BLAST_ = PORT_A6,
     DEN_ = PORT_A7,
-    //Int0_ = PORT_C6, // int0 disconnected right now
+    Int0_ = Count, // Int0 disconnected right now

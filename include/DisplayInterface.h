@@ -119,59 +119,64 @@ public:
 public:
     DisplayInterface() = delete;
     ~DisplayInterface() = delete;
-    static constexpr bool respondsTo(byte targetPage) noexcept {
-        return targetPage >= StartPage && targetPage < EndPage;
-    }
     static void begin() noexcept {
-#ifdef CHIPSET_TYPE1
-        pinMode(i960Pinout::TFT_CS, OUTPUT);
         pinMode(i960Pinout::SD_EN, OUTPUT);
-        digitalWrite<i960Pinout::TFT_CS, HIGH>();
         digitalWrite<i960Pinout::SD_EN, HIGH>();
-        Wire.begin();
-        if (!displayShield_.begin()) {
-            signalHaltState(F("display shield seesaw could not be initialized!")) ;
-        }
-        Serial.println(F("Display seesaw started"));
-        Serial.print(F("Version: "));
-        Serial.println(displayShield_.getVersion(), HEX);
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            pinMode(i960Pinout::TFT_CS, OUTPUT);
+            digitalWrite<i960Pinout::TFT_CS, HIGH>();
+            Wire.begin();
+            if (!displayShield_.begin()) {
+                signalHaltState(F("display shield seesaw could not be initialized!"));
+            }
+            Serial.println(F("Display seesaw started"));
+            Serial.print(F("Version: "));
+            Serial.println(displayShield_.getVersion(), HEX);
 
-        setBacklightIntensity(TFTSHIELD_BACKLIGHT_OFF);
-        displayShield_.tftReset();
-        tft.initR(INITR_BLACKTAB);
-        setBacklightIntensity(TFTSHIELD_BACKLIGHT_ON);
-        Serial.println(F("TFT UP AND OK!"));
-        tft.fillScreen(ST7735_CYAN);
-        delay(1000);
-        tft.fillScreen(ST7735_BLACK);
-#endif
+            setBacklightIntensity(TFTSHIELD_BACKLIGHT_OFF);
+            displayShield_.tftReset();
+            tft.initR(INITR_BLACKTAB);
+            setBacklightIntensity(TFTSHIELD_BACKLIGHT_ON);
+            Serial.println(F("TFT UP AND OK!"));
+            tft.fillScreen(ST7735_CYAN);
+            delay(1000);
+            tft.fillScreen(ST7735_BLACK);
+        }
     }
 private:
     static void setBacklightIntensity(uint16_t value) noexcept {
-        backlightIntensity_ = value;
-        displayShield_.setBacklight(backlightIntensity_);
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            backlightIntensity_ = value;
+            displayShield_.setBacklight(backlightIntensity_);
+        }
     }
 public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        switch  (targetPage) {
-            case SeesawPage:
-                return handleSeesawReads(offset, lss);
-            case DisplayPage:
-                return handleDisplayRead(offset, lss);
-            default:
-                return 0;
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            switch (targetPage) {
+                case SeesawPage:
+                    return handleSeesawReads(offset, lss);
+                case DisplayPage:
+                    return handleDisplayRead(offset, lss);
+                default:
+                    return 0;
+            }
+        } else {
+            return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        switch (targetPage) {
-            case SeesawPage:
-                handleSeesawWrite(offset, lss, value);
-                break;
-            case DisplayPage:
-                handleDisplayWrite(offset, lss, value);
-                break;
-            default:
-                break;
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            switch (targetPage) {
+                case SeesawPage:
+                    handleSeesawWrite(offset, lss, value);
+                    break;
+                case DisplayPage:
+                    handleDisplayWrite(offset, lss, value);
+                    break;
+                default:
+                    break;
+            }
         }
     }
 private:
@@ -199,65 +204,73 @@ private:
         FillCircle = 0x17,
     };
     static void invoke(SplitWord16 opcode) noexcept {
-        switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
-            case InvokeOpcodes::FillScreen:
-                tft.fillScreen(fields_[0]);
-                break;
-            case InvokeOpcodes::DrawPixel:
-                tft.drawPixel(fields_[0], fields_[1], fields_[2]);
-                break;
-            case InvokeOpcodes::DrawLine:
-                tft.drawLine(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
-                break;
-            case InvokeOpcodes::DrawFastVLine:
-                tft.drawFastVLine(fields_[0], fields_[1], fields_[2], fields_[3]);
-                break;
-            case InvokeOpcodes::DrawFastHLine:
-                tft.drawFastHLine(fields_[0], fields_[1], fields_[2], fields_[3]);
-                break;
-            case InvokeOpcodes::DrawRect:
-                tft.drawRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
-                break;
-            case InvokeOpcodes::FillRect:
-                tft.fillRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
-                break;
-            case InvokeOpcodes::FillCircle:
-                tft.fillCircle(fields_[0], fields_[1], fields_[2], fields_[3]);
-                break;
-            case InvokeOpcodes::DrawCircle:
-                tft.drawCircle(fields_[0], fields_[1], fields_[2], fields_[3]);
-                break;
-            case InvokeOpcodes::FillRoundRect:
-                tft.fillRoundRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5]);
-                break;
-            case InvokeOpcodes::DrawRoundRect:
-                tft.drawRoundRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5]);
-                break;
-            case InvokeOpcodes::FillTriangle:
-                tft.fillTriangle(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5], fields_[6]);
-                break;
-            case InvokeOpcodes::DrawTriangle:
-                tft.drawTriangle(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5], fields_[6]);
-                break;
-            default:
-                break;
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
+                case InvokeOpcodes::FillScreen:
+                    tft.fillScreen(fields_[0]);
+                    break;
+                case InvokeOpcodes::DrawPixel:
+                    tft.drawPixel(fields_[0], fields_[1], fields_[2]);
+                    break;
+                case InvokeOpcodes::DrawLine:
+                    tft.drawLine(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
+                    break;
+                case InvokeOpcodes::DrawFastVLine:
+                    tft.drawFastVLine(fields_[0], fields_[1], fields_[2], fields_[3]);
+                    break;
+                case InvokeOpcodes::DrawFastHLine:
+                    tft.drawFastHLine(fields_[0], fields_[1], fields_[2], fields_[3]);
+                    break;
+                case InvokeOpcodes::DrawRect:
+                    tft.drawRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
+                    break;
+                case InvokeOpcodes::FillRect:
+                    tft.fillRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4]);
+                    break;
+                case InvokeOpcodes::FillCircle:
+                    tft.fillCircle(fields_[0], fields_[1], fields_[2], fields_[3]);
+                    break;
+                case InvokeOpcodes::DrawCircle:
+                    tft.drawCircle(fields_[0], fields_[1], fields_[2], fields_[3]);
+                    break;
+                case InvokeOpcodes::FillRoundRect:
+                    tft.fillRoundRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5]);
+                    break;
+                case InvokeOpcodes::DrawRoundRect:
+                    tft.drawRoundRect(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5]);
+                    break;
+                case InvokeOpcodes::FillTriangle:
+                    tft.fillTriangle(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5], fields_[6]);
+                    break;
+                case InvokeOpcodes::DrawTriangle:
+                    tft.drawTriangle(fields_[0], fields_[1], fields_[2], fields_[3], fields_[4], fields_[5], fields_[6]);
+                    break;
+                default:
+                    break;
+            }
         }
     }
     static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
-        switch (static_cast<DisplayInterfaceRegisters>(offset)) {
-            case DisplayInterfaceRegisters::InstructionField00:
-            case DisplayInterfaceRegisters::InstructionField01:
-            case DisplayInterfaceRegisters::InstructionField02:
-            case DisplayInterfaceRegisters::InstructionField03:
-            case DisplayInterfaceRegisters::InstructionField04:
-            case DisplayInterfaceRegisters::InstructionField05:
-            case DisplayInterfaceRegisters::InstructionField06:
-            case DisplayInterfaceRegisters::InstructionField07:
-                return fields_[offset - static_cast<byte>(DisplayInterfaceRegisters::InstructionField00)];
-            default: return 0;
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            switch (static_cast<DisplayInterfaceRegisters>(offset)) {
+                case DisplayInterfaceRegisters::InstructionField00:
+                case DisplayInterfaceRegisters::InstructionField01:
+                case DisplayInterfaceRegisters::InstructionField02:
+                case DisplayInterfaceRegisters::InstructionField03:
+                case DisplayInterfaceRegisters::InstructionField04:
+                case DisplayInterfaceRegisters::InstructionField05:
+                case DisplayInterfaceRegisters::InstructionField06:
+                case DisplayInterfaceRegisters::InstructionField07:
+                    return fields_[offset - static_cast<byte>(DisplayInterfaceRegisters::InstructionField00)];
+                default:
+                    return 0;
+            }
+        } else {
+            return 0;
         }
     }
     static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
                 case DisplayInterfaceRegisters::InstructionField00:
                 case DisplayInterfaceRegisters::InstructionField01:
@@ -272,40 +285,41 @@ private:
                 case DisplayInterfaceRegisters::Invoke0:
                     invoke(value);
                     break;
-                default: break;
+                default:
+                    break;
             }
+        }
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
-#ifdef CHIPSET_TYPE1
-        switch (static_cast<SeesawRegisters>(offset))  {
-            case SeesawRegisters::Backlight:
-                setBacklightIntensity(value.getWholeValue());
-                break;
-            default: break;
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            switch (static_cast<SeesawRegisters>(offset)) {
+                case SeesawRegisters::Backlight:
+                    setBacklightIntensity(value.getWholeValue());
+                    break;
+                default:
+                    break;
+            }
         }
-#endif
     }
     static uint16_t handleSeesawReads(uint8_t offset, LoadStoreStyle) noexcept {
-#ifdef CHIPSET_TYPE1
-        switch (static_cast<SeesawRegisters>(offset)) {
-            case SeesawRegisters::Backlight:
-                return backlightIntensity_;
-            default:
-                return 0;
+        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+            switch (static_cast<SeesawRegisters>(offset)) {
+                case SeesawRegisters::Backlight:
+                    return backlightIntensity_;
+                default:
+                    return 0;
+            }
+        } else {
+            return 0;
         }
-#else
-        return 0;
-#endif
 
     }
 private:
-#ifdef CHIPSET_TYPE1
     static inline Adafruit_TFTShield18 displayShield_;
     static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
     static inline uint16_t backlightIntensity_ = 0;
     static inline uint16_t fields_[8] { 0 };
-#endif
 };
 #endif //SXCHIPSET_DISPLAYINTERFACE_H
