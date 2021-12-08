@@ -28,10 +28,10 @@
     TFT_DC = PORT_C5,
     // PC4-PC7 unused
     // PORT A
-    ADDR_INT0 = PORT_A0,
-    ADDR_INT1 = PORT_A1,
-    ADDR_INT2 = PORT_A2,
-    ADDR_INT3 = PORT_A3,
+    INT_EN0 = PORT_A0,
+    INT_EN1 = PORT_A1,
+    INT_EN2 = PORT_A2,
+    INT_EN3 = PORT_A3,
     BE0 = PORT_A4,
     BE1 = PORT_A5,
     BLAST_ = PORT_A6,

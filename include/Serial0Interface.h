@@ -97,7 +97,9 @@ private:
     static inline void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
-                pulse<i960Pinout::Int0_>();
+                if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+                    pulse<i960Pinout::Int0_>();
+                }
                 break;
             case Registers::ConsoleFlush:
                 Serial.flush();

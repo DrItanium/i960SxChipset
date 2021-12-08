@@ -51,7 +51,7 @@ public:
     static constexpr auto NumChips = 8;
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
-#elif defined(CHIPSET_TYPE1_4)
+#elif defined(CHIPSET_TYPE2)
     static constexpr auto NumChips = 1;
 #endif
 public:

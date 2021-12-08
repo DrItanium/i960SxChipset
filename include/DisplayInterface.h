@@ -32,8 +32,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_seesaw.h>
+#ifdef CHIPSET_TYPE1
 #include <Adafruit_ST7735.h>
 #include <Adafruit_TFTShield18.h>
+#elif defined(CHIPSET_TYPE2)
+#include <Adafruit_ILI9341.h>
+#include <Adafruit_FT6206.h>
+#endif
 
 #include "Pinout.h"
 
@@ -122,7 +127,7 @@ public:
     static void begin() noexcept {
         pinMode(i960Pinout::SD_EN, OUTPUT);
         digitalWrite<i960Pinout::SD_EN, HIGH>();
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+#ifdef CHIPSET_TYPE1
             pinMode(i960Pinout::TFT_CS, OUTPUT);
             digitalWrite<i960Pinout::TFT_CS, HIGH>();
             Wire.begin();
@@ -141,14 +146,17 @@ public:
             tft.fillScreen(ST7735_CYAN);
             delay(1000);
             tft.fillScreen(ST7735_BLACK);
-        }
+#elif defined(CHIPSET_TYPE2)
+        tft.begin();
+        tft.fillScreen(ILI9341_BLACK);
+#endif
     }
 private:
     static void setBacklightIntensity(uint16_t value) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+#ifdef CHIPSET_TYPE1
             backlightIntensity_ = value;
             displayShield_.setBacklight(backlightIntensity_);
-        }
+#endif
     }
 public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
@@ -204,7 +212,6 @@ private:
         FillCircle = 0x17,
     };
     static void invoke(SplitWord16 opcode) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
             switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
                 case InvokeOpcodes::FillScreen:
                     tft.fillScreen(fields_[0]);
@@ -248,10 +255,8 @@ private:
                 default:
                     break;
             }
-        }
     }
     static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
                 case DisplayInterfaceRegisters::InstructionField00:
                 case DisplayInterfaceRegisters::InstructionField01:
@@ -265,12 +270,8 @@ private:
                 default:
                     return 0;
             }
-        } else {
-            return 0;
-        }
     }
     static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
                 case DisplayInterfaceRegisters::InstructionField00:
                 case DisplayInterfaceRegisters::InstructionField01:
@@ -288,7 +289,6 @@ private:
                 default:
                     break;
             }
-        }
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         if constexpr (TargetBoard::onAtmega1284p_Type1()) {
@@ -315,10 +315,15 @@ private:
 
     }
 private:
+#ifdef CHIPSET_TYPE1
     static inline Adafruit_TFTShield18 displayShield_;
     static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
+#elif defined(CHIPSET_TYPE2)
+static inline Adafruit_ILI9341 tft {static_cast<int>(i960Pinout::TFT_CS), static_cast<int>(i960Pinout::TFT_DC) };
+static inline Adafruit_FT6206 touchController{};
+#endif
     static inline uint16_t backlightIntensity_ = 0;
     static inline uint16_t fields_[8] { 0 };
 };

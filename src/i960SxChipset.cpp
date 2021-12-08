@@ -370,7 +370,9 @@ void setup() {
               i960Pinout::Reset960,
               i960Pinout::Int0_);
     digitalWrite<i960Pinout::Reset960, HIGH>();
-    digitalWrite<i960Pinout::Int0_, HIGH>();
+    if constexpr (isValidPin960_v<i960Pinout::Int0_>) {
+        digitalWrite<i960Pinout::Int0_, HIGH>();
+    }
     {
         PinAsserter<i960Pinout::Reset960> holdi960InReset;
         // all of these pins need to be pulled high
@@ -397,7 +399,8 @@ void setup() {
                   i960Pinout::DEN_,
                   i960Pinout::FAIL,
                   i960Pinout::INT_EN0,
-                  i960Pinout::INT_EN1);
+                  i960Pinout::INT_EN1
+                  );
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         theCache.begin();
         SPI.begin();
