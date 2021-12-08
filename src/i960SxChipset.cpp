@@ -349,72 +349,87 @@ void setupDispatchTable() noexcept {
         lookupTable_Debug[ConfigurationSpace::SectionID] = handleExternalDeviceRequest<true, ConfigurationSpace>;
     }
 }
+void setupChipsetType1() noexcept {
+#ifdef CHIPSET_TYPE1
+    setupPins(OUTPUT,
+              i960Pinout::SPI_OFFSET0,
+              i960Pinout::SPI_OFFSET1,
+              i960Pinout::SPI_OFFSET2,
+              i960Pinout::Int0_);
+    digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
+    digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
+    digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
+    digitalWrite<i960Pinout::Int0_, HIGH>();
+    setupPins(INPUT,
+              i960Pinout::BA1,
+              i960Pinout::BA2,
+              i960Pinout::BA3);
+#endif
+}
+void setupChipsetType2() noexcept {
+#ifdef CHIPSET_TYPE2
+    setupPins(OUTPUT,
+              i960Pinout::INT_EN0,
+              i960Pinout::INT_EN1,
+              i960Pinout::INT_EN2,
+              i960Pinout::INT_EN3 );
+#endif
+}
+
+void setupChipsetVersionSpecificPins() noexcept {
+    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        setupChipsetType1();
+    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        setupChipsetType2();
+    } else {
+        // do nothing
+    }
+}
 // the setup routine runs once when you press reset:
 void setup() {
+    // always do this first to make sure that we put the i960 into reset regardless of target
+    pinMode(i960Pinout::Reset960, OUTPUT) ;
+    digitalWrite<i960Pinout::Reset960, LOW>();
     // seed random on startup to be on the safe side from analog pin A0, A1, A2, and A3
     randomSeed(analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3));
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
+    setupChipsetVersionSpecificPins();
     setupPins(OUTPUT,
               i960Pinout::PSRAM_EN,
               i960Pinout::SD_EN,
-              i960Pinout::Reset960,
               i960Pinout::Ready,
-              i960Pinout::GPIOSelect,
-#ifdef CHIPSET_TYPE1
-              i960Pinout::SPI_OFFSET0,
-              i960Pinout::SPI_OFFSET1,
-              i960Pinout::SPI_OFFSET2,
-#endif
-              i960Pinout::Reset960,
-              i960Pinout::Int0_);
+              i960Pinout::GPIOSelect);
+    // all of these pins need to be pulled high
+    digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+    digitalWrite<i960Pinout::SD_EN, HIGH>();
+    digitalWrite<i960Pinout::Ready, HIGH>();
+    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+    // setup the pins that could be attached to an io expander separately
+    setupPins(INPUT,
+              i960Pinout::BE0,
+              i960Pinout::BE1,
+              i960Pinout::BLAST_,
+              i960Pinout::W_R_,
+              i960Pinout::DEN_,
+              i960Pinout::FAIL,
+              i960Pinout::INT_EN0,
+              i960Pinout::INT_EN1
+    );
+    //pinMode(i960Pinout::MISO, INPUT_PULLUP);
+    theCache.begin();
+    SPI.begin();
+    // purge the cache pages
+    ConfigurationSpace::begin();
+    Serial.println(F("i960Sx chipset bringup"));
+    ProcessorInterface::begin();
+    BackingMemoryStorage_t::begin();
+    setupDispatchTable();
+    installBootImage();
+    delay(100);
+    Serial.println(F("i960Sx chipset brought up fully!"));
     digitalWrite<i960Pinout::Reset960, HIGH>();
-    if constexpr (isValidPin960_v<i960Pinout::Int0_>) {
-        digitalWrite<i960Pinout::Int0_, HIGH>();
-    }
-    {
-        PinAsserter<i960Pinout::Reset960> holdi960InReset;
-        // all of these pins need to be pulled high
-        digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-        digitalWrite<i960Pinout::SD_EN, HIGH>();
-        digitalWrite<i960Pinout::Ready, HIGH>();
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-#ifdef CHIPSET_TYPE1
-        digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
-        digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
-        digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
-#endif
-        // setup the pins that could be attached to an io expander separately
-        setupPins(INPUT,
-#ifdef CHIPSET_TYPE1
-                  i960Pinout::BA1,
-                  i960Pinout::BA2,
-                  i960Pinout::BA3,
-#endif
-                  i960Pinout::BE0,
-                  i960Pinout::BE1,
-                  i960Pinout::BLAST_,
-                  i960Pinout::W_R_,
-                  i960Pinout::DEN_,
-                  i960Pinout::FAIL,
-                  i960Pinout::INT_EN0,
-                  i960Pinout::INT_EN1
-                  );
-        //pinMode(i960Pinout::MISO, INPUT_PULLUP);
-        theCache.begin();
-        SPI.begin();
-        // purge the cache pages
-        ConfigurationSpace::begin();
-        Serial.println(F("i960Sx chipset bringup"));
-        ProcessorInterface::begin();
-        BackingMemoryStorage_t::begin();
-        setupDispatchTable();
-        installBootImage();
-        delay(100);
-        Serial.println(F("i960Sx chipset brought up fully!"));
-
-    }
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
