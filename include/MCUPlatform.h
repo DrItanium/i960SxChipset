@@ -116,7 +116,7 @@ static_assert(!is_same_v<ClosestBitValue_t<10>, ClosestBitValue_t<4>>);
 
 enum class TargetMCU {
     ATmega1284p_Type1,
-    ATmega1284p_Type1_4,
+    ATmega1284p_Type2,
     Unknown,
 };
 class MCUConfiguration final {
@@ -150,10 +150,10 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
 };
 
 template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1_4> = {
+constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type2> = {
         16_KB,
         10_MHz,
-        5_MHz // due to the current design, we have to run the psram at 5 Mhz
+        10_MHz // due to the current design, we have to run the psram at 5 Mhz
 };
 
 class TargetBoard {
@@ -163,8 +163,8 @@ public:
 #ifdef ARDUINO_AVR_ATmega1284
 #ifdef CHIPSET_TYPE1
         return TargetMCU::ATmega1284p_Type1;
-#elif defined(CHIPSET_TYPE1_4)
-        return TargetMCU::ATmega1284p_Type1_4;
+#elif defined(CHIPSET_TYPE2)
+        return TargetMCU::ATmega1284p_Type2;
 #else
         return TargetMCU::Unknown;
 #endif
@@ -172,10 +172,16 @@ public:
         return TargetMCU::Unknown;
 #endif
     }
-    [[nodiscard]] static constexpr auto onAtmega1284p_Type1() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type1; }
-    [[nodiscard]] static constexpr auto onAtmega1284p_Type1_4() noexcept { return getMCUTarget() == TargetMCU::ATmega1284p_Type1_4; }
-    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return onAtmega1284p_Type1() || onAtmega1284p_Type1_4(); }
-    [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return getMCUTarget() == TargetMCU::Unknown; }
+    template<TargetMCU mcu>
+    [[nodiscard]] static constexpr auto targetMCUIs() noexcept { return getMCUTarget() == mcu; }
+    template<TargetMCU ... rest>
+    [[nodiscard]] static constexpr auto targetMCUIsOneOfThese() noexcept {
+        return (targetMCUIs<rest>() || ...);
+    }
+    [[nodiscard]] static constexpr auto onAtmega1284p_Type1() noexcept { return targetMCUIs<TargetMCU::ATmega1284p_Type1>(); }
+    [[nodiscard]] static constexpr auto onAtmega1284p_Type2() noexcept { return targetMCUIs<TargetMCU::ATmega1284p_Type2>(); }
+    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return targetMCUIsOneOfThese<TargetMCU::ATmega1284p_Type1, TargetMCU::ATmega1284p_Type2>(); }
+    [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return targetMCUIs<TargetMCU::Unknown>(); }
     [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept { return BoardDescription<getMCUTarget()>.getSramAmount(); }
     [[nodiscard]] static constexpr auto runIOExpanderSPIInterfaceAt() noexcept { return BoardDescription<getMCUTarget()>.runIOExpanderSPIInterfaceAt(); }
     [[nodiscard]] static constexpr auto runPSRAMAt() noexcept { return BoardDescription<getMCUTarget()>.runPSRAMAt(); }
