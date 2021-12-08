@@ -149,6 +149,12 @@ public:
 #elif defined(CHIPSET_TYPE2)
         tft.begin();
         tft.fillScreen(ILI9341_BLACK);
+        if (!touchController_.begin(40)) {
+            Serial.println(F("Couldn't start FT6206 touchscreen controller"));
+            while (1);
+        } else {
+            Serial.println(F("FT6206 touchscreen initialized"));
+        }
 #endif
     }
 private:
@@ -160,31 +166,25 @@ private:
     }
 public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-            switch (targetPage) {
-                case SeesawPage:
-                    return handleSeesawReads(offset, lss);
-                case DisplayPage:
-                    return handleDisplayRead(offset, lss);
-                default:
-                    return 0;
-            }
-        } else {
-            return 0;
+        switch (targetPage) {
+            case SeesawPage:
+                return handleSeesawReads(offset, lss);
+            case DisplayPage:
+                return handleDisplayRead(offset, lss);
+            default:
+                return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-            switch (targetPage) {
-                case SeesawPage:
-                    handleSeesawWrite(offset, lss, value);
-                    break;
-                case DisplayPage:
-                    handleDisplayWrite(offset, lss, value);
-                    break;
-                default:
-                    break;
-            }
+        switch (targetPage) {
+            case SeesawPage:
+                handleSeesawWrite(offset, lss, value);
+                break;
+            case DisplayPage:
+                handleDisplayWrite(offset, lss, value);
+                break;
+            default:
+                break;
         }
     }
 private:
@@ -291,28 +291,21 @@ private:
             }
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-            switch (static_cast<SeesawRegisters>(offset)) {
-                case SeesawRegisters::Backlight:
-                    setBacklightIntensity(value.getWholeValue());
-                    break;
-                default:
-                    break;
-            }
+        switch (static_cast<SeesawRegisters>(offset)) {
+            case SeesawRegisters::Backlight:
+                setBacklightIntensity(value.getWholeValue());
+                break;
+            default:
+                break;
         }
     }
     static uint16_t handleSeesawReads(uint8_t offset, LoadStoreStyle) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-            switch (static_cast<SeesawRegisters>(offset)) {
-                case SeesawRegisters::Backlight:
-                    return backlightIntensity_;
-                default:
-                    return 0;
-            }
-        } else {
-            return 0;
+        switch (static_cast<SeesawRegisters>(offset)) {
+            case SeesawRegisters::Backlight:
+                return backlightIntensity_;
+            default:
+                return 0;
         }
-
     }
 private:
 #ifdef CHIPSET_TYPE1
@@ -322,7 +315,7 @@ private:
                                       -1};
 #elif defined(CHIPSET_TYPE2)
 static inline Adafruit_ILI9341 tft {static_cast<int>(i960Pinout::TFT_CS), static_cast<int>(i960Pinout::TFT_DC) };
-static inline Adafruit_FT6206 touchController{};
+static inline Adafruit_FT6206 touchController_{};
 #endif
     static inline uint16_t backlightIntensity_ = 0;
     static inline uint16_t fields_[8] { 0 };
