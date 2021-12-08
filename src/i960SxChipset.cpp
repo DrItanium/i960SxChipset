@@ -253,7 +253,6 @@ inline void handleExternalDeviceRequest() noexcept {
     }
 }
 
-
 template<bool inDebugMode, bool useInterrupts>
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
@@ -318,8 +317,38 @@ void installBootImage() noexcept {
 }
 
 using DispatchTable = BodyFunction[256];
-extern DispatchTable lookupTable;
-extern DispatchTable lookupTable_Debug;
+DispatchTable lookupTable;
+DispatchTable lookupTable_Debug;
+void setupDispatchTable() noexcept {
+    Serial.println(F("Setting up the initial lookup table"));
+    for (auto& entry : lookupTable) {
+        entry = fallbackBody<false>;
+    }
+    lookupTable[0] = handleMemoryInterface<false>;
+    // only chipset type 1 has access to the full 64 megabytes
+    lookupTable[1] = handleMemoryInterface<false>;
+    lookupTable[2] = handleMemoryInterface<false>;
+    lookupTable[3] = handleMemoryInterface<false>;
+    lookupTable[TheRTCInterface ::SectionID] = handleExternalDeviceRequest<false, TheRTCInterface >;
+    lookupTable[TheDisplayInterface ::SectionID] = handleExternalDeviceRequest<false, TheDisplayInterface>;
+    lookupTable[TheSDInterface ::SectionID] = handleExternalDeviceRequest<false, TheSDInterface>;
+    lookupTable[TheConsoleInterface :: SectionID] = handleExternalDeviceRequest<false, TheConsoleInterface >;
+    lookupTable[ConfigurationSpace :: SectionID] = handleExternalDeviceRequest<false, ConfigurationSpace >;
+    if constexpr (CompileInAddressDebuggingSupport) {
+        for (auto &entry: lookupTable_Debug) {
+            entry = fallbackBody<true>;
+        }
+        lookupTable_Debug[0] = handleMemoryInterface<true>;
+        lookupTable_Debug[1] = handleMemoryInterface<true>;
+        lookupTable_Debug[2] = handleMemoryInterface<true>;
+        lookupTable_Debug[3] = handleMemoryInterface<true>;
+        lookupTable_Debug[TheRTCInterface::SectionID] = handleExternalDeviceRequest<true, TheRTCInterface>;
+        lookupTable_Debug[TheDisplayInterface::SectionID] = handleExternalDeviceRequest<true, TheDisplayInterface>;
+        lookupTable_Debug[TheSDInterface::SectionID] = handleExternalDeviceRequest<true, TheSDInterface>;
+        lookupTable_Debug[TheConsoleInterface::SectionID] = handleExternalDeviceRequest<true, TheConsoleInterface>;
+        lookupTable_Debug[ConfigurationSpace::SectionID] = handleExternalDeviceRequest<true, ConfigurationSpace>;
+    }
+}
 // the setup routine runs once when you press reset:
 void setup() {
     // seed random on startup to be on the safe side from analog pin A0, A1, A2, and A3
@@ -377,7 +406,7 @@ void setup() {
         Serial.println(F("i960Sx chipset bringup"));
         ProcessorInterface::begin();
         BackingMemoryStorage_t::begin();
-
+        setupDispatchTable();
         installBootImage();
         delay(100);
         Serial.println(F("i960Sx chipset brought up fully!"));
@@ -464,34 +493,12 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
         delay(1000);
     }
 }
-template<bool debug>
-BodyFunction getExecBody(byte index) noexcept {
-    switch (index) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-            return handleMemoryInterface<debug>;
-        case TheRTCInterface::SectionID:
-            return handleExternalDeviceRequest<debug, TheRTCInterface>;
-        case TheDisplayInterface::SectionID:
-            return handleExternalDeviceRequest<debug, TheDisplayInterface>;
-        case TheSDInterface::SectionID:
-            return handleExternalDeviceRequest<debug, TheSDInterface>;
-        case TheConsoleInterface::SectionID:
-            return handleExternalDeviceRequest<debug, TheConsoleInterface>;
-        case ConfigurationSpace::SectionID:
-            return handleExternalDeviceRequest<debug, ConfigurationSpace>;
-        default: break;
-    }
-    return fallbackBody<debug>;
-}
 BodyFunction getNonDebugBody(byte index) noexcept {
-    return getExecBody<false>(index);
+    return lookupTable[index];
 }
 BodyFunction getDebugBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
-        return getExecBody<true>(index);
+        return lookupTable_Debug[index];
     } else {
         return fallbackBody<true>;
     }
