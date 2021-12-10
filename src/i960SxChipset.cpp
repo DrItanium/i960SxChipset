@@ -290,7 +290,7 @@ void installBootImage() noexcept {
             // okay we were successful in opening the file, now copy the image into psram
         Address size = theFile.size();
         Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
-#if 0
+#ifdef CHIPSET_TYPE1
         static constexpr auto CacheSize = theCache.getCacheSize();
         //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
         // use the cache as a buffer since it won't be in use at this point in time
@@ -299,7 +299,7 @@ void installBootImage() noexcept {
             // do a linear read from the start to the end of storage
             // wait around to make sure we don't run afoul of the sdcard itself
             while (theFile.isBusy());
-            auto numRead = theFile.read(storage, CacheSize / 2);
+            auto numRead = theFile.read(storage, CacheSize);
             if (numRead < 0) {
                 // something wen't wrong so halt at this point
                 SD.errorHalt();
