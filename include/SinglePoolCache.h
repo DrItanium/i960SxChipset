@@ -73,6 +73,7 @@ public:
     byte* viewAsStorage() noexcept {
         return reinterpret_cast<byte*>(backingStorage_);
     }
+
     void begin() noexcept {
         // populate the lines from a separate block of entries known as the backing storage
         for (size_t i = 0; i < ActualNumberOfEntries; ++i) {

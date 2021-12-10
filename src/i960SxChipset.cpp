@@ -59,8 +59,8 @@ constexpr auto Serial0BaseAddress = 0xFB00'0000;
 constexpr auto DisplayBaseAddress = 0xFC00'0000;
 constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
-constexpr auto CompileInAddressDebuggingSupport = false;
-constexpr auto AddressDebuggingEnabledOnStartup = false;
+constexpr auto CompileInAddressDebuggingSupport = true;
+constexpr auto AddressDebuggingEnabledOnStartup = true;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
@@ -309,14 +309,16 @@ void installBootImage() noexcept {
             Serial.print(F("."));
         }
 #else
-        static constexpr auto CacheSize = 1024;
-        byte storage0[CacheSize] { 0 };
-        byte storage1[CacheSize] { 0 };
-        for (Address addr = 0; addr < size; addr += CacheSize) {
+        static constexpr auto CacheSize = theCache.getCacheSize();
+        static constexpr auto RealCacheSize = CacheSize / 2;
+        auto* storage= theCache.viewAsStorage();
+        byte* storage0 = storage;
+        byte* storage1 = storage + (RealCacheSize);
+        for (Address addr = 0; addr < size; addr += RealCacheSize) {
             // do a linear read from the start to the end of storage
             // wait around to make sure we don't run afoul of the sdcard itself
             while (theFile.isBusy());
-            auto numRead = theFile.read(storage0, CacheSize);
+            auto numRead = theFile.read(storage0, RealCacheSize);
             if (numRead < 0) {
                 // something wen't wrong so halt at this point
                 SD.errorHalt();
