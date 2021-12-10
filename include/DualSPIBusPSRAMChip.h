@@ -76,10 +76,9 @@ private:
     enum class OperationKind {
         Write,
         Read,
-        Generic,
     };
 
-    template<byte opcode, OperationKind kind = OperationKind::Generic>
+    template<byte opcode, OperationKind kind>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         if (capacity == 0) {
             return 0;
@@ -87,66 +86,59 @@ private:
         PSRAMBlockAddress curr(address);
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
+        digitalWrite<EnablePin1, LOW>();
         SPDR = opcode;
+        UDR1 = opcode;
         asm volatile("nop");
         PSRAMBlockAddress end(address + capacity);
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[2];
+        UDR1 = curr.bytes_[2];
         asm volatile("nop");
         auto numBytesToSecondChip = end.getOffset();
         while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << RXC1)));
         SPDR = curr.bytes_[1];
+        UDR1 = curr.bytes_[1];
         asm volatile("nop");
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << RXC1)));
         SPDR = curr.bytes_[0];
+        UDR1 = curr.bytes_[0];
         asm volatile("nop");
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << RXC1)));
+        // okay so when we are using the separate SPI bus we need to interleaved operations, we are interleaving bytes
+        // so even bytes go to bus0 and odd bytes go to bus1
         if constexpr (kind == OperationKind::Write) {
-            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
-                transmitByte(buf[i]);
+            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
+                // interleave bytes, that way it is easier to access this stuff
+                SPDR = buf[i];
+                UDR1 = buf[i+1];
+                asm volatile("nop");
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                while (!(UCSR1A & (1 << RXC1)));
             }
         } else if constexpr (kind == OperationKind::Read) {
-            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
-                transmitByte(0);
+            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
+                SPDR = 0;
+                UDR1 = 0;
+                asm volatile("nop");
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 buf[i] = SPDR;
+                while (!(UCSR1A & (1 << RXC1)));
+                buf[i+1] = UDR1;
             }
         } else {
-            SPI.transfer(buf, numBytesToFirstChip);
+            static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
         }
         digitalWrite<EnablePin, HIGH>();
-        if (!localToASingleChip && (numBytesToSecondChip > 0)) {
-            // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
-            // thus we can actually convert this work into two separate spi transactions
-            // start writing at the start of the next chip the remaining number of bytes
-            setChipId(end.getIndex());
-            // we start at address zero on this new chip always
-            digitalWrite<EnablePin, LOW>();
-            transmitByte(opcode);
-            transmitByte(0);
-            transmitByte(0);
-            transmitByte(0);
-            if constexpr (kind == OperationKind::Write) {
-                auto count = numBytesToSecondChip;
-                auto actualBuf = buf + numBytesToFirstChip;
-                for (decltype(count) i = 0; i < count; ++i) {
-                    transmitByte(actualBuf[i]);
-                }
-            } else if (kind == OperationKind::Read) {
-                auto count = numBytesToSecondChip;
-                auto actualBuf = buf + numBytesToFirstChip;
-                for (decltype(count) i = 0; i < count; ++i) {
-                    transmitByte(0);
-                    actualBuf[i] = SPDR;
-                }
-            } else {
-                SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
-            }
-            digitalWrite<EnablePin, HIGH>();
-        }
+        digitalWrite<EnablePin1, HIGH>();
+        // we cannot
         SPI.endTransaction();
-        return capacity;
+        return numBytesToFirstChip;
     }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
@@ -156,33 +148,11 @@ public:
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-#ifdef CHIPSET_TYPE1
-    template<byte index>
-    static void doWrites() noexcept {
-        digitalWrite<Select0, (index & (1 << 0)) ? HIGH : LOW>();
-        digitalWrite<Select1, (index & (1 << 1)) ? HIGH : LOW>();
-        digitalWrite<Select2, (index & (1 << 2)) ? HIGH : LOW>();
-    }
-#endif
-    static void setChipId(byte index) noexcept {
-#ifdef CHIPSET_TYPE1
-        using Action = void(*)();
-        static constexpr Action Operations[8] {
-            doWrites<0>, doWrites<1>, doWrites<2>, doWrites<3>,
-            doWrites<4>, doWrites<5>, doWrites<6>, doWrites<7>,
-        };
-        if (index != currentIndex_) {
-            Operations[index & 0b111]();
-            currentIndex_ = index & 0b111;
-        }
-#endif
-    }
 public:
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
-            setChipId(0);
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
             digitalWrite<i960Pinout::PSRAM_EN, LOW>();
