@@ -227,7 +227,7 @@ public:
     static void begin() noexcept;
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
     [[nodiscard]] static SplitWord16 getDataBits() noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
             return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
         } else {
             // stub out
@@ -235,7 +235,7 @@ public:
         }
     }
     static void setDataBits(uint16_t value) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
             // the latch is preserved in between data line changes
             // okay we are still pointing as output values
             // check the latch and see if the output value is the same as what is latched
@@ -247,43 +247,11 @@ public:
             // do nothing
         }
     }
-    /**
-     * @brief A version of setDataBits that takes the LoadStoreStyle into account
-     * @param value the value to assign
-     * @param style The load store style for the given target
-     */
-    static void setDataBits(uint16_t value, LoadStoreStyle style) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-            switch (SplitWord16 tmp(value); style) {
-                case LoadStoreStyle::Lower8:
-                    if (latchedDataOutput.bytes[0] != tmp.bytes[0]) {
-                        latchedDataOutput.bytes[0] = tmp.bytes[0];
-                        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::GPIOA>(latchedDataOutput.bytes[0]);
-                    }
-                    break;
-                case LoadStoreStyle::Upper8:
-                    if (latchedDataOutput.bytes[1] != tmp.bytes[1]) {
-                        latchedDataOutput.bytes[1] = tmp.bytes[1];
-                        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::GPIOB>(latchedDataOutput.bytes[1]);
-                    }
-                    break;
-                default:
-                    setDataBits(value);
-                    break;
-
-            }
-            // the latch is preserved in between data line changes
-            // okay we are still pointing as output values
-            // check the latch and see if the output value is the same as what is latched
-        } else {
-            // do nothing
-        }
-    }
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
     inline static void setupDataLinesForWrite() noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
             if (!dataLinesDirection_) {
                 dataLinesDirection_ = ~dataLinesDirection_;
                 writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
@@ -293,7 +261,7 @@ public:
         }
     }
     inline static void setupDataLinesForRead() noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+        if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
             if (dataLinesDirection_) {
                 dataLinesDirection_ = ~dataLinesDirection_;
                 writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
@@ -308,20 +276,19 @@ private:
         if constexpr (!useInterrupts) {
             return 0;
         } else {
-#ifdef CHIPSET_TYPE1
-            switch (PIND & 0b1001'0000) {
-                case 0b0000'0000: return 0b0000;
-                case 0b0001'0000: return 0b0011;
-                case 0b1000'0000: return 0b1100;
-                case 0b1001'0000: return 0b1111;
-                default: return 0b0000;
+            if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+                switch (PIND & 0b1001'0000) {
+                    case 0b0000'0000: return 0b0000;
+                    case 0b0001'0000: return 0b0011;
+                    case 0b1000'0000: return 0b1100;
+                    case 0b1001'0000: return 0b1111;
+                    default: return 0b0000;
+                }
+            } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+                return PINA & 0b0000'1111;
+            } else {
+                return 0;
             }
-#elif defined(CHIPSET_TYPE2)
-            return PINA & 0b0000'1111;
-#else
-            return 0;
-#endif
-
         }
     }
     template<byte offsetMask>

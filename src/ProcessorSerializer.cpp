@@ -63,16 +63,11 @@ ProcessorInterface::begin() noexcept {
         } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
             writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
             writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
+            writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
-            writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
-            // the MemoryCommitExtras does not exist in type 2, we use a 4809 in its place
-            //writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0x005F);
-            // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
-            //write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
-            // write the default value out to the latch to start with
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
             updateTargetFunctions<true>();
             updateTargetFunctions<false>();
