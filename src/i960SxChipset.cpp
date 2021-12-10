@@ -293,18 +293,32 @@ void installBootImage() noexcept {
         //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
         // use the cache as a buffer since it won't be in use at this point in time
         auto *storage = theCache.viewAsStorage();
+        auto lowerHalf = storage;
+        auto upperHalf = storage + (CacheSize / 2);
         Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
-        for (Address addr = 0; addr < size; addr += CacheSize) {
+        for (Address addr = 0; addr < size; addr += (CacheSize / 2)) {
             // do a linear read from the start to the end of storage
             // wait around to make sure we don't run afoul of the sdcard itself
             while (theFile.isBusy());
-            auto numRead = theFile.read(storage, CacheSize);
+            auto numRead = theFile.read(lowerHalf, CacheSize / 2);
             if (numRead < 0) {
                 // something wen't wrong so halt at this point
                 SD.errorHalt();
             }
-            (void) BackingMemoryStorage_t::write(addr, storage, numRead);
-
+            (void) BackingMemoryStorage_t::write(addr, lowerHalf, numRead);
+            // now read back the contents into the upper half
+            (void) BackingMemoryStorage_t::read(addr, upperHalf, numRead);
+            for (Address start = 0, start2 = CacheSize / 2; start < (CacheSize / 2); ++start, ++start2) {
+                auto lh = lowerHalf[start];
+                auto lh2 = upperHalf[start2];
+                if (lh != lh2) {
+                    Serial.print(F("Read back mismatch detected! Expected: 0x"));
+                    Serial.print(lh, HEX);
+                    Serial.print(F(", but got 0x"));
+                    Serial.print(lh2, HEX);
+                    Serial.println(F("instead!"));
+                }
+            }
             Serial.print(F("."));
         }
         Serial.println();
