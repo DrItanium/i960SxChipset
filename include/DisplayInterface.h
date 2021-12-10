@@ -30,14 +30,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SXCHIPSET_DISPLAYINTERFACE_H
 #include <Arduino.h>
 #include <Wire.h>
+#ifdef CHIPSET_TYPE1
 #include <Adafruit_GFX.h>
 #include <Adafruit_seesaw.h>
-#ifdef CHIPSET_TYPE1
 #include <Adafruit_ST7735.h>
 #include <Adafruit_TFTShield18.h>
 #elif defined(CHIPSET_TYPE2)
-#include <Adafruit_ILI9341.h>
-#include <Adafruit_FT6206.h>
+// currently disabled due to non use
+//#include <Adafruit_ILI9341.h>
+//#include <Adafruit_FT6206.h>
 #endif
 
 #include "Pinout.h"
@@ -147,6 +148,8 @@ public:
             delay(1000);
             tft.fillScreen(ST7735_BLACK);
 #elif defined(CHIPSET_TYPE2)
+            // this code is not usable right now because the touchscreen shield isn't properly mapped to the 1284p
+#if 0
         tft.begin();
         tft.fillScreen(ILI9341_BLACK);
         if (!touchController_.begin(40)) {
@@ -155,6 +158,7 @@ public:
         } else {
             Serial.println(F("FT6206 touchscreen initialized"));
         }
+#endif
 #endif
     }
 private:
@@ -212,6 +216,7 @@ private:
         FillCircle = 0x17,
     };
     static void invoke(SplitWord16 opcode) noexcept {
+#ifdef CHIPSET_TYPE1
             switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
                 case InvokeOpcodes::FillScreen:
                     tft.fillScreen(fields_[0]);
@@ -255,8 +260,10 @@ private:
                 default:
                     break;
             }
+#endif
     }
     static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
+#ifdef CHIPSET_TYPE1
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
                 case DisplayInterfaceRegisters::InstructionField00:
                 case DisplayInterfaceRegisters::InstructionField01:
@@ -270,8 +277,12 @@ private:
                 default:
                     return 0;
             }
+#else
+        return 0;
+#endif
     }
     static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+#ifdef CHIPSET_TYPE1
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
                 case DisplayInterfaceRegisters::InstructionField00:
                 case DisplayInterfaceRegisters::InstructionField01:
@@ -289,8 +300,10 @@ private:
                 default:
                     break;
             }
+#endif
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
+#ifdef CHIPSET_TYPE1
         switch (static_cast<SeesawRegisters>(offset)) {
             case SeesawRegisters::Backlight:
                 setBacklightIntensity(value.getWholeValue());
@@ -298,14 +311,19 @@ private:
             default:
                 break;
         }
+#endif
     }
     static uint16_t handleSeesawReads(uint8_t offset, LoadStoreStyle) noexcept {
+#ifdef CHIPSET_TYPE1
         switch (static_cast<SeesawRegisters>(offset)) {
             case SeesawRegisters::Backlight:
                 return backlightIntensity_;
             default:
                 return 0;
         }
+#else
+return 0;
+#endif
     }
 private:
 #ifdef CHIPSET_TYPE1
@@ -314,8 +332,8 @@ private:
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
 #elif defined(CHIPSET_TYPE2)
-static inline Adafruit_ILI9341 tft {static_cast<int>(i960Pinout::TFT_CS), static_cast<int>(i960Pinout::TFT_DC) };
-static inline Adafruit_FT6206 touchController_{};
+//static inline Adafruit_ILI9341 tft {static_cast<int>(i960Pinout::TFT_CS), static_cast<int>(i960Pinout::TFT_DC) };
+//static inline Adafruit_FT6206 touchController_{};
 #endif
     static inline uint16_t backlightIntensity_ = 0;
     static inline uint16_t fields_[8] { 0 };
