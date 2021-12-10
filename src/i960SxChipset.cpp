@@ -61,6 +61,7 @@ constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = true;
 constexpr auto AddressDebuggingEnabledOnStartup = true;
+constexpr auto ValidateTransferDuringInstall = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
@@ -290,55 +291,55 @@ void installBootImage() noexcept {
             // okay we were successful in opening the file, now copy the image into psram
         Address size = theFile.size();
         Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
-#ifdef CHIPSET_TYPE1
         static constexpr auto CacheSize = theCache.getCacheSize();
-        //static_assert(CacheSize >= (TargetBoard::cacheLineSize() * TargetBoard::numberOfCacheLines()), "The entry cache set is smaller than the requested cache size");
-        // use the cache as a buffer since it won't be in use at this point in time
         auto *storage = theCache.viewAsStorage();
-        for (Address addr = 0; addr < size; addr += CacheSize) {
-            // do a linear read from the start to the end of storage
-            // wait around to make sure we don't run afoul of the sdcard itself
-            while (theFile.isBusy());
-            auto numRead = theFile.read(storage, CacheSize);
-            if (numRead < 0) {
-                // something wen't wrong so halt at this point
-                SD.errorHalt();
-            }
-            (void) BackingMemoryStorage_t::write(addr, storage, numRead);
-            // now read back the contents into the upper half
-            Serial.print(F("."));
-        }
-#else
-        static constexpr auto CacheSize = theCache.getCacheSize();
-        static constexpr auto RealCacheSize = CacheSize / 2;
-        auto* storage= theCache.viewAsStorage();
-        byte* storage0 = storage;
-        byte* storage1 = storage + (RealCacheSize);
-        for (Address addr = 0; addr < size; addr += RealCacheSize) {
-            // do a linear read from the start to the end of storage
-            // wait around to make sure we don't run afoul of the sdcard itself
-            while (theFile.isBusy());
-            auto numRead = theFile.read(storage0, RealCacheSize);
-            if (numRead < 0) {
-                // something wen't wrong so halt at this point
-                SD.errorHalt();
-            }
-            (void) BackingMemoryStorage_t::write(addr, storage0, numRead);
-            (void) BackingMemoryStorage_t::read(addr, storage1, numRead);
-            // now read back the contents into the second buffer
-            for (auto i = 0; i < numRead; ++i) {
-                auto a = storage0[i];
-                auto b = storage1[i];
-                if (a != b) {
-                    Serial.print(F("MISMATCH WANTED 0x"));
-                    Serial.print(a, HEX);
-                    Serial.print(F(" BUT GOT 0x"));
-                    Serial.println(b, HEX);
+        if constexpr (ValidateTransferDuringInstall) {
+            static constexpr auto RealCacheSize = CacheSize / 2;
+            byte* storage0 = storage;
+            byte* storage1 = storage + (RealCacheSize);
+            for (Address addr = 0; addr < size; addr += RealCacheSize) {
+                // do a linear read from the start to the end of storage
+                // wait around to make sure we don't run afoul of the sdcard itself
+                while (theFile.isBusy());
+                auto numRead = theFile.read(storage0, RealCacheSize);
+                if (numRead < 0) {
+                    // something wen't wrong so halt at this point
+                    SD.errorHalt();
                 }
-            }
+                (void) BackingMemoryStorage_t::write(addr, storage0, numRead);
+                (void) BackingMemoryStorage_t::read(addr, storage1, numRead);
+                // now read back the contents into the second buffer
+                for (auto i = 0; i < numRead; ++i) {
+                    auto a = storage0[i];
+                    auto b = storage1[i];
+                    if (a != b) {
+                        Serial.print(F("MISMATCH WANTED 0x"));
+                        Serial.print(a, HEX);
+                        Serial.print(F(" BUT GOT 0x"));
+                        Serial.println(b, HEX);
+                    }
+                }
 
-            Serial.print(F("."));
+                Serial.print(F("."));
+            }
+        } else {
+            // use the cache as a buffer since it won't be in use at this point in time
+            for (Address addr = 0; addr < size; addr += CacheSize) {
+                // do a linear read from the start to the end of storage
+                // wait around to make sure we don't run afoul of the sdcard itself
+                while (theFile.isBusy());
+                auto numRead = theFile.read(storage, CacheSize);
+                if (numRead < 0) {
+                    // something wen't wrong so halt at this point
+                    SD.errorHalt();
+                }
+                (void) BackingMemoryStorage_t::write(addr, storage, numRead);
+                // now read back the contents into the upper half
+                Serial.print(F("."));
+            }
         }
+#ifdef CHIPSET_TYPE1
+#else
 #endif
         Serial.println();
         Serial.println(F("Transfer complete!"));
