@@ -155,8 +155,10 @@ public:
             initialized_ = true;
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
+
             digitalWrite<i960Pinout::PSRAM_EN, LOW>();
             digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
+
             SPDR = 0x66;
             UDR1 = 0x66;
             asm volatile("nop");

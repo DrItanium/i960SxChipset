@@ -400,6 +400,8 @@ void setupChipsetType2() noexcept {
               i960Pinout::INT_EN3,
               i960Pinout::PSRAM_EN,
               i960Pinout::PSRAM_EN1);
+    digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+    digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
     setupSecondSPIBus();
 #endif
 }
