@@ -41,20 +41,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @tparam sel1 The middle pin used to select the target device
  * @tparam sel2 The upper pin used to select the target device
  */
-class MemoryBlock {
+class Type2MemoryBlock {
 public:
     static constexpr auto EnablePin = i960Pinout::PSRAM_EN;
     static constexpr auto EnablePin1 = i960Pinout::PSRAM_EN1;
     static constexpr auto NumChips = 2;
 public:
-    MemoryBlock() = delete;
-    ~MemoryBlock() = delete;
+    Type2MemoryBlock() = delete;
+    ~Type2MemoryBlock() = delete;
     union PSRAMBlockAddress {
         constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
         constexpr auto getAddress() const noexcept { return base; }
         constexpr auto getOffset() const noexcept { return offset; }
+        constexpr auto getIndex() const noexcept { return index; }
         Address base;
-        Address offset : 24;
+        union {
+            Address offset: 24;
+            byte index : 2; // we have blocks of 16 megabytes instead of blocks of 8 megabytes found in type 1
+        };
         byte bytes_[4];
     };
 private:
@@ -180,27 +184,25 @@ public:
             initialized_ = true;
             setChipId(0);
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-            for (int i = 0; i < NumChips; ++i) {
-                setChipId(i);
-                delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(0x66);
-                digitalWrite<enablePin, HIGH>();
-                asm volatile ("nop");
-                asm volatile ("nop");
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(0x99);
-                digitalWrite<enablePin, HIGH>();
-            }
+            delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
+            digitalWrite<i960Pinout::PSRAM_EN, LOW>();
+            digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
+            SPDR = 0x66;
+            UDR1 = 0x66;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            while (!(UCSR1A & (1 << RXC1)));
+            SPDR = 0x99;
+            UDR1 = 0x99;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            while (!(UCSR1A & (1 << RXC1)));
+            digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
+            digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
             SPI.endTransaction();
         }
     }
-private:
-#ifdef CHIPSET_TYPE1
-    static inline byte currentIndex_ = 0xFF;
-#endif
 };
-
-using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
+using OnboardPSRAMBlock = Type2MemoryBlock;
 #endif
 #endif //SXCHIPSET_DUALSPIBUSPSRAMCHIP_H
