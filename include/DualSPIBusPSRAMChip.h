@@ -162,6 +162,11 @@ public:
             asm volatile("nop");
             while (!(SPSR & _BV(SPIF))) ; // wait
             while (!(UCSR1A & (1 << RXC1)));
+            digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
+            digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+            delay(1);
+            digitalWrite<i960Pinout::PSRAM_EN, LOW>();
+            digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
             SPDR = 0x99;
             UDR1 = 0x99;
             asm volatile("nop");
