@@ -366,13 +366,27 @@ void setupChipsetType1() noexcept {
               i960Pinout::BA3);
 #endif
 }
+void setupSecondSPIBus() noexcept {
+#ifdef CHIPSET_TYPE2
+    UBRR1 = 0x0000;
+    pinMode(i960Pinout::SCK1, OUTPUT); // setup XCK1 which is actually SCK1
+    UCSR1C = _BV(UMSEL11) | _BV(UMSEL10); // set usart spi mode of operation and SPI data mode 1,1
+    UCSR1B = _BV(TXEN1) | _BV(RXEN1); // enable transmitter and reciever
+    // set the baud rate. IMPORTANT: The Baud Rate must be set after the Transmitter is enabled
+    UBRR1 = 0x0000; // where maximum speed of FCPU/2 = 0x0000
+    // make sure we setup the PSRAM enable pins
+#endif
+}
 void setupChipsetType2() noexcept {
 #ifdef CHIPSET_TYPE2
     setupPins(OUTPUT,
               i960Pinout::INT_EN0,
               i960Pinout::INT_EN1,
               i960Pinout::INT_EN2,
-              i960Pinout::INT_EN3 );
+              i960Pinout::INT_EN3,
+              i960Pinout::PSRAM_EN,
+              i960Pinout::PSRAM_EN1);
+    setupSecondSPIBus();
 #endif
 }
 
@@ -395,6 +409,8 @@ void setup() {
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
+    // get SPI setup ahead of time
+    SPI.begin();
     setupChipsetVersionSpecificPins();
     setupPins(OUTPUT,
               i960Pinout::PSRAM_EN,
@@ -419,7 +435,6 @@ void setup() {
     );
     //pinMode(i960Pinout::MISO, INPUT_PULLUP);
     theCache.begin();
-    SPI.begin();
     // purge the cache pages
     ConfigurationSpace::begin();
     Serial.println(F("i960Sx chipset bringup"));
