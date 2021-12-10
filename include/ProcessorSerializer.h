@@ -308,6 +308,7 @@ private:
         if constexpr (!useInterrupts) {
             return 0;
         } else {
+#ifdef CHIPSET_TYPE1
             switch (PIND & 0b1001'0000) {
                 case 0b0000'0000: return 0b0000;
                 case 0b0001'0000: return 0b0011;
@@ -315,6 +316,12 @@ private:
                 case 0b1001'0000: return 0b1111;
                 default: return 0b0000;
             }
+#elif defined(CHIPSET_TYPE2)
+            return PINA & 0b0000'1111;
+#else
+            return 0;
+#endif
+
         }
     }
     template<byte offsetMask>
