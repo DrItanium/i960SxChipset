@@ -309,7 +309,7 @@ void installBootImage() noexcept {
             Serial.print(F("."));
         }
 #else
-        static constexpr auto CacheSize = 256;
+        static constexpr auto CacheSize = 1024;
         byte storage0[CacheSize] { 0 };
         byte storage1[CacheSize] { 0 };
         for (Address addr = 0; addr < size; addr += CacheSize) {
