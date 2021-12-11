@@ -293,7 +293,7 @@ void installBootImage() noexcept {
     } else {
             // okay we were successful in opening the file, now copy the image into psram
         Address size = theFile.size();
-        Serial.println(F("TRANSFERRING BOOT.SYS TO PSRAM"));
+        Serial.println(F("TRANSFERRING BOOT.SYS TO RAM"));
         static constexpr auto CacheSize = theCache.getCacheSize();
         auto *storage = theCache.viewAsStorage();
         if constexpr (ValidateTransferDuringInstall) {
