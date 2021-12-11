@@ -159,6 +159,7 @@ public:
             (void)dualTransferMirrored(0x66);
             digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
             digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+            __builtin_avr_nops(4);
             digitalWrite<i960Pinout::PSRAM_EN, LOW>();
             digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
             (void) dualTransferMirrored(0x99);
