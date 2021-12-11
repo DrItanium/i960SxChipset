@@ -90,60 +90,49 @@ private:
 
     template<byte opcode, OperationKind kind>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
+        // unlike a single channel design, the dual channel design only stores half the bytes per chip.
+        // Thus we need to make sure the address actually reflects this. For instance, if we are transferring 16 bytes then
+        // 8 bytes to go one side and 8 byte to the other. The difference is that the address in question must map to a real 23 bit address
         if (capacity == 0) {
             return 0;
         }
-        PSRAMBlockAddress curr(address);
+        // since we are commiting half the bytes to each chip we have to treat the address as though we are only commiting half the capacity
+        // so shift right by 1 to reflect this change
+        auto realAddress = address >> 1;
+        // the realCapacity is the number of bytes stored to each chip in the transaction
+        auto realCapacity = capacity >> 1;
+        PSRAMBlockAddress curr(realAddress);
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        PSRAMBlockAddress end(address + capacity);
+        // computing the end address is a little strange with a dual channel setup. It is realAddress + realCapacity because only
+        // half the bytes go to a given chip. This is why we can get 16 megabytes of storage out of a 23 bit address
+        PSRAMBlockAddress end((realAddress) + realCapacity);
         auto numBytesToSecondChip = end.getOffset();
         auto localToASingleChip = curr.getIndex() == end.getIndex();
-        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
-        if (numBytesToFirstChip == 0) {
-            return 0;
-        }
-#if 1
+        // the only part where we have to be careful is when returning the number of bytes committed.
+        // It will always be double the number computed here, so just double the number right now
+        auto numBytesToFirstChip = (localToASingleChip ? realCapacity : (realCapacity - numBytesToSecondChip)) * 2;
+
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin1, LOW>();
         (void)dualTransferMirrored(opcode);
         (void)dualTransferMirrored(curr.bytes_[2]);
         (void)dualTransferMirrored(curr.bytes_[1]);
         (void)dualTransferMirrored(curr.bytes_[0]);
-        // okay so when we are using the separate SPI bus we need to interleaved operations, we are interleaving bytes
-        // so even bytes go to bus0 and odd bytes go to bus1
-        if constexpr (kind == OperationKind::Write) {
-            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
-                // interleave bytes, that way it is easier to access this stuff
+        // at this point just iterate through and transfer all of the bytes, hopefully the total number of bytes is even
+        for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
+            // interleave bytes, that way it is easier to access this stuff
+            if constexpr (kind == OperationKind::Write) {
                 (void)dualTransfer(buf[i], buf[i+1]);
-            }
-        } else if constexpr (kind == OperationKind::Read) {
-            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
+            } else if constexpr (kind == OperationKind::Read) {
                 auto result = dualTransferMirrored(0);
                 buf[i] = result.getLowerHalf();
                 buf[i+1] = result.getUpperHalf();
-            }
-        } else {
-            static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
-        }
-        digitalWrite<EnablePin1, HIGH>();
-        digitalWrite<EnablePin, HIGH>();
-#else
-        digitalWrite<EnablePin, LOW>();
-        (void)transmitByte(opcode);
-        (void)transmitByte(curr.bytes_[2]);
-        (void)transmitByte(curr.bytes_[1]);
-        (void)transmitByte(curr.bytes_[0]);
-        for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
-            if constexpr (kind == OperationKind::Write) {
-                (void)transmitByte(buf[i]) ;
-            }  else if constexpr (kind == OperationKind::Read) {
-                buf[i] = transmitByte(0);
-            }  else {
+            } else {
                 static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
             }
         }
+        digitalWrite<EnablePin1, HIGH>();
         digitalWrite<EnablePin, HIGH>();
-#endif
         // we cannot
         SPI.endTransaction();
         return numBytesToFirstChip;
