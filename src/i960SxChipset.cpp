@@ -416,11 +416,12 @@ void setupSecondSPIBus() noexcept {
 }
 void setupChipsetType2() noexcept {
 #ifdef CHIPSET_TYPE2
-    setupPins(OUTPUT,
+    setupPins(INPUT_PULLUP,
               i960Pinout::INT_EN0,
               i960Pinout::INT_EN1,
               i960Pinout::INT_EN2,
-              i960Pinout::INT_EN3,
+              i960Pinout::INT_EN3);
+    setupPins(OUTPUT,
               i960Pinout::PSRAM_EN,
               i960Pinout::PSRAM_EN1);
     digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
