@@ -66,7 +66,7 @@ constexpr auto UsePSRAMForType2 = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
-constexpr auto UseIOExpanderAddressLineInterrupts = false;
+constexpr auto UseIOExpanderAddressLineInterrupts = TargetBoard::onAtmega1284p_Type2();
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport, AddressDebuggingEnabledOnStartup>;
