@@ -62,6 +62,7 @@ constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
 constexpr auto ValidateTransferDuringInstall = true;
+constexpr auto UsePSRAMForType2 = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
@@ -76,9 +77,10 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheRTCInterface>;
 // define the backing memory storage classes via template specialization
 // at this point in time, if no specialization is performed, use SDCard as ram backend
-template<TargetMCU mcu> struct BackingMemoryStorage final { using Type = SDCardAsRam<TheSDInterface>; };
+using FallbackMemory = SDCardAsRam<TheSDInterface >;
+template<TargetMCU mcu> struct BackingMemoryStorage final { using Type = FallbackMemory; };
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final { using Type = OnboardPSRAMBlock; };
-//template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final { using Type = OnboardPSRAMBlock; };
+template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final { using Type = conditional_t<UsePSRAMForType2 , OnboardPSRAMBlock , FallbackMemory>; };
 
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
 
