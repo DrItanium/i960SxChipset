@@ -38,8 +38,7 @@ ProcessorInterface::begin() noexcept {
         // should receive it.
         // so do a begin operation on all chips (0b000)
         // set IOCON.HAEN on all chips
-        auto iocon = read8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>();
-        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(iocon | 0b0000'1000);
+        write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(0b0000'1000);
         if constexpr (TargetBoard::onAtmega1284p_Type1()) {
             // now all devices tied to this ~CS pin have separate addresses
             // make each of these inputs
@@ -64,6 +63,8 @@ ProcessorInterface::begin() noexcept {
             writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
             writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
             writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
+            write8<IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0000'1000) ;
+            write8<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0000'1000) ;
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
