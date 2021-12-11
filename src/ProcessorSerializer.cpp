@@ -66,7 +66,9 @@ ProcessorInterface::begin() noexcept {
             writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
             writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0001'1000'0001'1000) ;
-            write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0101'1000'0101'1000) ;
+            // for some reason, mirroring the upper 16-bits is a no go... unsure why
+            //write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0101'1000'0101'1000) ;
+            write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0001'1000'0001'1000) ;
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
