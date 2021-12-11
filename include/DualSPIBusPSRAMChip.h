@@ -101,6 +101,9 @@ private:
         auto numBytesToSecondChip = end.getOffset();
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+        if (numBytesToFirstChip == 0) {
+            return 0;
+        }
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin1, LOW>();
         (void)dualTransferMirrored(opcode);
