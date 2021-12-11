@@ -85,6 +85,8 @@ private:
         }
         PSRAMBlockAddress curr(address);
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
+        (void)UDR1;
+        (void)UDR1;
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin1, LOW>();
         SPDR = opcode;
@@ -110,6 +112,8 @@ private:
         auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << RXC1)));
+        (void)UDR1;
+        (void)UDR1;
         // okay so when we are using the separate SPI bus we need to interleaved operations, we are interleaving bytes
         // so even bytes go to bus0 and odd bytes go to bus1
         if constexpr (kind == OperationKind::Write) {
@@ -166,7 +170,8 @@ public:
             while (!(UCSR1A & (1 << RXC1)));
             digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
             digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-            delay(1);
+            (void)UDR1;
+            (void)UDR1;
             digitalWrite<i960Pinout::PSRAM_EN, LOW>();
             digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
             SPDR = 0x99;
@@ -176,6 +181,8 @@ public:
             while (!(UCSR1A & (1 << RXC1)));
             digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
             digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+            (void)UDR1;
+            (void)UDR1;
             SPI.endTransaction();
         }
     }
