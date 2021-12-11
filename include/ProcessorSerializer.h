@@ -285,6 +285,8 @@ private:
                     default: return 0b0000;
                 }
             } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+                // even though three of the four pins are actually in use, I want to eventually diagnose the problem itself
+                // so this code is ready for that day
                 return PINA & 0b0000'1111;
             } else {
                 return 0;

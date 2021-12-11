@@ -417,24 +417,10 @@ void setupSecondSPIBus() noexcept {
 }
 void setupChipsetType2() noexcept {
 #ifdef CHIPSET_TYPE2
-    static_assert(i960Pinout::INT_EN0 != i960Pinout::INT_EN1);
-    static_assert(i960Pinout::INT_EN0 != i960Pinout::INT_EN2);
-    static_assert(i960Pinout::INT_EN0 != i960Pinout::INT_EN3);
-    static_assert(i960Pinout::INT_EN1 != i960Pinout::INT_EN0);
-    static_assert(i960Pinout::INT_EN1 != i960Pinout::INT_EN2);
-    static_assert(i960Pinout::INT_EN1 != i960Pinout::INT_EN3);
-    static_assert(i960Pinout::INT_EN2 != i960Pinout::INT_EN0);
-    static_assert(i960Pinout::INT_EN2 != i960Pinout::INT_EN1);
-    static_assert(i960Pinout::INT_EN2 != i960Pinout::INT_EN3);
-    static_assert(i960Pinout::INT_EN3 != i960Pinout::INT_EN0);
-    static_assert(i960Pinout::INT_EN3 != i960Pinout::INT_EN1);
-    static_assert(i960Pinout::INT_EN3 != i960Pinout::INT_EN2);
     Serial.println(F("Bringing up type2 specific aspects!"));
     setupSecondSPIBus();
-    pinMode(i960Pinout::INT_EN2, INPUT_PULLUP);
-    pinMode(i960Pinout::INT_EN3, INPUT_PULLUP);
-    digitalWrite<i960Pinout::INT_EN2, HIGH>();
-    digitalWrite<i960Pinout::INT_EN3, HIGH>();
+    pinMode(i960Pinout::INT_EN2, INPUT);
+    pinMode(i960Pinout::INT_EN3, INPUT);
     pinMode(i960Pinout::PSRAM_EN1, OUTPUT);
     digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
 #endif

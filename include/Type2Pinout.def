@@ -31,7 +31,7 @@
     INT_EN0 = PORT_A0,
     INT_EN1 = PORT_A1,
     INT_EN2 = PORT_A2,
-    INT_EN3 = PORT_A3,
+    INT_EN3 = PORT_A3, // a mirror of INT_EN2 because of some strangeness with the board design...
     BE0 = PORT_A4,
     BE1 = PORT_A5,
     BLAST_ = PORT_A6,
