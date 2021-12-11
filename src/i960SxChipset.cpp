@@ -62,7 +62,7 @@ constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
 constexpr auto ValidateTransferDuringInstall = true;
-constexpr auto UsePSRAMForType2 = false;
+constexpr auto UsePSRAMForType2 = true;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
@@ -294,7 +294,8 @@ void installBootImage() noexcept {
             // okay we were successful in opening the file, now copy the image into psram
         Address size = theFile.size();
         Serial.println(F("TRANSFERRING BOOT.SYS TO RAM"));
-        static constexpr auto CacheSize = theCache.getCacheSize();
+        //static constexpr auto CacheSize = theCache.getCacheSize();
+        static constexpr auto CacheSize = ::CacheSize;
         auto *storage = theCache.viewAsStorage();
         if constexpr (ValidateTransferDuringInstall) {
             static constexpr auto RealCacheSize = CacheSize / 2;
