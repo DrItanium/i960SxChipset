@@ -45,7 +45,6 @@ class Type2MemoryBlock {
 public:
     static constexpr auto EnablePin = i960Pinout::PSRAM_EN;
     static constexpr auto EnablePin1 = i960Pinout::PSRAM_EN1;
-    static constexpr auto NumChips = 2;
 public:
     Type2MemoryBlock() = delete;
     ~Type2MemoryBlock() = delete;
@@ -56,16 +55,17 @@ public:
         constexpr auto getIndex() const noexcept { return index; }
         Address base;
         union {
-            Address offset: 24;
-            byte index : 2; // we have blocks of 16 megabytes instead of blocks of 8 megabytes found in type 1
+            Address offset: 23;
+            byte index : 3; // we have blocks of 16 megabytes instead of blocks of 8 megabytes found in type 1
         };
         byte bytes_[4];
     };
 private:
-    static inline void transmitByte(byte value) noexcept {
+    static inline byte transmitByte(byte value) noexcept {
         SPDR = value;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
+        return SPDR;
     }
     static inline byte mspimTransfer(byte value) noexcept {
         while (!(UCSR1A & (1 << UDRE1)));
@@ -95,8 +95,6 @@ private:
         }
         PSRAMBlockAddress curr(address);
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        //(void)UDR1;
-        //(void)UDR1;
         PSRAMBlockAddress end(address + capacity);
         auto numBytesToSecondChip = end.getOffset();
         auto localToASingleChip = curr.getIndex() == end.getIndex();
@@ -105,6 +103,7 @@ private:
             return 0;
         }
         digitalWrite<EnablePin, LOW>();
+#if 0
         digitalWrite<EnablePin1, LOW>();
         (void)dualTransferMirrored(opcode);
         (void)dualTransferMirrored(curr.bytes_[2]);
@@ -126,8 +125,23 @@ private:
         } else {
             static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
         }
-        digitalWrite<EnablePin, HIGH>();
         digitalWrite<EnablePin1, HIGH>();
+#else
+        (void)transmitByte(opcode);
+        (void)transmitByte(curr.bytes_[2]);
+        (void)transmitByte(curr.bytes_[1]);
+        (void)transmitByte(curr.bytes_[0]);
+        for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
+            if constexpr (kind == OperationKind::Write) {
+                (void)transmitByte(buf[i]) ;
+            }  else if constexpr (kind == OperationKind::Read) {
+                buf[i] = transmitByte(0);
+            }  else {
+                static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
+            }
+        }
+#endif
+        digitalWrite<EnablePin, HIGH>();
         // we cannot
         SPI.endTransaction();
         return numBytesToFirstChip;
