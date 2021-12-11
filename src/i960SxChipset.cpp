@@ -63,6 +63,7 @@ constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
 constexpr auto ValidateTransferDuringInstall = true;
 constexpr auto UsePSRAMForType2 = false;
+constexpr auto UseSingleChannelConfigurationForType2 = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
@@ -80,7 +81,13 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 using FallbackMemory = SDCardAsRam<TheSDInterface >;
 template<TargetMCU mcu> struct BackingMemoryStorage final { using Type = FallbackMemory; };
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final { using Type = OnboardPSRAMBlock; };
-template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final { using Type = conditional_t<UsePSRAMForType2 , OnboardPSRAMBlock , FallbackMemory>; };
+template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final {
+#ifdef CHIPSET_TYPE2
+    using Type = conditional_t<UsePSRAMForType2 , Type2MemoryBlock<UseSingleChannelConfigurationForType2>, FallbackMemory>;
+#else
+    using Type = conditional_t<UsePSRAMForType2 , OnboardPSRAMBlock , FallbackMemory>;
+#endif
+};
 
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
 

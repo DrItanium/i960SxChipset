@@ -35,12 +35,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "TaggedCacheAddress.h"
 /**
- * @brief Interface to the memory connected to the chipset
- * @tparam enablePin The pin that is used to signal chip usage
- * @tparam sel0 The lowest pin used to select the target device
- * @tparam sel1 The middle pin used to select the target device
- * @tparam sel2 The upper pin used to select the target device
+ * @brief Interface to the memory connected to the chipset (type2 version)
  */
+template<bool SingleChannelConfiguration = false>
 class Type2MemoryBlock {
 public:
     static constexpr auto EnablePin = i960Pinout::PSRAM_EN;
@@ -74,13 +71,21 @@ private:
         return UDR1;
     }
     static inline SplitWord16 dualTransfer(byte lower, byte upper) noexcept {
-        while (!(UCSR1A & (1 << UDRE1)));
-        SPDR = lower;
-        UDR1 = upper;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << RXC1)));
-        return SplitWord16{SPDR, UDR1};
+        if constexpr (SingleChannelConfiguration) {
+            auto a = transmitByte(lower);
+            auto b = transmitByte(upper);
+            return SplitWord16{a, b};
+        } else {
+            while (!(UCSR1A & (1 << UDRE1)));
+            SPDR = lower;
+            UDR1 = upper;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            auto a = SPDR;
+            while (!(UCSR1A & (1 << RXC1)));
+            auto b = UDR1;
+            return SplitWord16{a, b};
+        }
     }
     static inline SplitWord16 dualTransferMirrored(byte value) noexcept { return dualTransfer(value, value); }
     enum class OperationKind {
@@ -90,12 +95,57 @@ private:
 
     template<byte opcode, OperationKind kind>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
-        // unlike a single channel design, the dual channel design only stores half the bytes per chip.
-        // Thus we need to make sure the address actually reflects this. For instance, if we are transferring 16 bytes then
-        // 8 bytes to go one side and 8 byte to the other. The difference is that the address in question must map to a real 23 bit address
         if (capacity == 0) {
             return 0;
         }
+        if constexpr (SingleChannelConfiguration) {
+
+            // unlike a single channel design, the dual channel design only stores half the bytes per chip.
+            // Thus we need to make sure the address actually reflects this. For instance, if we are transferring 16 bytes then
+            // 8 bytes to go one side and 8 byte to the other. The difference is that the address in question must map to a real 23 bit address
+
+            // since we are commiting half the bytes to each chip we have to treat the address as though we are only commiting half the capacity
+            // so shift right by 1 to reflect this change
+            auto realAddress = address;
+            // the realCapacity is the number of bytes stored to each chip in the transaction
+            auto realCapacity = capacity;
+            PSRAMBlockAddress curr(realAddress);
+            SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
+            // computing the end address is a little strange with a dual channel setup. It is realAddress + realCapacity because only
+            // half the bytes go to a given chip. This is why we can get 16 megabytes of storage out of a 23 bit address
+            PSRAMBlockAddress end((realAddress) + realCapacity);
+            auto numBytesToSecondChip = end.getOffset();
+            auto localToASingleChip = curr.getIndex() == end.getIndex();
+            // the only part where we have to be careful is when returning the number of bytes committed.
+            // It will always be double the number computed here, so just double the number right now
+            auto numBytesToFirstChip = (localToASingleChip ? realCapacity : (realCapacity - numBytesToSecondChip));
+
+            digitalWrite<EnablePin, LOW>();
+            (void)transmitByte(opcode);
+            (void)transmitByte(curr.bytes_[2]);
+            (void)transmitByte(curr.bytes_[1]);
+            (void)transmitByte(curr.bytes_[0]);
+            // at this point just iterate through and transfer all of the bytes, hopefully the total number of bytes is even
+            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
+                // interleave bytes, that way it is easier to access this stuff
+                if constexpr (kind == OperationKind::Write) {
+                    (void)transmitByte(buf[i]);
+                } else if constexpr (kind == OperationKind::Read) {
+                    buf[i] = transmitByte(0);
+                } else {
+                    static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
+                }
+            }
+            digitalWrite<EnablePin, HIGH>();
+            // we cannot
+            SPI.endTransaction();
+            return numBytesToFirstChip;
+        } else {
+
+        // unlike a single channel design, the dual channel design only stores half the bytes per chip.
+        // Thus we need to make sure the address actually reflects this. For instance, if we are transferring 16 bytes then
+        // 8 bytes to go one side and 8 byte to the other. The difference is that the address in question must map to a real 23 bit address
+
         // since we are commiting half the bytes to each chip we have to treat the address as though we are only commiting half the capacity
         // so shift right by 1 to reflect this change
         auto realAddress = address >> 1;
@@ -136,6 +186,7 @@ private:
         // we cannot
         SPI.endTransaction();
         return numBytesToFirstChip;
+        }
     }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
@@ -150,23 +201,37 @@ public:
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
+            pinMode(EnablePin, OUTPUT);
+            pinMode(EnablePin1, OUTPUT);
+            digitalWrite<EnablePin, HIGH>();
+            digitalWrite<EnablePin1, HIGH>();
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-            digitalWrite<EnablePin, LOW>();
-            digitalWrite<EnablePin1, LOW>();
-            (void)dualTransferMirrored(0x66);
-            digitalWrite<EnablePin1, HIGH>();
-            digitalWrite<EnablePin, HIGH>();
-            __builtin_avr_nops(4);
-            digitalWrite<EnablePin, LOW>();
-            digitalWrite<EnablePin1, LOW>();
-            (void) dualTransferMirrored(0x99);
-            digitalWrite<EnablePin1, HIGH>();
-            digitalWrite<EnablePin, HIGH>();
+            if constexpr (SingleChannelConfiguration) {
+                digitalWrite<EnablePin, LOW>();
+                digitalWrite<EnablePin1, LOW>();
+                (void) dualTransferMirrored(0x66);
+                digitalWrite<EnablePin1, HIGH>();
+                digitalWrite<EnablePin, HIGH>();
+                __builtin_avr_nops(4);
+                digitalWrite<EnablePin, LOW>();
+                digitalWrite<EnablePin1, LOW>();
+                (void) dualTransferMirrored(0x99);
+                digitalWrite<EnablePin1, HIGH>();
+                digitalWrite<EnablePin, HIGH>();
+            } else {
+                digitalWrite<EnablePin, LOW>();
+                (void) transmitByte(0x66);
+                digitalWrite<EnablePin, HIGH>();
+                __builtin_avr_nops(4);
+                digitalWrite<EnablePin, LOW>();
+                (void) transmitByte(0x99);
+                digitalWrite<EnablePin, HIGH>();
+            }
             SPI.endTransaction();
         }
     }
 };
-using OnboardPSRAMBlock = Type2MemoryBlock;
+using OnboardPSRAMBlock = Type2MemoryBlock<>;
 #endif
 #endif //SXCHIPSET_TYPE2PSRAMCHIP_H
