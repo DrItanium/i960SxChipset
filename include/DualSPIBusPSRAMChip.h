@@ -73,6 +73,16 @@ private:
         while (!(UCSR1A & (1 << RXC1)));
         return UDR1;
     }
+    static inline SplitWord16 dualTransfer(byte lower, byte upper) noexcept {
+        while (!(UCSR1A & (1 << UDRE1)));
+        SPDR = lower;
+        UDR1 = upper;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << RXC1)));
+        return SplitWord16{SPDR, UDR1};
+    }
+    static inline SplitWord16 dualTransferMirrored(byte value) noexcept { return dualTransfer(value, value); }
     enum class OperationKind {
         Write,
         Read,
@@ -85,63 +95,30 @@ private:
         }
         PSRAMBlockAddress curr(address);
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
+        //(void)UDR1;
+        //(void)UDR1;
+        PSRAMBlockAddress end(address + capacity);
+        auto numBytesToSecondChip = end.getOffset();
+        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin1, LOW>();
-        SPDR = opcode;
-        UDR1 = opcode;
-        asm volatile("nop");
-        PSRAMBlockAddress end(address + capacity);
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << RXC1)));
-        (void)UDR1;
-
-        SPDR = curr.bytes_[2];
-        UDR1 = curr.bytes_[2];
-        asm volatile("nop");
-        auto numBytesToSecondChip = end.getOffset();
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << RXC1)));
-        (void)UDR1;
-
-        SPDR = curr.bytes_[1];
-        UDR1 = curr.bytes_[1];
-        asm volatile("nop");
-        auto localToASingleChip = curr.getIndex() == end.getIndex();
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << RXC1)));
-        (void)UDR1;
-
-        SPDR = curr.bytes_[0];
-        UDR1 = curr.bytes_[0];
-        asm volatile("nop");
-        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        while (!(UCSR1A & (1 << RXC1)));
-        (void)UDR1;
+        (void)dualTransferMirrored(opcode);
+        (void)dualTransferMirrored(curr.bytes_[2]);
+        (void)dualTransferMirrored(curr.bytes_[1]);
+        (void)dualTransferMirrored(curr.bytes_[0]);
         // okay so when we are using the separate SPI bus we need to interleaved operations, we are interleaving bytes
         // so even bytes go to bus0 and odd bytes go to bus1
         if constexpr (kind == OperationKind::Write) {
             for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
                 // interleave bytes, that way it is easier to access this stuff
-                UDR1 = buf[i+1];
-                SPDR = buf[i];
-                asm volatile("nop");
-                while (!(SPSR & _BV(SPIF))) ; // wait
-                while (!(UCSR1A & (1 << RXC1)));
-                (void)UDR1;
-        //        (void)UDR1;
+                (void)dualTransfer(buf[i], buf[i+1]);
             }
         } else if constexpr (kind == OperationKind::Read) {
             for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
-                UDR1 = 0;
-                SPDR = 0;
-                asm volatile("nop");
-                while (!(SPSR & _BV(SPIF))) ; // wait
-                while (!(UCSR1A & (1 << RXC1)));
-                buf[i] = SPDR;
-                buf[i+1] = UDR1;
-         //       (void)UDR1;
-         //       (void)UDR1;
+                auto result = dualTransferMirrored(0);
+                buf[i] = result.getLowerHalf();
+                buf[i+1] = result.getUpperHalf();
             }
         } else {
             static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
