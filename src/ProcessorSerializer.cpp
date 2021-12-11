@@ -66,7 +66,9 @@ ProcessorInterface::begin() noexcept {
             write8<IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0000'1000) ;
             write8<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0000'1000) ;
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+            write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+            write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
             updateTargetFunctions<true>();
             updateTargetFunctions<false>();
