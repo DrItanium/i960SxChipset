@@ -388,6 +388,7 @@ void setupDispatchTable() noexcept {
 }
 void setupChipsetType1() noexcept {
 #ifdef CHIPSET_TYPE1
+    Serial.println(F("Bringing up type1 specific aspects!"));
     setupPins(OUTPUT,
               i960Pinout::SPI_OFFSET0,
               i960Pinout::SPI_OFFSET1,
@@ -416,17 +417,26 @@ void setupSecondSPIBus() noexcept {
 }
 void setupChipsetType2() noexcept {
 #ifdef CHIPSET_TYPE2
-    setupPins(INPUT_PULLUP,
-              i960Pinout::INT_EN0,
-              i960Pinout::INT_EN1,
-              i960Pinout::INT_EN2,
-              i960Pinout::INT_EN3);
-    setupPins(OUTPUT,
-              i960Pinout::PSRAM_EN,
-              i960Pinout::PSRAM_EN1);
-    digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-    digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
+    static_assert(i960Pinout::INT_EN0 != i960Pinout::INT_EN1);
+    static_assert(i960Pinout::INT_EN0 != i960Pinout::INT_EN2);
+    static_assert(i960Pinout::INT_EN0 != i960Pinout::INT_EN3);
+    static_assert(i960Pinout::INT_EN1 != i960Pinout::INT_EN0);
+    static_assert(i960Pinout::INT_EN1 != i960Pinout::INT_EN2);
+    static_assert(i960Pinout::INT_EN1 != i960Pinout::INT_EN3);
+    static_assert(i960Pinout::INT_EN2 != i960Pinout::INT_EN0);
+    static_assert(i960Pinout::INT_EN2 != i960Pinout::INT_EN1);
+    static_assert(i960Pinout::INT_EN2 != i960Pinout::INT_EN3);
+    static_assert(i960Pinout::INT_EN3 != i960Pinout::INT_EN0);
+    static_assert(i960Pinout::INT_EN3 != i960Pinout::INT_EN1);
+    static_assert(i960Pinout::INT_EN3 != i960Pinout::INT_EN2);
+    Serial.println(F("Bringing up type2 specific aspects!"));
     setupSecondSPIBus();
+    pinMode(i960Pinout::INT_EN2, INPUT_PULLUP);
+    pinMode(i960Pinout::INT_EN3, INPUT_PULLUP);
+    digitalWrite<i960Pinout::INT_EN2, HIGH>();
+    digitalWrite<i960Pinout::INT_EN3, HIGH>();
+    pinMode(i960Pinout::PSRAM_EN1, OUTPUT);
+    digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
 #endif
 }
 
@@ -444,6 +454,10 @@ void setup() {
     // always do this first to make sure that we put the i960 into reset regardless of target
     pinMode(i960Pinout::Reset960, OUTPUT) ;
     digitalWrite<i960Pinout::Reset960, LOW>();
+    Serial.begin(115200);
+    while (!Serial) {
+        delay(10);
+    }
     // seed random on startup to be on the safe side from analog pin A0, A1, A2, and A3
     randomSeed(analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3));
     // before we do anything else, configure as many pins as possible and then

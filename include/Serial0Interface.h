@@ -118,10 +118,7 @@ private:
     }
 public:
     static void begin() noexcept {
-        Serial.begin(115200);
-        while(!Serial) {
-            delay(10);
-        }
+        // this is done ahead of time
         Serial.println(F("CONSOLE UP!"));
     }
 
