@@ -85,8 +85,6 @@ private:
         }
         PSRAMBlockAddress curr(address);
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        (void)UDR1;
-        (void)UDR1;
         digitalWrite<EnablePin, LOW>();
         digitalWrite<EnablePin1, LOW>();
         SPDR = opcode;
@@ -94,18 +92,25 @@ private:
         asm volatile("nop");
         PSRAMBlockAddress end(address + capacity);
         while (!(SPSR & _BV(SPIF))) ; // wait
+        while (!(UCSR1A & (1 << RXC1)));
+        (void)UDR1;
+
         SPDR = curr.bytes_[2];
         UDR1 = curr.bytes_[2];
         asm volatile("nop");
         auto numBytesToSecondChip = end.getOffset();
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << RXC1)));
+        (void)UDR1;
+
         SPDR = curr.bytes_[1];
         UDR1 = curr.bytes_[1];
         asm volatile("nop");
         auto localToASingleChip = curr.getIndex() == end.getIndex();
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << RXC1)));
+        (void)UDR1;
+
         SPDR = curr.bytes_[0];
         UDR1 = curr.bytes_[0];
         asm volatile("nop");
@@ -113,27 +118,30 @@ private:
         while (!(SPSR & _BV(SPIF))) ; // wait
         while (!(UCSR1A & (1 << RXC1)));
         (void)UDR1;
-        (void)UDR1;
         // okay so when we are using the separate SPI bus we need to interleaved operations, we are interleaving bytes
         // so even bytes go to bus0 and odd bytes go to bus1
         if constexpr (kind == OperationKind::Write) {
             for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
                 // interleave bytes, that way it is easier to access this stuff
-                SPDR = buf[i];
                 UDR1 = buf[i+1];
+                SPDR = buf[i];
                 asm volatile("nop");
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 while (!(UCSR1A & (1 << RXC1)));
+                (void)UDR1;
+        //        (void)UDR1;
             }
         } else if constexpr (kind == OperationKind::Read) {
             for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; i+=2) {
-                SPDR = 0;
                 UDR1 = 0;
+                SPDR = 0;
                 asm volatile("nop");
                 while (!(SPSR & _BV(SPIF))) ; // wait
-                buf[i] = SPDR;
                 while (!(UCSR1A & (1 << RXC1)));
+                buf[i] = SPDR;
                 buf[i+1] = UDR1;
+         //       (void)UDR1;
+         //       (void)UDR1;
             }
         } else {
             static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
