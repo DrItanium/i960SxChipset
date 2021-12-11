@@ -152,28 +152,17 @@ public:
             initialized_ = true;
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-
-#if 1
-            digitalWrite<i960Pinout::PSRAM_EN, LOW>();
-            digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
+            digitalWrite<EnablePin, LOW>();
+            digitalWrite<EnablePin1, LOW>();
             (void)dualTransferMirrored(0x66);
-            digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
-            digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+            digitalWrite<EnablePin1, HIGH>();
+            digitalWrite<EnablePin, HIGH>();
             __builtin_avr_nops(4);
-            digitalWrite<i960Pinout::PSRAM_EN, LOW>();
-            digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
+            digitalWrite<EnablePin, LOW>();
+            digitalWrite<EnablePin1, LOW>();
             (void) dualTransferMirrored(0x99);
-            digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
-            digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-#else
-            digitalWrite<i960Pinout::PSRAM_EN, LOW>();
-            transmitByte(0x66);
-            digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-            delay(1);
-            digitalWrite<i960Pinout::PSRAM_EN, LOW>();
-            transmitByte(0x66);
-            digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-#endif
+            digitalWrite<EnablePin1, HIGH>();
+            digitalWrite<EnablePin, HIGH>();
             SPI.endTransaction();
         }
     }
