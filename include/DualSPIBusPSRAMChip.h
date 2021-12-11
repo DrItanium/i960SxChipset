@@ -102,8 +102,8 @@ private:
         if (numBytesToFirstChip == 0) {
             return 0;
         }
+#if 1
         digitalWrite<EnablePin, LOW>();
-#if 0
         digitalWrite<EnablePin1, LOW>();
         (void)dualTransferMirrored(opcode);
         (void)dualTransferMirrored(curr.bytes_[2]);
@@ -126,7 +126,9 @@ private:
             static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
         }
         digitalWrite<EnablePin1, HIGH>();
+        digitalWrite<EnablePin, HIGH>();
 #else
+        digitalWrite<EnablePin, LOW>();
         (void)transmitByte(opcode);
         (void)transmitByte(curr.bytes_[2]);
         (void)transmitByte(curr.bytes_[1]);
@@ -140,8 +142,8 @@ private:
                 static_assert(false_v<decltype(kind)>, "OperationKind must be read or write!");
             }
         }
-#endif
         digitalWrite<EnablePin, HIGH>();
+#endif
         // we cannot
         SPI.endTransaction();
         return numBytesToFirstChip;
@@ -162,28 +164,15 @@ public:
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
 
-#if 0
+#if 1
             digitalWrite<i960Pinout::PSRAM_EN, LOW>();
             digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
-
-            SPDR = 0x66;
-            UDR1 = 0x66;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            while (!(UCSR1A & (1 << RXC1)));
+            (void)dualTransferMirrored(0x66);
             digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
             digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-            (void)UDR1;
-            (void)UDR1;
             digitalWrite<i960Pinout::PSRAM_EN, LOW>();
             digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
-            SPDR = 0x99;
-            UDR1 = 0x99;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            while (!(UCSR1A & (1 << RXC1)));
-            (void)UDR1;
-            (void)UDR1;
+            (void) dualTransferMirrored(0x99);
             digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
             digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
 #else
