@@ -162,6 +162,7 @@ public:
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
 
+#if 0
             digitalWrite<i960Pinout::PSRAM_EN, LOW>();
             digitalWrite<i960Pinout::PSRAM_EN1, LOW>();
 
@@ -181,10 +182,19 @@ public:
             asm volatile("nop");
             while (!(SPSR & _BV(SPIF))) ; // wait
             while (!(UCSR1A & (1 << RXC1)));
+            (void)UDR1;
+            (void)UDR1;
             digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
             digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-            (void)UDR1;
-            (void)UDR1;
+#else
+            digitalWrite<i960Pinout::PSRAM_EN, LOW>();
+            transmitByte(0x66);
+            digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+            delay(1);
+            digitalWrite<i960Pinout::PSRAM_EN, LOW>();
+            transmitByte(0x66);
+            digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+#endif
             SPI.endTransaction();
         }
     }
