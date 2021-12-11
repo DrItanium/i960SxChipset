@@ -62,7 +62,7 @@ constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
 constexpr auto ValidateTransferDuringInstall = true;
-constexpr auto UsePSRAMForType2 = true;
+constexpr auto UsePSRAMForType2 = false;
 constexpr auto UseSingleChannelConfigurationForType2 = true;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
