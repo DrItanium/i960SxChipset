@@ -61,7 +61,7 @@ constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
-constexpr auto ValidateTransferDuringInstall = true;
+constexpr auto ValidateTransferDuringInstall = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
