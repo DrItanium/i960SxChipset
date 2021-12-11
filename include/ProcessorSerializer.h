@@ -526,6 +526,7 @@ public:
             case 0b0110:
                 updateLowest8<offsetMask>();
                 updateHighest8();
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0111:
                 updateHighest8();
