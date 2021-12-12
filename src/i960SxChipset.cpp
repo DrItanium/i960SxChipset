@@ -90,11 +90,25 @@ template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final {
 };
 
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
-
+constexpr auto computeCacheLineSize() noexcept {
+   if constexpr (TargetBoard::onAtmega1284p_Type1())  {
+       return 6;
+   } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+        if constexpr (UsePSRAMForType2) {
+            return 6;
+        } else {
+            // sdcard as ram means that we want to increase the hit rate as much as possible even if it slows down misses
+            // the sdcard is so damn slow!
+            return 7;
+        }
+   } else {
+       return 6;
+   }
+}
 //using OnboardPSRAMBlock = ::
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto CacheLineSize = 6;
+constexpr auto CacheLineSize = computeCacheLineSize();
 constexpr auto CacheSize = 8192;
 //using L1Cache = CacheInstance_t<EightWayTreePLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 //using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
