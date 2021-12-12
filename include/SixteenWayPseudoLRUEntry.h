@@ -83,7 +83,7 @@ private:
                 _BV(static_cast<uint16_t>(12)),
                 _BV(static_cast<uint16_t>(13)),
                 _BV(static_cast<uint16_t>(14)),
-                _BV(static_cast<uint16_t>(15)),
+                static_cast<uint16_t>(_BV(static_cast<uint16_t>(15))),
         };
         mruBits_.wholeValue_ |= lookup[index];
         if (mruBits_.wholeValue_ == 0xFFFF) {
