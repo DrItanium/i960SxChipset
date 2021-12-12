@@ -116,8 +116,8 @@ public:
     bool setRelativePosition(int32_t pos) noexcept { return backingStore_.seekCur(pos); }
     bool seekToEnd() noexcept { return backingStore_.seekEnd(); }
     bool seekToBeginning() noexcept { return backingStore_.seekSet(0); }
-    bool getWriteError() const noexcept { return backingStore_.getWriteError(); }
-    auto getError() const noexcept { return backingStore_.getError(); }
+    [[nodiscard]] bool getWriteError() const noexcept { return backingStore_.getWriteError(); }
+    [[nodiscard]] auto getError() const noexcept { return backingStore_.getError(); }
     void flush() noexcept { backingStore_.flush(); }
     void sync() noexcept { backingStore_.sync(); }
     bool isBusy() noexcept { return backingStore_.isBusy(); }
