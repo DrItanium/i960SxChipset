@@ -99,7 +99,7 @@ constexpr auto computeCacheLineSize() noexcept {
         } else {
             // sdcard as ram means that we want to increase the hit rate as much as possible even if it slows down misses
             // the sdcard is so damn slow!
-            return 7;
+            return 6;
         }
    } else {
        return 6;
