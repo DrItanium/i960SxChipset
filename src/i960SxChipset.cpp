@@ -99,7 +99,7 @@ constexpr auto computeCacheLineSize() noexcept {
         } else {
             // sdcard as ram means that we want to increase the hit rate as much as possible even if it slows down misses
             // the sdcard is so damn slow!
-            return 7;
+            return 6;
         }
    } else {
        return 6;
@@ -112,7 +112,8 @@ constexpr auto CacheLineSize = computeCacheLineSize();
 constexpr auto CacheSize = 8192;
 //using L1Cache = CacheInstance_t<EightWayTreePLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 //using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
-using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
+//using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
+using L1Cache = CacheInstance_t<SixteenWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 L1Cache theCache;
 
 //template<template<auto, auto, auto, typename> typename L,

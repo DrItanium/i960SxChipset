@@ -47,7 +47,7 @@ public:
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i]->matches(theAddress)) {
                 updateFlags(i);
-                return ways_[i];
+                return *ways_[i];
             } else if (firstInvalid == NumberOfWays && !ways_[i]->isValid()) {
                 firstInvalid = i;
             }
@@ -97,6 +97,7 @@ private:
             return LRUTable[mruBits_.bytes[0]];
         }
     }
+public:
     [[nodiscard]] constexpr bool valid() const noexcept {
         for (auto *a : ways_) {
             if (!a) {
