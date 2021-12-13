@@ -67,79 +67,10 @@ public:
         byte bytes_[4];
     };
 private:
-    enum class InterleavedMultibyteTransmissionStyle : byte {
-        Mirrored = 0,
-        SPI0_SPI1,
-        SPI1_SPI0,
-        Count, // must be last
-    };
-    template<InterleavedMultibyteTransmissionStyle style>
-    static constexpr bool ValidTransmissionStyle_v = static_cast<byte>(style) < static_cast<byte>(InterleavedMultibyteTransmissionStyle::Count);
     static inline void transmitByte(byte value) noexcept {
         SPDR = value;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
-    }
-    static inline byte mspimTransfer(byte value) noexcept {
-        while (!(UCSR1A & (1 << UDRE1)));
-        UDR1 = value;
-        while (!(UCSR1A & (1 << RXC1)));
-        return UDR1;
-    }
-    static inline void transmitByte_Bus2(byte value) noexcept {
-        UDR1 = value;
-        asm volatile ("nop");
-        while (!(UCSR1A & (1 << UDRE1)));
-    }
-    static inline void transmitByte_Interleaved(byte value) noexcept {
-        UDR1 = value;
-        SPDR = value;
-        asm volatile ("nop");
-        while (!(UCSR1A & (1 << UDRE1)));
-        while (!(SPSR & (1 << SPIF)));
-    }
-    static inline void transmitTwoByte(uint8_t first, uint8_t second) noexcept {
-        SPDR = first;
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF)));
-        SPDR = second;
-        asm volatile ("nop");
-        while (!(SPSR & _BV(SPIF)));
-    }
-    static inline void transmitTwoByte_Bus2(uint8_t first, uint8_t second) noexcept {
-        UDR1 = first;
-        UDR1 = second;
-        asm volatile ("nop");
-        while (!(UCSR1A & (1 << UDRE1)));
-    }
-    template<InterleavedMultibyteTransmissionStyle style>
-    static inline void transmitTwoByte_Interleaved(uint8_t first, uint8_t second) noexcept {
-        static_assert(ValidTransmissionStyle_v<style>, "Unimplemented or illegal transmission style specified");
-        if constexpr (style == InterleavedMultibyteTransmissionStyle::Mirrored) {
-            UDR1 = first;
-            SPDR = first;
-            UDR1 = second;
-            asm volatile ("nop");
-            while (!(SPSR & _BV(SPIF)));
-            SPDR = second;
-            asm volatile ("nop");
-            while (!(SPSR & _BV(SPIF)));
-            while (!(UCSR1A & (1 << UDRE1)));
-        } else if constexpr (style == InterleavedMultibyteTransmissionStyle::SPI0_SPI1) {
-            SPDR = first;
-            UDR1 = second;
-            asm volatile ("nop");
-            while (!(SPSR & _BV(SPIF)));
-            while (!(UCSR1A & (1 << UDRE1)));
-        } else if constexpr (style == InterleavedMultibyteTransmissionStyle::SPI1_SPI0) {
-            UDR1 = first;
-            SPDR = second;
-            asm volatile ("nop");
-            while (!(SPSR & _BV(SPIF)));
-            while (!(UCSR1A & (1 << UDRE1)));
-        } else {
-            // do nothing
-        }
     }
     enum class OperationKind {
         Write,
@@ -225,16 +156,13 @@ public:
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-#ifdef CHIPSET_TYPE1
     template<byte index>
     static void doWrites() noexcept {
         digitalWrite<Select0, (index & (1 << 0)) ? HIGH : LOW>();
         digitalWrite<Select1, (index & (1 << 1)) ? HIGH : LOW>();
         digitalWrite<Select2, (index & (1 << 2)) ? HIGH : LOW>();
     }
-#endif
     static void setChipId(byte index) noexcept {
-#ifdef CHIPSET_TYPE1
         using Action = void(*)();
         static constexpr Action Operations[8] {
             doWrites<0>, doWrites<1>, doWrites<2>, doWrites<3>,
@@ -244,7 +172,6 @@ private:
             Operations[index & 0b111]();
             currentIndex_ = index & 0b111;
         }
-#endif
     }
 public:
     static void begin() noexcept {
@@ -269,9 +196,7 @@ public:
         }
     }
 private:
-#ifdef CHIPSET_TYPE1
     static inline byte currentIndex_ = 0xFF;
-#endif
 };
 
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
