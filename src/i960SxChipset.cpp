@@ -371,9 +371,6 @@ void installBootImage() noexcept {
                 Serial.print(F("."));
             }
         }
-#ifdef CHIPSET_TYPE1
-#else
-#endif
         Serial.println();
         Serial.println(F("Transfer complete!"));
         // make sure we close the file before destruction
