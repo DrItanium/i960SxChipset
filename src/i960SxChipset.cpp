@@ -61,8 +61,8 @@ constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
-constexpr auto ValidateTransferDuringInstall = true;
 constexpr auto UsePSRAMForType2 = false;
+constexpr auto ValidateTransferDuringInstall = TargetBoard::onAtmega1284p_Type2() && UsePSRAMForType2;
 constexpr auto UseSingleChannelConfigurationForType2 = true;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
