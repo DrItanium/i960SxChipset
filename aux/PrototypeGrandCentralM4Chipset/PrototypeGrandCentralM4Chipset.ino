@@ -201,11 +201,29 @@ public:
         // setup the data lines for output since we are reading a value from main memory
         write16(IOExpanderAddress::DataLines, MCP23x17Registers::IODIR, 0);
     }
+    static void setDirection(IOExpanderAddress addr, uint16_t directionBits) noexcept {
+        write16(addr, MCP23x17Registers::IODIR, directionBits);
+    }
+    static void begin() noexcept {
+        outputPin(GPIO_CS);
+        digitalWrite(GPIO_CS, HIGH);
+        SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
+        // first, set the hardware enable bits to make sure all of the others are set correctly
+        write8(IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, 0x08);
+        write8(IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, 0x08);
+        write8(IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, 0x08);
+        setDirection(IOExpanderAddress::DataLines, 0xFFFF);
+        setDirection(IOExpanderAddress::Lower16Lines, 0xFFFF);
+        setDirection(IOExpanderAddress::Upper16Lines, 0xFFFF);
+        write16(IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, 0);
+        // enable address lookup bits
+        write16(IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, 0xFFFF);
+        write16(IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, 0xFFFF);
+        write16(IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, 0);
+        write16(IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, 0);
+        SPI.endTransaction();
+    }
 };
-void
-setupIOExpanders() noexcept {
-
-}
 
 Address
 getAddress() noexcept {
@@ -242,7 +260,6 @@ void setup() {
     digitalWrite(RESET960, LOW);
     SPI.begin();
     setupConsole();
-    setupSDCard();
     inputPin(MCU_FAIL);
     inputPin(BLAST);
     inputPin(DEN);
@@ -258,17 +275,17 @@ void setup() {
     outputPin(PSRAMEN1);
     outputPin(PSRAMEN2);
     outputPin(PSRAMEN3);
-    outputPin(GPIO_CS);
     outputPin(MCU_READY);
 
     digitalWrite(PSRAMEN0, HIGH);
     digitalWrite(PSRAMEN1, HIGH);
     digitalWrite(PSRAMEN2, HIGH);
     digitalWrite(PSRAMEN3, HIGH);
-    digitalWrite(GPIO_CS, HIGH);
     digitalWrite(MCU_READY, HIGH);
-    setupIOExpanders();
-
+    IOExpander::begin();
+    setupSDCard();
+    /// @todo insert code for setting up other devices here
+    delay(1000);
     digitalWrite(RESET960, HIGH);
     // i960 is active after this point
     while (digitalRead(MCU_FAIL) == LOW) {
