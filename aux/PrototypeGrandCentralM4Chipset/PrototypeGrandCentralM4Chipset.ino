@@ -78,49 +78,101 @@ struct IOExpander final {
     IOExpander& operator=(IOExpander const&) = delete;
     IOExpander& operator=(IOExpander &&) = delete;
 public:
-    static uint16_t read16(byte opcode, byte address) noexcept {
+    enum class MCP23x17Registers : byte {
+        IODIRA = 0,
+        IODIRB,
+        IPOLA,
+        IPOLB,
+        GPINTENA,
+        GPINTENB,
+        DEFVALA,
+        DEFVALB,
+        INTCONA,
+        INTCONB,
+        _IOCONA,
+        _IOCONB,
+        GPPUA,
+        GPPUB,
+        INTFA,
+        INTFB,
+        INTCAPA,
+        INTCAPB,
+        GPIOA,
+        GPIOB,
+        OLATA,
+        OLATB,
+        OLAT = OLATA,
+        GPIO = GPIOA,
+        IOCON = _IOCONA,
+        IODIR = IODIRA,
+        INTCAP = INTCAPA,
+        INTF = INTFA,
+        GPPU = GPPUA,
+        INTCON = INTCONA,
+        DEFVAL = DEFVALA,
+        GPINTEN = GPINTENA,
+        IPOL = IPOLA,
+    };
+    enum class IOExpanderAddress : byte {
+        DataLines = 0b0000,
+        Lower16Lines = 0b0010,
+        Upper16Lines = 0b0100,
+        MemoryCommitExtras = 0b0110,
+        OtherDevice0 = 0b1000,
+        OtherDevice1 = 0b1010,
+        OtherDevice2 = 0b1100,
+        OtherDevice3 = 0b1110,
+    };
+    static constexpr byte generateReadOpcode(IOExpanderAddress address) noexcept {
+        return 0b01000001 | static_cast<uint8_t>(address);
+    }
+    static constexpr byte generateWriteOpcode(IOExpanderAddress address) noexcept {
+        return 0b01000000 | static_cast<uint8_t>(address);
+    }
+    static uint16_t read16(IOExpanderAddress addr, MCP23x17Registers opcode) noexcept {
         SplitWord16 ret{0};
         digitalWrite(GPIO_CS, LOW);
-        SPI.transfer(opcode);
-        SPI.transfer(address);
+        SPI.transfer(generateReadOpcode(addr));
+        SPI.transfer(static_cast<byte>(opcode));
         ret.setLowerHalf(SPI.transfer(0));
         ret.setUpperHalf(SPI.transfer(0));
         digitalWrite(GPIO_CS, HIGH);
         return ret.getValue();
     }
-    static uint8_t read8(byte opcode, byte address) noexcept {
+    static uint8_t read8(IOExpanderAddress addr, MCP23x17Registers opcode) noexcept {
         digitalWrite(GPIO_CS, LOW);
-        SPI.transfer(opcode);
-        SPI.transfer(address);
+        SPI.transfer(generateReadOpcode(addr));
+        SPI.transfer(static_cast<byte>(opcode));
         auto result = SPI.transfer(0);
         digitalWrite(GPIO_CS, HIGH);
         return result;
     }
 private:
-    static void write16(byte opcode, byte address, SplitWord16 value) noexcept {
+    static void write16(IOExpanderAddress address, MCP23x17Registers opcode, SplitWord16 value) noexcept {
         digitalWrite(GPIO_CS, LOW);
-        SPI.transfer(opcode);
-        SPI.transfer(address);
+        SPI.transfer(generateWriteOpcode(address));
+        SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(value.getLowerHalf());
         SPI.transfer(value.getUpperHalf());
         digitalWrite(GPIO_CS, HIGH);
     }
 public:
-    static void write16(byte opcode, byte address, uint16_t value) noexcept {
-        write16(opcode, address, SplitWord16{value});
+    static void write16(IOExpanderAddress address, MCP23x17Registers opcode, uint16_t value) noexcept {
+        write16(address, opcode, SplitWord16{value});
     }
-    static void write8(byte opcode, byte address, uint8_t value) noexcept {
+    static void write8(IOExpanderAddress address, MCP23x17Registers opcode, uint8_t value) noexcept {
         digitalWrite(GPIO_CS, LOW);
-        SPI.transfer(opcode);
-        SPI.transfer(address);
+        SPI.transfer(generateWriteOpcode(address));
+        SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(value);
         digitalWrite(GPIO_CS, HIGH);
     }
 
     static uint16_t getDataLines() noexcept {
-        return 0;
+        return read16(IOExpanderAddress::DataLines, MCP23x17Registers::GPIO);
     }
     static void setDataLines(uint16_t value) noexcept {
+        write16(IOExpanderAddress::DataLines, MCP23x17Registers::GPIO, value);
         // do nothing right now
     }
 };
