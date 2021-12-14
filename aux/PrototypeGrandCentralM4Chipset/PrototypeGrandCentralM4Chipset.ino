@@ -14,7 +14,10 @@ void setup() {
     while(!Serial) {
         delay(100);
     }
-    SD.begin(SDCARD_SS_PIN);
+    while (!SD.begin(SDCARD_SS_PIN)) {
+        Serial.println("NO SD CARD FOUND...TRYING AGAIN IN 1 SECOND!");
+        delay(1000);
+    }
     SPI.begin();
     // put your setup code here, to run once:
     pinMode(PSRAMEN0, OUTPUT);
