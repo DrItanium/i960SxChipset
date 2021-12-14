@@ -116,6 +116,13 @@ public:
         SPI.transfer(value);
         digitalWrite(GPIO_CS, HIGH);
     }
+
+    static uint16_t getDataLines() noexcept {
+        return 0;
+    }
+    static void setDataLines(uint16_t value) noexcept {
+        // do nothing right now
+    }
 };
 void
 setupIOExpanders() noexcept {
@@ -138,6 +145,27 @@ getAddress() noexcept {
 }
 inline bool isReadOperation() noexcept {
     return digitalRead(WR) == LOW;
+}
+void pulse(byte index, decltype(LOW) to = LOW, decltype(HIGH) from = HIGH) noexcept {
+    digitalWrite(index, to);
+    digitalWrite(index, from);
+}
+bool transactionComplete() noexcept {
+    auto done = digitalRead(BLAST) == LOW;
+    pulse(MCU_READY);
+    return done;
+}
+enum class ByteEnablePattern : byte {
+    Full16 = 0b00,
+    Upper8 = 0b01,
+    Lower8 = 0b10,
+    Error = 0b11,
+};
+ByteEnablePattern getByteEnablePattern() noexcept {
+    return static_cast<ByteEnablePattern>(
+            static_cast<byte>(digitalRead(BE0) == HIGH ? 0b01 : 0b00) |
+            static_cast<byte>(digitalRead(BE1) == HIGH ? 0b10 : 0b00)
+            );
 }
 
 void setup() {
@@ -193,8 +221,28 @@ void loop() {
     if (isReadOperation()) {
         // is a read operation
         setupDataLinesForRead();
+        do {
+            auto pattern = getByteEnablePattern();
+            /// @todo get value from a data source
+            IOExpander::setDataLines(0);
+            if (transactionComplete()) {
+                break;
+            } else {
+                targetAddress += 2;
+            }
+        } while (true);
     } else {
         // is a write operation
         setupDataLinesForWrite();
+        do {
+            /// @todo set value to data source
+            auto pattern = getByteEnablePattern();
+            auto valueToCommit = IOExpander::getDataLines();
+            if (transactionComplete()) {
+                break;
+            } else {
+                targetAddress += 2;
+            }
+        } while (true);
     }
 }
