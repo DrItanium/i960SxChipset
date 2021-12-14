@@ -1,5 +1,14 @@
 #include <SD.h>
 #include <SPI.h>
+constexpr unsigned long long int operator "" _KB(unsigned long long int value) noexcept { return value * 1024; }
+constexpr unsigned long long int operator "" _MB(unsigned long long int value) noexcept { return value * 1024 * 1024; }
+constexpr unsigned long long int operator "" _KHz(unsigned long long int value) noexcept { return value * 1000; }
+constexpr unsigned long long int operator "" _MHz(unsigned long long int value) noexcept { return value * 1000 * 1000; }
+static_assert(2_KHz == 2000);
+static_assert(2_MHz == 2000000);
+static_assert(20_MHz == 20000000);
+static_assert(2_KB == 2048);
+static_assert(8_KB == 8192);
 /*
  * A simple grand central m4 sketch to prototype the i960 chipset interface
  */
@@ -131,41 +140,49 @@ public:
     }
     static uint16_t read16(IOExpanderAddress addr, MCP23x17Registers opcode) noexcept {
         SplitWord16 ret{0};
+        SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
         digitalWrite(GPIO_CS, LOW);
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         ret.setLowerHalf(SPI.transfer(0));
         ret.setUpperHalf(SPI.transfer(0));
         digitalWrite(GPIO_CS, HIGH);
+        SPI.endTransaction();
         return ret.getValue();
     }
     static uint8_t read8(IOExpanderAddress addr, MCP23x17Registers opcode) noexcept {
+        SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
         digitalWrite(GPIO_CS, LOW);
         SPI.transfer(generateReadOpcode(addr));
         SPI.transfer(static_cast<byte>(opcode));
         auto result = SPI.transfer(0);
         digitalWrite(GPIO_CS, HIGH);
+        SPI.endTransaction();
         return result;
     }
 private:
     static void write16(IOExpanderAddress address, MCP23x17Registers opcode, SplitWord16 value) noexcept {
+        SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
         digitalWrite(GPIO_CS, LOW);
         SPI.transfer(generateWriteOpcode(address));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(value.getLowerHalf());
         SPI.transfer(value.getUpperHalf());
         digitalWrite(GPIO_CS, HIGH);
+        SPI.endTransaction();
     }
 public:
     static void write16(IOExpanderAddress address, MCP23x17Registers opcode, uint16_t value) noexcept {
         write16(address, opcode, SplitWord16{value});
     }
     static void write8(IOExpanderAddress address, MCP23x17Registers opcode, uint8_t value) noexcept {
+        SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
         digitalWrite(GPIO_CS, LOW);
         SPI.transfer(generateWriteOpcode(address));
         SPI.transfer(static_cast<byte>(opcode));
         SPI.transfer(value);
         digitalWrite(GPIO_CS, HIGH);
+        SPI.endTransaction();
     }
 
     static uint16_t getDataLines() noexcept {
@@ -175,19 +192,19 @@ public:
         write16(IOExpanderAddress::DataLines, MCP23x17Registers::GPIO, value);
         // do nothing right now
     }
+    static void setupDataLinesForWrite() noexcept {
+        // setup the data lines for input since we are writing a value to main memory
+        write16(IOExpanderAddress::DataLines, MCP23x17Registers::IODIR, 0xFFFF);
+    }
+
+    static void setupDataLinesForRead() noexcept {
+        // setup the data lines for output since we are reading a value from main memory
+        write16(IOExpanderAddress::DataLines, MCP23x17Registers::IODIR, 0);
+    }
 };
 void
 setupIOExpanders() noexcept {
 
-}
-void
-setupDataLinesForWrite() noexcept {
-    // setup the data lines for input since we are writing a value to main memory
-}
-
-void
-setupDataLinesForRead() noexcept {
-    // setup the data lines for output since we are reading a valeu from main memory
 }
 
 Address
@@ -272,7 +289,7 @@ void loop() {
     auto targetAddress = getAddress();
     if (isReadOperation()) {
         // is a read operation
-        setupDataLinesForRead();
+        IOExpander::setupDataLinesForRead();
         do {
             auto pattern = getByteEnablePattern();
             /// @todo get value from a data source
@@ -285,7 +302,7 @@ void loop() {
         } while (true);
     } else {
         // is a write operation
-        setupDataLinesForWrite();
+        IOExpander::setupDataLinesForWrite();
         do {
             /// @todo set value to data source
             auto pattern = getByteEnablePattern();
