@@ -235,6 +235,7 @@ inline bool isReadOperation() noexcept {
 }
 void pulse(byte index, decltype(LOW) to = LOW, decltype(HIGH) from = HIGH) noexcept {
     digitalWrite(index, to);
+    //delay(1);
     digitalWrite(index, from);
 }
 bool transactionComplete() noexcept {
@@ -254,12 +255,19 @@ ByteEnablePattern getByteEnablePattern() noexcept {
             static_cast<byte>(digitalRead(BE1) == HIGH ? 0b10 : 0b00)
             );
 }
-
+constexpr bool TestCycleSpeed = true;
 void setup() {
     outputPin(RESET960);
     digitalWrite(RESET960, LOW);
     SPI.begin();
     setupConsole();
+    if (TestCycleSpeed) {
+        outputPin(A4);
+        digitalWrite(A4, HIGH);
+        while (true) {
+            pulse(A4, LOW, HIGH);
+        }
+    }
     inputPin(MCU_FAIL);
     inputPin(BLAST);
     inputPin(DEN);
@@ -290,14 +298,17 @@ void setup() {
     // i960 is active after this point
     while (digitalRead(MCU_FAIL) == LOW) {
         if (digitalRead(DEN) == LOW) {
+            Serial.println("PHASE 1: DEN ASSERTED BREAKING!");
             break;
         }
     }
     while (digitalRead(MCU_FAIL) == HIGH) {
         if (digitalRead(DEN) == LOW) {
+            Serial.println("PHASE 2: DEN ASSERTED BREAKING!");
             break;
         }
     }
+    Serial.println("BOOTED!");
 }
 
 void loop() {
