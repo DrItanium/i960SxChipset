@@ -263,7 +263,6 @@ ByteEnablePattern getByteEnablePattern() noexcept {
             static_cast<byte>(digitalRead(BE1) == HIGH ? 0b10 : 0b00)
             );
 }
-constexpr bool TestCycleSpeed = false;
 void setup() {
     // hold the 4809 in reset as the first thing we do!
     outputPin(RESET4809);
@@ -273,13 +272,6 @@ void setup() {
     digitalWrite(RESET4809, HIGH);
     SPI.begin();
     setupConsole();
-    if (TestCycleSpeed) {
-        outputPin(A4);
-        digitalWrite(A4, HIGH);
-        while (true) {
-            pulse(A4, LOW, HIGH);
-        }
-    }
     inputPin(MCU_FAIL);
     inputPin(BLAST);
     inputPin(DEN);
@@ -334,8 +326,8 @@ void loop() {
                 targetAddress += 2;
                 //Serial.print("Address is now: 0x");
                 //Serial.println(targetAddress, HEX);
-                delay(1);
-                //delayMicroseconds(2);
+                // until I come up with a better synchronization mechanism, this will have to work.
+                delayMicroseconds(2);
             }
         } while (true);
         //delay(1);
@@ -352,7 +344,7 @@ void loop() {
                 targetAddress += 2;
                 //Serial.print("Address is now: 0x");
                 //Serial.println(targetAddress, HEX);
-                delay(1);
+                delayMicroseconds(2);
             }
         } while (true);
     }
