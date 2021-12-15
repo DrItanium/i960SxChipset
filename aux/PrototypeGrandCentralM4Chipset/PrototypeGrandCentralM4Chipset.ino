@@ -15,16 +15,16 @@ static_assert(8_KB == 8192);
 using Address = uint32_t;
 using DataValue = uint16_t;
 // inputs
-constexpr auto MCU_FAIL = 26;
-constexpr auto BLAST = 27;
-constexpr auto DEN = 28;
-constexpr auto WR = 23;
-constexpr auto BE0 = 37;
-constexpr auto BE1 = 36;
-constexpr auto LINE_INT0 = 35;
-constexpr auto LINE_INT1 = 34;
-constexpr auto LINE_INT2 = 33;
-constexpr auto LINE_INT3 = 32;
+constexpr auto MCU_FAIL = 27;
+constexpr auto BLAST = 28;
+constexpr auto DEN = 23;
+constexpr auto WR = 37;
+constexpr auto BE0 = 36;
+constexpr auto BE1 = 35;
+constexpr auto LINE_INT0 = 34;
+constexpr auto LINE_INT1 = 33;
+constexpr auto LINE_INT2 = 32;
+constexpr auto LINE_INT3 = 31;
 // outputs
 constexpr auto MCU_READY = 16;
 constexpr auto RESET960 = 17;
@@ -297,25 +297,13 @@ void setup() {
     digitalWrite(RESET960, HIGH);
     delay(10000);
     // i960 is active after this point
-    while (digitalRead(MCU_FAIL) == LOW) {
-        if (digitalRead(DEN) == LOW) {
-            Serial.println("PHASE 1: DEN ASSERTED BREAKING!");
-            break;
-        }
-    }
-    delay(1);
-    while (digitalRead(MCU_FAIL) == HIGH) {
-        if (digitalRead(DEN) == LOW) {
-            Serial.println("PHASE 2: DEN ASSERTED BREAKING!");
-            break;
-        }
-    }
+    while (digitalRead(MCU_FAIL) == LOW);
     Serial.println("BOOTED!");
     delay(1000);
 }
 
 void loop() {
-    checkForFailPin();
+    //checkForFailPin();
     waitForDataRequest();
     auto targetAddress = IOExpander::getAddress();
     Serial.print("Target Address: 0x");
