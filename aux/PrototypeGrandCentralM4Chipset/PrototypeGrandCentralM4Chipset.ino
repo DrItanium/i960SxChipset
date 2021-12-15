@@ -40,16 +40,23 @@ inline void outputPin(byte value) noexcept {
 inline void inputPin(byte value) noexcept {
     pinMode(value, INPUT);
 }
-inline void waitForDataRequest() noexcept {
-    while (digitalRead(DEN) != LOW);
+void checksumFailureHappened() noexcept {
+    Serial.println("CHECKSUM FAIL!");
+    while (true) {
+        delay(1000);
+    }
 }
 inline void checkForFailPin() noexcept {
     if (digitalRead(MCU_FAIL) == LOW) {
-        Serial.println("CHECKSUM FAIL!");
-        while (true) {
-            delay(1000);
-        }
+        checksumFailureHappened();
     }
+}
+void checksumFailInterrupt() {
+    // even though this is in interrupt context, if we get here then just hang everything
+    checksumFailureHappened();
+}
+inline void waitForDataRequest() noexcept {
+    while (digitalRead(DEN) != LOW);
 }
 void setupConsole() noexcept {
     Serial.begin(115200);
@@ -304,11 +311,12 @@ void setup() {
     // i960 is active after this point
     while (digitalRead(MCU_FAIL) == LOW);
     Serial.println("BOOTED!");
-    //delay(1000);
+    // attach an interrupt
+    attachInterrupt(digitalPinToInterrupt(MCU_FAIL), checksumFailInterrupt, LOW);
 }
 
 void loop() {
-    checkForFailPin();
+    //checkForFailPin();
     waitForDataRequest();
     auto targetAddress = IOExpander::getAddress();
     //Serial.print("Target Address: 0x");
@@ -327,9 +335,10 @@ void loop() {
                 //Serial.print("Address is now: 0x");
                 //Serial.println(targetAddress, HEX);
                 delay(1);
+                //delayMicroseconds(2);
             }
         } while (true);
-        delay(1);
+        //delay(1);
     } else {
         // is a write operation
         IOExpander::setupDataLinesForWrite();
@@ -346,6 +355,5 @@ void loop() {
                 delay(1);
             }
         } while (true);
-        delay(1);
     }
 }
