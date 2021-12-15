@@ -33,6 +33,7 @@ constexpr auto PSRAMEN0 = A0;
 constexpr auto PSRAMEN1 = A1;
 constexpr auto PSRAMEN2 = A2;
 constexpr auto PSRAMEN3 = A3;
+constexpr auto RESET4809 = 5;
 inline void outputPin(byte value) noexcept {
     pinMode(value, OUTPUT);
 }
@@ -257,8 +258,12 @@ ByteEnablePattern getByteEnablePattern() noexcept {
 }
 constexpr bool TestCycleSpeed = false;
 void setup() {
+    // hold the 4809 in reset as the first thing we do!
+    outputPin(RESET4809);
+    digitalWrite(RESET4809, LOW);
     outputPin(RESET960);
     digitalWrite(RESET960, LOW);
+    digitalWrite(RESET4809, HIGH);
     SPI.begin();
     setupConsole();
     if (TestCycleSpeed) {
