@@ -311,8 +311,8 @@ void loop() {
     checkForFailPin();
     waitForDataRequest();
     auto targetAddress = IOExpander::getAddress();
-    Serial.print("Target Address: 0x");
-    Serial.println(targetAddress, HEX);
+    //Serial.print("Target Address: 0x");
+    //Serial.println(targetAddress, HEX);
     if (isReadOperation()) {
         // is a read operation
         IOExpander::setupDataLinesForRead();
@@ -324,8 +324,8 @@ void loop() {
                 break;
             } else {
                 targetAddress += 2;
-                Serial.print("Address is now: 0x");
-                Serial.println(targetAddress, HEX);
+                //Serial.print("Address is now: 0x");
+                //Serial.println(targetAddress, HEX);
                 delay(1);
             }
         } while (true);
@@ -341,8 +341,8 @@ void loop() {
                 break;
             } else {
                 targetAddress += 2;
-                Serial.print("Address is now: 0x");
-                Serial.println(targetAddress, HEX);
+                //Serial.print("Address is now: 0x");
+                //Serial.println(targetAddress, HEX);
                 delay(1);
             }
         } while (true);
