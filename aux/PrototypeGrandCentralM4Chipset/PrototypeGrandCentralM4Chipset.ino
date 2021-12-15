@@ -295,7 +295,7 @@ void setup() {
     /// @todo insert code for setting up other devices here
     delay(1000);
     digitalWrite(RESET960, HIGH);
-    delay(2000);
+    delay(10000);
     // i960 is active after this point
     while (digitalRead(MCU_FAIL) == LOW) {
         if (digitalRead(DEN) == LOW) {
@@ -318,6 +318,8 @@ void loop() {
     checkForFailPin();
     waitForDataRequest();
     auto targetAddress = IOExpander::getAddress();
+    Serial.print("Target Address: 0x");
+    Serial.println(targetAddress, HEX);
     if (isReadOperation()) {
         // is a read operation
         IOExpander::setupDataLinesForRead();
@@ -329,7 +331,8 @@ void loop() {
                 break;
             } else {
                 targetAddress += 2;
-
+                Serial.print("Address is now: 0x");
+                Serial.println(targetAddress, HEX);
                 delay(1);
             }
         } while (true);
@@ -345,6 +348,8 @@ void loop() {
                 break;
             } else {
                 targetAddress += 2;
+                Serial.print("Address is now: 0x");
+                Serial.println(targetAddress, HEX);
                 delay(1);
             }
         } while (true);
