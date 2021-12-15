@@ -295,15 +295,15 @@ void setup() {
     /// @todo insert code for setting up other devices here
     delay(1000);
     digitalWrite(RESET960, HIGH);
-    delay(10000);
+    //delay(10000);
     // i960 is active after this point
     while (digitalRead(MCU_FAIL) == LOW);
     Serial.println("BOOTED!");
-    delay(1000);
+    //delay(1000);
 }
 
 void loop() {
-    //checkForFailPin();
+    checkForFailPin();
     waitForDataRequest();
     auto targetAddress = IOExpander::getAddress();
     Serial.print("Target Address: 0x");
