@@ -14,8 +14,10 @@ constexpr auto Reset960 = PIN_PF0;
 constexpr auto LOCK960 = PIN_PF1;
 constexpr auto HLDA960 = PIN_PF2;
 constexpr auto HOLD960 = PIN_PF3;
-// this pin is responsible for allowing the 
 constexpr auto WAITBOOT960 = PIN_PF4;
+constexpr auto FAIL960 = PIN_PF5;
+constexpr auto SYSTEMBOOT = PIN_PD7;
+// this pin is responsible for allowing the 
 constexpr auto INT0_960 = PIN_PE0;
 constexpr auto INT1_960 = PIN_PE1;
 constexpr auto INT2_960 = PIN_PE2;
@@ -43,8 +45,6 @@ void setup() {
     pinMode(Reset960, OUTPUT);
     digitalWrite(Reset960, LOW);
     pinMode(WAITBOOT960, INPUT_PULLUP);
-    Serial1.swap(1);
-    Serial1.begin(9600);
     delay(2000);
     // wait two seconds to give the other device time to set stuff up
     pinMode(LOCK960, OUTPUT);
@@ -60,14 +60,16 @@ void setup() {
     digitalWrite(INT2_960, LOW);
     pinMode(INT3_960, OUTPUT);
     digitalWrite(INT3_960, HIGH);
-    Serial1.println("WAITING FOR SIGNAL CHANGE!");
+    pinMode(FAIL960, INPUT);
+    pinMode(SYSTEMBOOT, OUTPUT);
+    digitalWrite(SYSTEMBOOT, LOW);
     // just poll until we are let through (aka this value is high)
     while (digitalRead(WAITBOOT960) == LOW);
-    Serial1.println("SIGNAL CHANGED!");
-
-    delay(2000); // always wait 2 seconds at the minimum
-    // rest of the logic goes here
     digitalWrite(Reset960, HIGH);
+
+    while (digitalRead(FAIL960) == LOW);
+    while (digitalRead(FAIL960) == HIGH);
+    digitalWrite(SYSTEMBOOT, HIGH);
 }
 
 
