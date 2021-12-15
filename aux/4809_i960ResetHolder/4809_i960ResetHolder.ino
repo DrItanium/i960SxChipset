@@ -74,6 +74,12 @@ void setup() {
 
 
 void loop() {
-    // put your main code here, to run repeatedly:
-    delay(1000);
+    // keep an eye on the FAIL960 pin, if we run into an issue then tell the chipset this
+
+    if (digitalRead(FAIL960) == HIGH) {
+        digitalWrite(SYSTEMBOOT, LOW);
+        while (true) {
+            delay(1);
+        }
+    }
 }
