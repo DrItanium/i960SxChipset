@@ -43,7 +43,7 @@ inline void waitForDataRequest() noexcept {
     while (digitalRead(DEN) != LOW);
 }
 inline void checkForFailPin() noexcept {
-    if (digitalRead(MCU_FAIL) == HIGH) {
+    if (digitalRead(MCU_FAIL) == LOW) {
         Serial.println("CHECKSUM FAIL!");
         while (true) {
             delay(1000);
