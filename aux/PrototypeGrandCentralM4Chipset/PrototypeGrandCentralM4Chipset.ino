@@ -223,13 +223,13 @@ public:
         write16(IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, 0);
         SPI.endTransaction();
     }
+    static Address getAddress() noexcept {
+        auto lowerHalf = static_cast<uint32_t>(read16(IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPIO));
+        auto upperHalf = static_cast<uint32_t>(read16(IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPIO)) << 16;
+        return lowerHalf | upperHalf;
+    }
 };
 
-Address
-getAddress() noexcept {
-    /// @todo unstub this
-    return 0;
-}
 inline bool isReadOperation() noexcept {
     return digitalRead(WR) == LOW;
 }
@@ -255,7 +255,7 @@ ByteEnablePattern getByteEnablePattern() noexcept {
             static_cast<byte>(digitalRead(BE1) == HIGH ? 0b10 : 0b00)
             );
 }
-constexpr bool TestCycleSpeed = true;
+constexpr bool TestCycleSpeed = false;
 void setup() {
     outputPin(RESET960);
     digitalWrite(RESET960, LOW);
@@ -295,6 +295,7 @@ void setup() {
     /// @todo insert code for setting up other devices here
     delay(1000);
     digitalWrite(RESET960, HIGH);
+    delay(2000);
     // i960 is active after this point
     while (digitalRead(MCU_FAIL) == LOW) {
         if (digitalRead(DEN) == LOW) {
@@ -302,6 +303,7 @@ void setup() {
             break;
         }
     }
+    delay(1);
     while (digitalRead(MCU_FAIL) == HIGH) {
         if (digitalRead(DEN) == LOW) {
             Serial.println("PHASE 2: DEN ASSERTED BREAKING!");
@@ -309,12 +311,13 @@ void setup() {
         }
     }
     Serial.println("BOOTED!");
+    delay(1000);
 }
 
 void loop() {
     checkForFailPin();
     waitForDataRequest();
-    auto targetAddress = getAddress();
+    auto targetAddress = IOExpander::getAddress();
     if (isReadOperation()) {
         // is a read operation
         IOExpander::setupDataLinesForRead();
@@ -326,8 +329,11 @@ void loop() {
                 break;
             } else {
                 targetAddress += 2;
+
+                delay(1);
             }
         } while (true);
+        delay(1);
     } else {
         // is a write operation
         IOExpander::setupDataLinesForWrite();
@@ -339,7 +345,9 @@ void loop() {
                 break;
             } else {
                 targetAddress += 2;
+                delay(1);
             }
         } while (true);
+        delay(1);
     }
 }
