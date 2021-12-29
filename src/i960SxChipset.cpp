@@ -81,17 +81,13 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 // at this point in time, if no specialization is performed, use SDCard as ram backend
 using FallbackMemory = SDCardAsRam<TheSDInterface >;
 template<TargetMCU mcu> struct BackingMemoryStorage final {
-    static constexpr bool HasBackingStore = false;
     using Type = FallbackMemory;
-    using ActualType = Type;
 };
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
-    static constexpr bool HasBackingStore = true;
     using ActualType = OnboardPSRAMBlock;
     using Type = SRAMDataContainer<ActualType>;
 };
 
-using ImageInstallationTarget_t = conditional_t<BackingMemoryStorage<TargetBoard::getMCUTarget()>::HasBackingStore, BackingMemoryStorage<TargetBoard::getMCUTarget()>::ActualType, BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type>;
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
 constexpr auto computeCacheLineSize() noexcept { return 6; }
 //using OnboardPSRAMBlock = ::
@@ -327,8 +323,8 @@ void installBootImage() noexcept {
                     // something wen't wrong so halt at this point
                     SD.errorHalt();
                 }
-                (void) ImageInstallationTarget_t ::write(addr, storage0, numRead);
-                (void) ImageInstallationTarget_t ::read(addr, storage1, numRead);
+                (void) BackingMemoryStorage_t ::write(addr, storage0, numRead);
+                (void) BackingMemoryStorage_t ::read(addr, storage1, numRead);
                 // now read back the contents into the second buffer
                 for (auto i = 0; i < numRead; ++i) {
                     auto a = storage0[i];
@@ -354,7 +350,7 @@ void installBootImage() noexcept {
                     // something wen't wrong so halt at this point
                     SD.errorHalt();
                 }
-                (void) ImageInstallationTarget_t ::write(addr, storage, numRead);
+                (void) BackingMemoryStorage_t ::write(addr, storage, numRead);
                 // now read back the contents into the upper half
                 Serial.print(F("."));
             }
