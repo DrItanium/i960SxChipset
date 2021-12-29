@@ -503,6 +503,7 @@ void setup() {
               i960Pinout::INT_EN0,
               i960Pinout::INT_EN1
     );
+    SRAMDataContainer<BackingMemoryStorage_t>::begin();
     //pinMode(i960Pinout::MISO, INPUT_PULLUP);
     theCache.begin();
     // purge the cache pages
