@@ -33,13 +33,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
  * @brief Describes a single cache line which associates an address with 32 bytes of storage
  */
-template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T>
+template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true>
 class CacheEntry final {
 public:
     static constexpr size_t NumBytesCached = pow2(numLowestBits);
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
     static constexpr byte CacheEntryMask = NumWordsCached - 1;
-    using TaggedAddress = ::TaggedAddress<numTagBits, maxAddressBits, numLowestBits>;
+    using TaggedAddress = ::TaggedAddress<numTagBits, maxAddressBits, numLowestBits, useSpecificTypeSizes>;
     using OffsetType = typename TaggedAddress::LowerType ;
     static constexpr OffsetType  InvalidCacheLineState = 0xFF;
     static constexpr OffsetType CleanCacheLineState = 0xFE;

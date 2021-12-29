@@ -33,12 +33,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 #include "CacheEntry.h"
 
-template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T>
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes = true>
 class TwoWayLRUCacheWay {
 public:
     static constexpr auto NumberOfWays = 2;
     static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T>;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:

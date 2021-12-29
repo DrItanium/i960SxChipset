@@ -34,15 +34,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CacheEntry.h"
 #include "ProcessorSerializer.h"
 
-template<template<auto, auto, auto, typename> typename L,
+template<template<auto, auto, auto, typename, bool> typename L,
         byte NumberOfCaches,
         uint16_t IndividualCacheSize,
         byte NumberOfAddressBits,
         byte CacheLineSize,
-        typename T>
+        typename T,
+        bool useSpecificTypeSizes = true>
 class MultiCache {
 public:
-    using Cache = CacheInstance_t<L, IndividualCacheSize, NumberOfAddressBits, CacheLineSize, T>;
+    using Cache = CacheInstance_t<L, IndividualCacheSize, NumberOfAddressBits, CacheLineSize, T, useSpecificTypeSizes>;
     using CacheEntry = typename Cache::CacheEntry;
     using TaggedAddress = typename Cache::TaggedAddress;
     static constexpr auto NumWordsCached = Cache::NumWordsCached;

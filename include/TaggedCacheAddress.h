@@ -5,7 +5,7 @@
 #ifndef SXCHIPSET_TAGGEDCACHEADDRESS_H
 #define SXCHIPSET_TAGGEDCACHEADDRESS_H
 #include "MCUPlatform.h"
-template<byte tagBits, byte totalBits = 32, byte offsetBits = 4>
+template<byte tagBits, byte totalBits = 32, byte offsetBits = 4, bool useSpecificTypeSizes = true>
 union TaggedAddress {
     static constexpr auto NumLowestBits = offsetBits;
     static constexpr auto NumTagBits = tagBits;
@@ -13,10 +13,10 @@ union TaggedAddress {
     static constexpr auto MaximumAddressSize = totalBits;
     static_assert((NumLowestBits + NumTagBits + NumRestBits) == MaximumAddressSize, "Too many or too few bits for this given tagged address!");
     static_assert((MaximumAddressSize >= 26) && (MaximumAddressSize <= 32), "Addresses cannot be smaller than 26 bits!");
-    using TagType = ClosestBitValue_t<NumTagBits>;
-    using RestType = ClosestBitValue_t<NumRestBits>;
-    using LowerType = ClosestBitValue_t<NumLowestBits>;
-    using AddressType = ClosestBitValue_t<MaximumAddressSize>;
+    using TagType = conditional_t<useSpecificTypeSizes, ClosestBitValue_t<NumTagBits>, Address>;
+    using RestType = conditional_t<useSpecificTypeSizes, ClosestBitValue_t<NumRestBits>, Address>;
+    using LowerType = conditional_t<useSpecificTypeSizes, ClosestBitValue_t<NumLowestBits>, Address>;
+    using AddressType = conditional_t<useSpecificTypeSizes, ClosestBitValue_t<MaximumAddressSize>, Address>;
     constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
     constexpr explicit TaggedAddress(RestType key, TagType tag, LowerType offset = 0) noexcept : lowest(offset), tagIndex(tag), rest(key) { }
     void clear() noexcept { base = 0; }
