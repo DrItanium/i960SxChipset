@@ -176,12 +176,21 @@ private:
     }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        CacheAddress addr(address);
-        return write(addr, buf, capacity);
+        if (capacity > CacheLineSize) {
+            return BackingStore::write(address, buf, capacity);
+        } else {
+            CacheAddress addr(address);
+            return write(addr, buf, capacity);
+        }
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        CacheAddress currAddr(address);
-        return read(currAddr, buf, capacity);
+        // bypass the sram if the size is too large for a single cache line
+        if (capacity > CacheLineSize) {
+            return BackingStore ::read(address, buf, capacity);
+        } else {
+            CacheAddress currAddr(address);
+            return read(currAddr, buf, capacity);
+        }
     }
     static void clear() noexcept {
         for (auto& a : tags_) {
