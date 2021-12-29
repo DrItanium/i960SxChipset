@@ -140,6 +140,7 @@ public:
         for (auto& a : tagData_) {
             a.clear();
         }
+        memset(transferBuffer_, 0, CacheLineSize);
     }
     static void begin() noexcept {
         clear();
