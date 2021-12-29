@@ -32,11 +32,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "23LC1024.h"
 
+/**
+ * @brief Wrapper that caches data from the true backing store into a much faster block of spi sram. The class which uses this class is unaware
+ * of the caching that is going on.
+ * @tparam T The underlying type to talk to when we don't contain the given data here
+ */
 template<typename T>
 class SRAMDataContainer {
 public:
     using BackingStore = T;
     using CacheBackingStore = SRAM_23LC1024Chip<i960Pinout::CACHE_EN>;
+    static constexpr auto Capacity = CacheBackingStore::Capacity;
+    static constexpr auto CacheLineSize = 64; // bytes
+    static constexpr auto NumLines = Capacity / CacheLineSize;
     SRAMDataContainer() = delete;
     ~SRAMDataContainer() = delete;
     SRAMDataContainer(SRAMDataContainer&&) = delete;
@@ -44,6 +52,12 @@ public:
     SRAMDataContainer operator=(SRAMDataContainer&&) = delete;
     SRAMDataContainer operator=(const SRAMDataContainer&) = delete;
 public:
+    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+        return 0;
+    }
+    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+        return 0;
+    }
 private:
 };
 
