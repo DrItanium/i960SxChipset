@@ -113,16 +113,16 @@ constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto CacheLineSize = computeCacheLineSize();
 constexpr auto CacheSize = 8192;
-template<auto a, auto b, auto c, typename d>
+template<auto a, auto b, auto c, typename d, bool e = true>
 using CacheWayStyle = conditional_t<TargetBoard::onAtmega1284p_Type2(),
-        conditional_t<UsePSRAMForType2, EightWayRandPLRUCacheSet<a,b,c,d>, SixteenWayLRUCacheWay<a,b,c,d>>,
-        EightWayRandPLRUCacheSet<a,b,c,d>>;
+        conditional_t<UsePSRAMForType2, EightWayRandPLRUCacheSet<a,b,c,d, e>, SixteenWayLRUCacheWay<a,b,c,d, e>>,
+        EightWayRandPLRUCacheSet<a,b,c,d, e>>;
 
 //using L1Cache = CacheInstance_t<EightWayTreePLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 //using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 //using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
-using L1Cache = CacheInstance_t<SixteenWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
-//using L1Cache = CacheInstance_t<CacheWayStyle, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
+//using L1Cache = CacheInstance_t<SixteenWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
+using L1Cache = CacheInstance_t<CacheWayStyle, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 L1Cache theCache;
 
 //template<template<auto, auto, auto, typename> typename L,
