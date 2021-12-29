@@ -42,13 +42,14 @@ template<typename T>
 class SRAMDataContainer {
 public:
     using BackingStore = T;
-    using CacheBackingStore = SRAM_23LC1024Chip<i960Pinout::CACHE_EN>;
-    static constexpr auto Capacity = CacheBackingStore::Capacity;
+    using SRAM = SRAM_23LC1024Chip<i960Pinout::CACHE_EN>;
+    static constexpr auto Capacity = SRAM::Capacity;
     static constexpr auto CacheLineSize = 1024; // bytes
     static constexpr auto CacheLineBits = getNumberOfBitsForNumberOfEntries(CacheLineSize);
     static constexpr auto NumLines = Capacity / CacheLineSize;
     static constexpr auto NumLineBits = getNumberOfBitsForNumberOfEntries(NumLines);
     using CacheAddress = TaggedAddress<NumLineBits, 32, CacheLineBits>;
+    using KeyType = typename CacheAddress::RestType;
     // list our assumptions
     static_assert(CacheAddress::NumLowestBits == 10, "This class is written assuming a 1024 byte segment");
     static_assert(CacheAddress::NumTagBits == 7, "This class is written assuming a 1024 byte segment");
@@ -70,19 +71,62 @@ private:
             Dirty,
         };
         Status status_ = Status::Invalid;
-        uint16_t key_ = 0;
+        KeyType key_ = 0;
         // the key will be used to reconstruct the sram and backing storage addresses
         [[nodiscard]] constexpr bool dirty() const noexcept { return status_ == Status::Dirty; }
         [[nodiscard]] constexpr bool clean() const noexcept { return status_ == Status::Clean; }
         [[nodiscard]] constexpr bool invalid() const noexcept { return status_ == Status::Invalid; }
-        [[nodiscard]] constexpr CacheAddress reconstructAddress(typename CacheAddress::TagType tagIndex) noexcept {
+        [[nodiscard]] constexpr bool valid() const noexcept { return !invalid(); }
+        [[nodiscard]] constexpr CacheAddress reconstructBackingStoreAddress(typename CacheAddress::TagType tagIndex) const noexcept {
             return CacheAddress{ key_, tagIndex };
+        }
+        [[nodiscard]] constexpr CacheAddress reconstructSramAddress(typename CacheAddress::TagType tagIndex) const noexcept {
+            return CacheAddress {0, tagIndex };
+        }
+        [[nodiscard]] constexpr auto matches(KeyType other) const noexcept {
+            return valid() && (key_ == other);
         }
         void clear() noexcept {
             status_ = Status::Invalid;
             key_ = 0;
         }
     };
+    static void readFromSRAMToBuffer(const CacheAddress& theAddress, byte* buffer, size_t count) noexcept {
+        SRAM::read(theAddress.getAddress(), buffer, count);
+    }
+    static void writeToSRAMFromBuffer(const CacheAddress& theAddress, byte* buffer, size_t count) noexcept {
+        SRAM::write(theAddress.getAddress(), buffer, count);
+    }
+    static void fillBufferFromSRAM(const CacheAddress& theAddress) noexcept {
+        readFromSRAMToBuffer(theAddress, transferBuffer_, CacheLineSize);
+    }
+    static void fillBufferFromBackingStore(const CacheAddress& theAddress)  noexcept {
+        BackingStore :: read(theAddress.getAddress(), transferBuffer_, CacheLineSize);
+    }
+    static void saveBufferToBackingStore(const CacheAddress& theAddress) noexcept {
+        BackingStore :: write(theAddress.getAddress(), transferBuffer_, CacheLineSize);
+    }
+    static void saveBufferToSRAM(const CacheAddress& theAddress) noexcept {
+        writeToSRAMFromBuffer(theAddress, transferBuffer_, CacheLineSize);
+    }
+    static void transferSegmentFromSRAMToBackingStore(const CacheAddress& sramAddress, const CacheAddress& backingStoreAddress) noexcept {
+        fillBufferFromSRAM(sramAddress);
+        saveBufferToBackingStore(backingStoreAddress);
+    }
+    static void transferSegmentFromSRAMToBackingStore(const Tag& targetTag, typename CacheAddress::TagType tagIndex) noexcept {
+        auto sramAddress = targetTag.reconstructSramAddress(tagIndex);
+        auto backingStoreAddress = targetTag.reconstructBackingStoreAddress(tagIndex);
+        transferSegmentFromSRAMToBackingStore(sramAddress, backingStoreAddress);
+    }
+    static void transferSegmentFromBackingStoreToSRAM(const CacheAddress& sramAddress, const CacheAddress& backingStoreAddress) noexcept {
+        fillBufferFromBackingStore(backingStoreAddress);
+        saveBufferToSRAM(sramAddress);
+    }
+    static void transferSegmentFromBackingStoreToSRAM(const Tag& targetTag, typename CacheAddress::TagType tagIndex) noexcept {
+        auto sramAddress = targetTag.reconstructSramAddress(tagIndex);
+        auto backingStoreAddress = targetTag.reconstructBackingStoreAddress(tagIndex);
+        transferSegmentFromBackingStoreToSRAM(sramAddress, backingStoreAddress);
+    }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         CacheAddress currAddr(address);
