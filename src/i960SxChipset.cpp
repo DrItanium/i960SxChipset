@@ -81,7 +81,7 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 // at this point in time, if no specialization is performed, use SDCard as ram backend
 using FallbackMemory = SDCardAsRam<TheSDInterface >;
 template<TargetMCU mcu> struct BackingMemoryStorage final { using Type = FallbackMemory; };
-//template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final { using Type = OnboardPSRAMBlock; };
+template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final { using Type = OnboardPSRAMBlock; };
 #if 0
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final {
 #ifdef CHIPSET_TYPE2
