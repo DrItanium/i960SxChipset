@@ -44,7 +44,7 @@ public:
     using BackingStore = T;
     using SRAM = SRAM_23LC1024Chip<i960Pinout::CACHE_EN>;
     static constexpr auto Capacity = SRAM::Capacity;
-    static constexpr auto CacheLineSize = 1024; // bytes
+    static constexpr auto CacheLineSize = 512; // bytes
     static constexpr auto CacheLineBits = getNumberOfBitsForNumberOfEntries(CacheLineSize);
     static constexpr auto NumLines = Capacity / CacheLineSize;
     static constexpr auto NumLineBits = getNumberOfBitsForNumberOfEntries(NumLines);
@@ -52,8 +52,8 @@ public:
     using KeyType = typename CacheAddress::RestType;
     using TagType = typename CacheAddress::TagType ;
     // list our assumptions
-    static_assert(CacheAddress::NumLowestBits == 10, "This class is written assuming a 1024 byte segment");
-    static_assert(CacheAddress::NumTagBits == 7, "This class is written assuming a 1024 byte segment");
+    static_assert(CacheAddress::NumLowestBits == 9, "This class is written assuming a 1024 byte segment");
+    static_assert(CacheAddress::NumTagBits == 8, "This class is written assuming a 1024 byte segment");
     static_assert(CacheAddress::NumRestBits == 15, "This class is written assuming a 1024 byte segment");
     SRAMDataContainer() = delete;
     ~SRAMDataContainer() = delete;
