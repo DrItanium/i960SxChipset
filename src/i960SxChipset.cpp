@@ -84,6 +84,7 @@ using FallbackMemory = SDCardAsRam<TheSDInterface >;
 template<TargetMCU mcu> struct BackingMemoryStorage final {
     static constexpr bool HasBackingStore = false;
     using Type = FallbackMemory;
+    using ActualType = Type;
 };
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
     static constexpr bool HasBackingStore = true;
@@ -100,7 +101,7 @@ template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final {
 };
 #endif
 
-using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
+using BackingMemoryStorage_t = conditional_t<BackingMemoryStorage<TargetBoard::getMCUTarget()>::HasBackingStore, BackingMemoryStorage<TargetBoard::getMCUTarget()>::ActualType, BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type>;
 constexpr auto computeCacheLineSize() noexcept {
    if constexpr (TargetBoard::onAtmega1284p_Type1())  {
        return 6;
@@ -349,8 +350,8 @@ void installBootImage() noexcept {
                     // something wen't wrong so halt at this point
                     SD.errorHalt();
                 }
-                (void) BackingMemoryStorage_t::BackingStore::write(addr, storage0, numRead);
-                (void) BackingMemoryStorage_t::BackingStore::read(addr, storage1, numRead);
+                (void) BackingMemoryStorage_t::write(addr, storage0, numRead);
+                (void) BackingMemoryStorage_t::read(addr, storage1, numRead);
                 // now read back the contents into the second buffer
                 for (auto i = 0; i < numRead; ++i) {
                     auto a = storage0[i];
@@ -376,7 +377,7 @@ void installBootImage() noexcept {
                     // something wen't wrong so halt at this point
                     SD.errorHalt();
                 }
-                (void) BackingMemoryStorage_t::BackingStore::write(addr, storage, numRead);
+                (void) BackingMemoryStorage_t::write(addr, storage, numRead);
                 // now read back the contents into the upper half
                 Serial.print(F("."));
             }
