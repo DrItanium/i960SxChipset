@@ -1,6 +1,6 @@
 /*
 i960SxChipset
-Copyright (c) 2020-2021, Joshua Scoggins
+Copyright (c) 2020-2022, Joshua Scoggins
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_23LC1024_H
 #define SXCHIPSET_23LC1024_H
+#include <SPI.h>
 #include "MCUPlatform.h"
 #include "Pinout.h"
 template<i960Pinout enablePin>
