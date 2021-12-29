@@ -191,6 +191,8 @@ public:
     }
     static void begin() noexcept {
         clear();
+        BackingStore ::begin();
+        SRAM::begin();
     }
 private:
     static inline Tag tags_[NumLines];
