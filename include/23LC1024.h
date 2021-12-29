@@ -38,6 +38,7 @@ public:
     static constexpr Address AddressMask = 0x1FFFF;
     static constexpr Address InvertedAddressMask = ~AddressMask;
     using TheEnablePin = DigitalPin<EnablePin>;
+    using EnableCommunicationWithChip = PinAsserter<EnablePin>;
     static_assert(TheEnablePin ::isOutputPin(), "The sram chip must be tagged as output");
     SRAM_23LC1024Chip() = delete;
     ~SRAM_23LC1024Chip() = delete;
@@ -49,28 +50,29 @@ public:
         // it is up to the classes to handle overflow/wrap around
         auto maskedStartAddress= address & AddressMask;
         SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
-        TheEnablePin ::assertPin();
-        SPI.transfer(0x02);
-        SPI.transfer(maskedStartAddress >> 16);
-        SPI.transfer(maskedStartAddress >> 8);
-        SPI.transfer(maskedStartAddress);
-        SPI.transfer(buf, capacity);
-        // only transfer
-        TheEnablePin ::deassertPin();
+        {
+            EnableCommunicationWithChip talk;
+            SPI.transfer(0x02);
+            SPI.transfer(maskedStartAddress >> 16);
+            SPI.transfer(maskedStartAddress >> 8);
+            SPI.transfer(maskedStartAddress);
+            SPI.transfer(buf, capacity);
+        }
         SPI.endTransaction();
         return capacity;
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         auto maskedStartAddress= address & AddressMask;
         SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
-        TheEnablePin ::assertPin();
-        SPI.transfer(0x03);
-        SPI.transfer(maskedStartAddress >> 16);
-        SPI.transfer(maskedStartAddress >> 8);
-        SPI.transfer(maskedStartAddress);
-        SPI.transfer(buf, capacity);
-        // only transfer
-        TheEnablePin ::deassertPin();
+        {
+            EnableCommunicationWithChip talk;
+            SPI.transfer(0x03);
+            SPI.transfer(maskedStartAddress >> 16);
+            SPI.transfer(maskedStartAddress >> 8);
+            SPI.transfer(maskedStartAddress);
+            SPI.transfer(buf, capacity);
+            // only transfer
+        }
         SPI.endTransaction();
         return capacity;
     }
@@ -81,15 +83,16 @@ public:
             TheEnablePin::deassertPin();
             // start at the beginning and just clear the entire chip out
             SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
-            TheEnablePin::assertPin();
-            SPI.transfer(0x02);
-            SPI.transfer(0);
-            SPI.transfer(0);
-            SPI.transfer(0);
-            for (uint32_t i = 0; i < 128_KB; ++i) {
+            {
+                EnableCommunicationWithChip talk;
+                SPI.transfer(0x02);
                 SPI.transfer(0);
+                SPI.transfer(0);
+                SPI.transfer(0);
+                for (uint32_t i = 0; i < 128_KB; ++i) {
+                    SPI.transfer(0);
+                }
             }
-            TheEnablePin::deassertPin();
             SPI.endTransaction();
         }
     }
