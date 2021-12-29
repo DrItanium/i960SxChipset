@@ -80,7 +80,8 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 // at this point in time, if no specialization is performed, use SDCard as ram backend
 using FallbackMemory = SDCardAsRam<TheSDInterface >;
 template<TargetMCU mcu> struct BackingMemoryStorage final { using Type = FallbackMemory; };
-template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final { using Type = OnboardPSRAMBlock; };
+//template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final { using Type = OnboardPSRAMBlock; };
+#if 0
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final {
 #ifdef CHIPSET_TYPE2
     using Type = conditional_t<UsePSRAMForType2 , Type2MemoryBlock<UseSingleChannelConfigurationForType2>, FallbackMemory>;
@@ -88,6 +89,7 @@ template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final {
     using Type = conditional_t<UsePSRAMForType2 , OnboardPSRAMBlock , FallbackMemory>;
 #endif
 };
+#endif
 
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
 constexpr auto computeCacheLineSize() noexcept {
@@ -112,15 +114,14 @@ constexpr auto CacheLineSize = computeCacheLineSize();
 constexpr auto CacheSize = 8192;
 template<auto a, auto b, auto c, typename d>
 using CacheWayStyle = conditional_t<TargetBoard::onAtmega1284p_Type2(),
-        conditional_t<UsePSRAMForType2,
-                EightWayRandPLRUCacheSet<a,b,c,d>,
-                SixteenWayLRUCacheWay<a,b,c,d>>,
+        conditional_t<UsePSRAMForType2, EightWayRandPLRUCacheSet<a,b,c,d>, SixteenWayLRUCacheWay<a,b,c,d>>,
         EightWayRandPLRUCacheSet<a,b,c,d>>;
 
 //using L1Cache = CacheInstance_t<EightWayTreePLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 //using L1Cache = CacheInstance_t<EightWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 //using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
-using L1Cache = CacheInstance_t<CacheWayStyle, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
+using L1Cache = CacheInstance_t<SixteenWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
+//using L1Cache = CacheInstance_t<CacheWayStyle, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 L1Cache theCache;
 
 //template<template<auto, auto, auto, typename> typename L,

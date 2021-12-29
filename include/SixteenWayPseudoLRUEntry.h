@@ -65,6 +65,7 @@ public:
         mruBits_.wholeValue_ = 0;
     }
 private:
+    template<bool useSingleAssignmentForm = true>
     void updateFlags(byte index) noexcept {
         // cache the lookup
         static constexpr uint16_t lookup[NumberOfWays] {
@@ -85,9 +86,17 @@ private:
                 _BV(static_cast<uint16_t>(14)),
                 static_cast<uint16_t>(_BV(static_cast<uint16_t>(15))),
         };
-        mruBits_.wholeValue_ |= lookup[index];
-        if (mruBits_.wholeValue_ == 0xFFFF) {
-            mruBits_.wholeValue_ = lookup[index];
+        if constexpr (useSingleAssignmentForm) {
+            if (static_cast<uint16_t>(~mruBits_.wholeValue_) == lookup[index]) {
+                mruBits_.wholeValue_ = lookup[index];
+            } else {
+                mruBits_.wholeValue_ |= lookup[index];
+            }
+        } else {
+            mruBits_.wholeValue_ |= lookup[index];
+            if (mruBits_.wholeValue_ == 0xFFFF) {
+                mruBits_.wholeValue_ = lookup[index];
+            }
         }
     }
     [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
