@@ -50,6 +50,7 @@ public:
     static constexpr auto NumLineBits = getNumberOfBitsForNumberOfEntries(NumLines);
     using CacheAddress = TaggedAddress<NumLineBits, 32, CacheLineBits>;
     using KeyType = typename CacheAddress::RestType;
+    using TagType = typename CacheAddress::TagType ;
     // list our assumptions
     static_assert(CacheAddress::NumLowestBits == 10, "This class is written assuming a 1024 byte segment");
     static_assert(CacheAddress::NumTagBits == 7, "This class is written assuming a 1024 byte segment");
@@ -77,25 +78,32 @@ private:
         [[nodiscard]] constexpr bool clean() const noexcept { return status_ == Status::Clean; }
         [[nodiscard]] constexpr bool invalid() const noexcept { return status_ == Status::Invalid; }
         [[nodiscard]] constexpr bool valid() const noexcept { return !invalid(); }
-        [[nodiscard]] constexpr CacheAddress reconstructBackingStoreAddress(typename CacheAddress::TagType tagIndex) const noexcept {
+        void setKey(KeyType value) noexcept { key_ = value; }
+        void markDirty() noexcept { status_ = Status::Dirty; }
+        void markClean() noexcept { status_ = Status::Clean; }
+        void markInvalid() noexcept { status_ = Status::Invalid; }
+        [[nodiscard]] constexpr CacheAddress reconstructBackingStoreAddress(TagType tagIndex) const noexcept {
             return CacheAddress{ key_, tagIndex };
         }
-        [[nodiscard]] constexpr CacheAddress reconstructSramAddress(typename CacheAddress::TagType tagIndex) const noexcept {
+        [[nodiscard]] constexpr CacheAddress reconstructSramAddress(TagType tagIndex) const noexcept {
             return CacheAddress {0, tagIndex };
         }
         [[nodiscard]] constexpr auto matches(KeyType other) const noexcept {
             return valid() && (key_ == other);
+        }
+        [[nodiscard]] constexpr auto matches(const CacheAddress& other) const noexcept {
+            return matches(other.getRest());
         }
         void clear() noexcept {
             status_ = Status::Invalid;
             key_ = 0;
         }
     };
-    static void readFromSRAMToBuffer(const CacheAddress& theAddress, byte* buffer, size_t count) noexcept {
-        SRAM::read(theAddress.getAddress(), buffer, count);
+    static size_t readFromSRAMToBuffer(const CacheAddress& theAddress, byte* buffer, size_t count) noexcept {
+        return SRAM::read(theAddress.getAddress(), buffer, count);
     }
-    static void writeToSRAMFromBuffer(const CacheAddress& theAddress, byte* buffer, size_t count) noexcept {
-        SRAM::write(theAddress.getAddress(), buffer, count);
+    static size_t writeToSRAMFromBuffer(const CacheAddress& theAddress, byte* buffer, size_t count) noexcept {
+        return SRAM::write(theAddress.getAddress(), buffer, count);
     }
     static void fillBufferFromSRAM(const CacheAddress& theAddress) noexcept {
         readFromSRAMToBuffer(theAddress, transferBuffer_, CacheLineSize);
@@ -113,7 +121,7 @@ private:
         fillBufferFromSRAM(sramAddress);
         saveBufferToBackingStore(backingStoreAddress);
     }
-    static void transferSegmentFromSRAMToBackingStore(const Tag& targetTag, typename CacheAddress::TagType tagIndex) noexcept {
+    static void transferSegmentFromSRAMToBackingStore(const Tag& targetTag, TagType tagIndex) noexcept {
         auto sramAddress = targetTag.reconstructSramAddress(tagIndex);
         auto backingStoreAddress = targetTag.reconstructBackingStoreAddress(tagIndex);
         transferSegmentFromSRAMToBackingStore(sramAddress, backingStoreAddress);
@@ -122,22 +130,61 @@ private:
         fillBufferFromBackingStore(backingStoreAddress);
         saveBufferToSRAM(sramAddress);
     }
-    static void transferSegmentFromBackingStoreToSRAM(const Tag& targetTag, typename CacheAddress::TagType tagIndex) noexcept {
+    static void transferSegmentFromBackingStoreToSRAM(const Tag& targetTag, TagType tagIndex) noexcept {
         auto sramAddress = targetTag.reconstructSramAddress(tagIndex);
         auto backingStoreAddress = targetTag.reconstructBackingStoreAddress(tagIndex);
         transferSegmentFromBackingStoreToSRAM(sramAddress, backingStoreAddress);
     }
+    static void loadSegmentIntoSRAM(const CacheAddress& addr, Tag& theTag) noexcept {
+        if (theTag.dirty()) {
+            // okay so the tag is currently pointing to dirty data
+            // we need to save that back to backing store first
+            // use the current tag information to do this
+            transferSegmentFromSRAMToBackingStore(theTag, addr.getTagIndex());
+        }
+        // Either the tag is invalid or it is a clean segment. Either way just dump it without committing back
+        // get the aligned base address
+        auto alignedAddress = addr.aligned();
+        // update the tag
+        theTag.setKey(alignedAddress.getRest());
+        theTag.markClean();
+        // then do the transfer itself
+        transferSegmentFromBackingStoreToSRAM(theTag, addr.getTagIndex());
+    }
+    static size_t write(const CacheAddress& addr, byte* buf, size_t capacity) noexcept {
+        // get the tag and see if we have a match
+        auto& theTag = tags_[addr.getTagIndex()];
+        if (!theTag.matches(addr)) {
+            // get the right segment into memory
+            loadSegmentIntoSRAM(addr, theTag);
+        }
+        // then write our modifications to the sram
+        writeToSRAMFromBuffer(addr, buf, capacity);
+        theTag.markDirty();
+        return capacity;
+    }
+    static size_t read(const CacheAddress& addr, byte* buf, size_t capacity) noexcept {
+        // get the tag and see if we have a match
+        auto& theTag = tags_[addr.getTagIndex()];
+        if (!theTag.matches(addr)) {
+            // get the right segment into memory
+            loadSegmentIntoSRAM(addr, theTag);
+        }
+        // then write our modifications to the sram
+        readFromSRAMToBuffer(addr, buf, capacity);
+        return capacity;
+    }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        CacheAddress currAddr(address);
-        return 0;
+        CacheAddress addr(address);
+        return write(addr, buf, capacity);
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         CacheAddress currAddr(address);
-        return 0;
+        return read(currAddr, buf, capacity);
     }
     static void clear() noexcept {
-        for (auto& a : tagData_) {
+        for (auto& a : tags_) {
             a.clear();
         }
         memset(transferBuffer_, 0, CacheLineSize);
@@ -146,7 +193,7 @@ public:
         clear();
     }
 private:
-    static inline Tag tagData_[NumLines];
+    static inline Tag tags_[NumLines];
     static inline byte transferBuffer_[CacheLineSize];
 };
 
