@@ -53,6 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "RTCInterface.h"
 #include "i960SxChipset.h"
 #include "type_traits.h"
+#include "23LC1024.h"
 
 constexpr auto RTCBaseAddress = 0xFA00'0000;
 constexpr auto Serial0BaseAddress = 0xFB00'0000;

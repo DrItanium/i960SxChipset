@@ -28,5 +28,72 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_23LC1024_H
 #define SXCHIPSET_23LC1024_H
-
+#include "MCUPlatform.h"
+#include "Pinout.h"
+template<i960Pinout enablePin>
+class SRAM_23LC1024Chip {
+public:
+    static constexpr auto EnablePin = enablePin;
+    static constexpr Address Capacity = 128_KB;
+    static constexpr Address AddressMask = 0x1FFFF;
+    static constexpr Address InvertedAddressMask = ~AddressMask;
+    using TheEnablePin = DigitalPin<EnablePin>;
+    static_assert(TheEnablePin ::isOutputPin(), "The sram chip must be tagged as output");
+    SRAM_23LC1024Chip() = delete;
+    ~SRAM_23LC1024Chip() = delete;
+    SRAM_23LC1024Chip(SRAM_23LC1024Chip&&) = delete;
+    SRAM_23LC1024Chip(const SRAM_23LC1024Chip&) = delete;
+    SRAM_23LC1024Chip operator=(SRAM_23LC1024Chip&&) = delete;
+    SRAM_23LC1024Chip operator=(const SRAM_23LC1024Chip&) = delete;
+    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+        // it is up to the classes to handle overflow/wrap around
+        auto maskedStartAddress= address & AddressMask;
+        SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
+        TheEnablePin ::assertPin();
+        SPI.transfer(0x02);
+        SPI.transfer(maskedStartAddress >> 16);
+        SPI.transfer(maskedStartAddress >> 8);
+        SPI.transfer(maskedStartAddress);
+        SPI.transfer(buf, capacity);
+        // only transfer
+        TheEnablePin ::deassertPin();
+        SPI.endTransaction();
+        return capacity;
+    }
+    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+        auto maskedStartAddress= address & AddressMask;
+        SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
+        TheEnablePin ::assertPin();
+        SPI.transfer(0x03);
+        SPI.transfer(maskedStartAddress >> 16);
+        SPI.transfer(maskedStartAddress >> 8);
+        SPI.transfer(maskedStartAddress);
+        SPI.transfer(buf, capacity);
+        // only transfer
+        TheEnablePin ::deassertPin();
+        SPI.endTransaction();
+        return capacity;
+    }
+    static void begin() noexcept {
+        if (!initialized_) {
+            initialized_ = true;
+            pinMode(TheEnablePin::getPin(), OUTPUT);
+            TheEnablePin::deassertPin();
+            // start at the beginning and just clear the entire chip out
+            SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
+            TheEnablePin::assertPin();
+            SPI.transfer(0x02);
+            SPI.transfer(0);
+            SPI.transfer(0);
+            SPI.transfer(0);
+            for (uint32_t i = 0; i < 128_KB; ++i) {
+                SPI.transfer(0);
+            }
+            TheEnablePin::deassertPin();
+            SPI.endTransaction();
+        }
+    }
+private:
+    static inline bool initialized_ = false;
+};
 #endif //SXCHIPSET_23LC1024_H
