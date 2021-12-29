@@ -91,32 +91,9 @@ template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
     using ActualType = OnboardPSRAMBlock;
     using Type = SRAMDataContainer<ActualType>;
 };
-#if 0
-template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type2> final {
-#ifdef CHIPSET_TYPE2
-    using Type = conditional_t<UsePSRAMForType2 , Type2MemoryBlock<UseSingleChannelConfigurationForType2>, FallbackMemory>;
-#else
-    using Type = conditional_t<UsePSRAMForType2 , OnboardPSRAMBlock , FallbackMemory>;
-#endif
-};
-#endif
 
 using BackingMemoryStorage_t = conditional_t<BackingMemoryStorage<TargetBoard::getMCUTarget()>::HasBackingStore, BackingMemoryStorage<TargetBoard::getMCUTarget()>::ActualType, BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type>;
-constexpr auto computeCacheLineSize() noexcept {
-   if constexpr (TargetBoard::onAtmega1284p_Type1())  {
-       return 6;
-   } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        if constexpr (UsePSRAMForType2) {
-            return 6;
-        } else {
-            // sdcard as ram means that we want to increase the hit rate as much as possible even if it slows down misses
-            // the sdcard is so damn slow!
-            return 6;
-        }
-   } else {
-       return 6;
-   }
-}
+constexpr auto computeCacheLineSize() noexcept { return 6; }
 //using OnboardPSRAMBlock = ::
 constexpr auto NumAddressBitsForPSRAMCache = 26;
 constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
