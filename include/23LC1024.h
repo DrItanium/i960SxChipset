@@ -52,13 +52,34 @@ public:
         auto maskedStartAddress= address & AddressMask;
         SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
         SplitWord32 decompose(maskedStartAddress);
+        byte next = 0;
+        size_t index = 0;
         {
             EnableCommunicationWithChip talk;
-            SPI.transfer(0x02);
-            SPI.transfer(decompose.bytes[2]);
-            SPI.transfer(decompose.bytes[1]);
-            SPI.transfer(decompose.bytes[0]);
-            SPI.transfer(buf, capacity);
+            SPDR = 0x02;
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = decompose.bytes[2];
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = decompose.bytes[1];
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = decompose.bytes[0];
+            asm volatile ("nop");
+            {
+                next = buf[0];
+                ++index;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            // unpack the SPI.transfer for an array but do not overwrite the input array
+            SPDR = next;
+            for (; index < capacity; ++index) {
+                next = buf[index];
+                while (!(SPSR & _BV(SPIF)));
+                SPDR = next;
+            }
+            while (!(SPSR & _BV(SPIF)));
         }
         SPI.endTransaction();
         return capacity;
@@ -69,12 +90,25 @@ public:
         SplitWord32 decompose(maskedStartAddress);
         {
             EnableCommunicationWithChip talk;
-            SPI.transfer(0x03);
-            SPI.transfer(decompose.bytes[2]);
-            SPI.transfer(decompose.bytes[1]);
-            SPI.transfer(decompose.bytes[0]);
-            SPI.transfer(buf, capacity);
-            // only transfer
+            SPDR = 0x03;
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = decompose.bytes[2];
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = decompose.bytes[1];
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = decompose.bytes[0];
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            // just keep sending zero and get the result
+            for (size_t index = 0; index < capacity; ++index) {
+                SPDR = 0;
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF)));
+                buf[index] = SPDR;
+            }
         }
         SPI.endTransaction();
         return capacity;
@@ -88,12 +122,22 @@ public:
             SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
             {
                 EnableCommunicationWithChip talk;
-                SPI.transfer(0x02);
-                SPI.transfer(0);
-                SPI.transfer(0);
-                SPI.transfer(0);
+                SPDR = 0x02;
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
                 for (uint32_t i = 0; i < 128_KB; ++i) {
-                    SPI.transfer(0);
+                    SPDR = 0;
+                    asm volatile ("nop");
+                    while (!(SPSR & _BV(SPIF))); // wait
                 }
             }
             SPI.endTransaction();
