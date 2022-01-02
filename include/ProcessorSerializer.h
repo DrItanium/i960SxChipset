@@ -256,8 +256,6 @@ public:
                 write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
                 // write the default value out to the latch to start with
                 write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
-                updateTargetFunctions<true>();
-                updateTargetFunctions<false>();
             } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
                 writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
                 writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
@@ -273,12 +271,14 @@ public:
                 write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0101'1000'0101'1000) ;
                 // If I ever figure out why the upper 16 lines do not want to work with independent pins then we will activate this version
                 //write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0001'1000'0001'1000) ;
-                updateTargetFunctions<true>();
-                updateTargetFunctions<false>();
                 // make sure we clear out any interrupt flags
             } else {
                 /// @todo implement this
             }
+            updateTargetFunctions<true, true>();
+            updateTargetFunctions<false, true>();
+            updateTargetFunctions<true, false>();
+            updateTargetFunctions<false, false>();
             SPI.endTransaction();
         }
     }
@@ -541,56 +541,62 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
 private:
-    template<bool inDebugMode>
+    template<bool inDebugMode, bool differentiateReadWrite>
     inline static void updateTargetFunctions() noexcept {
-        if constexpr (auto a = getBody<inDebugMode>(address_.bytes[3]),
-                           b = getReadBody<inDebugMode>(address_.bytes[3]),
-                           c = getWriteBody<inDebugMode>(address_.bytes[3]); inDebugMode) {
-            lastDebug_ = a;
-            lastReadDebug_ = b;
-            lastWriteDebug_ = c;
+        if constexpr (differentiateReadWrite) {
+            if constexpr (auto b = getReadBody<inDebugMode>(address_.bytes[3]),
+                        c = getWriteBody<inDebugMode>(address_.bytes[3]); inDebugMode) {
+                lastReadDebug_ = b;
+                lastWriteDebug_ = c;
+            } else {
+                lastRead_ = b;
+                lastWrite_ = c;
+            }
         } else {
-            last_ = a;
-            lastRead_ = b;
-            lastWrite_ = c;
+            if constexpr (auto a = getBody<inDebugMode>(address_.bytes[3]) ; inDebugMode) {
+                lastDebug_ = a;
+            } else {
+                last_ = a;
+            }
+
         }
     }
 public:
-    template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
+    template<bool inDebugMode, byte offsetMask, bool useInterrupts = true, bool differentiateReadWrite = true>
     static void newDataCycle() noexcept {
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
                 updateLower8();
                 upper16Update();
-                updateTargetFunctions<inDebugMode>();
+                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
                 break;
             case 0b0010:
                 updateLowest8<offsetMask>();
                 upper16Update();
-                updateTargetFunctions<inDebugMode>();
+                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
                 break;
             case 0b0011:
                 upper16Update();
-                updateTargetFunctions<inDebugMode>();
+                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
                 break;
             case 0b0100:
                 lower16Update<offsetMask>();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
                 break;
             case 0b0101:
                 updateLower8();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
                 break;
             case 0b0110:
                 updateLowest8<offsetMask>();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
                 break;
             case 0b0111:
                 updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
                 break;
             case 0b1000:
                 lower16Update<offsetMask>();
@@ -619,13 +625,31 @@ public:
             case 0b1111: break;
             default:
                 full32BitUpdate<offsetMask>();
-                updateTargetFunctions<inDebugMode>();
+                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
                 break;
         }
-        if constexpr (inDebugMode) {
-            lastDebug_();
+        if constexpr (differentiateReadWrite) {
+            if (isReadOperation()) {
+                setupDataLinesForRead();
+                if constexpr (inDebugMode) {
+                    lastReadDebug_();
+                } else {
+                    lastRead_();
+                }
+            } else {
+                setupDataLinesForWrite();
+                if constexpr (inDebugMode) {
+                    lastWriteDebug_();
+                } else {
+                    lastWrite_();
+                }
+            }
         } else {
-            last_();
+            if constexpr (inDebugMode) {
+                lastDebug_();
+            } else {
+                last_();
+            }
         }
     }
     /**
