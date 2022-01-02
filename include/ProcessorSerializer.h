@@ -639,7 +639,7 @@ public:
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
 
     template<typename CacheLine>
-    static inline void performFastRead(const CacheLine& line) noexcept {
+    static inline void performCacheRead(const CacheLine& line) noexcept {
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
             auto isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             setDataBits(line.get(offset));
@@ -650,7 +650,7 @@ public:
         }
     }
     template<typename CacheLine>
-    static inline void performFastWrite(CacheLine& line) noexcept {
+    static inline void performCacheWrite(CacheLine& line) noexcept {
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
             auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             line.set(offset, getStyle(), getDataBits());

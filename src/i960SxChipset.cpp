@@ -173,11 +173,11 @@ inline void handleMemoryInterface() noexcept {
     // now take the time to compute the cache offset entries
     if (auto& theLine = theCache.getLine(); ProcessorInterface::isReadOperation()) {
         ProcessorInterface::setupDataLinesForRead();
-        ProcessorInterface :: performFastRead(theLine);
+        ProcessorInterface::performCacheRead(theLine);
 
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        ProcessorInterface :: performFastWrite(theLine);
+        ProcessorInterface::performCacheWrite(theLine);
     }
 }
 
