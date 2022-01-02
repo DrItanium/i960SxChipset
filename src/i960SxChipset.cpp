@@ -174,14 +174,14 @@ inline void handleMemoryInterface() noexcept {
     // now take the time to compute the cache offset entries
     if (auto& theEntry = theCache.getLine(); TheProcessorInterface::isReadOperation()) {
         TheProcessorInterface::setupDataLinesForRead();
-        TheProcessorInterface::startFastCacheTransaction(&theEntry, TheProcessorInterface::getCacheOffsetEntry());
+        TheProcessorInterface::startFastCacheTransaction(&theEntry);
         do {
             TheProcessorInterface ::nextFastRead();
             if (informCPU()) {
+                TheProcessorInterface::endFastCacheTransaction();
                 break;
             }
         } while (true);
-        TheProcessorInterface::endFastCacheTransaction();
 
 #if 0
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
@@ -205,9 +205,17 @@ inline void handleMemoryInterface() noexcept {
 #endif
     } else {
         TheProcessorInterface::setupDataLinesForWrite();
+        TheProcessorInterface::startFastCacheTransaction(&theEntry);
+        do {
+            TheProcessorInterface ::nextFastWrite();
+            if (informCPU()) {
+                TheProcessorInterface::endFastCacheTransaction();
+                break;
+            }
+        } while (true);
+#if 0
         // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
         // far as we can go with how the Sx works!
-
         // Also the manual states that the processor cannot burst across 16-byte boundaries so :D.
         for (byte i = TheProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
             auto bits = TheProcessorInterface::getDataBits();
@@ -226,6 +234,7 @@ inline void handleMemoryInterface() noexcept {
             // so if I don't increment the address, I think we run too fast xD based on some experimentation
             TheProcessorInterface::burstNext<LeaveAddressAlone>();
         }
+#endif
     }
 }
 

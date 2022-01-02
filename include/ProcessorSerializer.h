@@ -644,15 +644,15 @@ public:
     [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
 
-    static void startFastCacheTransaction(CacheLine* line, byte startOffset) noexcept {
+    static void startFastCacheTransaction(CacheLine* line) noexcept {
         savedCacheLine_ = line;
-        savedCacheLineOffset_ = startOffset;
+        savedCacheLineOffset_ = getCacheOffsetEntry();
     }
     static void nextFastRead() noexcept {
         setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
     }
     static void nextFastWrite() noexcept {
-        savedCacheLine_->set(getDataBits(), savedCacheLineOffset_++);
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits());
     }
     static void endFastCacheTransaction() noexcept {
         savedCacheLine_ = nullptr;
