@@ -38,7 +38,6 @@ inline BodyFunction getNonDebugWriteBody(byte index) noexcept { return lookupTab
 BodyFunction getDebugReadBody(byte index) noexcept;
 BodyFunction getDebugWriteBody(byte index) noexcept;
 
-
 template<bool inDebugMode>
 BodyFunction getReadBody(byte index) noexcept {
     if constexpr (inDebugMode) {

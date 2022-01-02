@@ -435,6 +435,8 @@ void setupDispatchTable() noexcept {
         lookupTableRead_Debug[ConfigurationSpace ::SectionID] = ProcessorInterface::performExternalDeviceRead<ConfigurationSpace , true>;
         lookupTableWrite_Debug[ConfigurationSpace ::SectionID] = ProcessorInterface::performExternalDeviceWrite<ConfigurationSpace , true>;
     }
+    // now tell the ProcessorInterface to pull the appropriate functions
+    ProcessorInterface::setupMostRecentDispatchFunctions();
 }
 BodyFunction
 getDebugReadBody(byte index) noexcept {

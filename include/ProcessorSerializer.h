@@ -275,10 +275,6 @@ public:
             } else {
                 /// @todo implement this
             }
-            lastRead_ = getReadBody<false>(0);
-            lastWrite_ = getWriteBody<false>(0);
-            lastReadDebug_ = getReadBody<true>(0);
-            lastWriteDebug_ = getWriteBody<true>(0);
             SPI.endTransaction();
         }
     }
@@ -750,12 +746,23 @@ public:
             }
         } while (true);
     }
+public:
+    static inline void setupMostRecentDispatchFunctions() noexcept {
+        if (!initialDispatchFunctionsInitialized_) {
+            initialDispatchFunctionsInitialized_ = true;
+            lastRead_ = getReadBody<false>(0);
+            lastWrite_ = getWriteBody<false>(0);
+            lastReadDebug_ = getReadBody<true>(0);
+            lastWriteDebug_ = getWriteBody<true>(0);
+        }
+    }
 private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
     static inline byte dataLinesDirection_ = 0xFF;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
+    static inline bool initialDispatchFunctionsInitialized_ = false;
     static inline BodyFunction lastRead_ = nullptr;
     static inline BodyFunction lastReadDebug_ = nullptr;
     static inline BodyFunction lastWrite_ = nullptr;
