@@ -341,14 +341,27 @@ public:
         }
     }
     inline static void setupDataLinesForRead() noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
-            if (dataLinesDirection_) {
+
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        // start the transaction but only finish it if we need to
+        SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+        if (dataLinesDirection_) {
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+            {
                 dataLinesDirection_ = ~dataLinesDirection_;
-                writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0);
             }
-        } else {
-            // do nothing
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
         }
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        SPI.endTransaction();
     }
 private:
     template<bool useInterrupts = true>
