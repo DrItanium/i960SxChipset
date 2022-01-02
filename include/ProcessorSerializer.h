@@ -743,10 +743,8 @@ public:
     static inline void setupMostRecentDispatchFunctions() noexcept {
         if (!initialDispatchFunctionsInitialized_) {
             initialDispatchFunctionsInitialized_ = true;
-            lastRead_ = getReadBody<false>(0);
-            lastWrite_ = getWriteBody<false>(0);
-            lastReadDebug_ = getReadBody<true>(0);
-            lastWriteDebug_ = getWriteBody<true>(0);
+            // update all of the target functions at the same time on initial startup
+            updateTargetFunctions<true>(0);
         }
     }
 private:
