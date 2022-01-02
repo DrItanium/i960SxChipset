@@ -403,9 +403,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        if (highest != address_.bytes[3]) {
-            updateTargetFunctions<inDebugMode>(highest);
-        }
+        updateTargetFunctions<inDebugMode>(highest);
         address_.bytes[3] = highest;
     }
     template<byte offsetMask>
@@ -462,9 +460,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        if (address_.bytes[3] != highest) {
-            updateTargetFunctions<inDebugMode>(highest);
-        }
+        updateTargetFunctions<inDebugMode>(highest);
         address_.bytes[3] = highest;
     }
     template<bool inDebugMode>
@@ -484,9 +480,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        if (highest != address_.bytes[3]) {
-            updateTargetFunctions<inDebugMode>(highest);
-        }
+        updateTargetFunctions<inDebugMode>(highest);
         address_.bytes[3] = highest;
     }
     static void updateHigher8() noexcept {
