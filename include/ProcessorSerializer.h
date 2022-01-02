@@ -655,13 +655,6 @@ public:
                 bool isLastRead;
                 digitalWrite<i960Pinout::GPIOSelect, LOW>();
                 SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
-                /*
-                 * The following NOP introduces a small delay that can prevent the wait
-                 * loop form iterating when running at the maximum speed. This gives
-                 * about 10% more speed, even if it seems counter-intuitive. At lower
-                 * speeds it is unnoticed.
-                 */
-                asm volatile("nop");
                 {
                     // this operation is very important to interleave because it can be very expensive to
                     // but if we are also communicating over SPI, then the cost of this operation is nullified considerably
@@ -669,7 +662,6 @@ public:
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-                asm volatile("nop");
                 {
                     // find out if this is the last transaction while we are talking to the io expander
                     isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -678,13 +670,13 @@ public:
                 SPDR = latchedDataOutput.bytes[0];
                 asm volatile("nop");
                 {
-                    /// @todo insert tiny independent operations here if desired
+                    /// @todo insert tiny independent operations here if desired, delete nop if code added here
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 SPDR = latchedDataOutput.bytes[1];
                 asm volatile("nop");
                 {
-                    /// @todo insert tiny independent operations here if desired
+                    /// @todo insert tiny independent operations here if desired, delete nop if code added here
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 digitalWrite<i960Pinout::GPIOSelect, HIGH>();
@@ -716,13 +708,11 @@ public:
             // getDataBits will be expanded here
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
             SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-            asm volatile("nop");
             {
                 isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
             SPDR = static_cast<byte>(MCP23x17Registers::GPIO) ;
-            asm volatile("nop");
             {
                 currLSS = getStyle();
             }
@@ -730,12 +720,11 @@ public:
             SPDR = 0;
             asm volatile("nop");
             {
-                /// @todo insert tiny independent operations here if desired
+                /// @todo insert tiny independent operations here if desired, delete nop if code added here
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
             auto lower = SPDR;
             SPDR = 0;
-            asm volatile("nop");
             {
                 output.bytes[0] = lower;
             }
