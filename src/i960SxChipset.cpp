@@ -113,54 +113,6 @@ inline void displayRequestedAddress() noexcept {
     Serial.println(address, HEX);
 }
 
-template<bool inDebugMode>
-inline void fallbackBody() noexcept {
-    if constexpr (inDebugMode) {
-        displayRequestedAddress();
-    }
-    // fallback, be consistent to make sure we don't run faster than the i960
-    if (ProcessorInterface::isReadOperation()) {
-        ProcessorInterface::setupDataLinesForRead();
-        ProcessorInterface::performFallbackRead<inDebugMode>();
-    } else {
-        ProcessorInterface::setupDataLinesForWrite();
-        ProcessorInterface::performFallbackWrite<inDebugMode>();
-    }
-}
-
-template<bool inDebugMode>
-inline void handleMemoryInterface() noexcept {
-    if constexpr (inDebugMode) {
-        displayRequestedAddress();
-    }
-    // okay we are dealing with the psram chips
-    // now take the time to compute the cache offset entries
-    if (auto& theLine = theCache.getLine(); ProcessorInterface::isReadOperation()) {
-        ProcessorInterface::setupDataLinesForRead();
-        ProcessorInterface::performCacheRead<decltype(theLine), inDebugMode>(theLine);
-
-    } else {
-        ProcessorInterface::setupDataLinesForWrite();
-        ProcessorInterface::performCacheWrite<decltype(theLine), inDebugMode>(theLine);
-    }
-}
-
-template<bool inDebugMode, typename T>
-inline void handleExternalDeviceRequest() noexcept {
-    if constexpr (inDebugMode) {
-        displayRequestedAddress();
-    }
-    // with burst transactions in the core chipset, we do not have access to a cache line to write into.
-    // instead we need to do the old style infinite iteration design
-    if (ProcessorInterface::isReadOperation()) {
-        ProcessorInterface::setupDataLinesForRead();
-        ProcessorInterface::performExternalDeviceRead<T, inDebugMode>();
-    } else {
-        ProcessorInterface::setupDataLinesForWrite();
-        ProcessorInterface::performExternalDeviceWrite<T, inDebugMode>();
-    }
-}
-
 template<bool inDebugMode, bool useInterrupts>
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
@@ -439,14 +391,12 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
 
 extern DispatchTable lookupTableRead_Debug;
 extern DispatchTable lookupTableWrite_Debug;
-extern DispatchTable lookupTable_Debug;
 void setupDispatchTable() noexcept {
     Serial.println(F("Setting up the initial lookup table"));
     for (int i = 0; i < 256; ++i) {
         lookupTableRead[i] = ProcessorInterface::performFallbackRead<false>;
         lookupTableWrite[i] = ProcessorInterface::performFallbackWrite<false>;
         if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTable_Debug[i] = fallbackBody<true>;
             lookupTableRead_Debug[i] = ProcessorInterface::performFallbackRead<true>;
             lookupTableWrite_Debug[i] = ProcessorInterface::performFallbackWrite<true>;
         }
@@ -459,7 +409,6 @@ void setupDispatchTable() noexcept {
         lookupTableRead[i] = readCacheLine;
         lookupTableWrite[i] = writeCacheLine;
         if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTable_Debug[i] = handleMemoryInterface<true>;
             lookupTableRead_Debug[i] = readCacheLine_Debug;
             lookupTableWrite_Debug[i] = writeCacheLine_Debug;
         }
