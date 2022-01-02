@@ -31,24 +31,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using BodyFunction = void (*)();
 using DispatchTable = BodyFunction[256];
-extern DispatchTable lookupTable;
 extern DispatchTable lookupTableRead;
 extern DispatchTable lookupTableWrite;
 inline BodyFunction getNonDebugReadBody(byte index) noexcept { return lookupTableRead[index]; }
 inline BodyFunction getNonDebugWriteBody(byte index) noexcept { return lookupTableWrite[index]; }
-inline BodyFunction getNonDebugBody(byte index) noexcept { return lookupTable[index]; }
-BodyFunction getDebugBody(byte index) noexcept;
 BodyFunction getDebugReadBody(byte index) noexcept;
 BodyFunction getDebugWriteBody(byte index) noexcept;
 
-template<bool inDebugMode>
-BodyFunction getBody(byte index) noexcept {
-    if constexpr (inDebugMode) {
-        return getDebugBody(index);
-    } else {
-        return getNonDebugBody(index);
-    }
-}
 
 template<bool inDebugMode>
 BodyFunction getReadBody(byte index) noexcept {

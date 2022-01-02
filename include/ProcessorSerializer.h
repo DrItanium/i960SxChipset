@@ -275,10 +275,10 @@ public:
             } else {
                 /// @todo implement this
             }
-            updateTargetFunctions<true, true>();
-            updateTargetFunctions<false, true>();
-            updateTargetFunctions<true, false>();
-            updateTargetFunctions<false, false>();
+            lastRead_ = getReadBody<false>(0);
+            lastWrite_ = getWriteBody<false>(0);
+            lastReadDebug_ = getReadBody<true>(0);
+            lastWriteDebug_ = getWriteBody<true>(0);
             SPI.endTransaction();
         }
     }
@@ -541,62 +541,58 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
 private:
-    template<bool inDebugMode, bool differentiateReadWrite>
+    template<bool inDebugMode>
     inline static void updateTargetFunctions() noexcept {
-        if constexpr (differentiateReadWrite) {
-            if constexpr (auto b = getReadBody<inDebugMode>(address_.bytes[3]),
-                        c = getWriteBody<inDebugMode>(address_.bytes[3]); inDebugMode) {
-                lastReadDebug_ = b;
-                lastWriteDebug_ = c;
+        if constexpr (inDebugMode) {
+            if (isReadOperation()) {
+                lastReadDebug_ = getReadBody<inDebugMode>(address_.bytes[3]);
             } else {
-                lastRead_ = b;
-                lastWrite_ = c;
+                lastWriteDebug_ = getWriteBody<inDebugMode>(address_.bytes[3]) ;
             }
         } else {
-            if constexpr (auto a = getBody<inDebugMode>(address_.bytes[3]) ; inDebugMode) {
-                lastDebug_ = a;
+            if (isReadOperation()) {
+                lastRead_ = getReadBody<inDebugMode>(address_.bytes[3]);
             } else {
-                last_ = a;
+                lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]) ;
             }
-
         }
     }
 public:
-    template<bool inDebugMode, byte offsetMask, bool useInterrupts = true, bool differentiateReadWrite = true>
+    template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
     static void newDataCycle() noexcept {
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
                 updateLower8();
                 upper16Update();
-                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0010:
                 updateLowest8<offsetMask>();
                 upper16Update();
-                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0011:
                 upper16Update();
-                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0100:
                 lower16Update<offsetMask>();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0101:
                 updateLower8();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0110:
                 updateLowest8<offsetMask>();
                 updateHighest8();
-                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b0111:
                 updateHighest8();
-                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
+                updateTargetFunctions<inDebugMode>();
                 break;
             case 0b1000:
                 lower16Update<offsetMask>();
@@ -625,30 +621,22 @@ public:
             case 0b1111: break;
             default:
                 full32BitUpdate<offsetMask>();
-                updateTargetFunctions<inDebugMode, differentiateReadWrite>();
+                updateTargetFunctions<inDebugMode>();
                 break;
         }
-        if constexpr (differentiateReadWrite) {
-            if (isReadOperation()) {
-                setupDataLinesForRead();
-                if constexpr (inDebugMode) {
-                    lastReadDebug_();
-                } else {
-                    lastRead_();
-                }
+        if (isReadOperation()) {
+            setupDataLinesForRead();
+            if constexpr (inDebugMode) {
+                lastReadDebug_();
             } else {
-                setupDataLinesForWrite();
-                if constexpr (inDebugMode) {
-                    lastWriteDebug_();
-                } else {
-                    lastWrite_();
-                }
+                lastRead_();
             }
         } else {
+            setupDataLinesForWrite();
             if constexpr (inDebugMode) {
-                lastDebug_();
+                lastWriteDebug_();
             } else {
-                last_();
+                lastWrite_();
             }
         }
     }
@@ -762,8 +750,6 @@ private:
     static inline byte dataLinesDirection_ = 0xFF;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
-    static inline BodyFunction last_ = nullptr;
-    static inline BodyFunction lastDebug_ = nullptr;
     static inline BodyFunction lastRead_ = nullptr;
     static inline BodyFunction lastReadDebug_ = nullptr;
     static inline BodyFunction lastWrite_ = nullptr;

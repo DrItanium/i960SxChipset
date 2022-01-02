@@ -443,7 +443,6 @@ extern DispatchTable lookupTable_Debug;
 void setupDispatchTable() noexcept {
     Serial.println(F("Setting up the initial lookup table"));
     for (int i = 0; i < 256; ++i) {
-        lookupTable[i] = fallbackBody<false>;
         lookupTableRead[i] = ProcessorInterface::performFallbackRead<false>;
         lookupTableWrite[i] = ProcessorInterface::performFallbackWrite<false>;
         if constexpr (CompileInAddressDebuggingSupport) {
@@ -457,7 +456,6 @@ void setupDispatchTable() noexcept {
     auto readCacheLine_Debug = []() { ProcessorInterface::performCacheRead<typename L1Cache::CacheEntry, true>(theCache.getLine()); };
     auto writeCacheLine_Debug = []() { ProcessorInterface::performCacheWrite<typename L1Cache::CacheEntry, true>(theCache.getLine()); };
     for (int i = 0;i < 4; ++i) {
-        lookupTable[i] = handleMemoryInterface<false>;
         lookupTableRead[i] = readCacheLine;
         lookupTableWrite[i] = writeCacheLine;
         if constexpr (CompileInAddressDebuggingSupport) {
@@ -466,45 +464,27 @@ void setupDispatchTable() noexcept {
             lookupTableWrite_Debug[i] = writeCacheLine_Debug;
         }
     }
-    lookupTable[TheRTCInterface ::SectionID] = handleExternalDeviceRequest<false, TheRTCInterface >;
     lookupTableRead[TheRTCInterface ::SectionID] = ProcessorInterface::performExternalDeviceRead<TheRTCInterface , false>;
     lookupTableWrite[TheRTCInterface ::SectionID] = ProcessorInterface::performExternalDeviceWrite<TheRTCInterface , false>;
-    lookupTable[TheDisplayInterface ::SectionID] = handleExternalDeviceRequest<false, TheDisplayInterface >;
     lookupTableRead[TheDisplayInterface ::SectionID] = ProcessorInterface::performExternalDeviceRead<TheDisplayInterface , false>;
     lookupTableWrite[TheDisplayInterface ::SectionID] = ProcessorInterface::performExternalDeviceWrite<TheDisplayInterface , false>;
-    lookupTable[TheSDInterface ::SectionID] = handleExternalDeviceRequest<false, TheSDInterface >;
     lookupTableRead[TheSDInterface ::SectionID] = ProcessorInterface::performExternalDeviceRead<TheSDInterface , false>;
     lookupTableWrite[TheSDInterface ::SectionID] = ProcessorInterface::performExternalDeviceWrite<TheSDInterface , false>;
-    lookupTable[TheConsoleInterface ::SectionID] = handleExternalDeviceRequest<false, TheConsoleInterface >;
     lookupTableRead[TheConsoleInterface ::SectionID] = ProcessorInterface::performExternalDeviceRead<TheConsoleInterface , false>;
     lookupTableWrite[TheConsoleInterface ::SectionID] = ProcessorInterface::performExternalDeviceWrite<TheConsoleInterface , false>;
-    lookupTable[ConfigurationSpace ::SectionID] = handleExternalDeviceRequest<false, ConfigurationSpace >;
     lookupTableRead[ConfigurationSpace ::SectionID] = ProcessorInterface::performExternalDeviceRead<ConfigurationSpace , false>;
     lookupTableWrite[ConfigurationSpace ::SectionID] = ProcessorInterface::performExternalDeviceWrite<ConfigurationSpace , false>;
     if constexpr (CompileInAddressDebuggingSupport) {
-        lookupTable_Debug[TheRTCInterface ::SectionID] = handleExternalDeviceRequest<true, TheRTCInterface >;
         lookupTableRead_Debug[TheRTCInterface ::SectionID] = ProcessorInterface::performExternalDeviceRead<TheRTCInterface , true>;
         lookupTableWrite_Debug[TheRTCInterface ::SectionID] = ProcessorInterface::performExternalDeviceWrite<TheRTCInterface , true>;
-        lookupTable_Debug[TheDisplayInterface ::SectionID] = handleExternalDeviceRequest<true, TheDisplayInterface >;
         lookupTableRead_Debug[TheDisplayInterface ::SectionID] = ProcessorInterface::performExternalDeviceRead<TheDisplayInterface , true>;
         lookupTableWrite_Debug[TheDisplayInterface ::SectionID] = ProcessorInterface::performExternalDeviceWrite<TheDisplayInterface , true>;
-        lookupTable_Debug[TheSDInterface ::SectionID] = handleExternalDeviceRequest<true, TheSDInterface >;
         lookupTableRead_Debug[TheSDInterface ::SectionID] = ProcessorInterface::performExternalDeviceRead<TheSDInterface , true>;
         lookupTableWrite_Debug[TheSDInterface ::SectionID] = ProcessorInterface::performExternalDeviceWrite<TheSDInterface , true>;
-        lookupTable_Debug[TheConsoleInterface ::SectionID] = handleExternalDeviceRequest<true, TheConsoleInterface >;
         lookupTableRead_Debug[TheConsoleInterface ::SectionID] = ProcessorInterface::performExternalDeviceRead<TheConsoleInterface , true>;
         lookupTableWrite_Debug[TheConsoleInterface ::SectionID] = ProcessorInterface::performExternalDeviceWrite<TheConsoleInterface , true>;
-        lookupTable_Debug[ConfigurationSpace ::SectionID] = handleExternalDeviceRequest<true, ConfigurationSpace >;
         lookupTableRead_Debug[ConfigurationSpace ::SectionID] = ProcessorInterface::performExternalDeviceRead<ConfigurationSpace , true>;
         lookupTableWrite_Debug[ConfigurationSpace ::SectionID] = ProcessorInterface::performExternalDeviceWrite<ConfigurationSpace , true>;
-    }
-}
-BodyFunction
-getDebugBody(byte index) noexcept {
-    if constexpr (CompileInAddressDebuggingSupport) {
-        return lookupTable_Debug[index];
-    } else {
-        return fallbackBody<true>;
     }
 }
 BodyFunction
@@ -525,8 +505,6 @@ getDebugWriteBody(byte index) noexcept {
 }
 
 SdFat SD;
-DispatchTable lookupTable;
-DispatchTable lookupTable_Debug;
 DispatchTable lookupTableRead;
 DispatchTable lookupTableRead_Debug;
 DispatchTable lookupTableWrite;
