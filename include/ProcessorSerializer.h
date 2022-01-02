@@ -763,20 +763,48 @@ public:
         // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
         // so you may still be reading the previous i960 cycle state!
         for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
-            auto dataBits = getDataBits();
-            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            bool isLast;
+            LoadStoreStyle currLSS;
+            SplitWord16 dataBits;
+            byte pageIndex;
+            // getDataBits will be expanded here
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+            {
+                isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::GPIO) ;
+            {
+                currLSS = getStyle();
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            {
+                pageIndex = getPageIndex();
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            auto lower = SPDR;
+            SPDR = 0;
+            {
+                dataBits.bytes[0] = lower;
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            dataBits.bytes[1] = SPDR;
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tPage Index: 0x"));
-                Serial.println(ProcessorInterface::getPageIndex(), HEX);
+                Serial.println(pageIndex, HEX);
                 Serial.print(F("\tPage Offset: 0x"));
                 Serial.println(pageOffset, HEX);
                 Serial.print(F("\tData To Write: 0x"));
                 Serial.println(dataBits.getWholeValue(), HEX);
             }
-            T::write(getPageIndex(),
+            T::write(pageIndex,
                      pageOffset,
-                     getStyle(),
+                     currLSS,
                      dataBits);
+            // we could actually pulse the cpu and then perform the write, unsure at this point
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 break;
