@@ -42,30 +42,28 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         byte target = NumberOfWays;
         for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i]->matches(theAddress)) {
+            if (ways_[i].matches(theAddress)) {
                 updateFlags(i);
-                return *ways_[i];
-            } else if (!ways_[i]->isValid() && target == NumberOfWays){
+                return ways_[i];
+            } else if (!ways_[i].isValid() && target == NumberOfWays){
                 target = i;
             }
         }
         auto index = target < NumberOfWays ? target : getLeastRecentlyUsed();
         updateFlags(index);
-        ways_[index]->reset(theAddress);
-        return *ways_[index];
+        ways_[index].reset(theAddress);
+        return ways_[index];
 
     }
     void clear() noexcept {
         for (auto& way : ways_) {
-            way->clear();
+            way.clear();
         }
         bits_ = 0;
     }
-    [[nodiscard]] constexpr auto getWay(size_t index = 0) const noexcept { return ways_[index & WayMask]; }
-    void setWay(CacheEntry& way, size_t index = 0) noexcept { ways_[index & WayMask] = &way; }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     void updateFlags(byte index) noexcept {
@@ -207,7 +205,7 @@ private:
         return LookupTable[bits_];
     }
 private:
-    CacheEntry* ways_[NumberOfWays] = { nullptr };
+    CacheEntry ways_[NumberOfWays];
     // This is RandPLRU Tree so we need to organize things correctly, I'm going to try four groups of two
     union {
         byte bits_ = 0b0111'1111;

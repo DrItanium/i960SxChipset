@@ -42,31 +42,28 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         byte targetIndex = 0xFF;
         for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i]->matches(theAddress)) {
+            if (ways_[i].matches(theAddress)) {
                 updateFlags(i);
-                return *ways_[i];
-            } else if (!ways_[i]->isValid() && (targetIndex >= NumberOfWays)) {
+                return ways_[i];
+            } else if (!ways_[i].isValid() && (targetIndex >= NumberOfWays)) {
                targetIndex = i;
             }
         }
         auto index = targetIndex < NumberOfWays ? targetIndex : getLeastRecentlyUsed();
         updateFlags(index);
-        ways_[index]->reset(theAddress);
-        return *ways_[index];
+        ways_[index].reset(theAddress);
+        return ways_[index];
 
     }
     void clear() noexcept {
         for (auto& way : ways_) {
-            way->clear();
+            way.clear();
         }
         mruBits_ = 0;
     }
-    [[nodiscard]] constexpr auto getWay(size_t index = 0) const noexcept { return ways_[index & WayMask]; }
-    void setWay(CacheEntry& way, size_t index = 0) noexcept { ways_[index & WayMask] = &way; }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     void updateFlags(byte index) noexcept {
@@ -83,7 +80,7 @@ private:
         return LRUTable[mruBits_];
     }
 private:
-    CacheEntry* ways_[NumberOfWays] = { nullptr };
+    CacheEntry ways_[NumberOfWays] = { nullptr };
     byte mruBits_ = 0;
     static constexpr byte LRUTable[256] {
         7, 7, 7, 7, 7, 7, 7, 7,

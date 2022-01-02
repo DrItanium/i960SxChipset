@@ -42,7 +42,7 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         if (auto result = find (theAddress); result) {
             return *result;
         } else {
@@ -51,9 +51,9 @@ public:
     }
     CacheEntry* find(TaggedAddress theAddress) noexcept {
         for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i]->matches(theAddress)) {
+            if (ways_[i].matches(theAddress)) {
                 mostRecentlyUsed_ = (i != 0);
-                return ways_[i];
+                return &ways_[i];
             }
         }
         return nullptr;
@@ -62,23 +62,18 @@ public:
     reset(TaggedAddress theAddress) noexcept {
         auto index = (!mostRecentlyUsed_? 1 : 0);
         mostRecentlyUsed_ = (index != 0);
-        ways_[index]->reset(theAddress);
-        return *ways_[index];
+        ways_[index].reset(theAddress);
+        return ways_[index];
     }
     void clear() noexcept {
-        if (valid()) {
-            for (auto &way: ways_) {
-                way->clear();
-            }
+        for (auto &way: ways_) {
+            way.clear();
         }
         mostRecentlyUsed_ = false;
     }
-    [[nodiscard]] constexpr bool valid() const noexcept { return ways_[0] && ways_[1]; }
-    [[nodiscard]] constexpr auto getWay(size_t index = 0) const noexcept { return ways_[index & WayMask]; }
-    void setWay(CacheEntry& way, size_t index = 0) noexcept { ways_[index & WayMask] = &way; }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
-    CacheEntry* ways_[NumberOfWays] = { nullptr };
+    CacheEntry ways_[NumberOfWays];
     bool mostRecentlyUsed_ = false;
 };
 

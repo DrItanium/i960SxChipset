@@ -71,11 +71,12 @@ public:
         }
     }
     byte* viewAsStorage() noexcept {
-        return reinterpret_cast<byte*>(backingStorage_);
+        return reinterpret_cast<byte*>(entries_);
     }
 
     void begin() noexcept {
         // populate the lines from a separate block of entries known as the backing storage
+#if 0
         for (size_t i = 0; i < ActualNumberOfEntries; ++i) {
             auto& way = backingStorage_[i];
             CacheWay& targetEntry = entries_[i];
@@ -83,12 +84,13 @@ public:
                 targetEntry.setWay(way[j], j);
             }
         }
+#endif
         clear();
         // set everything up
     }
-    constexpr auto getCacheSize() const noexcept { return sizeof(backingStorage_); }
+    constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
 private:
-    CacheEntry backingStorage_[ActualNumberOfEntries][CacheWay::NumberOfWays];
+    //CacheEntry backingStorage_[ActualNumberOfEntries][CacheWay::NumberOfWays];
     CacheWay entries_[ActualNumberOfEntries];
 };
 

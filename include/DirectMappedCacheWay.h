@@ -42,30 +42,20 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    __attribute__((noinline)) CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         // okay first we need to see if we hit any matches
-        if (way_->matches(theAddress)) {
-            return *way_;
+        if (way_.matches(theAddress)) {
+            return way_;
         }
         return reset(theAddress);
     }
-    CacheEntry* find(TaggedAddress theAddress) noexcept {
-        if (!way_->matches(theAddress))  {
-            return nullptr;
-        } else {
-            return way_;
-        }
-    }
     CacheEntry& reset(TaggedAddress theAddress) noexcept {
-        way_->reset(theAddress);
-        return *way_;
+        way_.reset(theAddress);
+        return way_;
     }
-    void clear() noexcept { way_->clear(); }
-    [[nodiscard]] constexpr bool valid() const noexcept { return way_; }
-    [[nodiscard]] constexpr auto getWay(size_t = 0) const noexcept { return way_; }
-    void setWay(CacheEntry& way, size_t = 0) noexcept { way_ = &way; }
+    void clear() noexcept { way_.clear(); }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
-    CacheEntry* way_ = nullptr;
+    CacheEntry way_;
 };
 #endif //SXCHIPSET_DIRECTMAPPEDCACHEWAY_H
