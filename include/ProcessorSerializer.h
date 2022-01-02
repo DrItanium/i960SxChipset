@@ -728,7 +728,6 @@ public:
         // next 16-bit word
         // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
         for (byte pageOffset = getPageOffset(); ;pageOffset += 2) {
-            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             auto result = T::read(getPageIndex(),
                                   pageOffset,
                                   getStyle());
@@ -740,7 +739,7 @@ public:
                 Serial.print(F("\tRead Value: 0x"));
                 Serial.println(result, HEX);
             }
-            setDataBits(result);
+            auto isLast = setDataBits(result);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 return;
@@ -775,8 +774,7 @@ public:
     template<bool inDebugMode>
     static inline void performFallbackRead() noexcept {
         do {
-            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            setDataBits(0);
+            auto isLast = setDataBits(0);
             DigitalPin<i960Pinout::Ready>::pulse();
             // need to introduce some delay
             if (isLast) {
