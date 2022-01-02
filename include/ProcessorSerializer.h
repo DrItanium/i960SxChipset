@@ -287,17 +287,44 @@ public:
             return SplitWord16(0);
         }
     }
-    static void setDataBits(uint16_t value) noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
-            // the latch is preserved in between data line changes
-            // okay we are still pointing as output values
-            // check the latch and see if the output value is the same as what is latched
-            if (latchedDataOutput.getWholeValue() != value) {
+    static bool setDataBits(uint16_t value) noexcept {
+        // the latch is preserved in between data line changes
+        // okay we are still pointing as output values
+        // check the latch and see if the output value is the same as what is latched
+        if (latchedDataOutput.getWholeValue() != value) {
+            //latchedDataOutput.wholeValue_ = value;
+            bool isLastRead;
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+            {
+                // this operation is very important to interleave because it can be very expensive to
+                // but if we are also communicating over SPI, then the cost of this operation is nullified considerably
                 latchedDataOutput.wholeValue_ = value;
-                writeGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>(latchedDataOutput.getWholeValue());
             }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+            {
+                // find out if this is the last transaction while we are talking to the io expander
+                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = latchedDataOutput.bytes[0];
+            {
+                asm volatile("nop");
+                /// @todo insert tiny independent operations here if desired, delete nop if code added here
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = latchedDataOutput.bytes[1];
+            {
+                asm volatile("nop");
+                /// @todo insert tiny independent operations here if desired, delete nop if code added here
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            return isLastRead;
         } else {
-            // do nothing
+            return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+
         }
     }
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
@@ -645,55 +672,10 @@ public:
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
-            // unpacking setDataBits allows us to interleave operations into the thing itself
-            // informing the cpu is duplicated on both sides of the if statement
-            // this is done so the compiler does not need to insert jumps to skip over statements.
-            // This design removes around 6 bytes of code from the final product. Since this is one of the
-            // most heavily used sections of code it is a good idea to not interleave paths in such a way that
-            // could confuse the compiler.
-            if (auto value = line.get(offset); latchedDataOutput.getWholeValue() != value) {
-                bool isLastRead;
-                digitalWrite<i960Pinout::GPIOSelect, LOW>();
-                SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
-                {
-                    // this operation is very important to interleave because it can be very expensive to
-                    // but if we are also communicating over SPI, then the cost of this operation is nullified considerably
-                    latchedDataOutput.wholeValue_ = value;
-                }
-                while (!(SPSR & _BV(SPIF))) ; // wait
-                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-                {
-                    // find out if this is the last transaction while we are talking to the io expander
-                    isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                }
-                while (!(SPSR & _BV(SPIF))) ; // wait
-                SPDR = latchedDataOutput.bytes[0];
-                {
-                    asm volatile("nop");
-                    /// @todo insert tiny independent operations here if desired, delete nop if code added here
-                }
-                while (!(SPSR & _BV(SPIF))) ; // wait
-                SPDR = latchedDataOutput.bytes[1];
-                {
-                    asm volatile("nop");
-                    /// @todo insert tiny independent operations here if desired, delete nop if code added here
-                }
-                while (!(SPSR & _BV(SPIF))) ; // wait
-                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLastRead) {
-                    break;
-                }
-            } else {
-                // As I said above, this code is duplicated to allow the compiler to create a more compact representation
-                // if I were to only calcualte isLastRead and then pull the cpu inform section out to below it, the code would be
-                // technically simpler but require the compiler to insert jumps. This way, you either go down one path on each iteration
-                // of the loop. Analysis with -Ofast shows that this duplication actually makes the code smaller :).
-                auto isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLastRead) {
-                    break;
-                }
+            auto isLastRead = setDataBits(line.get(offset));
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                break;
             }
         }
         SPI.endTransaction();
