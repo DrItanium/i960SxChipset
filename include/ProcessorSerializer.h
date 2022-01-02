@@ -622,15 +622,6 @@ public:
             last_();
         }
     }
-    template<bool advanceAddress = true>
-    static void burstNext() noexcept {
-        if constexpr (advanceAddress) {
-            // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
-            // next 16-bit word
-            // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
-            address_.bytes[0] += 2;
-        }
-    }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
      * @return The LSB of the address
