@@ -331,13 +331,25 @@ public:
     [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
     inline static void setupDataLinesForWrite() noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
-            if (!dataLinesDirection_) {
+        if (!dataLinesDirection_) {
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+            {
                 dataLinesDirection_ = ~dataLinesDirection_;
-                writeDirection<ProcessorInterface::IOExpanderAddress::DataLines>(0xFFFF);
             }
-        } else {
-            // do nothing
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0xFF;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0xFF;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            SPI.endTransaction();
         }
     }
     inline static void setupDataLinesForRead() noexcept {
