@@ -644,11 +644,53 @@ public:
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheRead(const CacheLine& line) noexcept {
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
-            auto isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            setDataBits(line.get(offset));
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                return;
+            // unpacking setDataBits allows us to interleave operations into the thing itself
+            if (auto value = line.get(offset); latchedDataOutput.getWholeValue() != value) {
+                bool isLastRead = false;
+                SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+                /*
+                 * The following NOP introduces a small delay that can prevent the wait
+                 * loop form iterating when running at the maximum speed. This gives
+                 * about 10% more speed, even if it seems counter-intuitive. At lower
+                 * speeds it is unnoticed.
+                 */
+                asm volatile("nop");
+                {
+                    latchedDataOutput.wholeValue_ = value;
+                }
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                asm volatile("nop");
+                {
+                    isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = latchedDataOutput.bytes[0];
+                asm volatile("nop");
+                {
+
+                }
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = latchedDataOutput.bytes[1];
+                asm volatile("nop");
+                {
+
+                }
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                SPI.endTransaction();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    return;
+                }
+            } else {
+                auto isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    return;
+                }
             }
         }
     }
