@@ -660,6 +660,56 @@ public:
             }
         }
     }
+    template<typename T, bool inDebugMode>
+    static inline void performExternalDeviceRead() noexcept {
+        // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
+        // next 16-bit word
+        // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
+        for (byte pageOffset = getPageOffset(); ;pageOffset += 2) {
+            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            auto result = T::read(getPageIndex(),
+                                  pageOffset,
+                                  getStyle());
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tPage Index: 0x")) ;
+                Serial.println(getPageIndex(), HEX);
+                Serial.print(F("\tPage Offset: 0x")) ;
+                Serial.println(pageOffset, HEX);
+                Serial.print(F("\tRead Value: 0x"));
+                Serial.println(result, HEX);
+            }
+            setDataBits(result);
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLast) {
+                return;
+            }
+        }
+    }
+    template<typename T, bool inDebugMode>
+    static inline void performExternalDeviceWrite() noexcept {
+        // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
+        // so you may still be reading the previous i960 cycle state!
+        for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
+            auto dataBits = getDataBits();
+            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tPage Index: 0x"));
+                Serial.println(ProcessorInterface::getPageIndex(), HEX);
+                Serial.print(F("\tPage Offset: 0x"));
+                Serial.println(pageOffset, HEX);
+                Serial.print(F("\tData To Write: 0x"));
+                Serial.println(dataBits.getWholeValue(), HEX);
+            }
+            T::write(getPageIndex(),
+                     pageOffset,
+                     getStyle(),
+                     dataBits);
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLast) {
+                break;
+            }
+        }
+    }
 private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
