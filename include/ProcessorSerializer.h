@@ -668,14 +668,14 @@ public:
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 SPDR = latchedDataOutput.bytes[0];
-                asm volatile("nop");
                 {
+                    asm volatile("nop");
                     /// @todo insert tiny independent operations here if desired, delete nop if code added here
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 SPDR = latchedDataOutput.bytes[1];
-                asm volatile("nop");
                 {
+                    asm volatile("nop");
                     /// @todo insert tiny independent operations here if desired, delete nop if code added here
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
@@ -718,8 +718,8 @@ public:
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
             SPDR = 0;
-            asm volatile("nop");
             {
+                asm volatile("nop");
                 /// @todo insert tiny independent operations here if desired, delete nop if code added here
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
