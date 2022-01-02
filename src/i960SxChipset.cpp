@@ -190,47 +190,10 @@ inline void handleExternalDeviceRequest() noexcept {
     // instead we need to do the old style infinite iteration design
     if (ProcessorInterface::isReadOperation()) {
         ProcessorInterface::setupDataLinesForRead();
-        for(;;) {
-            auto result = T::read(ProcessorInterface::getPageIndex(),
-                                  ProcessorInterface::getPageOffset(),
-                                  ProcessorInterface::getStyle());
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x")) ;
-                Serial.println(ProcessorInterface::getPageIndex(), HEX);
-                Serial.print(F("\tPage Offset: 0x")) ;
-                Serial.println(ProcessorInterface::getPageOffset(), HEX);
-                Serial.print(F("\tRead Value: 0x"));
-                Serial.println(result, HEX);
-            }
-            ProcessorInterface::setDataBits(result);
-            if (informCPU()) {
-                break;
-            }
-            ProcessorInterface::burstNext<IncrementAddress>();
-        }
+        ProcessorInterface::performExternalDeviceRead<T, inDebugMode>();
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        for (;;) {
-            auto dataBits = ProcessorInterface::getDataBits();
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x")) ;
-                Serial.println(ProcessorInterface::getPageIndex(), HEX);
-                Serial.print(F("\tPage Offset: 0x")) ;
-                Serial.println(ProcessorInterface::getPageOffset(), HEX);
-                Serial.print(F("\tData To Write: 0x"));
-                Serial.println(dataBits.getWholeValue(), HEX);
-            }
-            T::write(ProcessorInterface::getPageIndex(),
-                     ProcessorInterface::getPageOffset(),
-                     ProcessorInterface::getStyle(),
-                     dataBits);
-            if (informCPU()) {
-                break;
-            }
-            // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
-            // so you may still be reading the previous i960 cycle state!
-            ProcessorInterface::burstNext<IncrementAddress>();
-        }
+        ProcessorInterface::performExternalDeviceWrite<T, inDebugMode>();
     }
 }
 
