@@ -629,7 +629,7 @@ public:
     [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
 
-    template<typename CacheLine>
+    template<typename CacheLine, bool inDebugMode>
     static inline void performCacheRead(const CacheLine& line) noexcept {
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
             auto isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -640,7 +640,7 @@ public:
             }
         }
     }
-    template<typename CacheLine>
+    template<typename CacheLine, bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
             auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -701,6 +701,7 @@ public:
             }
         }
     }
+    template<bool inDebugMode>
     static inline void performFallbackRead() noexcept {
         do {
             auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -712,6 +713,7 @@ public:
             }
         } while (true);
     }
+    template<bool inDebugMode>
     static inline void performFallbackWrite() noexcept {
         do {
             // put four cycles worth of delay into this to make damn sure we are ready with the i960
