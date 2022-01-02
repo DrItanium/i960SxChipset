@@ -643,6 +643,7 @@ public:
 
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheRead(const CacheLine& line) noexcept {
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
             // unpacking setDataBits allows us to interleave operations into the thing itself
             // informing the cpu is duplicated on both sides of the if statement
@@ -651,8 +652,7 @@ public:
             // most heavily used sections of code it is a good idea to not interleave paths in such a way that
             // could confuse the compiler.
             if (auto value = line.get(offset); latchedDataOutput.getWholeValue() != value) {
-                bool isLastRead = false;
-                SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+                bool isLastRead;
                 digitalWrite<i960Pinout::GPIOSelect, LOW>();
                 SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
                 /*
@@ -688,10 +688,9 @@ public:
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                SPI.endTransaction();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
-                    return;
+                    break;
                 }
             } else {
                 // As I said above, this code is duplicated to allow the compiler to create a more compact representation
@@ -701,10 +700,11 @@ public:
                 auto isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
-                    return;
+                    break;
                 }
             }
         }
+        SPI.endTransaction();
     }
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
