@@ -107,27 +107,6 @@ using CacheWayStyle = conditional_t<TargetBoard::onAtmega1284p_Type2(),
 using L1Cache = CacheInstance_t<CacheWayStyle, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 L1Cache theCache;
 
-//template<template<auto, auto, auto, typename> typename L,
-//        byte NumberOfCaches,
-//        uint16_t IndividualCacheSize,
-//        byte CacheLineSize>
-//using L1Cache = MultiCache<L, NumberOfCaches, IndividualCacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
-//L1Cache<DirectMappedCacheWay, 11, 1024, 6> theCache;
-
-
-
-
-
-[[nodiscard]] bool informCPU() noexcept {
-    // you must scan the BLAST_ pin before pulsing ready, the cpu will change blast for the next transaction
-    auto isBurstLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-    pulse<i960Pinout::Ready>();
-    return isBurstLast;
-}
-constexpr auto IncrementAddress = true;
-constexpr auto LeaveAddressAlone = false;
-// while the i960 does not allow going beyond 8 words, we can use the number of words cached in all cases to be safe
-constexpr byte MaximumNumberOfWordsTransferrableInASingleTransaction = decltype(theCache)::NumWordsCached;
 inline void displayRequestedAddress() noexcept {
     auto address = ProcessorInterface ::getAddress();
     Serial.print(F("ADDRESS: 0x"));
