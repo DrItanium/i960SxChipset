@@ -171,13 +171,13 @@ inline void handleMemoryInterface() noexcept {
     }
     // okay we are dealing with the psram chips
     // now take the time to compute the cache offset entries
-    if (ProcessorInterface::isReadOperation()) {
+    if (auto& theLine = theCache.getLine(); ProcessorInterface::isReadOperation()) {
         ProcessorInterface::setupDataLinesForRead();
-        ProcessorInterface :: performFastRead(&theCache.getLine());
+        ProcessorInterface :: performFastRead(theLine);
 
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        ProcessorInterface :: performFastWrite(&theCache.getLine());
+        ProcessorInterface :: performFastWrite(theLine);
     }
 }
 
