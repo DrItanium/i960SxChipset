@@ -121,10 +121,10 @@ inline void fallbackBody() noexcept {
     // fallback, be consistent to make sure we don't run faster than the i960
     if (ProcessorInterface::isReadOperation()) {
         ProcessorInterface::setupDataLinesForRead();
-        ProcessorInterface::performFallbackRead();
+        ProcessorInterface::performFallbackRead<inDebugMode>();
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        ProcessorInterface::performFallbackWrite();
+        ProcessorInterface::performFallbackWrite<inDebugMode>();
     }
 }
 
@@ -137,11 +137,11 @@ inline void handleMemoryInterface() noexcept {
     // now take the time to compute the cache offset entries
     if (auto& theLine = theCache.getLine(); ProcessorInterface::isReadOperation()) {
         ProcessorInterface::setupDataLinesForRead();
-        ProcessorInterface::performCacheRead(theLine);
+        ProcessorInterface::performCacheRead<decltype(theLine), inDebugMode>(theLine);
 
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        ProcessorInterface::performCacheWrite(theLine);
+        ProcessorInterface::performCacheWrite<decltype(theLine), inDebugMode>(theLine);
     }
 }
 
@@ -437,14 +437,9 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
     }
 }
 
-using DispatchTable = BodyFunction[256];
-DispatchTable lookupTable;
-DispatchTable lookupTable_Debug;
-DispatchTable lookupTableRead;
-DispatchTable lookupTableRead_Debug;
-DispatchTable lookupTableWrite;
-DispatchTable lookupTableWrite_Debug;
-
+extern DispatchTable lookupTableRead_Debug;
+extern DispatchTable lookupTableWrite_Debug;
+extern DispatchTable lookupTable_Debug;
 void setupDispatchTable() noexcept {
     Serial.println(F("Setting up the initial lookup table"));
     for (int i = 0; i < 256; ++i) {
@@ -505,15 +500,34 @@ void setupDispatchTable() noexcept {
     }
 }
 BodyFunction
-getNonDebugBody(byte index) noexcept {
-    return lookupTable[index];
-}
-BodyFunction getDebugBody(byte index) noexcept {
+getDebugBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
         return lookupTable_Debug[index];
     } else {
         return fallbackBody<true>;
     }
 }
+BodyFunction
+getDebugReadBody(byte index) noexcept {
+    if constexpr (CompileInAddressDebuggingSupport) {
+        return lookupTableRead_Debug[index];
+    } else {
+        return ProcessorInterface::performFallbackRead<true>;
+    }
+}
+BodyFunction
+getDebugWriteBody(byte index) noexcept {
+    if constexpr (CompileInAddressDebuggingSupport) {
+        return lookupTableWrite_Debug[index];
+    } else {
+        return ProcessorInterface::performFallbackWrite<true>;
+    }
+}
 
 SdFat SD;
+DispatchTable lookupTable;
+DispatchTable lookupTable_Debug;
+DispatchTable lookupTableRead;
+DispatchTable lookupTableRead_Debug;
+DispatchTable lookupTableWrite;
+DispatchTable lookupTableWrite_Debug;
