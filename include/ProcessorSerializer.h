@@ -350,7 +350,7 @@ private:
             }
         }
     }
-    template<byte offsetMask>
+    template<byte offsetMask, bool inDebugMode>
     inline static void full32BitUpdate() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -405,8 +405,12 @@ private:
             address_.bytes[2] = higher;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[3] = SPDR;
+        auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if (highest != address_.bytes[3]) {
+            updateTargetFunctions<inDebugMode>(highest);
+        }
+        address_.bytes[3] = highest;
     }
     template<byte offsetMask>
     static void lower16Update() noexcept {
@@ -438,6 +442,7 @@ private:
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
+    template<bool inDebugMode>
     static void upper16Update() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -459,9 +464,14 @@ private:
             address_.bytes[2] = higher;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[3] = SPDR;
+        auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if (address_.bytes[3] != highest) {
+            updateTargetFunctions<inDebugMode>(highest);
+        }
+        address_.bytes[3] = highest;
     }
+    template<bool inDebugMode>
     static void updateHighest8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOB);
@@ -476,8 +486,12 @@ private:
         SPDR = 0;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[3] = SPDR;
+        auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        if (highest != address_.bytes[3]) {
+            updateTargetFunctions<inDebugMode>(highest);
+        }
+        address_.bytes[3] = highest;
     }
     static void updateHigher8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -542,18 +556,18 @@ private:
     }
 private:
     template<bool inDebugMode>
-    inline static void updateTargetFunctions() noexcept {
+    inline static void updateTargetFunctions(byte index) noexcept {
         if constexpr (inDebugMode) {
             if (isReadOperation()) {
-                lastReadDebug_ = getReadBody<inDebugMode>(address_.bytes[3]);
+                lastReadDebug_ = getReadBody<inDebugMode>(index);
             } else {
-                lastWriteDebug_ = getWriteBody<inDebugMode>(address_.bytes[3]) ;
+                lastWriteDebug_ = getWriteBody<inDebugMode>(index) ;
             }
         } else {
             if (isReadOperation()) {
-                lastRead_ = getReadBody<inDebugMode>(address_.bytes[3]);
+                lastRead_ = getReadBody<inDebugMode>(index);
             } else {
-                lastWrite_ = getWriteBody<inDebugMode>(address_.bytes[3]) ;
+                lastWrite_ = getWriteBody<inDebugMode>(index) ;
             }
         }
     }
@@ -563,36 +577,29 @@ public:
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
                 updateLower8();
-                upper16Update();
-                updateTargetFunctions<inDebugMode>();
+                upper16Update<inDebugMode>();
                 break;
             case 0b0010:
                 updateLowest8<offsetMask>();
-                upper16Update();
-                updateTargetFunctions<inDebugMode>();
+                upper16Update<inDebugMode>();
                 break;
             case 0b0011:
-                upper16Update();
-                updateTargetFunctions<inDebugMode>();
+                upper16Update<inDebugMode>();
                 break;
             case 0b0100:
                 lower16Update<offsetMask>();
-                updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+                updateHighest8<inDebugMode>();
                 break;
             case 0b0101:
                 updateLower8();
-                updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+                updateHighest8<inDebugMode>();
                 break;
             case 0b0110:
                 updateLowest8<offsetMask>();
-                updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+                updateHighest8<inDebugMode>();
                 break;
             case 0b0111:
-                updateHighest8();
-                updateTargetFunctions<inDebugMode>();
+                updateHighest8<inDebugMode>();
                 break;
             case 0b1000:
                 lower16Update<offsetMask>();
@@ -620,8 +627,7 @@ public:
                 break;
             case 0b1111: break;
             default:
-                full32BitUpdate<offsetMask>();
-                updateTargetFunctions<inDebugMode>();
+                full32BitUpdate<offsetMask, inDebugMode>();
                 break;
         }
         if (isReadOperation()) {
