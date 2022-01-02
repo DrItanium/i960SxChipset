@@ -365,7 +365,6 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto higher = SPDR;
         SPDR = 0;
-        asm volatile("nop");
         {
             address_.bytes[2] = higher;
         }
@@ -373,25 +372,31 @@ private:
         auto highest = SPDR;
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
-        asm volatile("nop");
         {
-            if (highest != address_.bytes[3]) {
-                updateTargetFunctions<inDebugMode>(highest);
+            // don't do the comparison, instead just force the update every single time
+            // there should be enough time in between transactions to make sure
+            if constexpr (inDebugMode) {
+                lastReadDebug_ = getReadBody<true>(highest);
             }
+            lastRead_ = getReadBody<false>(highest);
         }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-        asm volatile("nop");
         {
-            address_.bytes[3] = highest;
+            if constexpr (inDebugMode) {
+                lastWriteDebug_ = getWriteBody<true>(highest);
+            }
+            lastWrite_ = getWriteBody<false>(highest);
         }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
+        {
+            address_.bytes[3] = highest;
+        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
-        asm volatile("nop");
         {
             // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
             // put scope ticks to force the matter
