@@ -708,12 +708,12 @@ public:
     }
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
             bool isLast;
             LoadStoreStyle currLSS;
             SplitWord16 output;
             // getDataBits will be expanded here
-            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
             SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
             asm volatile("nop");
@@ -742,14 +742,14 @@ public:
             while (!(SPSR & _BV(SPIF))) ; // wait
             output.bytes[1] = SPDR;
             digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            SPI.endTransaction();
 
             line.set(offset, currLSS, output);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                return;
+                break;
             }
         }
+        SPI.endTransaction();
     }
     template<typename T, bool inDebugMode>
     static inline void performExternalDeviceRead() noexcept {
