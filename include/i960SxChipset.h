@@ -50,5 +50,22 @@ BodyFunction getBody(byte index) noexcept {
     }
 }
 
+template<bool inDebugMode>
+BodyFunction getReadBody(byte index) noexcept {
+    if constexpr (inDebugMode) {
+        return getDebugReadBody(index);
+    } else {
+        return getNonDebugReadBody(index);
+    }
+}
+template<bool inDebugMode>
+BodyFunction getWriteBody(byte index) noexcept {
+    if constexpr (inDebugMode) {
+        return getDebugWriteBody(index);
+    } else {
+        return getNonDebugWriteBody(index);
+    }
+}
+
 [[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
 #endif //SXCHIPSET_I960SXCHIPSET_H

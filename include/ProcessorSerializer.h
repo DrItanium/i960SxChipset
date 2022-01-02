@@ -543,10 +543,16 @@ private:
 private:
     template<bool inDebugMode>
     inline static void updateTargetFunctions() noexcept {
-        if constexpr (auto a = getBody<inDebugMode>(address_.bytes[3]); inDebugMode) {
+        if constexpr (auto a = getBody<inDebugMode>(address_.bytes[3]),
+                           b = getReadBody<inDebugMode>(address_.bytes[3]),
+                           c = getWriteBody<inDebugMode>(address_.bytes[3]); inDebugMode) {
             lastDebug_ = a;
+            lastReadDebug_ = b;
+            lastWriteDebug_ = c;
         } else {
             last_ = a;
+            lastRead_ = b;
+            lastWrite_ = c;
         }
     }
 public:
@@ -734,6 +740,10 @@ private:
     static inline bool initialized_ = false;
     static inline BodyFunction last_ = nullptr;
     static inline BodyFunction lastDebug_ = nullptr;
+    static inline BodyFunction lastRead_ = nullptr;
+    static inline BodyFunction lastReadDebug_ = nullptr;
+    static inline BodyFunction lastWrite_ = nullptr;
+    static inline BodyFunction lastWriteDebug_ = nullptr;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
