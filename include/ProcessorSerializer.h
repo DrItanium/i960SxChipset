@@ -341,28 +341,26 @@ public:
         }
     }
     inline static void setupDataLinesForRead() noexcept {
-
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        // start the transaction but only finish it if we need to
-        SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
         if (dataLinesDirection_) {
-            // okay the data lines direction is not the same so complete the transaction
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
             {
                 dataLinesDirection_ = ~dataLinesDirection_;
             }
             while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
             SPDR = 0;
             asm volatile("nop");
             while (!(SPSR & _BV(SPIF))); // wait
             SPDR = 0;
             asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            SPI.endTransaction();
         }
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPI.endTransaction();
     }
 private:
     template<bool useInterrupts = true>
