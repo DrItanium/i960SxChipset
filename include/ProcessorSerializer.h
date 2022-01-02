@@ -405,9 +405,8 @@ private:
             address_.bytes[2] = higher;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
+        address_.bytes[3] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        address_.bytes[3] = highest;
     }
     template<byte offsetMask>
     static void lower16Update() noexcept {
@@ -436,9 +435,8 @@ private:
             address_.bytes[0] = lowest;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        auto lower = SPDR;
+        address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        address_.bytes[1] = lower;
     }
     static void upper16Update() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -461,9 +459,8 @@ private:
             address_.bytes[2] = higher;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
+        address_.bytes[3] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        address_.bytes[3] = highest;
     }
     static void updateHighest8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -479,9 +476,8 @@ private:
         SPDR = 0;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
+        address_.bytes[3] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        address_.bytes[3] = highest;
     }
     static void updateHigher8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -541,9 +537,8 @@ private:
         SPDR = 0;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
-        auto lower = SPDR;
+        address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        address_.bytes[1] = lower;
     }
 private:
     template<bool inDebugMode>
