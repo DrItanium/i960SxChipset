@@ -403,7 +403,9 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        updateTargetFunctions<inDebugMode>(highest);
+        if (highest != address_.bytes[3]) {
+            updateTargetFunctions<inDebugMode>(highest);
+        }
         address_.bytes[3] = highest;
     }
     template<byte offsetMask>
@@ -460,7 +462,9 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        updateTargetFunctions<inDebugMode>(highest);
+        if (address_.bytes[3] != highest) {
+            updateTargetFunctions<inDebugMode>(highest);
+        }
         address_.bytes[3] = highest;
     }
     template<bool inDebugMode>
@@ -480,7 +484,9 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        updateTargetFunctions<inDebugMode>(highest);
+        if (highest != address_.bytes[3]) {
+            updateTargetFunctions<inDebugMode>(highest);
+        }
         address_.bytes[3] = highest;
     }
     static void updateHigher8() noexcept {
@@ -548,18 +554,11 @@ private:
     template<bool inDebugMode>
     inline static void updateTargetFunctions(byte index) noexcept {
         if constexpr (inDebugMode) {
-            if (isReadOperation()) {
-                lastReadDebug_ = getReadBody<inDebugMode>(index);
-            } else {
-                lastWriteDebug_ = getWriteBody<inDebugMode>(index) ;
-            }
-        } else {
-            if (isReadOperation()) {
-                lastRead_ = getReadBody<inDebugMode>(index);
-            } else {
-                lastWrite_ = getWriteBody<inDebugMode>(index) ;
-            }
+            lastReadDebug_ = getReadBody<inDebugMode>(index);
+            lastWriteDebug_ = getWriteBody<inDebugMode>(index) ;
         }
+        lastRead_ = getReadBody<inDebugMode>(index);
+        lastWrite_ = getWriteBody<inDebugMode>(index) ;
     }
 public:
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
