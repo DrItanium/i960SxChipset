@@ -174,6 +174,16 @@ inline void handleMemoryInterface() noexcept {
     // now take the time to compute the cache offset entries
     if (auto& theEntry = theCache.getLine(); TheProcessorInterface::isReadOperation()) {
         TheProcessorInterface::setupDataLinesForRead();
+        TheProcessorInterface::startFastCacheTransaction(&theEntry, TheProcessorInterface::getCacheOffsetEntry());
+        do {
+            TheProcessorInterface ::nextFastRead();
+            if (informCPU()) {
+                break;
+            }
+        } while (true);
+        TheProcessorInterface::endFastCacheTransaction();
+
+#if 0
         // when dealing with read operations, we can actually easily unroll the do while by starting at the cache offset entry and walking
         // forward until we either hit the end of the cache line or blast is asserted first (both are valid states)
         for (byte i = TheProcessorInterface::getCacheOffsetEntry(); i < MaximumNumberOfWordsTransferrableInASingleTransaction; ++i) {
@@ -192,6 +202,7 @@ inline void handleMemoryInterface() noexcept {
             // so if I don't increment the address, I think we run too fast xD based on some experimentation
             TheProcessorInterface::burstNext<LeaveAddressAlone>();
         }
+#endif
     } else {
         TheProcessorInterface::setupDataLinesForWrite();
         // when dealing with writes to the cache line we are safe in just looping through from the start to at most 8 because that is as
