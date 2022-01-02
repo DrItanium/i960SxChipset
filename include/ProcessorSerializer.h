@@ -709,8 +709,42 @@ public:
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
-            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            line.set(offset, getStyle(), getDataBits());
+            bool isLast;
+            LoadStoreStyle currLSS;
+            SplitWord16 output;
+            // getDataBits will be expanded here
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+            asm volatile("nop");
+            {
+                isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::GPIO) ;
+            asm volatile("nop");
+            {
+                currLSS = getStyle();
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            asm volatile("nop");
+            {
+                /// @todo insert tiny independent operations here if desired
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            auto lower = SPDR;
+            SPDR = 0;
+            asm volatile("nop");
+            {
+                output.bytes[0] = lower;
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            output.bytes[1] = SPDR;
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            SPI.endTransaction();
+
+            line.set(offset, currLSS, output);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 return;
