@@ -347,6 +347,7 @@ public:
         // start the transaction but only finish it if we need to
         SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
         if (dataLinesDirection_) {
+            // okay the data lines direction is not the same so complete the transaction
             while (!(SPSR & _BV(SPIF))); // wait
             SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
             {
