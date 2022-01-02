@@ -645,6 +645,11 @@ public:
     static inline void performCacheRead(const CacheLine& line) noexcept {
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
             // unpacking setDataBits allows us to interleave operations into the thing itself
+            // informing the cpu is duplicated on both sides of the if statement
+            // this is done so the compiler does not need to insert jumps to skip over statements.
+            // This design removes around 6 bytes of code from the final product. Since this is one of the
+            // most heavily used sections of code it is a good idea to not interleave paths in such a way that
+            // could confuse the compiler.
             if (auto value = line.get(offset); latchedDataOutput.getWholeValue() != value) {
                 bool isLastRead = false;
                 SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
@@ -658,25 +663,28 @@ public:
                  */
                 asm volatile("nop");
                 {
+                    // this operation is very important to interleave because it can be very expensive to
+                    // but if we are also communicating over SPI, then the cost of this operation is nullified considerably
                     latchedDataOutput.wholeValue_ = value;
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 asm volatile("nop");
                 {
+                    // find out if this is the last transaction while we are talking to the io expander
                     isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 SPDR = latchedDataOutput.bytes[0];
                 asm volatile("nop");
                 {
-
+                    /// @todo insert tiny independent operations here if desired
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 SPDR = latchedDataOutput.bytes[1];
                 asm volatile("nop");
                 {
-
+                    /// @todo insert tiny independent operations here if desired
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 digitalWrite<i960Pinout::GPIOSelect, HIGH>();
@@ -686,6 +694,10 @@ public:
                     return;
                 }
             } else {
+                // As I said above, this code is duplicated to allow the compiler to create a more compact representation
+                // if I were to only calcualte isLastRead and then pull the cpu inform section out to below it, the code would be
+                // technically simpler but require the compiler to insert jumps. This way, you either go down one path on each iteration
+                // of the loop. Analysis with -Ofast shows that this duplication actually makes the code smaller :).
                 auto isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
