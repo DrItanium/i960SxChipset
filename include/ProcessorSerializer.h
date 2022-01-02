@@ -554,11 +554,11 @@ private:
     template<bool inDebugMode>
     inline static void updateTargetFunctions(byte index) noexcept {
         if constexpr (inDebugMode) {
-            lastReadDebug_ = getReadBody<inDebugMode>(index);
-            lastWriteDebug_ = getWriteBody<inDebugMode>(index) ;
+            lastReadDebug_ = getReadBody<true>(index);
+            lastWriteDebug_ = getWriteBody<true>(index) ;
         }
-        lastRead_ = getReadBody<inDebugMode>(index);
-        lastWrite_ = getWriteBody<inDebugMode>(index) ;
+        lastRead_ = getReadBody<false>(index);
+        lastWrite_ = getWriteBody<false>(index) ;
     }
 public:
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
