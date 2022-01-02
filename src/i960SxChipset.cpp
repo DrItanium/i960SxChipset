@@ -140,27 +140,12 @@ inline void fallbackBody() noexcept {
         displayRequestedAddress();
     }
     // fallback, be consistent to make sure we don't run faster than the i960
-    if (ProcessorInterface ::isReadOperation()) {
+    if (ProcessorInterface::isReadOperation()) {
         ProcessorInterface::setupDataLinesForRead();
-        for (;;) {
-            // need to introduce some delay
-            ProcessorInterface::setDataBits(0);
-            if (informCPU()) {
-                break;
-            }
-            ProcessorInterface::burstNext<LeaveAddressAlone>();
-        }
+        ProcessorInterface::performFallbackRead();
     } else {
         ProcessorInterface::setupDataLinesForWrite();
-        for (;;) {
-            // put four cycles worth of delay into this to make damn sure we are ready with the i960
-            __builtin_avr_nops(4);
-            // need to introduce some delay
-            if (informCPU()) {
-                break;
-            }
-            ProcessorInterface::burstNext<LeaveAddressAlone>();
-        }
+        ProcessorInterface::performFallbackWrite();
     }
 }
 

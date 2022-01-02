@@ -710,6 +710,29 @@ public:
             }
         }
     }
+    static inline void performFallbackRead() noexcept {
+        do {
+            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            setDataBits(0);
+            DigitalPin<i960Pinout::Ready>::pulse();
+            // need to introduce some delay
+            if (isLast) {
+                break;
+            }
+        } while (true);
+    }
+    static inline void performFallbackWrite() noexcept {
+        do {
+            // put four cycles worth of delay into this to make damn sure we are ready with the i960
+            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            __builtin_avr_nops(4);
+            DigitalPin<i960Pinout::Ready>::pulse();
+            // need to introduce some delay
+            if (isLast) {
+                break;
+            }
+        } while (true);
+    }
 private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
