@@ -67,12 +67,12 @@ public:
         byte bytes_[4];
     };
 private:
-    static inline void transmitByte(byte value) noexcept {
+    [[gnu::always_inline]] static inline void transmitByte(byte value) noexcept {
         SPDR = value;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
     }
-    static inline byte receiveByte(byte transmitValue = 0) noexcept {
+    [[gnu::always_inline]] static inline byte receiveByte(byte transmitValue = 0) noexcept {
         transmitByte(transmitValue);
         return SPDR;
 
