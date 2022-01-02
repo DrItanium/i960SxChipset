@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "i960SxChipset.h"
 
+template<typename CacheLine>
 class ProcessorInterface {
     enum class MCP23x17Registers : byte {
         IODIRA = 0,
@@ -224,7 +225,64 @@ public:
     ProcessorInterface& operator=(const ProcessorInterface&) = delete;
     ProcessorInterface& operator=(ProcessorInterface&&) = delete;
 public:
-    static void begin() noexcept;
+    static void begin() noexcept {
+        if (!initialized_) {
+            initialized_ = true;
+            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+            pinMode(i960Pinout::GPIOSelect, OUTPUT);
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
+            // disabled. We can send out a single IOCON.HAEN enable message and all
+            // should receive it.
+            // so do a begin operation on all chips (0b000)
+            // set IOCON.HAEN on all chips
+            write16<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(0b0000'1000'0000'1000);
+            write16<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0000'1000'0000'1000);
+            write16<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0000'1000'0000'1000);
+            if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+                // now all devices tied to this ~CS pin have separate addresses
+                // make each of these inputs
+                writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
+                writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
+                // enable HAEN and also set the mirror INTA/INTB bits
+                write8<IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000) ;
+                write8<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000) ;
+                write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+                write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+                write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+                write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+                writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
+                writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0x005F);
+                // we can just set the pins up in a single write operation to the olat, since only the pins configured as outputs will be affected
+                write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
+                // write the default value out to the latch to start with
+                write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
+                updateTargetFunctions<true>();
+                updateTargetFunctions<false>();
+            } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
+                writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
+                writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
+                writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
+                write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+                write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+                write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+                write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+                write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
+                // use 16-bit versions to be on the safe side
+                write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0001'1000'0001'1000) ;
+                // for some reason, independent interrupts for the upper 16-bits is a no go... unsure why so enable mirroring and reclaim one of the pins
+                write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0101'1000'0101'1000) ;
+                // If I ever figure out why the upper 16 lines do not want to work with independent pins then we will activate this version
+                //write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0001'1000'0001'1000) ;
+                updateTargetFunctions<true>();
+                updateTargetFunctions<false>();
+                // make sure we clear out any interrupt flags
+            } else {
+                /// @todo implement this
+            }
+            SPI.endTransaction();
+        }
+    }
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
     [[nodiscard]] static SplitWord16 getDataBits() noexcept {
         if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
@@ -585,6 +643,21 @@ public:
      */
     [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
+
+    static void startFastCacheTransaction(CacheLine* line, byte startOffset) noexcept {
+        savedCacheLine_ = line;
+        savedCacheLineOffset_ = startOffset;
+    }
+    static void nextFastRead() noexcept {
+        setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+    }
+    static void nextFastWrite() noexcept {
+        savedCacheLine_->set(getDataBits(), savedCacheLineOffset_++);
+    }
+    static void endFastCacheTransaction() noexcept {
+        savedCacheLine_ = nullptr;
+        savedCacheLineOffset_ = 0;
+    }
 private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
@@ -593,6 +666,8 @@ private:
     static inline bool initialized_ = false;
     static inline BodyFunction last_ = nullptr;
     static inline BodyFunction lastDebug_ = nullptr;
+    static inline CacheLine* savedCacheLine_ = nullptr;
+    static inline byte savedCacheLineOffset_ = 0;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
