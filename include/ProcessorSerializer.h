@@ -30,7 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "i960SxChipset.h"
 
-template<typename CacheLine>
 class ProcessorInterface {
     enum class MCP23x17Registers : byte {
         IODIRA = 0,
@@ -644,21 +643,127 @@ public:
     [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
 
-    static void startFastCacheTransaction(CacheLine* line) noexcept {
-        savedCacheLine_ = line;
-        savedCacheLineOffset_ = getCacheOffsetEntry();
-    }
-    static bool nextFastRead() noexcept {
-        auto isNotLastRead = DigitalPin<i960Pinout::BLAST_>::isDeasserted();
+    template<typename CacheLine>
+    static void performFastRead(CacheLine* line) noexcept {
+        CacheLine* savedCacheLine_ = line;
+        byte savedCacheLineOffset_ =getCacheOffsetEntry();
+        auto isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
         DigitalPin<i960Pinout::Ready>::pulse();
-        return isNotLastRead;
-    }
-    static bool nextFastWrite() noexcept {
-        auto isNotLastRead = DigitalPin<i960Pinout::BLAST_>::isDeasserted();
-        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits());
+        if (isLastRead) {
+            return;
+        }
+        isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
         DigitalPin<i960Pinout::Ready>::pulse();
-        return isNotLastRead;
+        if (isLastRead) {
+            return;
+        }
+        isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLastRead) {
+            return;
+        }
+        isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLastRead) {
+            return;
+        }
+        isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLastRead) {
+            return;
+        }
+        isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLastRead) {
+            return;
+        }
+        isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLastRead) {
+            return;
+        }
+        isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLastRead) {
+            return;
+        }
+        do {
+            isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                return;
+            }
+        } while (true);
+    }
+    template<typename CacheLine>
+    static void performFastWrite(CacheLine* line) noexcept {
+        CacheLine* savedCacheLine_ = line;
+        byte savedCacheLineOffset_ =getCacheOffsetEntry();
+        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLast) {
+            return;
+        }
+        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLast) {
+            return;
+        }
+        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLast) {
+            return;
+        }
+        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLast) {
+            return;
+        }
+        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLast) {
+            return;
+        }
+        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLast) {
+            return;
+        }
+        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLast) {
+            return;
+        }
+        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        if (isLast) {
+            return;
+        }
+        do {
+            isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits()) ;
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLast) {
+                return;
+            }
+        } while (true);
     }
 private:
     static inline SplitWord32 address_{0};
@@ -668,8 +773,6 @@ private:
     static inline bool initialized_ = false;
     static inline BodyFunction last_ = nullptr;
     static inline BodyFunction lastDebug_ = nullptr;
-    static inline CacheLine* savedCacheLine_ = nullptr;
-    static inline byte savedCacheLineOffset_ = 0;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved

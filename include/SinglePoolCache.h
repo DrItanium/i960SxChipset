@@ -52,7 +52,7 @@ public:
 public:
     [[nodiscard]] CacheEntry& getLine() noexcept {
         // only align if we need to reset the chip
-        return getLine(TaggedAddress(ProcessorInterface<CacheEntry>::getAddress()));
+        return getLine(TaggedAddress(ProcessorInterface::getAddress()));
     }
     [[nodiscard]] CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
         // only align if we need to reset the chip
