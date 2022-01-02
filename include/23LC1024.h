@@ -51,12 +51,13 @@ public:
         // it is up to the classes to handle overflow/wrap around
         auto maskedStartAddress= address & AddressMask;
         SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
+        SplitWord32 decompose(maskedStartAddress);
         {
             EnableCommunicationWithChip talk;
             SPI.transfer(0x02);
-            SPI.transfer(maskedStartAddress >> 16);
-            SPI.transfer(maskedStartAddress >> 8);
-            SPI.transfer(maskedStartAddress);
+            SPI.transfer(decompose.bytes[2]);
+            SPI.transfer(decompose.bytes[1]);
+            SPI.transfer(decompose.bytes[0]);
             SPI.transfer(buf, capacity);
         }
         SPI.endTransaction();
@@ -65,12 +66,13 @@ public:
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         auto maskedStartAddress= address & AddressMask;
         SPI.beginTransaction(SPISettings{10_MHz, MSBFIRST, SPI_MODE0});
+        SplitWord32 decompose(maskedStartAddress);
         {
             EnableCommunicationWithChip talk;
             SPI.transfer(0x03);
-            SPI.transfer(maskedStartAddress >> 16);
-            SPI.transfer(maskedStartAddress >> 8);
-            SPI.transfer(maskedStartAddress);
+            SPI.transfer(decompose.bytes[2]);
+            SPI.transfer(decompose.bytes[1]);
+            SPI.transfer(decompose.bytes[0]);
             SPI.transfer(buf, capacity);
             // only transfer
         }
