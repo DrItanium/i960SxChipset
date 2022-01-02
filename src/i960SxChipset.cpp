@@ -173,7 +173,6 @@ inline void handleMemoryInterface() noexcept {
     // now take the time to compute the cache offset entries
     if (ProcessorInterface::isReadOperation()) {
         ProcessorInterface::setupDataLinesForRead();
-        // the body of this if statement should never ever execute but this is how we can terminate early if desired
         ProcessorInterface :: performFastRead(&theCache.getLine());
 
     } else {
