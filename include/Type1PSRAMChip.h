@@ -88,25 +88,33 @@ private:
         if (capacity == 0) {
             return 0;
         }
+        PSRAMBlockAddress end;
+        uint32_t numBytesToSecondChip;
+        uint32_t numBytesToFirstChip;
+        bool localToASingleChip;
         PSRAMBlockAddress curr(address);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         SPDR = opcode;
-        asm volatile("nop");
-        PSRAMBlockAddress end(address + capacity);
+        {
+            end = PSRAMBlockAddress(address + capacity);
+        }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[2];
-        asm volatile("nop");
-        auto numBytesToSecondChip = end.getOffset();
+        {
+            numBytesToSecondChip = end.getOffset();
+        }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[1];
-        asm volatile("nop");
-        auto localToASingleChip = curr.getIndex() == end.getIndex();
+        {
+            localToASingleChip = curr.getIndex() == end.getIndex();
+        }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[0];
-        asm volatile("nop");
-        auto numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+        {
+            numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+        }
         while (!(SPSR & _BV(SPIF))) ; // wait
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
            if constexpr (kind == OperationKind::Read)  {
