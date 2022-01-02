@@ -330,48 +330,36 @@ public:
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
     [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
+private:
+    inline static void invertDataLinesDirection() noexcept {
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+        {
+            dataLinesDirection_ = ~dataLinesDirection_;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = dataLinesDirection_;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = dataLinesDirection_;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        SPI.endTransaction();
+    }
+public:
     inline static void setupDataLinesForWrite() noexcept {
         if (!dataLinesDirection_) {
-            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
-            {
-                dataLinesDirection_ = ~dataLinesDirection_;
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = 0xFF;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = 0xFF;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            SPI.endTransaction();
+            invertDataLinesDirection();
         }
     }
     inline static void setupDataLinesForRead() noexcept {
         if (dataLinesDirection_) {
-            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
-            {
-                dataLinesDirection_ = ~dataLinesDirection_;
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            SPI.endTransaction();
+            invertDataLinesDirection();
         }
     }
 private:
