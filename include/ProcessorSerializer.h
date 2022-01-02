@@ -648,15 +648,17 @@ public:
         savedCacheLine_ = line;
         savedCacheLineOffset_ = getCacheOffsetEntry();
     }
-    static void nextFastRead() noexcept {
+    static bool nextFastRead() noexcept {
+        auto isNotLastRead = DigitalPin<i960Pinout::BLAST_>::isDeasserted();
         setDataBits(savedCacheLine_->get(savedCacheLineOffset_++));
+        DigitalPin<i960Pinout::Ready>::pulse();
+        return isNotLastRead;
     }
-    static void nextFastWrite() noexcept {
+    static bool nextFastWrite() noexcept {
+        auto isNotLastRead = DigitalPin<i960Pinout::BLAST_>::isDeasserted();
         savedCacheLine_->set(savedCacheLineOffset_++, getStyle(), getDataBits());
-    }
-    static void endFastCacheTransaction() noexcept {
-        savedCacheLine_ = nullptr;
-        savedCacheLineOffset_ = 0;
+        DigitalPin<i960Pinout::Ready>::pulse();
+        return isNotLastRead;
     }
 private:
     static inline SplitWord32 address_{0};
