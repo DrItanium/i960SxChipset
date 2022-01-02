@@ -354,39 +354,8 @@ private:
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Lower16Opcode;
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lowest = SPDR;
-        SPDR = 0;
-        asm volatile("nop");
-        {
-            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
-            // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> 1) & offsetMask; // we want to make this quick to increment
-            address_.bytes[0] = lowest;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lower = SPDR;
-        DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Upper16Opcode;
         asm volatile("nop");
-        {
-            address_.bytes[1] = lower;
-            // interleave this operation in, can't get more complex than this
-        }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
@@ -402,11 +371,36 @@ private:
         }
         while (!(SPSR & _BV(SPIF))); // wait
         auto highest = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        if (highest != address_.bytes[3]) {
-            updateTargetFunctions<inDebugMode>(highest);
+        DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
+        SPDR = Lower16Opcode;
+        asm volatile("nop");
+        {
+            if (highest != address_.bytes[3]) {
+                updateTargetFunctions<inDebugMode>(highest);
+            }
         }
-        address_.bytes[3] = highest;
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = GPIOOpcode;
+        asm volatile("nop");
+        {
+            address_.bytes[3] = highest;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto lowest = SPDR;
+        SPDR = 0;
+        asm volatile("nop");
+        {
+            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
+            // put scope ticks to force the matter
+            cacheOffsetEntry_ = (lowest >> 1) & offsetMask; // we want to make this quick to increment
+            address_.bytes[0] = lowest;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        address_.bytes[1] = SPDR;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
     template<byte offsetMask>
     static void lower16Update() noexcept {
