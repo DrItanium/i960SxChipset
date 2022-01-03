@@ -686,7 +686,10 @@ public:
         // read 32-bits at a time instead of 16 just to keep the throughput increased
         for (auto offset = getCacheOffsetEntry(); ;offset += 8) {
             SplitWord32 fullWord(line.get(offset), line.get(offset+1));
-            // this is more unsafe than waiting later on in the process
+            // this is more unsafe than waiting later on in the process as we are guessing that we need this data
+            // These full words will hold onto garbage data if we span two cache lines. That is actually okay because
+            // the i960 will never request that data. It will operate on a maximum of 16-bytes at a time.
+            // For consistency, I am leaving the loop in (my research may be flawed in some way)
             SplitWord32 fullWord2(line.get(offset+2), line.get(offset+3));
             SplitWord32 fullWord3(line.get(offset+4), line.get(offset+5));
             SplitWord32 fullWord4(line.get(offset+6), line.get(offset+7));
@@ -700,12 +703,6 @@ public:
             if (isLastRead) {
                 break;
             }
-            // at this point it is safe to get the next 32-bit word. The i960 will not cross 16-byte boundaries
-            // in a single burst transaction. If we got here then it means that there is at least 1 more 16-bit word that
-            // the i960 wants in this transaction. Accessing fullWord2 here means that I want to safely access the data.
-            //
-            // moving it to the top of the loop means that the chipset may overrun the cache line boundary but to be honest who cares
-            // the i960Sx will never request that data anyways.
             isLastRead = setDataBits(fullWord2.getLowerWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
