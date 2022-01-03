@@ -684,7 +684,7 @@ public:
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         // read 32-bits at a time instead of 16 just to keep the throughput increased
-        for (auto offset = getCacheOffsetEntry(); ;offset += 2) {
+        for (auto offset = getCacheOffsetEntry(); ;offset += 4) {
             SplitWord32 fullWord(line.get(offset), line.get(offset+1));
             auto isLastRead = setDataBits(fullWord.getLowerWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
@@ -696,6 +696,21 @@ public:
             if (isLastRead) {
                 break;
             }
+            // at this point it is safe to get the next 32-bit word. The i960 will not cross 16-byte boundaries
+            // in a single burst transaction. If we got here then it means that there is at least 1 more 16-bit word that
+            // the i960 wants in this transaction.
+            SplitWord32 fullWord2(line.get(offset+2), line.get(offset+3));
+            isLastRead = setDataBits(fullWord2.getLowerWord().getWholeValue());
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                break;
+            }
+            isLastRead = setDataBits(fullWord2.getUpperWord().getWholeValue());
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                break;
+            }
+
         }
         SPI.endTransaction();
     }
