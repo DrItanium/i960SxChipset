@@ -744,9 +744,16 @@ public:
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        for (auto offset = getCacheOffsetEntry(); ;offset += 4) {
+        for (auto offset = getCacheOffsetEntry(); ;offset += 8) {
             bool isLast;
-            LoadStoreStyle currLSS, currLSS2, currLSS3, currLSS4;
+            LoadStoreStyle currLSS;
+            LoadStoreStyle currLSS2;
+            LoadStoreStyle currLSS3;
+            LoadStoreStyle currLSS4;
+            LoadStoreStyle currLSS5;
+            LoadStoreStyle currLSS6;
+            LoadStoreStyle currLSS7;
+            LoadStoreStyle currLSS8;
             SplitWord32 output;
             {
                 // getDataBits will be expanded here
@@ -874,12 +881,141 @@ public:
                 while (!(SPSR & _BV(SPIF))); // wait
                 output.bytes[3] = SPDR;
                 digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                line.set(offset + 3, currLSS4, output.getUpperWord());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    line.set(offset + 3, currLSS4, output.getUpperWord());
+                    break;
+                }
+            }
+            {
+                // okay we have a 32-bit number of operate on
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                {
+                    line.set(offset + 3, currLSS4, output.getUpperWord());
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                {
+                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                {
+                    currLSS5 = getStyle();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                auto a = SPDR;
+                SPDR = 0;
+                {
+                    output.bytes[0] = a;
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                output.bytes[1] = SPDR;
+                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    line.set(offset + 4, currLSS5, output.getLowerWord());
+                    break;
+                }
+                // okay
+            }
+            {
+                // okay we have a 32-bit number of operate on
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                {
+                    line.set(offset+4, currLSS5, output.getLowerWord());
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                {
+                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                {
+                    currLSS6 = getStyle();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                auto higher = SPDR;
+                SPDR = 0;
+                {
+                    output.bytes[2] = higher;
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                output.bytes[3] = SPDR;
+                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    line.set(offset + 5, currLSS6, output.getUpperWord());
+                    break;
+                }
+            }
+            {
+                // okay we have a 32-bit number of operate on
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                {
+                    line.set(offset + 5, currLSS6, output.getUpperWord());
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                {
+                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                {
+                    currLSS7 = getStyle();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                auto a = SPDR;
+                SPDR = 0;
+                {
+                    output.bytes[0] = a;
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                output.bytes[1] = SPDR;
+                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    line.set(offset + 6, currLSS7, output.getLowerWord());
+                    break;
+                }
+                // okay
+            }
+            {
+                // okay we have a 32-bit number of operate on
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                {
+                    line.set(offset+6, currLSS7, output.getLowerWord());
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                {
+                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                {
+                    currLSS8 = getStyle();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                auto higher = SPDR;
+                SPDR = 0;
+                {
+                    output.bytes[2] = higher;
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                output.bytes[3] = SPDR;
+                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                line.set(offset + 7, currLSS8, output.getUpperWord());
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLast) {
                     break;
                 }
-                // okay
             }
         }
         SPI.endTransaction();
