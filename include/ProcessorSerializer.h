@@ -30,7 +30,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "i960SxChipset.h"
 
-class ProcessorInterface {
+/**
+ * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
+ */
+class ProcessorInterface final {
+    /**
+     * @brief The set of registers exposed by the MCP23S17 in the default bank mode
+     */
     enum class MCP23x17Registers : byte {
         IODIRA = 0,
         IODIRB,
@@ -66,10 +72,18 @@ class ProcessorInterface {
         GPINTEN = GPINTENA,
         IPOL = IPOLA,
     };
+    /**
+     * @brief The MCP23S17 devices connected to the single select pin. The MCP23S17 uses biased addressing to allow up to 8 io expanders to
+     * use the same enable line. When hardware addressing is enabled, the address described via biasing is encoded into the spi data stream
+     * in the first byte transmitted. This enum class is meant to make construction the read/write opcodes trivial
+     */
     enum class IOExpanderAddress : byte {
         DataLines = 0b0000,
         Lower16Lines = 0b0010,
         Upper16Lines = 0b0100,
+        /**
+         * @brief Any extra pins of the i960 that need to be managed external but are generally unimportant are connected to this io expander
+         */
         MemoryCommitExtras = 0b0110,
         OtherDevice0 = 0b1000,
         OtherDevice1 = 0b1010,
@@ -82,6 +96,13 @@ class ProcessorInterface {
     static constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
+    /**
+     * @brief Read a 16-bit value from a given io expander register
+     * @tparam addr The io expander to read from
+     * @tparam opcode The register pair to read from
+     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
+     * @return The 16-bit value pulled from the io expander
+     */
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static SplitWord16 read16() noexcept {
         if constexpr (standalone) {
@@ -120,6 +141,13 @@ class ProcessorInterface {
         }
         return output;
     }
+    /**
+     * @brief Read a 8-bit value from a given io expander register
+     * @tparam addr The io expander to read from
+     * @tparam opcode The register pair to read from
+     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
+     * @return The contents of an 8-bit register on the io expander
+     */
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static uint8_t read8() noexcept {
         if constexpr (standalone) {
@@ -147,7 +175,13 @@ class ProcessorInterface {
         }
         return SPDR;
     }
-
+    /**
+     * @brief Write a 16-bit value to a register pair on a target io expander
+     * @tparam addr The expander to talk to
+     * @tparam opcode The register pair to update
+     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
+     * @param value The 16-bit value to send to the io expander
+     */
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static void write16(uint16_t value) noexcept {
         SplitWord16 valueDiv(value);
@@ -178,6 +212,13 @@ class ProcessorInterface {
             SPI.endTransaction();
         }
     }
+    /**
+     * @brief Write an 8-bit value to a register on a target io expander
+     * @tparam addr The expander to talk to
+     * @tparam opcode The register to update
+     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
+     * @param value The 8-bit value to send to the io expander
+     */
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static void write8(uint8_t value) noexcept {
         if constexpr (standalone) {
@@ -204,14 +245,32 @@ class ProcessorInterface {
             SPI.endTransaction();
         }
     }
+    /**
+     * @brief Read all 16 GPIOs of an io expander
+     * @tparam addr The io expander to read from
+     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
+     * @return The contents of the GPIO register pair
+     */
     template<IOExpanderAddress addr, bool standalone = true>
     static inline SplitWord16 readGPIO16() noexcept {
         return read16<addr, MCP23x17Registers::GPIO, standalone>();
     }
+    /**
+     * @brief Set all 16 GPIOs of an io expander
+     * @tparam addr The io expander to write to
+     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
+     * @param value The value to set the gpios to
+     */
     template<IOExpanderAddress addr, bool standalone = true>
     static inline void writeGPIO16(uint16_t value) noexcept {
         write16<addr, MCP23x17Registers::GPIO, standalone>(value);
     }
+    /**
+     * @brief Describe the directions of all 16 pins on a given io expander.
+     * @tparam addr The io expander to update
+     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
+     * @param value The 16-bit direction mask to write to the io expander (a 1 means input, a 0 means output)
+     */
     template<IOExpanderAddress addr, bool standalone = true>
     static inline void writeDirection(uint16_t value) noexcept {
         write16<addr, MCP23x17Registers::IODIR, standalone>(value);
@@ -224,6 +283,9 @@ public:
     ProcessorInterface& operator=(const ProcessorInterface&) = delete;
     ProcessorInterface& operator=(ProcessorInterface&&) = delete;
 public:
+    /**
+     * @brief Setup the processor interface on chipset startup.
+     */
     static void begin() noexcept {
         if (!initialized_) {
             initialized_ = true;
@@ -278,15 +340,24 @@ public:
             SPI.endTransaction();
         }
     }
+    /**
+     * @brief Get the address for the current transaction
+     * @return The full 32-bit address for the current transaction
+     */
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
+    /**
+     * @brief Read the contents of the GPIO register pair on the data lines io expander
+     * @return The value sent to the chipset from the i960 to write
+     */
     [[nodiscard]] static SplitWord16 getDataBits() noexcept {
-        if constexpr (TargetBoard::onAtmega1284p_Type1() || TargetBoard::onAtmega1284p_Type2()) {
-            return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
-        } else {
-            // stub out
-            return SplitWord16(0);
-        }
+        return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
     }
+    /**
+     * @brief Update the contents of the GPIO register pair on the data lines io expander (the i960 wants to read from memory). Also check to
+     * see if this is the last word transmitted in the given transaction.
+     * @param value The value to set the GPIO register pair to
+     * @return True if this is the last word of a burst transaction
+     */
     static bool setDataBits(uint16_t value) noexcept {
         // the latch is preserved in between data line changes
         // okay we are still pointing as output values
@@ -327,10 +398,28 @@ public:
 
         }
     }
+    /**
+     * @brief Query the ~BE0 and ~BE1 pins provided by the i960 to denote how the chipset should treat the current word in the transaction
+     * @return The LoadStoreStyle derived from the ~BE0 and ~BE1 pins.
+     */
     [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
+    /**
+     * @brief Check the W/~R pin to see if we are dealing with a read transaction.
+     * Only needs to be queried once at the beginning of a new transaction
+     * @return If true, then the current transaction is a read operation. If false, then the current transaction is a write operation.
+     */
     [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
+    /**
+     * @brief Retrieve the computed cache offset entry start. This is the word index that the current transaction will start at within a
+     * target cache line.
+     * @return The precomputed cache offset for the current transaction
+     */
     [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
 private:
+    /**
+     * @brief A method responsible for turning data lines from input to output and vice-versa. It also inverts the tracking byte used by this
+     * class to only update the direction when needed (SPI bus transactions are relatively expensive).
+     */
     inline static void invertDataLinesDirection() noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -363,6 +452,13 @@ public:
         }
     }
 private:
+    /**
+     * @brief Query the MCP23S17 interrupt pins to figure out which ports on the address lines had actually changed since the last transaction
+     * @tparam useInterrupts When true, query the interrupt lines to generate a difference mask. When false, 0 is returned which means all have changed
+     * @return A four bit code where each bit corresponds to a block of 8-bits and if they have changed since the last transaction or not.
+     * Each zero found in the code signifies that that 8-bit quantity must be updated. If useInterrupts is off then zero is returned which
+     * means the whole address must be updated.
+     */
     template<bool useInterrupts = true>
     static byte getUpdateKind() noexcept {
         if constexpr (!useInterrupts) {
@@ -385,6 +481,12 @@ private:
             }
         }
     }
+    /**
+     * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
+     * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
+     * cache entry class that the L1 cache uses
+     * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
+     */
     template<byte offsetMask, bool inDebugMode>
     inline static void full32BitUpdate() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
@@ -446,6 +548,11 @@ private:
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
+    /**
+     * @brief Only update the lower 16 bits of the current transaction's base address
+     * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
+     * cache entry class that the L1 cache uses
+     */
     template<byte offsetMask>
     static void lower16Update() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
@@ -476,6 +583,10 @@ private:
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
+    /**
+     * @brief Update the upper 16-bits of the current transaction's address. Update the function to invoke to satisfy this request
+     * @tparam inDebugMode If true then enable debugging output and pass that to any child methods which accept the parameter as well
+     */
     template<bool inDebugMode>
     static void upper16Update() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -505,6 +616,10 @@ private:
         }
         address_.bytes[3] = highest;
     }
+    /**
+     * @brief Update the upper most 8 bits of the current transaction address. Also update the function to execute to satisfy this request
+     * @tparam inDebugMode If true then display debugging information and pass it to child methods that accept it
+     */
     template<bool inDebugMode>
     static void updateHighest8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
@@ -527,6 +642,9 @@ private:
         }
         address_.bytes[3] = highest;
     }
+    /**
+     * @brief Update address bits 16-23
+     */
     static void updateHigher8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOA);
@@ -545,6 +663,11 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         address_.bytes[2] = highest;
     }
+    /**
+     * @brief Update address bits 0-7 and compute the base cache offset value
+     * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
+     * cache entry class that the L1 cache uses
+     */
     template<byte offsetMask>
     static void updateLowest8() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
@@ -569,6 +692,9 @@ private:
         cacheOffsetEntry_ = (lowest >> 1) & offsetMask; // we want to make this quick to increment
         address_.bytes[0] = lowest;
     }
+    /**
+     * @brief Update address bits 8-15
+     */
     static void updateLower8() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOB);
@@ -589,6 +715,10 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
 private:
+    /**
+     * @brief save the read and write function pointers for a given index
+     * @tparam inDebugMode If true then also update the debug versions of the function pointers in addition to the non debug ones
+     */
     template<bool inDebugMode>
     inline static void updateTargetFunctions(byte index) noexcept {
         if constexpr (inDebugMode) {
@@ -599,6 +729,13 @@ private:
         lastWrite_ = getWriteBody<false>(index) ;
     }
 public:
+    /**
+     * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
+     * @tparam inDebugMode When true, use debug versions of the read/write function pointers to fulfill the request. This is passed to direct children as well.
+     * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
+     * cache entry class that the L1 cache uses
+     * @tparam useInterrupts If true, then query the directly connected interrupt pins to get a proper update mask
+     */
     template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
     static void newDataCycle() noexcept {
         switch (getUpdateKind<useInterrupts>()) {
@@ -680,6 +817,12 @@ public:
     [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
 
+    /**
+     * @brief loads a cache line based on base transaction address and then bursts up to 16 bytes to the i960
+     * @tparam CacheLine The type of a single cache line
+     * @tparam inDebugMode Are we in debug mode?
+     * @param line The cache line which we will be using for this transaction
+     */
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
@@ -741,6 +884,12 @@ public:
         }
         SPI.endTransaction();
     }
+    /**
+     * @brief commit up to 16-bytes of data from the i960 to a specified cache line
+     * @tparam CacheLine The type of the cache line to write to
+     * @tparam inDebugMode are we in debug mode?
+     * @param line The cache line to write to.
+     */
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
@@ -1020,6 +1169,11 @@ public:
         }
         SPI.endTransaction();
     }
+    /**
+     * @brief The current transaction is reading from a specific memory mapped device connected to the chipset.
+     * @tparam T The specific device to be read from
+     * @tparam inDebugMode are we in debug mode?
+     */
     template<typename T, bool inDebugMode>
     static inline void performExternalDeviceRead() noexcept {
         // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
@@ -1044,6 +1198,11 @@ public:
             }
         }
     }
+    /**
+     * @brief The current transaction is writing to a specific memory mapped device connected to the chipset.
+     * @tparam T The specific device to write to
+     * @tparam inDebugMode are we in debug mode?
+     */
     template<typename T, bool inDebugMode>
     static inline void performExternalDeviceWrite() noexcept {
         // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
@@ -1097,6 +1256,10 @@ public:
             }
         }
     }
+    /**
+     * @brief Used when the transaction is reading from unmapped memory in the i960's memory space. Zero will be sent to the i960 for the duration of the transaction
+     * @tparam inDebugMode are we in debug mode?
+     */
     template<bool inDebugMode>
     static inline void performFallbackRead() noexcept {
         do {
@@ -1108,6 +1271,10 @@ public:
             }
         } while (true);
     }
+    /**
+     * @brief Used when the transaction is writing to unmapped memory in the i960's memory space. Nothing will be written but an artificial delay will be introduced to be on the safe side.
+     * @tparam inDebugMode are we in debug mode?
+     */
     template<bool inDebugMode>
     static inline void performFallbackWrite() noexcept {
         do {
@@ -1122,6 +1289,9 @@ public:
         } while (true);
     }
 public:
+    /**
+     * @brief Complete the process of setting up the processor interface by seeding the cached function pointers with valid addresses.
+     */
     static inline void setupMostRecentDispatchFunctions() noexcept {
         if (!initialDispatchFunctionsInitialized_) {
             initialDispatchFunctionsInitialized_ = true;
