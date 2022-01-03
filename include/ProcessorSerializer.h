@@ -686,6 +686,8 @@ public:
         // read 32-bits at a time instead of 16 just to keep the throughput increased
         for (auto offset = getCacheOffsetEntry(); ;offset += 4) {
             SplitWord32 fullWord(line.get(offset), line.get(offset+1));
+            // this is more unsafe than waiting later on in the process
+            SplitWord32 fullWord2(line.get(offset+2), line.get(offset+3));
             auto isLastRead = setDataBits(fullWord.getLowerWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
@@ -702,7 +704,6 @@ public:
             //
             // moving it to the top of the loop means that the chipset may overrun the cache line boundary but to be honest who cares
             // the i960Sx will never request that data anyways.
-            SplitWord32 fullWord2(line.get(offset+2), line.get(offset+3));
             isLastRead = setDataBits(fullWord2.getLowerWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
