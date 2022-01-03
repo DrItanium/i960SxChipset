@@ -698,7 +698,6 @@ public:
         for (auto offset = getCacheOffsetEntry(); ;offset += 2) {
             bool isLast;
             LoadStoreStyle currLSS;
-            LoadStoreStyle currLSS2;
             SplitWord32 output;
             {
                 // getDataBits will be expanded here
@@ -735,6 +734,7 @@ public:
                 }
             }
             {
+                LoadStoreStyle currLSS2;
                 // okay we have a 32-bit number of operate on
                 digitalWrite<i960Pinout::GPIOSelect, LOW>();
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
