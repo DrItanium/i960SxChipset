@@ -698,7 +698,10 @@ public:
             }
             // at this point it is safe to get the next 32-bit word. The i960 will not cross 16-byte boundaries
             // in a single burst transaction. If we got here then it means that there is at least 1 more 16-bit word that
-            // the i960 wants in this transaction.
+            // the i960 wants in this transaction. Accessing fullWord2 here means that I want to safely access the data.
+            //
+            // moving it to the top of the loop means that the chipset may overrun the cache line boundary but to be honest who cares
+            // the i960Sx will never request that data anyways.
             SplitWord32 fullWord2(line.get(offset+2), line.get(offset+3));
             isLastRead = setDataBits(fullWord2.getLowerWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
