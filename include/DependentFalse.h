@@ -25,7 +25,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef I960SXCHIPSET_DEPENDENTFALSE_H
 #define I960SXCHIPSET_DEPENDENTFALSE_H
-
+/**
+ * @brief Used to defer static_assert statement analysis long enough to only trigger if actually on an active path.
+ * For example, static_assert(false) will always fail but static_assert(false_v<int>) will only fail if it becomes part of the code to be compiled.
+ * Especially useful when the else statement in a constexpr-if block is supposed to stop compilation
+ * @tparam ... Types to be dependent on.
+ */
 template<typename...>
 inline constexpr bool false_v = false;
 
