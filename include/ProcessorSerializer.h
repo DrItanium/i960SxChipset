@@ -788,12 +788,12 @@ public:
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
                 {
                     line.set(offset, currLSS, output.getLowerWord());
-                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
                     isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = 0;
@@ -822,12 +822,12 @@ public:
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
                 {
                     line.set(offset, currLSS, output.getUpperWord());
-                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
                     isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = 0;
@@ -856,12 +856,12 @@ public:
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
                 {
                     line.set(offset, currLSS, output.getLowerWord());
-                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
                     isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = 0;
@@ -889,12 +889,12 @@ public:
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
                 {
                     line.set(offset, currLSS, output.getUpperWord());
-                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
                     isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = 0;
@@ -923,12 +923,12 @@ public:
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
                 {
                     line.set(offset, currLSS, output.getLowerWord());
-                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
                     isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = 0;
@@ -956,12 +956,12 @@ public:
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
                 {
                     line.set(offset, currLSS, output.getUpperWord());
-                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
                     isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = 0;
@@ -990,12 +990,12 @@ public:
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
                 {
                     line.set(offset, currLSS, output.getLowerWord());
-                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
                     isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    ++offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = 0;
