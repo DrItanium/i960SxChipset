@@ -74,7 +74,12 @@ inline auto digitalRead(i960Pinout ip) {
 }
 template<i960Pinout pin>
 constexpr auto isValidPin960_v = static_cast<int>(pin) < static_cast<int>(i960Pinout::Count);
-//static_assert(isValidPin<i960Pinout::CACHE_A0>, "The CACHE_A0 pin should be a valid pin!");
+
+/**
+ * @brief Get the output port associated with a given pin. A compile-time error will be generated if the pin is not valid
+ * @tparam pin The pin whose output port will be retrieved
+ * @return A reference to the output port address tied to the given pin
+ */
 template<i960Pinout pin>
 [[gnu::always_inline]]
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
@@ -102,6 +107,11 @@ template<i960Pinout pin>
     }
 }
 
+/**
+ * @brief Get the direction register associated with a given pin. A compile-time error will be generated if the pin is not valid
+ * @tparam pin The pin whose direction register will be retrieved
+ * @return A reference to the direction register address tied to the given pin
+ */
 template<i960Pinout pin>
 [[gnu::always_inline]]
 [[nodiscard]] inline volatile unsigned char& getAssociatedDirectionPort() noexcept {
@@ -129,6 +139,11 @@ template<i960Pinout pin>
     }
 }
 
+/**
+ * @brief Get the input port associated with a given pin. A compile-time error will be generated if the pin is not valid
+ * @tparam pin The pin whose input port will be retrieved
+ * @return A reference to the input port address tied to the given pin
+ */
 template<i960Pinout pin>
 [[gnu::always_inline]]
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
@@ -154,6 +169,11 @@ template<i960Pinout pin>
             return PINA;
     }
 }
+/**
+ * @brief Get the pin mask associated with a digital pin in a constexpr context. Will generate compile-time error if pin is not a valid one
+ * @tparam pin The pin to get the proper pin mask for
+ * @return The constant pin mask pattern for the target pin
+ */
 template<i960Pinout pin>
 [[gnu::always_inline]]
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
@@ -180,6 +200,9 @@ template<i960Pinout pin>
     }
 }
 
+/**
+ * @brief RAII class which turns off interrupts during construction and restores them on destruction
+ */
 class InterruptDisabler final {
 public:
     InterruptDisabler() noexcept {
@@ -193,7 +216,11 @@ private:
     uint8_t storage_ = 0;
 };
 
-
+/**
+ * @brief Condense digitalWrite calls down into a single instruction. Use this method if the value of a pin will be known at compile time.
+ * @tparam pin the pin to modify
+ * @tparam value the value to set the pin to
+ */
 template<i960Pinout pin, decltype(HIGH) value>
 [[gnu::always_inline]]
 inline void digitalWrite() noexcept {
@@ -203,6 +230,11 @@ inline void digitalWrite() noexcept {
         thePort |= getPinMask<pin>();
     }
 }
+/**
+ * @brief Condense digitalWrite calls down into a simpler form
+ * @tparam pin The target pin to modify
+ * @param value The value to set the given pin to
+ */
 template<i960Pinout pin>
 [[gnu::always_inline]]
 inline void digitalWrite(decltype(HIGH) value) noexcept {
@@ -213,11 +245,30 @@ inline void digitalWrite(decltype(HIGH) value) noexcept {
         thePort |= getPinMask<pin>();
     }
 }
+/**
+ * @brief Convert a boolean value into a fast digitalWrite call
+ * @tparam pin The pin to modify
+ * @param level True -> HIGH , False -> LOW
+ */
 template<i960Pinout pin>
 [[gnu::always_inline]] inline void digitalWrite(bool level) noexcept {
     digitalWrite<pin>(level ? HIGH : LOW);
 }
 
+/**
+ * @brief Switch a given pin from one state to the other as fast as possible and then back again. It is the equivalent of:
+ * digitalWrite(pin, LOW);
+ * digitalWrite(pin, HIGH);
+ *
+ * The function will determine (at compile-time) the value to switch to and back. This function does not perform any error checking so if you do:
+ *
+ * digitalWrite<i960Pinout::PORT_D0, LOW>();
+ * pulse<i960Pinout::PORT_D0, LOW>();
+ *
+ * Then you will see that the cpu holds the pin low for two iterations instead of one before pulling it high again.
+ * @tparam pin The pin to pulse
+ * @tparam switchTo The value to set the pin to, this is used to determine what the original state was.
+ */
 template<i960Pinout pin, decltype(HIGH) switchTo = LOW>
 [[gnu::always_inline]]
 inline void pulse() noexcept {
@@ -226,6 +277,11 @@ inline void pulse() noexcept {
     digitalWrite<pin, ((switchTo == LOW) ? HIGH : LOW)>();
 }
 
+/**
+ * @brief Condense digitalRead into a single instruction (or as close as possible)
+ * @tparam pin The pin to query
+ * @return The pin value as HIGH or LOW depending on what it is set to
+ */
 template<i960Pinout pin>
 [[gnu::always_inline]]
 inline auto digitalRead() noexcept {
@@ -314,20 +370,27 @@ DefInputPin(i960Pinout::W_R_, LOW, HIGH);
 #undef DefInputPin
 #undef DefOutputPin
 
+/**
+ * @brief Template parameter pack version of pinMode which sets a block of pins to a given direction.
+ * This is designed to cut down on typing as much as possible
+ * @tparam Pins The type of the pins to set their pinMode to (this is implicitly populated)
+ * @param direction The direction that all specified pins will be set to
+ * @param pins The pins to set
+ */
 template<typename ... Pins>
 [[gnu::always_inline]]
 inline void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
     (pinMode(pins, direction), ...);
 }
 
-template<typename ... Pins>
-[[gnu::always_inline]]
-inline void digitalWriteBlock(decltype(HIGH) value, Pins ... pins) {
-    (digitalWrite(pins, value), ...);
-}
-
+/**
+ * @brief RAII-class which asserts a pin (direction defined by the DigitalPin class for a given pin) on construction.
+ * It deasserts the pin on destruction. Very useful with scopes to make sure that you never forget to assert and deassert a pin.
+ * Cleans up SPI transactions significantly. The compiler generally inlines the bodies of this class when used.
+ * @tparam pinId The pin to affect for the lifetime of the object
+ */
 template<i960Pinout pinId>
-class PinAsserter {
+class PinAsserter final {
 public:
     static_assert(DigitalPin<pinId>::isOutputPin());
     PinAsserter() { DigitalPin<pinId>::assertPin(); }
