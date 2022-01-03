@@ -1,6 +1,6 @@
 /*
 i960SxChipset
-Copyright (c) 2020-2021, Joshua Scoggins
+Copyright (c) 2020-2022, Joshua Scoggins
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -32,24 +32,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DependentFalse.h"
 
 // comment this out to disable sram cache support
-#ifdef ARDUINO_AVR_ATmega1284
-#define PACKED_ATTRIBUTE
-#else
-#define PACKED_ATTRIBUTE __attribute__((packed))
-#endif
 #ifdef __AVR__
 using int24_t = __int24;
 using uint24_t = __uint24;
 #endif
 
 
-template<typename E>
-constexpr bool isValidPin(E pin) noexcept {
-    return static_cast<int>(pin) < static_cast<int>(E::Count) &&
-           static_cast<int>(pin) >= 0;
-}
-template<auto pin>
-constexpr bool isValidPin_v = isValidPin(pin);
 constexpr unsigned long long int operator "" _KB(unsigned long long int value) noexcept { return value * 1024; }
 constexpr unsigned long long int operator "" _MB(unsigned long long int value) noexcept { return value * 1024 * 1024; }
 constexpr unsigned long long int operator "" _KHz(unsigned long long int value) noexcept { return value * 1000; }
@@ -113,8 +101,13 @@ static_assert(is_same_v<ClosestBitValue_t<4>, byte>);
 static_assert(is_same_v<ClosestBitValue_t<10>, uint16_t>);
 static_assert(!is_same_v<ClosestBitValue_t<10>, ClosestBitValue_t<4>>);
 
-
+/**
+ * @brief Describe the target microcontroller being used
+ */
 enum class TargetMCU {
+    /**
+     * @brief
+     */
     ATmega1284p_Type1,
     ATmega1284p_Type2,
     Unknown,
