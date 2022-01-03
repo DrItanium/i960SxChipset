@@ -758,8 +758,8 @@ public:
             while (!(SPSR & _BV(SPIF))) ; // wait
             output.bytes[3] = SPDR;
             digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            DigitalPin<i960Pinout::Ready>::pulse();
             line.set(offset+1, currLSS2, output.getUpperWord());
+            DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 break;
             }
