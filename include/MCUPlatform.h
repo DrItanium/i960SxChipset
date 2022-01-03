@@ -46,7 +46,7 @@ static_assert(2_KHz == 2'000);
 static_assert(2_MHz == 2'000'000);
 static_assert(20_MHz == 20'000'000);
 
-static constexpr byte BitMaskTable_Byte[8] {
+constexpr byte BitMaskTable_Byte[8] {
         0b0000'0001,
         0b0000'0010,
         0b0000'0100,
@@ -65,7 +65,7 @@ constexpr byte pow2(byte value) noexcept {
     }
 }
 
-static constexpr byte numberOfBitsForCount(uint16_t count) noexcept {
+constexpr byte numberOfBitsForCount(uint16_t count) noexcept {
     switch (count) {
         case 2: return 1;
         case 4: return 2;
@@ -85,7 +85,7 @@ static constexpr byte numberOfBitsForCount(uint16_t count) noexcept {
         default: return 0;
     }
 }
-static constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept { return numberOfBitsForCount(count); }
+constexpr byte getNumberOfBitsForNumberOfEntries(uint16_t count) noexcept { return numberOfBitsForCount(count); }
 
 static_assert(getNumberOfBitsForNumberOfEntries(512/4) == 7);
 static_assert(getNumberOfBitsForNumberOfEntries(256/4) == 6);
