@@ -683,8 +683,15 @@ public:
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        for (auto offset = getCacheOffsetEntry(); ;++offset) {
-            auto isLastRead = setDataBits(line.get(offset));
+        // read 32-bits at a time instead of 16 just to keep the throughput increased
+        for (auto offset = getCacheOffsetEntry(); ;offset += 2) {
+            SplitWord32 fullWord(line.get(offset), line.get(offset+1));
+            auto isLastRead = setDataBits(fullWord.getLowerWord().getWholeValue());
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                break;
+            }
+            isLastRead = setDataBits(fullWord.getUpperWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;

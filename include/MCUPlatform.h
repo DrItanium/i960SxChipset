@@ -214,6 +214,7 @@ union SplitWord32 {
     explicit constexpr SplitWord32(uint32_t value = 0) noexcept : wholeValue_(value) { }
     constexpr SplitWord32(uint16_t lower, uint16_t upper) noexcept : halves{lower, upper} {}
     constexpr SplitWord32(uint8_t lowest, uint8_t lower, uint8_t higher, uint8_t highest) noexcept : bytes{lowest, lower, higher, highest} {}
+    constexpr SplitWord32(const SplitWord16& lower, const SplitWord16& upper) noexcept : words_{lower, upper} { }
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     [[nodiscard]] constexpr auto getSignedRepresentation() const noexcept { return signedRepresentation_; }
     [[nodiscard]] constexpr auto getTargetPage() const noexcept { return static_cast<byte>(wholeValue_ >> 8); }
