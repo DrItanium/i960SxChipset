@@ -222,6 +222,8 @@ union SplitWord32 {
     [[nodiscard]] constexpr auto getUpperHalf() const noexcept { return halves[1]; }
     void setLowerHalf(SplitWord16 value) noexcept { words_[0] = value; }
     void setUpperHalf(SplitWord16 value) noexcept { words_[1] = value; }
+    [[nodiscard]] constexpr auto getLowerWord() const noexcept { return words_[0]; }
+    [[nodiscard]] constexpr auto getUpperWord() const noexcept { return words_[1]; }
     uint32_t wholeValue_ = 0;
     int32_t signedRepresentation_;
     byte bytes[sizeof(uint32_t)];
