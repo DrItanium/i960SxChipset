@@ -112,8 +112,17 @@ enum class TargetMCU {
     ATmega1284p_Type2,
     Unknown,
 };
+/**
+ * @brief Describes some of the important aspects tied to a specific TargetMCU
+ */
 class MCUConfiguration final {
 public:
+    /**
+     * @brief Describes how important aspects of this mcu are configured
+     * @param sramSize How much SRAM this MCU has  (16K, 256K, etc)
+     * @param ioExpanderSpeedCap What is the maximum SPI bus speed we can run MCP23S17s at in Hz. If over 10MHz then 10MHz is used!
+     * @param psramSpeedCap What is the maximum SPI bus speed we can run the PSRAM64H array at? If over 33MHz then 33MHz is selected
+     */
     constexpr MCUConfiguration(uint32_t sramSize,
                                uint32_t ioExpanderSpeedCap,
                                uint32_t psramSpeedCap
@@ -129,12 +138,17 @@ private:
     uint32_t ioExpanderPeripheralSpeed_;
     uint32_t psramSpeedCap_;
 };
+/**
+ * @brief A generic configuration for an unknown MCU target. This is the fallback case and is designed to generate an error. Designed to be specialized!
+ * @tparam mcu The target mcu
+ */
 template<TargetMCU mcu>
 constexpr MCUConfiguration BoardDescription = {
         0,
         10_MHz,
         8_MHz
 };
+
 template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         16_KB,
@@ -146,12 +160,23 @@ template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type2> = {
         16_KB,
         10_MHz,
-        10_MHz // due to the current design, we have to run the psram at 5 Mhz
+        10_MHz
 };
 
+/**
+ * @brief Common interface to query aspects specific to a chipset target. Uses the BoardDescription object to populate fields.
+ */
 class TargetBoard {
 public:
+    /**
+     * @brief Get the cpu clock frequency in Hz
+     * @return The macro F_CPU (or equivalent)
+     */
     [[nodiscard]] static constexpr auto getCPUFrequency() noexcept { return F_CPU; }
+    /**
+     * @brief Return the target microcontroller board currently being used based off of information supplied by the compiler
+     * @return The microcontroller board being used.
+     */
     [[nodiscard]] static constexpr TargetMCU getMCUTarget() noexcept {
 #ifdef ARDUINO_AVR_ATmega1284
 #ifdef CHIPSET_TYPE1
@@ -165,18 +190,56 @@ public:
         return TargetMCU::Unknown;
 #endif
     }
+    /**
+     * @brief Is this code running on the specific mcu?
+     * @tparam mcu The expected mcu
+     * @return True if the mcu we are running on is the same as the expected one
+     */
     template<TargetMCU mcu>
     [[nodiscard]] static constexpr auto targetMCUIs() noexcept { return getMCUTarget() == mcu; }
+    /**
+     * @brief Are we running on any of the specified microcontroller targets?
+     * @tparam rest the set of targets to check against
+     * @return True if we are running any of the specified boards
+     */
     template<TargetMCU ... rest>
     [[nodiscard]] static constexpr auto targetMCUIsOneOfThese() noexcept {
         return (targetMCUIs<rest>() || ...);
     }
+    /**
+     * @brief Are we running on an atmega1284p in a type 1 board configuration?
+     * @return True if we are running on a 1284p in a type1 config
+     */
     [[nodiscard]] static constexpr auto onAtmega1284p_Type1() noexcept { return targetMCUIs<TargetMCU::ATmega1284p_Type1>(); }
+    /**
+     * @brief Are we running on an atmega1284p in a type 2 board configuration?
+     * @return True if we are running on a 1284p in a type2 config
+     */
     [[nodiscard]] static constexpr auto onAtmega1284p_Type2() noexcept { return targetMCUIs<TargetMCU::ATmega1284p_Type2>(); }
+    /**
+     * @brief Regardless of configuration are we running on a atmega1284p?
+     * @return True if the microcontroller is an atmega1284p
+     */
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return targetMCUIsOneOfThese<TargetMCU::ATmega1284p_Type1, TargetMCU::ATmega1284p_Type2>(); }
+    /**
+     * @brief Are we on an undeclared microcontroller target?
+     * @return True if we were unable to determine the microcontroller target
+     */
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return targetMCUIs<TargetMCU::Unknown>(); }
+    /**
+     * @brief How much sram does this MCU have for us to maximally play with?
+     * @return The amount of sram available to us in bytes
+     */
     [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept { return BoardDescription<getMCUTarget()>.getSramAmount(); }
+    /**
+     * @brief What fastest speed can we run the MCP23S17s at?
+     * @return The highest clock speed (in hz) that this target's SPI bus can run the io expanders at
+     */
     [[nodiscard]] static constexpr auto runIOExpanderSPIInterfaceAt() noexcept { return BoardDescription<getMCUTarget()>.runIOExpanderSPIInterfaceAt(); }
+    /**
+     * @brief What fastest speed can we run the PSRAM64Hs at?
+     * @return The highest clock speed (in hz) that this target's SPI bus can run the psram at
+     */
     [[nodiscard]] static constexpr auto runPSRAMAt() noexcept { return BoardDescription<getMCUTarget()>.runPSRAMAt(); }
 public:
     TargetBoard() = delete;
@@ -191,7 +254,7 @@ static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been
 static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16kb of sram is not allowed!");
 
 /**
- * @brief The backing design of the registers within the chipset that are 32-bits in width
+ * @brief A view of a 16-bit number which can be broken up into different components transparently
  */
 union SplitWord16 {
     explicit constexpr SplitWord16(uint16_t value = 0) noexcept : wholeValue_(value) { }
@@ -202,21 +265,82 @@ union SplitWord16 {
     uint16_t wholeValue_ = 0;
     uint8_t bytes[sizeof(uint16_t) / sizeof(uint8_t)];
 };
+
+/**
+ * @brief A view of a 32-bit number which can be broken up into different components transparently
+ */
 union SplitWord32 {
     // adding this dropped program size by over 500 bytes!
     explicit constexpr SplitWord32(uint32_t value = 0) noexcept : wholeValue_(value) { }
+    /**
+     * @brief Build a SplitWord32 from two 16-bit values
+     * @param lower The lower half
+     * @param upper The upper half
+     */
     constexpr SplitWord32(uint16_t lower, uint16_t upper) noexcept : halves{lower, upper} {}
+    /**
+     * @brief Build a SplitWord32 from four 8-bit values
+     * @param lowest Bits 0-7
+     * @param lower Bits 8-15
+     * @param higher Bits 16-23
+     * @param highest Bits 24-31
+     */
     constexpr SplitWord32(uint8_t lowest, uint8_t lower, uint8_t higher, uint8_t highest) noexcept : bytes{lowest, lower, higher, highest} {}
+    /**
+     * @brief Build a SplitWord32 from two SplitWord16s
+     * @param lower The lower half of the number
+     * @param upper The upper half of the number
+     */
     constexpr SplitWord32(const SplitWord16& lower, const SplitWord16& upper) noexcept : words_{lower, upper} { }
+    /**
+     * @brief Get the backing 32-bit value
+     * @return The backing store 32-bit value as is
+     */
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
+    /**
+     * @brief View this value as a 32-bit signed number
+     * @return The backing store as a 32-bit signed number
+     */
     [[nodiscard]] constexpr auto getSignedRepresentation() const noexcept { return signedRepresentation_; }
+    /**
+     * @brief Constexpr method meant to get the target page byte (which is made up of bits 8-15)
+     * @return The target page as an 8-bit value
+     */
     [[nodiscard]] constexpr auto getTargetPage() const noexcept { return static_cast<byte>(wholeValue_ >> 8); }
+    /**
+     * @brief Constexpr method meant to allow one to get the most significant byte.
+     * @return The most significant byte
+     */
     [[nodiscard]] constexpr auto getMostSignificantByte() const noexcept { return static_cast<byte>(wholeValue_ >> 24); }
+    /**
+     * @brief Get the lower 16-bits as a raw 16-bit number
+     * @return The lower half as a plain 16-bit number
+     */
     [[nodiscard]] constexpr auto getLowerHalf() const noexcept { return halves[0]; }
+    /**
+     * @brief Get the upper 16-bits as a raw 16-bit number
+     * @return The upper half as a plain 16-bit number
+     */
     [[nodiscard]] constexpr auto getUpperHalf() const noexcept { return halves[1]; }
+    /**
+     * @brief Set the lower 16-bits of the backing store through the use of a SplitWord16
+     * @param value The new lower half value
+     */
     void setLowerHalf(SplitWord16 value) noexcept { words_[0] = value; }
+    /**
+     * @brief Set the upper 16-bits of the backing store through the use of a SplitWord16
+     * @param value The new upper half value
+     */
     void setUpperHalf(SplitWord16 value) noexcept { words_[1] = value; }
+    /**
+     * @brief View the lower half of this number as a SplitWord16
+     * @return The lower half of this number as a SplitWord16
+     */
     [[nodiscard]] constexpr auto getLowerWord() const noexcept { return words_[0]; }
+    /**
+     * @brief View the upper half of this number as a SplitWord16
+     * @return The upper half of this number as a SplitWord16
+     */
     [[nodiscard]] constexpr auto getUpperWord() const noexcept { return words_[1]; }
     uint32_t wholeValue_ = 0;
     int32_t signedRepresentation_;
