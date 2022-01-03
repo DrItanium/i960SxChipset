@@ -31,21 +31,57 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 #include "i960SxChipset.h"
 /**
- * @brief Describes a single cache line which associates an address with 32 bytes of storage
+ * @brief Describes a single cache line which holds onto a customizable number of words which are some multiple of 8 bit bytes
+ * @tparam numTagBits The number of bits in a given address devoted to the index of the cache line
+ * @tparam maxAddressBits How many bits the entire address is comprised of (maximum of 32)
+ * @tparam numLowestBits How many bits (and through some may bytes) describe the offset into this cache line (this determines how many bytes are stored in this line)
+ * @tparam T The type of the backing memory storage (SDCard, PSRAM, etc)
+ * @tparam useSpecificTypeSizes When true, use the smallest type for each field in the address type used by this cache line. When false, use uint32_t. Should only be false on ARM platforms
  */
 template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true>
 class CacheEntry final {
 public:
+    /**
+     * @brief Divides the bytes that make up this cache line to this type
+     */
     using Word = SplitWord16;
+    /**
+     * @brief The number of bytes cached by this line
+     */
     static constexpr size_t NumBytesCached = pow2(numLowestBits);
+    /**
+     * @brief The number of words cached by this line (NumBytesCached / sizeof(Word))
+     */
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(Word);
+    /**
+     * @brief A bitmask of the word types
+     */
     static constexpr byte CacheEntryMask = NumWordsCached - 1;
+    /**
+     * @brief The address type used to describe addresses passed to this line
+     */
     using TaggedAddress = ::TaggedAddress<numTagBits, maxAddressBits, numLowestBits, useSpecificTypeSizes>;
+    /**
+     * @brief The type of the offset component of the line address (the least significant bits of the address)
+     */
     using OffsetType = typename TaggedAddress::LowerType ;
+    /**
+     * @brief The type of the key component of the line address (the most significant bits of the address)
+     */
     using KeyType = typename TaggedAddress::RestType;
+    /**
+     * @brief The code that the line uses to signify it does not hold onto valid data
+     */
     static constexpr OffsetType  InvalidCacheLineState = 0xFF;
+    /**
+     * @brief The code that the line uses to signify that it holds onto valid data which has not been modified compared to backing memory source
+     */
     static constexpr OffsetType CleanCacheLineState = 0xFE;
 public:
+    /**
+     * @brief Clear the contents of the line out (committing the contents to backing store if dirty) and then populate the line with new data from the backing store.
+     * @param newTag The address that represents the base of the new line (offset will be zero)
+     */
     void reset(TaggedAddress newTag) noexcept {
         // no match so pull the data in from main memory
         if (isDirty()) {
@@ -76,8 +112,24 @@ public:
             a.wholeValue_ = 0;
         }
     }
+    /**
+     * @brief Given a valid line, compare the cache keys to see if they are equal
+     * @param addr The address to compare with the key stored inside the line
+     * @return True if line is valid and the keys match
+     */
     [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (addr.getRest() == key_); }
+    /**
+     * @brief Return the word at a given offset; NOTE THERE IS NO CHECKS TO MAKE SURE YOU DIDN'T GO OUT OF BOUNDS!
+     * @param offset The offset into the line in word form (it is not a byte offset)
+     * @return The word itself at the given position (a copy!)
+     */
     [[nodiscard]] constexpr auto get(OffsetType offset) const noexcept { return data[offset].getWholeValue(); }
+    /**
+     * @brief Update a given word in the line and check it to see if the dirty bits should be updated as well
+     * @param offset The word offset into the line
+     * @param style Is this a Full 16-bit update, lower8 update, or upper8 update? Chipset halt on anything else
+     * @param value The new value to update the target word in the line with
+     */
     void set(OffsetType offset, LoadStoreStyle style, Word value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         auto &target = data[offset];
@@ -111,8 +163,20 @@ public:
             }
         }
     }
+    /**
+     * @brief Check to see if the given line is valid
+     * @return True if the line is not invalid
+     */
     [[nodiscard]] constexpr bool isValid() const noexcept { return dirty_ != InvalidCacheLineState; }
+    /**
+     * @brief Check to see if any words in the line have been modified in a meaningful way
+     * @return True if any words in the line have been modified
+     */
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_ < NumWordsCached; }
+    /**
+     * @brief Return true if the line has valid unmodified data compared to the backing store
+     * @return True if no words in the valid line have been meaningfully modified
+     */
     [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
 private:
     Word data[NumWordsCached]; // 16 bytes
