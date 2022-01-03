@@ -703,6 +703,7 @@ public:
             if (isLastRead) {
                 break;
             }
+            // we are looking at a double word, triple word, or quad word
             isLastRead = setDataBits(fullWord2.getLowerWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
@@ -724,7 +725,8 @@ public:
             if (isLastRead) {
                 break;
             }
-            // okay so we are looking at a quad word operation
+            // okay so we are looking at a quad word operation of some kind
+            // perhaps the processor loading instruction into the data cache?
             isLastRead = setDataBits(fullWord4.getLowerWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
