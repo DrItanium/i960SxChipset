@@ -684,10 +684,12 @@ public:
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         // read 32-bits at a time instead of 16 just to keep the throughput increased
-        for (auto offset = getCacheOffsetEntry(); ;offset += 4) {
+        for (auto offset = getCacheOffsetEntry(); ;offset += 8) {
             SplitWord32 fullWord(line.get(offset), line.get(offset+1));
             // this is more unsafe than waiting later on in the process
             SplitWord32 fullWord2(line.get(offset+2), line.get(offset+3));
+            SplitWord32 fullWord3(line.get(offset+4), line.get(offset+5));
+            SplitWord32 fullWord4(line.get(offset+6), line.get(offset+7));
             auto isLastRead = setDataBits(fullWord.getLowerWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
@@ -710,6 +712,28 @@ public:
                 break;
             }
             isLastRead = setDataBits(fullWord2.getUpperWord().getWholeValue());
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                break;
+            }
+            // okay so we are looking at a triple word or quad word operation
+            isLastRead = setDataBits(fullWord3.getLowerWord().getWholeValue());
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                break;
+            }
+            isLastRead = setDataBits(fullWord3.getUpperWord().getWholeValue());
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                break;
+            }
+            // okay so we are looking at a quad word operation
+            isLastRead = setDataBits(fullWord4.getLowerWord().getWholeValue());
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                break;
+            }
+            isLastRead = setDataBits(fullWord4.getUpperWord().getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
