@@ -36,11 +36,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true>
 class CacheEntry final {
 public:
+    using Word = SplitWord16;
     static constexpr size_t NumBytesCached = pow2(numLowestBits);
-    static constexpr size_t NumWordsCached = NumBytesCached / sizeof(SplitWord16);
+    static constexpr size_t NumWordsCached = NumBytesCached / sizeof(Word);
     static constexpr byte CacheEntryMask = NumWordsCached - 1;
     using TaggedAddress = ::TaggedAddress<numTagBits, maxAddressBits, numLowestBits, useSpecificTypeSizes>;
     using OffsetType = typename TaggedAddress::LowerType ;
+    using KeyType = typename TaggedAddress::RestType;
     static constexpr OffsetType  InvalidCacheLineState = 0xFF;
     static constexpr OffsetType CleanCacheLineState = 0xFE;
 public:
@@ -51,9 +53,9 @@ public:
             byte end = ((highestUpdated_ - dirty_) + 1);
             //Serial.print(F("end offset: "));
             //Serial.println(end);
-            (void)T::write(TaggedAddress{key_, newTag.getTagIndex(), 0}.getAddress() + (dirty_ * sizeof(SplitWord16)),
+            (void)T::write(TaggedAddress{key_, newTag.getTagIndex(), 0}.getAddress() + (dirty_ * sizeof(Word)),
                            reinterpret_cast<byte *>(data + dirty_),
-                           sizeof(SplitWord16) * end);
+                           sizeof(Word) * end);
         }
         dirty_ = CleanCacheLineState;
         highestUpdated_ = 0;
@@ -76,7 +78,7 @@ public:
     }
     [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (addr.getRest() == key_); }
     [[nodiscard]] constexpr auto get(OffsetType offset) const noexcept { return data[offset].getWholeValue(); }
-    void set(OffsetType offset, LoadStoreStyle style, SplitWord16 value) noexcept {
+    void set(OffsetType offset, LoadStoreStyle style, Word value) noexcept {
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         auto &target = data[offset];
         if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
@@ -113,8 +115,8 @@ public:
     [[nodiscard]] constexpr bool isDirty() const noexcept { return dirty_ < NumWordsCached; }
     [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
 private:
-    SplitWord16 data[NumWordsCached]; // 16 bytes
-    typename TaggedAddress::RestType key_ = 0;
+    Word data[NumWordsCached]; // 16 bytes
+    KeyType key_ = 0;
     /**
      * @brief Describes lowest dirty word in a valid cache line; also denotes if the cache line is valid or not
      */
