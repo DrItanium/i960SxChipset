@@ -483,12 +483,13 @@ private:
     }
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
-     * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
-     * cache entry class that the L1 cache uses
+     * @tparam C The cache line type used by the L1 cache
      * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
      */
-    template<byte offsetMask, bool inDebugMode>
+    template<typename C, bool inDebugMode>
     inline static void full32BitUpdate() noexcept {
+        static constexpr auto OffsetMask = C::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = C::CacheEntryShiftAmount;
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -541,7 +542,7 @@ private:
         {
             // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
             // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> 1) & offsetMask; // we want to make this quick to increment
+            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
             address_.bytes[0] = lowest;
         }
         while (!(SPSR & _BV(SPIF))); // wait
@@ -550,11 +551,12 @@ private:
     }
     /**
      * @brief Only update the lower 16 bits of the current transaction's base address
-     * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
-     * cache entry class that the L1 cache uses
+     * @tparam C The cache line type used by the L1 cache
      */
-    template<byte offsetMask>
+    template<typename C>
     static void lower16Update() noexcept {
+        static constexpr auto OffsetMask = C::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = C::CacheEntryShiftAmount;
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // read only the lower half
@@ -576,7 +578,7 @@ private:
         {
             // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
             // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> 1) & offsetMask; // we want to make this quick to increment
+            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
             address_.bytes[0] = lowest;
         }
         while (!(SPSR & _BV(SPIF))); // wait
@@ -665,11 +667,12 @@ private:
     }
     /**
      * @brief Update address bits 0-7 and compute the base cache offset value
-     * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
-     * cache entry class that the L1 cache uses
+     * @tparam C The cache line type used by the L1 cache
      */
-    template<byte offsetMask>
+    template<typename C>
     static void updateLowest8() noexcept {
+        static constexpr auto OffsetMask = C::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = C::CacheEntryShiftAmount;
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOA);
         // read only the lower half
@@ -689,7 +692,7 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
         // put scope ticks to force the matter
-        cacheOffsetEntry_ = (lowest >> 1) & offsetMask; // we want to make this quick to increment
+        cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
         address_.bytes[0] = lowest;
     }
     /**
@@ -732,11 +735,12 @@ public:
     /**
      * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
      * @tparam inDebugMode When true, use debug versions of the read/write function pointers to fulfill the request. This is passed to direct children as well.
+     * @tparam C The cache line type useful for computing the offset mask and other components
      * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
      * cache entry class that the L1 cache uses
      * @tparam useInterrupts If true, then query the directly connected interrupt pins to get a proper update mask
      */
-    template<bool inDebugMode, byte offsetMask, bool useInterrupts = true>
+    template<bool inDebugMode, typename C, bool useInterrupts = true>
     static void newDataCycle() noexcept {
         switch (getUpdateKind<useInterrupts>()) {
             case 0b0001:
@@ -744,14 +748,14 @@ public:
                 upper16Update<inDebugMode>();
                 break;
             case 0b0010:
-                updateLowest8<offsetMask>();
+                updateLowest8<C>();
                 upper16Update<inDebugMode>();
                 break;
             case 0b0011:
                 upper16Update<inDebugMode>();
                 break;
             case 0b0100:
-                lower16Update<offsetMask>();
+                lower16Update<C>();
                 updateHighest8<inDebugMode>();
                 break;
             case 0b0101:
@@ -759,14 +763,14 @@ public:
                 updateHighest8<inDebugMode>();
                 break;
             case 0b0110:
-                updateLowest8<offsetMask>();
+                updateLowest8<C>();
                 updateHighest8<inDebugMode>();
                 break;
             case 0b0111:
                 updateHighest8<inDebugMode>();
                 break;
             case 0b1000:
-                lower16Update<offsetMask>();
+                lower16Update<C>();
                 updateHigher8();
                 break;
             case 0b1001:
@@ -775,23 +779,23 @@ public:
                 break;
             case 0b1010:
                 updateHigher8();
-                updateLowest8<offsetMask>();
+                updateLowest8<C>();
                 break;
             case 0b1011:
                 updateHigher8();
                 break;
             case 0b1100:
-                lower16Update<offsetMask>();
+                lower16Update<C>();
                 break;
             case 0b1101:
                 updateLower8();
                 break;
             case 0b1110:
-                updateLowest8<offsetMask>();
+                updateLowest8<C>();
                 break;
             case 0b1111: break;
             default:
-                full32BitUpdate<offsetMask, inDebugMode>();
+                full32BitUpdate<C, inDebugMode>();
                 break;
         }
         if (isReadOperation()) {
