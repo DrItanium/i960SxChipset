@@ -174,8 +174,42 @@ public:
             }
         }
     }
-
-    void set(OffsetType offset0, LoadStoreStyle style0, OffsetType offset1, LoadStoreStyle style1, DoubleWord value) noexcept { }
+    enum class LoadStoreStyle32 : byte {
+        Full32,
+        Upper24,
+        Upper16_Lowest8,
+        Upper16_Error,
+        Highest8_Lower16,
+        Highest8_Lower8,
+        Highest8_Lowest8,
+        Highest8_Error,
+        Lower24,
+        Middle16,
+        Higher8_Lowest8,
+        Higher8_Error,
+        Lower16,
+        Lower8,
+        Lowest8,
+        Error
+    };
+    static constexpr bool isErrorState(LoadStoreStyle32 style) noexcept {
+        return (static_cast<byte>(style) & 0b11) == 0b11;
+    }
+    static constexpr LoadStoreStyle32 construct(LoadStoreStyle lower, LoadStoreStyle upper) noexcept {
+        constexpr byte upperLookupTable[4]{
+            0b0000,
+            0b0100,
+            0b1000,
+            0b1100,
+        };
+        return static_cast<LoadStoreStyle32>(static_cast<byte>(lower) | upperLookupTable[static_cast<byte>(upper)]);
+    }
+    void set(OffsetType offset, LoadStoreStyle style0, LoadStoreStyle style1, DoubleWord value) noexcept {
+        // if style0 is None then it is an error state
+        if (style0 == LoadStoreStyle::None) {
+            signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
+        }
+    }
     /**
      * @brief Check to see if the given line is valid
      * @return True if the line is not invalid

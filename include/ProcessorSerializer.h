@@ -402,7 +402,9 @@ public:
      * @brief Query the ~BE0 and ~BE1 pins provided by the i960 to denote how the chipset should treat the current word in the transaction
      * @return The LoadStoreStyle derived from the ~BE0 and ~BE1 pins.
      */
-    [[nodiscard]] static auto getStyle() noexcept { return static_cast<LoadStoreStyle>((PINA & 0b11'0000)); }
+    [[nodiscard]] static auto getStyle() noexcept {
+        return static_cast<LoadStoreStyle>((PINA & 0b11'0000) >> 4);
+    }
     /**
      * @brief Check the W/~R pin to see if we are dealing with a read transaction.
      * Only needs to be queried once at the beginning of a new transaction
