@@ -41,11 +41,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true, typename W = SplitWord16>
 class CacheEntry final {
 public:
+    static_assert(sizeof(W) >= sizeof(SplitWord16), "The underlying word type must be at least 16-bits in size or greater");
     /**
      * @brief Divides the bytes that make up this cache line to this type
      */
     using Word = W;
-    static_assert(sizeof(Word) >= sizeof(SplitWord16), "The underlying word type must be at least 16-bits in size or greater");
     /**
      * @brief The number of bytes cached by this line
      */
