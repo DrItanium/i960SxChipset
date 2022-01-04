@@ -890,6 +890,18 @@ public:
         }
         SPI.endTransaction();
     }
+private:
+    struct CacheWriteRequest {
+        LoadStoreStyle style = LoadStoreStyle::Full16;
+        SplitWord16 value{0};
+        byte offset = 0;
+        template<typename CacheLine>
+        inline void set(CacheLine& line) noexcept {
+            line.set(offset, style, value);
+        }
+
+    };
+public:
     /**
      * @brief commit up to 16-bytes of data from the i960 to a specified cache line
      * @tparam CacheLine The type of the cache line to write to
@@ -899,53 +911,49 @@ public:
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        struct {
-            LoadStoreStyle style;
-            SplitWord16 value;
-            byte offset;
-        } transactions[8];
+        CacheWriteRequest transactions[8];
         byte count = 0;
         auto offset = getCacheOffsetEntry();
         for (;;) {
             bool isLast;
-            auto& currentTransaction = transactions[count];
-            // getDataBits will be expanded here
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
             {
-                isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-            {
-                currentTransaction.style = getStyle();
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = 0;
-            {
-                currentTransaction.offset = offset + count;
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            auto lower = SPDR;
-            SPDR = 0;
-            {
-                currentTransaction.value.bytes[0] = lower;
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            currentTransaction.value.bytes[1] = SPDR;
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            ++count;
-            if (isLast) {
-                break;
+                auto &currentTransaction = transactions[count];
+                // getDataBits will be expanded here
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                {
+                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                {
+                    currentTransaction.style = getStyle();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                {
+                    currentTransaction.offset = offset + count;
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                auto lower = SPDR;
+                SPDR = 0;
+                {
+                    currentTransaction.value.bytes[0] = lower;
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                currentTransaction.value.bytes[1] = SPDR;
+                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                ++count;
+                if (isLast) {
+                    break;
+                }
             }
         }
         SPI.endTransaction();
         // now commit everything back
         for (int i = 0; i < count; ++i) {
-            line.set(transactions[i].offset,
-                     transactions[i].style,
-                     transactions[i].value);
+            transactions[i].set(line);
         }
     }
     /**
