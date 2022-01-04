@@ -905,8 +905,7 @@ public:
             byte offset;
         } transactions[8];
         byte count = 0;
-        auto baseOffset = getCacheOffsetEntry();
-        for (auto offset = baseOffset; ;++offset) {
+        for (auto offset = getCacheOffsetEntry(); ;++offset) {
             bool isLast;
             {
                 // getDataBits will be expanded here
