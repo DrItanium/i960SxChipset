@@ -900,7 +900,7 @@ private:
             line.set(offset, style, value);
         }
     };
-    [[nodiscard]] static bool getDataBits(byte offset, CacheWriteRequest& request) noexcept {
+    [[nodiscard]] static bool getDataBits(byte offset, byte count, CacheWriteRequest& request) noexcept {
         bool isLast;
         // getDataBits will be expanded here
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -916,7 +916,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         {
-            request.offset = offset;
+            request.offset = offset + count;
         }
         while (!(SPSR & _BV(SPIF))); // wait
         auto lower = SPDR;
@@ -941,9 +941,10 @@ public:
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         CacheWriteRequest transactions[8];
         byte count = 0;
-        for (auto offset = getCacheOffsetEntry();; ++offset, ++count) {
+        for (auto offset = getCacheOffsetEntry();;) {
             auto &currentTransaction = transactions[count];
-            auto isLast = getDataBits(offset, currentTransaction);
+            auto isLast = getDataBits(offset, count, currentTransaction);
+            ++count;
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 break;
