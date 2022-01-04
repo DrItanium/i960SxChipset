@@ -902,7 +902,9 @@ private:
     };
     static inline CacheWriteRequest transactions[8];
     template<byte count>
-    [[nodiscard]] static inline bool getDataBits(byte offset) noexcept {
+    [[nodiscard]]
+    [[gnu::always_inline]]
+    static inline bool getDataBits(byte offset) noexcept {
         bool isLast;
         auto& request = transactions[count];
         // getDataBits will be expanded here
