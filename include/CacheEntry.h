@@ -175,46 +175,7 @@ public:
         }
     }
 
-    /**
-     * @brief Update a given word in the line and check it to see if the dirty bits should be updated as well
-     * @param offset The word offset into the line
-     * @param style Is this a Full 16-bit update, lower8 update, or upper8 update? Chipset halt on anything else
-     * @param value The new value to update the target word in the line with
-     */
-    void set(OffsetType offset0, LoadStoreStyle style0, Word value0, OffsetType offset1, LoadStoreStyle style1, Word value1) noexcept {
-        /// @todo add support for Words which are larger than bus width
-        // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
-        auto &target = data[offset];
-        if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
-            switch (style) {
-                case LoadStoreStyle::Full16:
-                    target = value;
-                    break;
-                case LoadStoreStyle::Lower8:
-                    target.bytes[0] = value.bytes[0];
-                    break;
-                case LoadStoreStyle::Upper8:
-                    target.bytes[1] = value.bytes[1];
-                    break;
-                default:
-                    signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
-            }
-            // do a comparison at the end to see if we actually changed anything
-            // the idea is that if the values don't change don't mark the cache line as dirty again
-            // it may already be dirty but don't force the matter on any write
-            // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
-            if (oldValue != target.getWholeValue()) {
-                // consumes more flash to do it this way but we only update ram when we have something to change
-                if (offset < dirty_) {
-                    dirty_ = offset;
-                }
-                // compute the highest updated entry, useful for computing an upper transfer range
-                if (offset > highestUpdated_) {
-                    highestUpdated_ = offset;
-                }
-            }
-        }
-    }
+    void set(OffsetType offset0, LoadStoreStyle style0, OffsetType offset1, LoadStoreStyle style1, DoubleWord value) noexcept { }
     /**
      * @brief Check to see if the given line is valid
      * @return True if the line is not invalid

@@ -94,15 +94,8 @@ constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 constexpr auto CacheLineSize = 6;
 constexpr auto CacheSize = 8192;
 constexpr auto UseSpecificTypesForDifferentAddressComponents = true;
-using CacheLineEntryWord = SplitWord16;
 
-using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet,
-        CacheSize,
-        NumAddressBits,
-        CacheLineSize,
-        BackingMemoryStorage_t,
-        UseSpecificTypesForDifferentAddressComponents,
-        CacheLineEntryWord>;
+using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 L1Cache theCache;
 
 template<bool inDebugMode, bool useInterrupts>
