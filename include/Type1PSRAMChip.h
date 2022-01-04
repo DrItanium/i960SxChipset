@@ -91,7 +91,7 @@ private:
         PSRAMBlockAddress end;
         uint32_t numBytesToSecondChip;
         uint32_t numBytesToFirstChip;
-        bool localToASingleChip;
+        bool localToASingleChip, spansMultipleChips;
         PSRAMBlockAddress curr(address);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
@@ -99,21 +99,22 @@ private:
         SPDR = opcode;
         {
             end = PSRAMBlockAddress(address + capacity);
+            numBytesToSecondChip = end.getOffset();
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[2];
         {
-            numBytesToSecondChip = end.getOffset();
+            localToASingleChip = curr.getIndex() == end.getIndex();
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[1];
         {
-            localToASingleChip = curr.getIndex() == end.getIndex();
+            numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = curr.bytes_[0];
         {
-            numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+            spansMultipleChips =  (!localToASingleChip && (numBytesToSecondChip > 0));
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
@@ -124,7 +125,7 @@ private:
            }
         }
         digitalWrite<EnablePin, HIGH>();
-        if (!localToASingleChip && (numBytesToSecondChip > 0)) {
+        if (spansMultipleChips) {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             // start writing at the start of the next chip the remaining number of bytes
