@@ -834,54 +834,58 @@ public:
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         // read 32-bits at a time instead of 16 just to keep the throughput increased
         for (auto offset = getCacheOffsetEntry(); ;offset += 8) {
-            SplitWord32 fullWord(line.get(offset), line.get(offset+1));
             // this is more unsafe than waiting later on in the process as we are guessing that we need this data
             // These full words will hold onto garbage data if we span two cache lines. That is actually okay because
             // the i960 will never request that data. It will operate on a maximum of 16-bytes at a time.
             // For consistency, I am leaving the loop in (my research may be flawed in some way)
-            SplitWord32 fullWord2(line.get(offset+2), line.get(offset+3));
-            SplitWord32 fullWord3(line.get(offset+4), line.get(offset+5));
-            SplitWord32 fullWord4(line.get(offset+6), line.get(offset+7));
-            auto isLastRead = setDataBits(fullWord.getLowerWord().getWholeValue());
+            auto a0 = line.get(offset+0);
+            auto a1 = line.get(offset+1);
+            auto a2 = line.get(offset+2);
+            auto a3 = line.get(offset+3);
+            auto a4 = line.get(offset+4);
+            auto a5 = line.get(offset+5);
+            auto a6 = line.get(offset+6);
+            auto a7 = line.get(offset+7);
+            auto isLastRead = setDataBits(a0);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits(fullWord.getUpperWord().getWholeValue());
+            isLastRead = setDataBits(a1);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // we are looking at a double word, triple word, or quad word
-            isLastRead = setDataBits(fullWord2.getLowerWord().getWholeValue());
+            isLastRead = setDataBits(a2);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits(fullWord2.getUpperWord().getWholeValue());
+            isLastRead = setDataBits(a3);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a triple word or quad word operation
-            isLastRead = setDataBits(fullWord3.getLowerWord().getWholeValue());
+            isLastRead = setDataBits(a4);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits(fullWord3.getUpperWord().getWholeValue());
+            isLastRead = setDataBits(a5);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a quad word operation of some kind
             // perhaps the processor loading instruction into the data cache?
-            isLastRead = setDataBits(fullWord4.getLowerWord().getWholeValue());
+            isLastRead = setDataBits(a6);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits(fullWord4.getUpperWord().getWholeValue());
+            isLastRead = setDataBits(a7);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
