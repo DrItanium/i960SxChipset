@@ -905,40 +905,39 @@ public:
             byte offset;
         } transactions[8];
         byte count = 0;
-        for (auto offset = getCacheOffsetEntry(); ;++offset) {
+        auto offset = getCacheOffsetEntry();
+        for (;;) {
             bool isLast;
+            auto& currentTransaction = transactions[count];
+            // getDataBits will be expanded here
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
             {
-                auto& currentTransaction = transactions[count];
-                // getDataBits will be expanded here
-                digitalWrite<i960Pinout::GPIOSelect, LOW>();
-                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-                {
-                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                }
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-                {
-                    currentTransaction.style = getStyle();
-                }
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = 0;
-                {
-                    currentTransaction.offset = offset;
-                }
-                while (!(SPSR & _BV(SPIF))); // wait
-                auto lower = SPDR;
-                SPDR = 0;
-                {
-                    currentTransaction.value.bytes[0] = lower;
-                }
-                while (!(SPSR & _BV(SPIF))); // wait
-                currentTransaction.value.bytes[1] = SPDR;
-                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                ++count;
-                if (isLast) {
-                    break;
-                }
+                isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+            {
+                currentTransaction.style = getStyle();
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            {
+                currentTransaction.offset = offset + count;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto lower = SPDR;
+            SPDR = 0;
+            {
+                currentTransaction.value.bytes[0] = lower;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            currentTransaction.value.bytes[1] = SPDR;
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            ++count;
+            if (isLast) {
+                break;
             }
         }
         SPI.endTransaction();
