@@ -900,7 +900,7 @@ private:
             line.set(offset, style, value);
         }
     };
-    [[nodiscard]] static inline bool getDataBits(byte offset, byte count, CacheWriteRequest& request) noexcept {
+    [[nodiscard]] static inline bool getDataBits(byte offset, CacheWriteRequest& request) noexcept {
         bool isLast;
         // getDataBits will be expanded here
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -916,7 +916,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         {
-            request.offset = offset + count;
+            request.offset = offset;
         }
         while (!(SPSR & _BV(SPIF))); // wait
         auto lower = SPDR;
@@ -941,7 +941,7 @@ public:
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         CacheWriteRequest transactions[8];
         for (auto offset = getCacheOffsetEntry();;offset += 8) {
-            auto isLast = getDataBits(offset, 0, transactions[0]);
+            auto isLast = getDataBits(offset + 0, transactions[0]);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 1; ++i) {
@@ -949,7 +949,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits(offset, 1, transactions[1]);
+            isLast = getDataBits(offset + 1, transactions[1]);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 2; ++i) {
@@ -957,7 +957,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits(offset, 2, transactions[2]);
+            isLast = getDataBits(offset + 2, transactions[2]);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 3; ++i) {
@@ -965,7 +965,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits(offset, 3, transactions[3]);
+            isLast = getDataBits(offset + 3, transactions[3]);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 4; ++i) {
@@ -973,7 +973,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits(offset, 4, transactions[4]);
+            isLast = getDataBits(offset + 4, transactions[4]);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 5; ++i) {
@@ -981,7 +981,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits(offset, 5, transactions[5]);
+            isLast = getDataBits(offset + 5, transactions[5]);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 6; ++i) {
@@ -989,7 +989,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits(offset, 6, transactions[6]);
+            isLast = getDataBits(offset + 6, transactions[6]);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 7; ++i) {
@@ -997,7 +997,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits(offset, 7, transactions[7]);
+            isLast = getDataBits(offset + 7, transactions[7]);
             DigitalPin<i960Pinout::Ready>::pulse();
             // perform the commit at this point
             for (int i = 0;i < 8; ++i) {
