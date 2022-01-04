@@ -908,6 +908,7 @@ public:
         for (auto offset = getCacheOffsetEntry(); ;++offset) {
             bool isLast;
             {
+                auto& currentTransaction = transactions[count];
                 // getDataBits will be expanded here
                 digitalWrite<i960Pinout::GPIOSelect, LOW>();
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
@@ -917,21 +918,21 @@ public:
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
-                    transactions[count].style = getStyle();
+                    currentTransaction.style = getStyle();
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = 0;
                 {
-                    transactions[count].offset = offset;
+                    currentTransaction.offset = offset;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 auto lower = SPDR;
                 SPDR = 0;
                 {
-                    transactions[count].value.bytes[0] = lower;
+                    currentTransaction.value.bytes[0] = lower;
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
-                transactions[count].value.bytes[1] = SPDR;
+                currentTransaction.value.bytes[1] = SPDR;
                 digitalWrite<i960Pinout::GPIOSelect, HIGH>();
                 DigitalPin<i960Pinout::Ready>::pulse();
                 ++count;
