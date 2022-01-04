@@ -38,13 +38,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @tparam T The type of the backing memory storage (SDCard, PSRAM, etc)
  * @tparam useSpecificTypeSizes When true, use the smallest type for each field in the address type used by this cache line. When false, use uint32_t. Should only be false on ARM platforms
  */
-template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true>
+template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true, typename W = SplitWord16>
 class CacheEntry final {
 public:
     /**
      * @brief Divides the bytes that make up this cache line to this type
      */
-    using Word = SplitWord16;
+    using Word = W;
+    static_assert(sizeof(Word) >= sizeof(SplitWord16), "The underlying word type must be at least 16-bits in size or greater");
     /**
      * @brief The number of bytes cached by this line
      */
