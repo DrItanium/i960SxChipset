@@ -80,11 +80,11 @@ private:
     enum class OperationKind {
         Write,
         Read,
-        Generic,
     };
 
-    template<byte opcode, OperationKind kind = OperationKind::Generic>
+    template<byte opcode, OperationKind kind>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
+        static_assert(kind == OperationKind::Read || kind == OperationKind::Write, "Must be a valid OperationKind type");
         if (capacity == 0) {
             return 0;
         }
@@ -131,24 +131,18 @@ private:
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
             digitalWrite<EnablePin, LOW>();
-            transmitByte(opcode);
+            SPDR = opcode;
+            auto actualBuf = buf + numBytesToFirstChip;
+            while (!(SPSR & _BV(SPIF))) ; // wait
             transmitByte(0);
             transmitByte(0);
             transmitByte(0);
-            if constexpr (kind == OperationKind::Write) {
-                auto count = numBytesToSecondChip;
-                auto actualBuf = buf + numBytesToFirstChip;
-                for (decltype(count) i = 0; i < count; ++i) {
-                    transmitByte(actualBuf[i]);
-                }
-            } else if (kind == OperationKind::Read) {
-                auto count = numBytesToSecondChip;
-                auto actualBuf = buf + numBytesToFirstChip;
-                for (decltype(count) i = 0; i < count; ++i) {
-                    actualBuf[i] = receiveByte();
-                }
-            } else {
-                SPI.transfer(buf + numBytesToFirstChip, numBytesToSecondChip);
+            for (decltype(numBytesToSecondChip) i = 0; i < numBytesToSecondChip; ++i) {
+               if constexpr (kind == OperationKind::Read) {
+                   actualBuf[i] = receiveByte();
+               } else {
+                   transmitByte(actualBuf[i]);
+               }
             }
             digitalWrite<EnablePin, HIGH>();
         }
