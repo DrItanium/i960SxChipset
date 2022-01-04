@@ -403,7 +403,7 @@ public:
      * @return The LoadStoreStyle derived from the ~BE0 and ~BE1 pins.
      */
     [[nodiscard]] static auto getStyle() noexcept {
-        return static_cast<LoadStoreStyle>((PINA & 0b11'0000) >> 4);
+        return static_cast<LoadStoreStyle>((PINA & 0b11'0000));
     }
     /**
      * @brief Check the W/~R pin to see if we are dealing with a read transaction.
