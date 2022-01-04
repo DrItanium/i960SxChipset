@@ -136,7 +136,7 @@ public:
      * @param style Is this a Full 16-bit update, lower8 update, or upper8 update? Chipset halt on anything else
      * @param value The new value to update the target word in the line with
      */
-    void set(OffsetType offset, LoadStoreStyle style, Word value) noexcept {
+    inline void set(OffsetType offset, LoadStoreStyle style, Word value) noexcept {
         /// @todo add support for Words which are larger than bus width
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         auto &target = data[offset];
