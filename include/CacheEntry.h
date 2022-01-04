@@ -62,7 +62,9 @@ public:
      * @brief The number of positions to shift the offset component by when computing the entry offset
      */
     static constexpr byte CacheEntryShiftAmount = numberOfBitsForCount(sizeof(Word));
+
     static_assert(CacheEntryShiftAmount != 0, "Defined word type must be a power of 2");
+    static_assert(CacheEntryShiftAmount < numLowestBits, "The words that make up a cache line need to be smaller than the entire storage in the cache line itself");
     /**
      * @brief The address type used to describe addresses passed to this line
      */
