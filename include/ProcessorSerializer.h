@@ -900,7 +900,7 @@ private:
             line.set(offset, style, value);
         }
     };
-    [[nodiscard]] static bool getDataBits(byte offset, byte count, CacheWriteRequest& request) noexcept {
+    [[nodiscard]] static inline bool getDataBits(byte offset, byte count, CacheWriteRequest& request) noexcept {
         bool isLast;
         // getDataBits will be expanded here
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
