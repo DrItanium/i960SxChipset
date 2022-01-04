@@ -892,17 +892,19 @@ public:
     }
 private:
     struct CacheWriteRequest {
-        LoadStoreStyle style = LoadStoreStyle::Full16;
-        SplitWord16 value{0};
-        byte offset = 0;
+        LoadStoreStyle style;
+        SplitWord16 value;
+        byte offset;
         template<typename CacheLine>
         inline void set(CacheLine& line) noexcept {
             line.set(offset, style, value);
         }
     };
+    static inline CacheWriteRequest transactions[8];
     template<byte count>
-    [[nodiscard]] static inline bool getDataBits(byte offset, CacheWriteRequest& request) noexcept {
+    [[nodiscard]] static inline bool getDataBits(byte offset) noexcept {
         bool isLast;
+        auto& request = transactions[count];
         // getDataBits will be expanded here
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
@@ -940,9 +942,8 @@ public:
     template<typename CacheLine, bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        CacheWriteRequest transactions[8];
         for (auto offset = getCacheOffsetEntry();;offset += 8) {
-            auto isLast = getDataBits<0>(offset, transactions[0]);
+            auto isLast = getDataBits<0>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 1; ++i) {
@@ -950,7 +951,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits<1>(offset, transactions[1]);
+            isLast = getDataBits<1>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 2; ++i) {
@@ -958,7 +959,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits<2>(offset, transactions[2]);
+            isLast = getDataBits<2>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 3; ++i) {
@@ -966,7 +967,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits<3>(offset, transactions[3]);
+            isLast = getDataBits<3>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 4; ++i) {
@@ -974,7 +975,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits<4>(offset, transactions[4]);
+            isLast = getDataBits<4>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 5; ++i) {
@@ -982,7 +983,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits<5>(offset, transactions[5]);
+            isLast = getDataBits<5>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 6; ++i) {
@@ -990,7 +991,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits<6>(offset, transactions[6]);
+            isLast = getDataBits<6>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 for (int i = 0;i < 7; ++i) {
@@ -998,7 +999,7 @@ public:
                 }
                 break;
             }
-            isLast = getDataBits<7>(offset, transactions[7]);
+            isLast = getDataBits<7>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             // perform the commit at this point
             for (int i = 0;i < 8; ++i) {
