@@ -38,14 +38,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @tparam T The type of the backing memory storage (SDCard, PSRAM, etc)
  * @tparam useSpecificTypeSizes When true, use the smallest type for each field in the address type used by this cache line. When false, use uint32_t. Should only be false on ARM platforms
  */
-template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true, typename W = SplitWord16>
+template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true>
 class CacheEntry final {
 public:
-    static_assert(sizeof(W) >= sizeof(SplitWord16), "The underlying word type must be at least 16-bits in size or greater");
     /**
      * @brief Divides the bytes that make up this cache line to this type
      */
-    using Word = W;
+    using Word = SplitWord16;
+    /**
+     * @brief A container type for two words worth of data
+     */
+    using DoubleWord = SplitWord32;
     /**
      * @brief The number of bytes cached by this line
      */
@@ -62,10 +65,6 @@ public:
      * @brief The number of positions to shift the offset component by when computing the entry offset
      */
     static constexpr byte CacheEntryShiftAmount = numberOfBitsForCount(sizeof(Word));
-    /**
-     * @brief Is the underlying storage type the same width as the i960Sx bus?
-     */
-    static constexpr auto WordIsBusWidth = sizeof(Word) == 2;
     static_assert(CacheEntryShiftAmount != 0, "Defined word type must be a power of 2");
     static_assert(CacheEntryShiftAmount < numLowestBits, "The words that make up a cache line need to be smaller than the entire storage in the cache line itself");
     /**
@@ -142,6 +141,48 @@ public:
      * @param value The new value to update the target word in the line with
      */
     void set(OffsetType offset, LoadStoreStyle style, Word value) noexcept {
+        /// @todo add support for Words which are larger than bus width
+        // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
+        auto &target = data[offset];
+        if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
+            switch (style) {
+                case LoadStoreStyle::Full16:
+                    target = value;
+                    break;
+                case LoadStoreStyle::Lower8:
+                    target.bytes[0] = value.bytes[0];
+                    break;
+                case LoadStoreStyle::Upper8:
+                    target.bytes[1] = value.bytes[1];
+                    break;
+                default:
+                    signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
+            }
+            // do a comparison at the end to see if we actually changed anything
+            // the idea is that if the values don't change don't mark the cache line as dirty again
+            // it may already be dirty but don't force the matter on any write
+            // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
+            if (oldValue != target.getWholeValue()) {
+                // consumes more flash to do it this way but we only update ram when we have something to change
+                if (offset < dirty_) {
+                    dirty_ = offset;
+                }
+                // compute the highest updated entry, useful for computing an upper transfer range
+                if (offset > highestUpdated_) {
+                    highestUpdated_ = offset;
+                }
+            }
+        }
+    }
+
+    /**
+     * @brief Update a given word in the line and check it to see if the dirty bits should be updated as well
+     * @param offset The word offset into the line
+     * @param style Is this a Full 16-bit update, lower8 update, or upper8 update? Chipset halt on anything else
+     * @param value The new value to update the target word in the line with
+     */
+    void set(OffsetType offset0, LoadStoreStyle style0, Word value0, OffsetType offset1, LoadStoreStyle style1, Word value1) noexcept {
+        /// @todo add support for Words which are larger than bus width
         // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
         auto &target = data[offset];
         if (auto oldValue = target.getWholeValue(); oldValue != value.getWholeValue()) {
