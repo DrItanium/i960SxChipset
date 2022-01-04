@@ -932,6 +932,13 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         return isLast;
     }
+    template<byte count, typename C>
+    static inline void commitTransactions(C& line) noexcept {
+        static_assert(count <= 8, "Can only transmit 8 transactions at a time");
+        for (byte i = 0; i < count; ++i) {
+            transactions[i].set(line);
+        }
+    }
 public:
     /**
      * @brief commit up to 16-bytes of data from the i960 to a specified cache line
@@ -946,71 +953,54 @@ public:
             auto isLast = getDataBits<0>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                for (int i = 0;i < 1; ++i) {
-                    transactions[i].set(line);
-                }
+                commitTransactions<1, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<1>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                for (int i = 0;i < 2; ++i) {
-                    transactions[i].set(line);
-                }
+                commitTransactions<2, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<2>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                for (int i = 0;i < 3; ++i) {
-                    transactions[i].set(line);
-                }
+                commitTransactions<3, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<3>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                for (int i = 0;i < 4; ++i) {
-                    transactions[i].set(line);
-                }
+                commitTransactions<4, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<4>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                for (int i = 0;i < 5; ++i) {
-                    transactions[i].set(line);
-                }
+                commitTransactions<5, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<5>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                for (int i = 0;i < 6; ++i) {
-                    transactions[i].set(line);
-                }
+                commitTransactions<6, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<6>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                for (int i = 0;i < 7; ++i) {
-                    transactions[i].set(line);
-                }
+                commitTransactions<7, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<7>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             // perform the commit at this point
-            for (int i = 0;i < 8; ++i) {
-                transactions[i].set(line);
-            }
+            commitTransactions<8, CacheLine>(line);
             if (isLast) {
                 break;
             }
         }
         SPI.endTransaction();
-        // now commit everything back
     }
     /**
      * @brief The current transaction is reading from a specific memory mapped device connected to the chipset.
