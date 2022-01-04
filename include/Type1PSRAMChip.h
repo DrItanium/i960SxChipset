@@ -163,46 +163,27 @@ public:
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-    template<byte index>
-    static void doWrites() noexcept {
-        digitalWrite<Select0, (index & (1 << 0)) ? HIGH : LOW>();
-        digitalWrite<Select1, (index & (1 << 1)) ? HIGH : LOW>();
-        digitalWrite<Select2, (index & (1 << 2)) ? HIGH : LOW>();
-    }
     static constexpr byte computePortLookup(byte value) noexcept {
         return (value & 0b111) << 2;
     }
-    template<bool usePortOperations = true>
     static void setChipId(byte index) noexcept {
-        if constexpr (usePortOperations) {
-            static constexpr byte theItemMask = 0b00011100;
-            static constexpr byte theInvertedMask = ~theItemMask;
-            static constexpr byte LookupTable[8] {
-                    computePortLookup(0),
-                    computePortLookup(1),
-                    computePortLookup(2),
-                    computePortLookup(3),
-                    computePortLookup(4),
-                    computePortLookup(5),
-                    computePortLookup(6),
-                    computePortLookup(7),
-            };
-            // since this is specific to type 1 we should speed this up significantly
-            auto contents = PORTC;
-            contents &= theInvertedMask;
-            contents |= LookupTable[index & 0b111];
-            PORTC = contents;
-        } else {
-            using Action = void (*)();
-            static constexpr Action Operations[8]{
-                    doWrites<0>, doWrites<1>, doWrites<2>, doWrites<3>,
-                    doWrites<4>, doWrites<5>, doWrites<6>, doWrites<7>,
-            };
-            if (index != currentIndex_) {
-                Operations[index & 0b111]();
-                currentIndex_ = index & 0b111;
-            }
-        }
+        static constexpr byte theItemMask = 0b00011100;
+        static constexpr byte theInvertedMask = ~theItemMask;
+        static constexpr byte LookupTable[8] {
+                computePortLookup(0),
+                computePortLookup(1),
+                computePortLookup(2),
+                computePortLookup(3),
+                computePortLookup(4),
+                computePortLookup(5),
+                computePortLookup(6),
+                computePortLookup(7),
+        };
+        // since this is specific to type 1 we should speed this up significantly
+        auto contents = PORTC;
+        contents &= theInvertedMask;
+        contents |= LookupTable[index & 0b111];
+        PORTC = contents;
     }
 public:
     static void begin() noexcept {
