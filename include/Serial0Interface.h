@@ -81,8 +81,17 @@ public:
 public:
     Serial0Interface() = delete;
     ~Serial0Interface() = delete;
-private:
-    static inline uint16_t handleFirstPageRegisterReads(uint8_t offset, LoadStoreStyle) noexcept {
+    Serial0Interface(const Serial0Interface&) = delete;
+    Serial0Interface(Serial0Interface&&) = delete;
+    Serial0Interface& operator=(const Serial0Interface&) = delete;
+    Serial0Interface& operator=(Serial0Interface&&) = delete;
+public:
+    static void begin() noexcept {
+        // this is done ahead of time
+        Serial.println(F("CONSOLE UP!"));
+    }
+
+    static uint16_t read(uint8_t, uint8_t offset, LoadStoreStyle ) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::ConsoleIO:
                 return Serial.read();
@@ -94,7 +103,8 @@ private:
                 return 0;
         }
     }
-    static inline void handleFirstPageRegisterWrites(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
+
+    static void write(uint8_t, uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
                 if constexpr (TargetBoard::onAtmega1284p_Type1()) {
@@ -115,19 +125,6 @@ private:
             default:
                 break;
         }
-    }
-public:
-    static void begin() noexcept {
-        // this is done ahead of time
-        Serial.println(F("CONSOLE UP!"));
-    }
-
-    static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        return handleFirstPageRegisterReads(offset, lss);
-    }
-
-    static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        handleFirstPageRegisterWrites(offset, lss, value);
     }
     static bool addressDebuggingEnabled() noexcept { return AddressDebuggingAllowed && enableAddressDebugging_; }
 private:
