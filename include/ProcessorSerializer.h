@@ -358,6 +358,7 @@ public:
         if (latchedDataOutput.getWholeValue() != value) {
             //latchedDataOutput.wholeValue_ = value;
             bool isLastRead;
+            byte computedValue = 0;
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
             SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
             {
@@ -370,15 +371,15 @@ public:
             {
                 // find out if this is the last transaction while we are talking to the io expander
                 isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                computedValue = latchedDataOutput.bytes[0];
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = latchedDataOutput.bytes[0];
+            SPDR = computedValue;
             {
-                asm volatile("nop");
-                /// @todo insert tiny independent operations here if desired, delete nop if code added here
+                computedValue = latchedDataOutput.bytes[1];
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = latchedDataOutput.bytes[1];
+            SPDR = computedValue;
             {
                 asm volatile("nop");
                 /// @todo insert tiny independent operations here if desired, delete nop if code added here
