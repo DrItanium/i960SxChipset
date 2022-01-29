@@ -108,7 +108,7 @@ union TaggedAddress {
      * @brief Construct a copy of this address with the offset set to zero
      * @return A copy of address with the offset field set to zero
      */
-    [[nodiscard]] TaggedAddress aligned() const noexcept {
+    [[nodiscard]] constexpr TaggedAddress aligned() const noexcept {
         return TaggedAddress{rest, tagIndex};
     }
 private:
