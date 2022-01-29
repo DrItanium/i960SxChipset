@@ -92,7 +92,7 @@ private:
         uint32_t numBytesToSecondChip;
         uint32_t numBytesToFirstChip;
         bool localToASingleChip, spansMultipleChips;
-        byte cb2, cb1, cb0;
+        byte cb2, cb1, cb0, tmp;
         PSRAMBlockAddress curr(address);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
@@ -119,13 +119,18 @@ private:
         SPDR = cb0;
         {
             spansMultipleChips =  (!localToASingleChip && (numBytesToSecondChip > 0));
+            if constexpr (kind == OperationKind::Write) {
+                tmp = buf[0];
+            }
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
            if constexpr (kind == OperationKind::Read)  {
                buf[i] = receiveByte();
            } else {
-               transmitByte(buf[i]);
+               SPDR = tmp;
+               tmp = buf[i + 1];
+               while (!(SPSR & _BV(SPIF))) ; // wait
            }
         }
         digitalWrite<EnablePin, HIGH>();
