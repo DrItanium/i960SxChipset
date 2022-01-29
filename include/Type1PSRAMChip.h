@@ -92,6 +92,7 @@ private:
         uint32_t numBytesToSecondChip;
         uint32_t numBytesToFirstChip;
         bool localToASingleChip, spansMultipleChips;
+        byte cb2, cb1, cb0;
         PSRAMBlockAddress curr(address);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
@@ -100,19 +101,22 @@ private:
         {
             end = PSRAMBlockAddress(address + capacity);
             numBytesToSecondChip = end.getOffset();
+            cb2 = curr.bytes_[2];
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[2];
+        SPDR = cb2;
         {
             localToASingleChip = curr.getIndex() == end.getIndex();
+            cb1 = curr.bytes_[1];
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[1];
+        SPDR = cb1;
         {
             numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+            cb0 = curr.bytes_[0];
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = curr.bytes_[0];
+        SPDR = cb0;
         {
             spansMultipleChips =  (!localToASingleChip && (numBytesToSecondChip > 0));
         }
@@ -202,8 +206,6 @@ public:
             SPI.endTransaction();
         }
     }
-private:
-    static inline byte currentIndex_ = 0xFF;
 };
 
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
