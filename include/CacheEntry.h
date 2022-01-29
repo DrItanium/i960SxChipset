@@ -93,9 +93,7 @@ public:
         if (isDirty()) {
             // we compute the overall range as we go through this stuff
             byte end = ((highestUpdated_ - dirty_) + 1);
-            //Serial.print(F("end offset: "));
-            //Serial.println(end);
-            (void)T::write(TaggedAddress{key_, newTag.getTagIndex(), 0}.getAddress() + (dirty_ * sizeof(Word)),
+            (void)T::write(TaggedAddress{key_, newTag.getTagIndex()}.getAddress() + (dirty_ * sizeof(Word)),
                            reinterpret_cast<byte *>(data + dirty_),
                            sizeof(Word) * end);
         }
@@ -104,7 +102,7 @@ public:
         // since we have called reset, now align the new address internally
         key_ = newTag.getRest();
         // this is a _very_ expensive operation
-        (void)T::read(TaggedAddress{key_, newTag.getTagIndex(), 0}.getAddress(), reinterpret_cast<byte*>(data), NumBytesCached);
+        (void)T::read(newTag.aligned().getAddress(), reinterpret_cast<byte*>(data), NumBytesCached);
     }
     /**
      * @brief Clear the entry without saving what was previously in it, necessary if the memory was reused for a different purpose

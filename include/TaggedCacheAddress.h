@@ -109,9 +109,7 @@ union TaggedAddress {
      * @return A copy of address with the offset field set to zero
      */
     [[nodiscard]] TaggedAddress aligned() const noexcept {
-        TaggedAddress result(base);
-        result.lowest = 0;
-        return result;
+        return TaggedAddress{rest, tagIndex};
     }
 private:
     Address base;
