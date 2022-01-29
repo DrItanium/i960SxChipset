@@ -957,10 +957,10 @@ private:
     [[nodiscard]]
     [[gnu::always_inline]]
     static inline bool getDataBits(byte offset) noexcept {
-        bool isLast;
         // getDataBits will be expanded here
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         auto& request = transactions[count];
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -971,7 +971,6 @@ private:
         SPDR = 0;
         {
             request.offset = offset + count;
-            isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         }
         while (!(SPSR & _BV(SPIF))); // wait
         auto lower = SPDR;
