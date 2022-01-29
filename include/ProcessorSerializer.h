@@ -742,7 +742,7 @@ public:
      * cache entry class that the L1 cache uses
      * @tparam useInterrupts If true, then query the directly connected interrupt pins to get a proper update mask
      */
-    template<bool inDebugMode, typename C, bool useInterrupts = true, bool useLookupTable = true>
+    template<bool inDebugMode, typename C, bool useInterrupts = true, bool useLookupTable = false>
     static void newDataCycle() noexcept {
 
         if constexpr (useLookupTable) {
