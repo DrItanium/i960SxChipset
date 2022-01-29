@@ -33,10 +33,10 @@ using Address = uint32_t;
  */
 enum class LoadStoreStyle : uint8_t {
     // based off of BE0,BE1 pins
-    Full16 = 0b00'0000,
-    Upper8 = 0b01'0000,
-    Lower8 = 0b10'0000,
-    None = 0b11'0000,
+    Full16 = 0,
+    Upper8,
+    Lower8,
+    None,
 };
 /// @todo fix this pinout for different targets
 enum class i960Pinout : int {

@@ -346,13 +346,6 @@ public:
      */
     [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
     /**
-     * @brief Read the contents of the GPIO register pair on the data lines io expander
-     * @return The value sent to the chipset from the i960 to write
-     */
-    [[nodiscard]] static SplitWord16 getDataBits() noexcept {
-        return readGPIO16<ProcessorInterface::IOExpanderAddress::DataLines>();
-    }
-    /**
      * @brief Update the contents of the GPIO register pair on the data lines io expander (the i960 wants to read from memory). Also check to
      * see if this is the last word transmitted in the given transaction.
      * @param value The value to set the GPIO register pair to
@@ -403,7 +396,7 @@ public:
      * @return The LoadStoreStyle derived from the ~BE0 and ~BE1 pins.
      */
     [[nodiscard]] static auto getStyle() noexcept {
-        return static_cast<LoadStoreStyle>((PINA & 0b11'0000));
+        return static_cast<LoadStoreStyle>(((PINA >> 4) & 0b11));
     }
     /**
      * @brief Check the W/~R pin to see if we are dealing with a read transaction.
