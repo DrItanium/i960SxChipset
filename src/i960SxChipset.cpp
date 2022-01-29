@@ -379,11 +379,11 @@ extern DispatchTable lookupTableWrite_Debug;
 void setupDispatchTable() noexcept {
     Serial.println(F("Setting up the initial lookup table"));
     for (int i = 0; i < 256; ++i) {
-        lookupTableRead[i] = ProcessorInterface::performFallbackRead<false>;
-        lookupTableWrite[i] = ProcessorInterface::performFallbackWrite<false>;
+        lookupTableRead[i] = ProcessorInterface::performFallbackRead;
+        lookupTableWrite[i] = ProcessorInterface::performFallbackWrite;
         if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTableRead_Debug[i] = ProcessorInterface::performFallbackRead<true>;
-            lookupTableWrite_Debug[i] = ProcessorInterface::performFallbackWrite<true>;
+            lookupTableRead_Debug[i] = ProcessorInterface::performFallbackRead;
+            lookupTableWrite_Debug[i] = ProcessorInterface::performFallbackWrite;
         }
     }
     auto readCacheLine = []() { ProcessorInterface::performCacheRead<typename L1Cache::CacheEntry, false>(theCache.getLine()); };
@@ -428,7 +428,7 @@ getDebugReadBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
         return lookupTableRead_Debug[index];
     } else {
-        return ProcessorInterface::performFallbackRead<true>;
+        return ProcessorInterface::performFallbackRead;
     }
 }
 BodyFunction
@@ -436,7 +436,7 @@ getDebugWriteBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
         return lookupTableWrite_Debug[index];
     } else {
-        return ProcessorInterface::performFallbackWrite<true>;
+        return ProcessorInterface::performFallbackWrite;
     }
 }
 
