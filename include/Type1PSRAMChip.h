@@ -146,12 +146,23 @@ private:
             while (!(SPSR & _BV(SPIF))) ; // wait
             transmitByte(0);
             transmitByte(0);
-            transmitByte(0);
+            SPDR = 0;
+            {
+                if constexpr (kind == OperationKind::Write) {
+                    tmp = actualBuf[0];
+                } else {
+                    asm volatile ("nop");
+                }
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
             for (decltype(numBytesToSecondChip) i = 0; i < numBytesToSecondChip; ++i) {
                if constexpr (kind == OperationKind::Read) {
                    actualBuf[i] = receiveByte();
                } else {
                    transmitByte(actualBuf[i]);
+                   SPDR = tmp;
+                   tmp = actualBuf[i + 1];
+                   while (!(SPSR & _BV(SPIF))) ; // wait
                }
             }
             digitalWrite<EnablePin, HIGH>();
