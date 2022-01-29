@@ -932,7 +932,6 @@ public:
             if (isLastRead) {
                 break;
             }
-
         }
         SPI.endTransaction();
     }
