@@ -217,9 +217,11 @@ template<i960Pinout pin, decltype(HIGH) value>
 [[gnu::always_inline]]
 inline void digitalWrite() noexcept {
     if constexpr (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
-        thePort &= ~getPinMask<pin>();
+        // generates a warning in C++20 mode if you do &= due to changes in volatile
+        thePort = thePort & ~getPinMask<pin>();
     } else {
-        thePort |= getPinMask<pin>();
+        // generates a warning in C++20 mode if you do |= due to changes in volatile
+        thePort = thePort | getPinMask<pin>();
     }
 }
 /**
@@ -232,9 +234,9 @@ template<i960Pinout pin>
 inline void digitalWrite(decltype(HIGH) value) noexcept {
     // don't disable interrupts, that should be done outside this method
     if (auto& thePort = getAssociatedOutputPort<pin>(); value == LOW) {
-        thePort &= ~getPinMask<pin>();
+        thePort = thePort & ~getPinMask<pin>();
     } else {
-        thePort |= getPinMask<pin>();
+        thePort = thePort | getPinMask<pin>();
     }
 }
 /**
