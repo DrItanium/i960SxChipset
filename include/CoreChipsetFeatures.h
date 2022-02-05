@@ -44,36 +44,8 @@ public:
     // each one of these 256 byte pages have a prescribed start and end
     static constexpr Address IOConfigurationSpaceStart = IOBaseAddress;
     static constexpr Address IOConfigurationSpaceEnd = IOConfigurationSpaceStart + (16 * 0x100);
-    enum class IOConfigurationSpace0Registers : uint8_t {
-#define TwoByteEntry(Prefix) Prefix ## 0, Prefix ## 1
-#define FourByteEntry(Prefix) \
-        TwoByteEntry(Prefix ## 0), \
-        TwoByteEntry(Prefix ## 1)
-
-        FourByteEntry(Serial0BaseAddress),
-        FourByteEntry(SDCardInterfaceBaseAddress),
-        FourByteEntry(SDCardFileBlock0BaseAddress),
-        FourByteEntry(DisplayShieldBaseAddress),
-        FourByteEntry(ST7735DisplayBaseAddress),
-        FourByteEntry(RTCBaseAddress),
-#undef FourByteEntry
-#undef TwoByteEntry
-        End,
-        Serial0BaseAddressLower = Serial0BaseAddress00,
-        Serial0BaseAddressUpper = Serial0BaseAddress10,
-        SDCardInterfaceBaseAddressLower = SDCardInterfaceBaseAddress00,
-        SDCardInterfaceBaseAddressUpper = SDCardInterfaceBaseAddress10,
-        SDCardFileBlock0BaseAddressLower = SDCardFileBlock0BaseAddress00,
-        SDCardFileBlock0BaseAddressUpper = SDCardFileBlock0BaseAddress10,
-        DisplayShieldBaseAddressLower = DisplayShieldBaseAddress00,
-        DisplayShieldBaseAddressUpper = DisplayShieldBaseAddress10,
-        ST7735DisplayBaseAddressLower = ST7735DisplayBaseAddress00,
-        ST7735DisplayBaseAddressUpper = ST7735DisplayBaseAddress10,
-        RTCBaseAddressLower = RTCBaseAddress00,
-        RTCBaseAddressUpper = RTCBaseAddress10,
-    };
 private:
-    static inline uint32_t ConfigurationSpace_AddressTable [] PROGMEM1 = {
+    static inline constexpr uint32_t AddressTable [] PROGMEM =  {
             TheConsoleInterface::StartAddress,
             TheSDInterface::ControlBaseAddress,
             TheSDInterface::FilesBaseAddress,
@@ -81,6 +53,8 @@ private:
             TheDisplayInterface::DisplaySectionStart,
             TheRTCInterface::StartAddress,
     };
+    static inline constexpr auto NumAddresses = sizeof(AddressTable) / sizeof(uint32_t);
+    static inline constexpr auto NumWords = sizeof(AddressTable) / sizeof(uint16_t);
 
 
 public:
@@ -98,9 +72,15 @@ public:
         TheRTCInterface::begin();
     }
 private:
-
     static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
-        return pgm_read_word_far(pgm_get_far_address(ConfigurationSpace_AddressTable) + offset);
+        //auto lower = pgm_read_byte_far(pgm_get_a);
+        //auto upper = pgm_read_byte_far(address + offset + 1);
+        //SplitWord16 result{0, upper};
+        if (offset >= NumWords ) {
+            return 0;
+        } else {
+            return pgm_read_word_near(reinterpret_cast<const uint16_t*>(AddressTable) + offset);
+        }
     }
 
 public:
