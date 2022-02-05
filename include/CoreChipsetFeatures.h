@@ -72,6 +72,15 @@ public:
         RTCBaseAddressLower = RTCBaseAddress00,
         RTCBaseAddressUpper = RTCBaseAddress10,
     };
+private:
+    static inline uint32_t ConfigurationSpace_AddressTable [] PROGMEM1 = {
+            TheConsoleInterface::StartAddress,
+            TheSDInterface::ControlBaseAddress,
+            TheSDInterface::FilesBaseAddress,
+            TheDisplayInterface::SeesawSectionStart,
+            TheDisplayInterface::DisplaySectionStart,
+            TheRTCInterface::StartAddress,
+    };
 
 
 public:
@@ -89,21 +98,9 @@ public:
         TheRTCInterface::begin();
     }
 private:
-    static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
-        switch (static_cast<IOConfigurationSpace0Registers>(offset)) {
-#define X(title, var) \
-             case IOConfigurationSpace0Registers:: title ## Lower : return static_cast<uint16_t>(var); \
-             case IOConfigurationSpace0Registers:: title ## Upper : return static_cast<uint16_t>(var >> 16)
-            X(Serial0BaseAddress, TheConsoleInterface::StartAddress);
-            X(SDCardInterfaceBaseAddress, TheSDInterface::ControlBaseAddress);
-            X(SDCardFileBlock0BaseAddress, TheSDInterface::FilesBaseAddress);
-            X(DisplayShieldBaseAddress, TheDisplayInterface::SeesawSectionStart);
-            X(ST7735DisplayBaseAddress, TheDisplayInterface::DisplaySectionStart);
-            X(RTCBaseAddress, TheRTCInterface::StartAddress);
-#undef X
 
-            default: return 0; // zero is never an io page!
-        }
+    static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
+        return pgm_read_word_far(pgm_get_far_address(ConfigurationSpace_AddressTable) + offset);
     }
 
 public:
