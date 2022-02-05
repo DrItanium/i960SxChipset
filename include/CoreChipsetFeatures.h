@@ -53,7 +53,6 @@ private:
             TheDisplayInterface::DisplaySectionStart,
             TheRTCInterface::StartAddress,
     };
-    static inline constexpr auto NumAddresses = sizeof(AddressTable) / sizeof(uint32_t);
     static inline constexpr auto NumWords = sizeof(AddressTable) / sizeof(uint16_t);
 
 
@@ -71,16 +70,23 @@ public:
         TheSDInterface::begin();
         TheRTCInterface::begin();
     }
+private:
+    static uint16_t readIOConfigurationSpace0(uint8_t offset) noexcept {
+        //auto lower = pgm_read_byte_far(pgm_get_a);
+        //auto upper = pgm_read_byte_far(address + offset + 1);
+        //SplitWord16 result{0, upper};
+        if (size_t realOffset = (offset >> 1); realOffset >= NumWords ) {
+            return 0;
+        } else {
+            return pgm_read_word_near(reinterpret_cast<const uint16_t*>(AddressTable) + realOffset);
+        }
+    }
 
 public:
-    [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle) noexcept {
+    [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
         // force override the default implementation
         if (targetPage == 0) {
-            if (offset >= NumWords) {
-                return 0;
-            } else {
-                return pgm_read_word_near(reinterpret_cast<const uint16_t*>(AddressTable) + offset);
-            }
+            return readIOConfigurationSpace0(offset);
         } else {
             return 0;
         }
