@@ -71,23 +71,16 @@ public:
         TheSDInterface::begin();
         TheRTCInterface::begin();
     }
-private:
-    static uint16_t readIOConfigurationSpace0(uint8_t offset, LoadStoreStyle) noexcept {
-        //auto lower = pgm_read_byte_far(pgm_get_a);
-        //auto upper = pgm_read_byte_far(address + offset + 1);
-        //SplitWord16 result{0, upper};
-        if (offset >= NumWords ) {
-            return 0;
-        } else {
-            return pgm_read_word_near(reinterpret_cast<const uint16_t*>(AddressTable) + offset);
-        }
-    }
 
 public:
-    [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+    [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle) noexcept {
         // force override the default implementation
         if (targetPage == 0) {
-            return readIOConfigurationSpace0(offset, lss);
+            if (offset >= NumWords) {
+                return 0;
+            } else {
+                return pgm_read_word_near(reinterpret_cast<const uint16_t*>(AddressTable) + offset);
+            }
         } else {
             return 0;
         }
