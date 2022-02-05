@@ -104,8 +104,8 @@ private:
         if (!initialized) {
             initialized = true;
             counter = 0;
-            for (uint16_t i = 0; i < 256; ++i) {
-                randomTable[i] = random(0, NumberOfGroups);
+            for (auto& v : randomTable) {
+                v = random(0, NumberOfGroups);
             }
         }
         auto theIndex = randomTable[counter++];
