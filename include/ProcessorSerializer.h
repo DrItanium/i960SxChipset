@@ -30,7 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "i960SxChipset.h"
 #include "ExternalHardwareInterface.h"
-
+namespace ExternalHardware {
+    void select(DeviceIs<Devices::GPIO>);
+    void configure(DeviceIs<Devices::GPIO>);
+    void begin(DeviceIs<Devices::GPIO>);
+    void end(DeviceIs<Devices::GPIO>);
+}
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
  */
@@ -304,8 +309,7 @@ public:
         if (!initialized_) {
             initialized_ = true;
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-            pinMode(i960Pinout::GPIOSelect, OUTPUT);
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            ExternalHardware::configure<ExternalHardware::Devices::GPIO>();
             // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
             // disabled. We can send out a single IOCON.HAEN enable message and all
             // should receive it.

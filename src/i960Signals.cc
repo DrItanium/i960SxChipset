@@ -27,6 +27,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
 #include "ExternalHardwareInterface.h"
+#include "Pinout.h"
 
 namespace ExternalHardware {
+    void
+    select(DeviceIs<Devices::GPIO>) {
+        // nothing to do for this target but who knows in the future
+    }
+
+    void
+    begin(DeviceIs<Devices::GPIO>) {
+        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
+    }
+    void
+    end(DeviceIs<Devices::GPIO>) {
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
+    }
+    void
+    configure(DeviceIs<Devices::GPIO>) {
+        pinMode(i960Pinout::GPIOSelect, OUTPUT);
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
+    }
+
 }
