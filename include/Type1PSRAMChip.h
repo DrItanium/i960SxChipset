@@ -237,7 +237,10 @@ namespace ExternalHardware {
         }
     }
     inline void select(byte index, DeviceIs<Devices::PSRAM>) {
-        setChipId(index);
+        static byte currentIndex = 0xFF;
+        if (currentIndex != index) {
+            setChipId(index);
+        }
     }
 }
 #endif
