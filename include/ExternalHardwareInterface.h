@@ -65,24 +65,27 @@ namespace ExternalHardware
     end() noexcept {
         end(DeviceIs<device>{} );
     }
-    void select(DeviceIs < Devices::Ready > );
-    void select(DeviceIs < Devices::Int0 > );
-    void select(DeviceIs < Devices::GPIO > );
-    void select(DeviceIs < Devices::TFT > );
-    void select(DeviceIs < Devices::SD > );
-    void select(DeviceIs < Devices::PSRAM > );
-    void end(DeviceIs < Devices::Ready > );
-    void end(DeviceIs < Devices::Int0 > );
-    void end(DeviceIs < Devices::GPIO > );
-    void end(DeviceIs < Devices::TFT > );
-    void end(DeviceIs < Devices::SD > );
-    void end(DeviceIs < Devices::PSRAM > );
-    void begin(DeviceIs < Devices::Ready > );
-    void begin(DeviceIs < Devices::Int0 > );
-    void begin(DeviceIs < Devices::GPIO > );
-    void begin(DeviceIs < Devices::TFT > );
-    void begin(DeviceIs < Devices::SD > );
-    void begin(DeviceIs < Devices::PSRAM > );
+    template<Devices device>
+    void
+    pulse() noexcept {
+        begin<device>();
+        end<device>();
+    }
+    template<Devices device>
+    void
+    changeState(bool value) noexcept {
+        if (value) {
+            begin<device>();
+        } else {
+            end<device>();
+        }
+    }
+    template<Devices device, typename ... Args>
+    inline void
+    configure(Args ... args) noexcept {
+        configure(args..., DeviceIs<device>{});
+    }
+
 } // end namespace ExternalHardware
 
 #endif //SXCHIPSET_EXTERNALHARDWAREINTERFACE_H

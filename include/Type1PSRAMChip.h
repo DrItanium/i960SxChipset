@@ -227,9 +227,6 @@ public:
 
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
 namespace ExternalHardware {
-    inline void select(DeviceIs<Devices::PSRAM>) {
-        // do nothing
-    }
     inline void begin(DeviceIs<Devices::PSRAM>) {
         digitalWrite<OnboardPSRAMBlock ::EnablePin, LOW>();
     }
