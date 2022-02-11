@@ -50,10 +50,10 @@ namespace ExternalHardware
     struct DeviceIs {
         static constexpr auto TargetDevice = device;
     };
-    template<Devices device>
+    template<Devices device, typename ... Args>
     void
-    select() noexcept {
-        select(DeviceIs<device>{} );
+    select(Args ... values) noexcept {
+        select(values..., DeviceIs<device>{});
     }
     template<Devices device>
     void
