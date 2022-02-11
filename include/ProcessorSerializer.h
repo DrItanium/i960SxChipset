@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include "Pinout.h"
 #include "i960SxChipset.h"
+#include "ExternalHardwareInterface.h"
 
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
@@ -96,6 +97,10 @@ class ProcessorInterface final {
     static consteval byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
+    using GPIODeviceEnabler = ExternalHardware::DeviceEnabler<ExternalHardware::Devices::GPIO>;
+    static void selectGPIO() noexcept {
+        ExternalHardware::select<ExternalHardware::Devices::GPIO>();
+    }
     /**
      * @brief Read a 16-bit value from a given io expander register
      * @tparam addr The io expander to read from
@@ -109,38 +114,41 @@ class ProcessorInterface final {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
         SplitWord16 output(0);
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(addr);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-
-        SPDR = static_cast<byte>(opcode) ;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        auto lower = SPDR;
-        SPDR = 0;
-        asm volatile("nop");
+        selectGPIO();
         {
-            output.bytes[0] = lower;
+            GPIODeviceEnabler enable;
+            SPDR = generateReadOpcode(addr);
+            /*
+             * The following NOP introduces a small delay that can prevent the wait
+             * loop form iterating when running at the maximum speed. This gives
+             * about 10% more speed, even if it seems counter-intuitive. At lower
+             * speeds it is unnoticed.
+             */
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+
+            SPDR = static_cast<byte>(opcode);
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto lower = SPDR;
+            SPDR = 0;
+            asm volatile("nop");
+            {
+                output.bytes[0] = lower;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            output.bytes[1] = SPDR;
         }
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        output.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
         return output;
     }
+
     /**
      * @brief Read a 8-bit value from a given io expander register
      * @tparam addr The io expander to read from
@@ -153,23 +161,25 @@ class ProcessorInterface final {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(addr);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(opcode);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        selectGPIO();
+        {
+            GPIODeviceEnabler enabler;
+            SPDR = generateReadOpcode(addr);
+            /*
+             * The following NOP introduces a small delay that can prevent the wait
+             * loop form iterating when running at the maximum speed. This gives
+             * about 10% more speed, even if it seems counter-intuitive. At lower
+             * speeds it is unnoticed.
+             */
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = static_cast<byte>(opcode);
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))) ; // wait
+        }
         if constexpr (standalone) {
             SPI.endTransaction();
         }
@@ -188,26 +198,28 @@ class ProcessorInterface final {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateWriteOpcode(addr);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(opcode);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = valueDiv.bytes[0];
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = valueDiv.bytes[1];
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        selectGPIO();
+        {
+            GPIODeviceEnabler enabler;
+            SPDR = generateWriteOpcode(addr);
+            /*
+             * The following NOP introduces a small delay that can prevent the wait
+             * loop form iterating when running at the maximum speed. This gives
+             * about 10% more speed, even if it seems counter-intuitive. At lower
+             * speeds it is unnoticed.
+             */
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(opcode);
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = valueDiv.bytes[0];
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = valueDiv.bytes[1];
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+        }
         if constexpr (standalone) {
             SPI.endTransaction();
         }
@@ -224,23 +236,25 @@ class ProcessorInterface final {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateWriteOpcode(addr);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(opcode);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = value;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        selectGPIO();
+        {
+            GPIODeviceEnabler enabler;
+            SPDR = generateWriteOpcode(addr);
+            /*
+             * The following NOP introduces a small delay that can prevent the wait
+             * loop form iterating when running at the maximum speed. This gives
+             * about 10% more speed, even if it seems counter-intuitive. At lower
+             * speeds it is unnoticed.
+             */
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(opcode);
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = value;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+        }
         if constexpr (standalone) {
             SPI.endTransaction();
         }
@@ -359,33 +373,35 @@ public:
             //latchedDataOutput.wholeValue_ = value;
             bool isLastRead;
             byte computedValue = 0;
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+            selectGPIO();
             {
-                // this operation is very important to interleave because it can be very expensive to
-                // but if we are also communicating over SPI, then the cost of this operation is nullified considerably
-                latchedDataOutput.wholeValue_ = value;
+                GPIODeviceEnabler enabler;
+                SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+                {
+                    // this operation is very important to interleave because it can be very expensive to
+                    // but if we are also communicating over SPI, then the cost of this operation is nullified considerably
+                    latchedDataOutput.wholeValue_ = value;
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                {
+                    // find out if this is the last transaction while we are talking to the io expander
+                    isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    computedValue = latchedDataOutput.bytes[0];
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = computedValue;
+                {
+                    computedValue = latchedDataOutput.bytes[1];
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = computedValue;
+                {
+                    asm volatile("nop");
+                    /// @todo insert tiny independent operations here if desired, delete nop if code added here
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
             }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-            {
-                // find out if this is the last transaction while we are talking to the io expander
-                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                computedValue = latchedDataOutput.bytes[0];
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = computedValue;
-            {
-                computedValue = latchedDataOutput.bytes[1];
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = computedValue;
-            {
-                asm volatile("nop");
-                /// @todo insert tiny independent operations here if desired, delete nop if code added here
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
             return isLastRead;
         } else {
             return DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -418,22 +434,24 @@ private:
      */
     inline static void invertDataLinesDirection() noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+        selectGPIO();
         {
-            dataLinesDirection_ = ~dataLinesDirection_;
+            GPIODeviceEnabler enabler;
+            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+            {
+                dataLinesDirection_ = ~dataLinesDirection_;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = dataLinesDirection_;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = dataLinesDirection_;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
         }
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::IODIR);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = dataLinesDirection_;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = dataLinesDirection_;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
 public:
@@ -489,61 +507,67 @@ private:
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        selectGPIO();
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Upper16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto higher = SPDR;
-        SPDR = 0;
+        byte highest = 0;
         {
-            address_.bytes[2] = higher;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
-        DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
-        SPDR = Lower16Opcode;
-        {
-            // don't do the comparison, instead just force the update every single time
-            // there should be enough time in between transactions to make sure
-            if constexpr (inDebugMode) {
-                lastReadDebug_ = getReadBody<true>(highest);
+            GPIODeviceEnabler enabler;
+            SPDR = Upper16Opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto higher = SPDR;
+            SPDR = 0;
+            {
+                address_.bytes[2] = higher;
             }
-            lastRead_ = getReadBody<false>(highest);
+            while (!(SPSR & _BV(SPIF))); // wait
+            highest = SPDR;
         }
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
         {
-            if constexpr (inDebugMode) {
-                lastWriteDebug_ = getWriteBody<true>(highest);
+            GPIODeviceEnabler enabler;
+
+            SPDR = Lower16Opcode;
+            {
+                // don't do the comparison, instead just force the update every single time
+                // there should be enough time in between transactions to make sure
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = getReadBody<true>(highest);
+                }
+                lastRead_ = getReadBody<false>(highest);
             }
-            lastWrite_ = getWriteBody<false>(highest);
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            {
+                if constexpr (inDebugMode) {
+                    lastWriteDebug_ = getWriteBody<true>(highest);
+                }
+                lastWrite_ = getWriteBody<false>(highest);
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            {
+                address_.bytes[3] = highest;
+            }
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto lowest = SPDR;
+            SPDR = 0;
+            {
+                // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
+                // put scope ticks to force the matter
+                cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
+                address_.bytes[0] = lowest;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            address_.bytes[1] = SPDR;
         }
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        {
-            address_.bytes[3] = highest;
-        }
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lowest = SPDR;
-        SPDR = 0;
-        {
-            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
-            // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
-            address_.bytes[0] = lowest;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
     /**
      * @brief Only update the lower 16 bits of the current transaction's base address
@@ -558,28 +582,31 @@ private:
         // read only the lower half
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Lower16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lowest = SPDR;
-        SPDR = 0;
-        asm volatile("nop");
+        selectGPIO();
         {
-            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
-            // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
-            address_.bytes[0] = lowest;
+            GPIODeviceEnabler enabler;
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = Lower16Opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto lowest = SPDR;
+            SPDR = 0;
+            asm volatile("nop");
+            {
+                // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
+                // put scope ticks to force the matter
+                cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
+                address_.bytes[0] = lowest;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            address_.bytes[1] = SPDR;
         }
-        while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
     /**
      * @brief Update the upper 16-bits of the current transaction's address. Update the function to invoke to satisfy this request
@@ -589,26 +616,29 @@ private:
     static void upper16Update() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-        // only read the upper 16-bits
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Upper16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto higher = SPDR;
-        SPDR = 0;
-        asm volatile("nop");
+        byte highest = 0;
+        selectGPIO();
         {
-            address_.bytes[2] = higher;
+            GPIODeviceEnabler enabler;
+            // only read the upper 16-bits
+            SPDR = Upper16Opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto higher = SPDR;
+            SPDR = 0;
+            asm volatile("nop");
+            {
+                address_.bytes[2] = higher;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            highest = SPDR;
         }
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (address_.bytes[3] != highest) {
             updateTargetFunctions<inDebugMode>(highest);
         }
@@ -622,19 +652,22 @@ private:
     static void updateHighest8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOB);
+        byte highest = 0;
+        selectGPIO();
         // only read the upper 8 bits
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPDR = Upper16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        {
+            GPIODeviceEnabler enabler;
+            SPDR = Upper16Opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            highest = SPDR;
+        }
         if (highest != address_.bytes[3]) {
             updateTargetFunctions<inDebugMode>(highest);
         }
@@ -646,19 +679,22 @@ private:
     static void updateHigher8() noexcept {
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOA);
+        byte highest = 0;
+        selectGPIO();
         // only read the upper 8 bits
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        SPDR = Upper16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        {
+            GPIODeviceEnabler enabler;
+            SPDR = Upper16Opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            highest = SPDR;
+        }
         address_.bytes[2] = highest;
     }
     /**
@@ -671,21 +707,25 @@ private:
         static constexpr auto OffsetShiftAmount = C::CacheEntryShiftAmount;
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOA);
+        byte lowest = 0;
+        selectGPIO();
         // read only the lower half
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Lower16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lowest = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        {
+            GPIODeviceEnabler enabler;
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = Lower16Opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            lowest = SPDR;
+        }
         // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
         // put scope ticks to force the matter
         cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
@@ -697,21 +737,23 @@ private:
     static void updateLower8() noexcept {
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIOB);
+        selectGPIO();
         // read only the lower half
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Lower16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        {
+            GPIODeviceEnabler enabler;
+            SPDR = Lower16Opcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            asm volatile("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            address_.bytes[1] = SPDR;
+        }
     }
 private:
     /**
@@ -950,11 +992,14 @@ private:
     [[nodiscard]]
     [[gnu::always_inline]]
     static inline bool getDataBits(byte offset) noexcept {
+        bool isLast = false;
+        selectGPIO();
         // getDataBits will be expanded here
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        {
+            GPIODeviceEnabler enabler;
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-        auto& request = transactions[count];
+        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        auto &request = transactions[count];
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
         {
@@ -974,6 +1019,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         request.value.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+    }
         return isLast;
     }
     template<byte count, typename C>
@@ -1089,31 +1135,33 @@ public:
             LoadStoreStyle currLSS;
             SplitWord16 dataBits;
             byte pageIndex;
+            selectGPIO();
             // getDataBits will be expanded here
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
             {
-                isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                GPIODeviceEnabler enabler;
+                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                {
+                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                {
+                    currLSS = getStyle();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                {
+                    pageIndex = getPageIndex();
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                auto lower = SPDR;
+                SPDR = 0;
+                {
+                    dataBits.bytes[0] = lower;
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                dataBits.bytes[1] = SPDR;
             }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::GPIO) ;
-            {
-                currLSS = getStyle();
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = 0;
-            {
-                pageIndex = getPageIndex();
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            auto lower = SPDR;
-            SPDR = 0;
-            {
-                dataBits.bytes[0] = lower;
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            dataBits.bytes[1] = SPDR;
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tPage Index: 0x"));
                 Serial.println(pageIndex, HEX);
