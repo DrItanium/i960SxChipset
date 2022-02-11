@@ -34,6 +34,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MCUPlatform.h"
 #include "Pinout.h"
 #include "TaggedCacheAddress.h"
+#include "ExternalHardwareInterface.h"
 /**
  * @brief Interface to the memory connected to the chipset
  * @tparam enablePin The pin that is used to signal chip usage
@@ -96,7 +97,7 @@ private:
         PSRAMBlockAddress curr(address);
         setChipId(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        digitalWrite<EnablePin, LOW>();
+        ExternalHardware::begin<ExternalHardware::Devices::PSRAM>();
         SPDR = opcode;
         {
             end = PSRAMBlockAddress(address + capacity);
@@ -133,14 +134,14 @@ private:
                while (!(SPSR & _BV(SPIF))) ; // wait
            }
         }
-        digitalWrite<EnablePin, HIGH>();
+        ExternalHardware::end<ExternalHardware::Devices::PSRAM>();
         if (spansMultipleChips) {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             // start writing at the start of the next chip the remaining number of bytes
             setChipId(end.getIndex());
             // we start at address zero on this new chip always
-            digitalWrite<EnablePin, LOW>();
+            ExternalHardware::begin<ExternalHardware::Devices::PSRAM>();
             SPDR = opcode;
             auto actualBuf = buf + numBytesToFirstChip;
             while (!(SPSR & _BV(SPIF))) ; // wait
@@ -165,7 +166,7 @@ private:
                    while (!(SPSR & _BV(SPIF))) ; // wait
                }
             }
-            digitalWrite<EnablePin, HIGH>();
+            ExternalHardware::end<ExternalHardware::Devices::PSRAM>();
         }
         SPI.endTransaction();
         return capacity;
@@ -210,14 +211,14 @@ public:
             for (int i = 0; i < NumChips; ++i) {
                 setChipId(i);
                 delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-                digitalWrite<enablePin, LOW>();
+                ExternalHardware::begin<ExternalHardware::Devices::PSRAM>();
                 SPI.transfer(0x66);
-                digitalWrite<enablePin, HIGH>();
+                ExternalHardware::end<ExternalHardware::Devices::PSRAM>();
                 asm volatile ("nop");
                 asm volatile ("nop");
-                digitalWrite<enablePin, LOW>();
+                ExternalHardware::begin<ExternalHardware::Devices::PSRAM>();
                 SPI.transfer(0x99);
-                digitalWrite<enablePin, HIGH>();
+                ExternalHardware::end<ExternalHardware::Devices::PSRAM>();
             }
             SPI.endTransaction();
         }
@@ -225,5 +226,17 @@ public:
 };
 
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
+namespace ExternalHardware {
+    inline void select(DeviceIs<Devices::PSRAM>) {
+        // do nothing
+    }
+    inline void begin(DeviceIs<Devices::PSRAM>) {
+        digitalWrite<OnboardPSRAMBlock ::EnablePin, LOW>();
+    }
+
+    inline void end(DeviceIs<Devices::PSRAM>) {
+        digitalWrite<OnboardPSRAMBlock ::EnablePin, HIGH>();
+    }
+}
 #endif
 #endif //SXCHIPSET_TYPE1PSRAMCHIP_H
