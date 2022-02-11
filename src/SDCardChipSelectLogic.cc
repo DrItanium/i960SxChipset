@@ -40,7 +40,10 @@ void sdCsInit(SdCsPin_t pin) {
 }
 
 void sdCsWrite(SdCsPin_t, bool level) {
-    ExternalHardware::changeState<ExternalHardware::Devices::SD>(level);
+    // we need to convert from high and low to start and end.
+    // in this case, a true would be end, and a false would be begin
+    // so just call change state but invert the level
+    ExternalHardware::changeState<ExternalHardware::Devices::SD>(!level);
 }
 
 namespace ExternalHardware {

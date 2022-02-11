@@ -86,6 +86,17 @@ namespace ExternalHardware
         configure(args..., DeviceIs<device>{});
     }
 
+    template<Devices target>
+    struct DeviceEnabler final {
+        using Self = DeviceEnabler<target>;
+        DeviceEnabler() { begin<target>(); }
+        ~DeviceEnabler() { end<target>(); }
+        DeviceEnabler(Self&&) = delete;
+        DeviceEnabler(const Self&) = delete;
+        Self operator=(DeviceEnabler&&) = delete;
+        Self operator=(const DeviceEnabler&) = delete;
+    };
+
 } // end namespace ExternalHardware
 
 #endif //SXCHIPSET_EXTERNALHARDWAREINTERFACE_H

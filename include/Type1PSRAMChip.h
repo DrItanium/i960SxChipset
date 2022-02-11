@@ -46,12 +46,9 @@ template<i960Pinout enablePin>
 class MemoryBlock {
 public:
     static constexpr auto EnablePin = enablePin;
-    static constexpr auto Select0 = i960Pinout::SPI_OFFSET0;
-    static constexpr auto Select1 = i960Pinout::SPI_OFFSET1;
-    static constexpr auto Select2 = i960Pinout::SPI_OFFSET2;
+    static constexpr auto TiedToExternalDevice = ExternalHardware::Devices::PSRAM;
+    using DeviceEnabler = ExternalHardware::DeviceEnabler<TiedToExternalDevice>;
     static constexpr auto NumChips = 8;
-    static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
-    static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
 public:
     MemoryBlock() = delete;
     ~MemoryBlock() = delete;
@@ -95,78 +92,80 @@ private:
         bool localToASingleChip, spansMultipleChips;
         byte tmp;
         PSRAMBlockAddress curr(address);
-        setChipId(curr.getIndex());
+        ExternalHardware::select<TiedToExternalDevice>(curr.getIndex());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
-        ExternalHardware::begin<ExternalHardware::Devices::PSRAM>();
-        SPDR = opcode;
         {
-            end = PSRAMBlockAddress(address + capacity);
-            numBytesToSecondChip = end.getOffset();
-            tmp = curr.bytes_[2];
-        }
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = tmp;
-        {
-            localToASingleChip = curr.getIndex() == end.getIndex();
-            tmp = curr.bytes_[1];
-        }
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = tmp;
-        {
-            numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
-            tmp = curr.bytes_[0];
-        }
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = tmp;
-        {
-            spansMultipleChips =  (!localToASingleChip && (numBytesToSecondChip > 0));
-            if constexpr (kind == OperationKind::Write) {
-                tmp = buf[0];
+            DeviceEnabler communicationEnabler;
+            SPDR = opcode;
+            {
+                end = PSRAMBlockAddress(address + capacity);
+                numBytesToSecondChip = end.getOffset();
+                tmp = curr.bytes_[2];
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = tmp;
+            {
+                localToASingleChip = curr.getIndex() == end.getIndex();
+                tmp = curr.bytes_[1];
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = tmp;
+            {
+                numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
+                tmp = curr.bytes_[0];
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            SPDR = tmp;
+            {
+                spansMultipleChips =  (!localToASingleChip && (numBytesToSecondChip > 0));
+                if constexpr (kind == OperationKind::Write) {
+                    tmp = buf[0];
+                }
+            }
+            while (!(SPSR & _BV(SPIF))) ; // wait
+            for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
+                if constexpr (kind == OperationKind::Read)  {
+                    buf[i] = receiveByte();
+                } else {
+                    SPDR = tmp;
+                    tmp = buf[i + 1];
+                    while (!(SPSR & _BV(SPIF))) ; // wait
+                }
             }
         }
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
-           if constexpr (kind == OperationKind::Read)  {
-               buf[i] = receiveByte();
-           } else {
-               SPDR = tmp;
-               tmp = buf[i + 1];
-               while (!(SPSR & _BV(SPIF))) ; // wait
-           }
-        }
-        ExternalHardware::end<ExternalHardware::Devices::PSRAM>();
         if (spansMultipleChips) {
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             // start writing at the start of the next chip the remaining number of bytes
-            setChipId(end.getIndex());
+            ExternalHardware::select<TiedToExternalDevice>(end.getIndex());
             // we start at address zero on this new chip always
-            ExternalHardware::begin<ExternalHardware::Devices::PSRAM>();
-            SPDR = opcode;
-            auto actualBuf = buf + numBytesToFirstChip;
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            transmitByte(0);
-            transmitByte(0);
-            SPDR = 0;
             {
-                if constexpr (kind == OperationKind::Write) {
-                    tmp = actualBuf[0];
-                } else {
-                    asm volatile ("nop");
+                DeviceEnabler startCommunication;
+                SPDR = opcode;
+                auto actualBuf = buf + numBytesToFirstChip;
+                while (!(SPSR & _BV(SPIF))); // wait
+                transmitByte(0);
+                transmitByte(0);
+                SPDR = 0;
+                {
+                    if constexpr (kind == OperationKind::Write) {
+                        tmp = actualBuf[0];
+                    } else {
+                        asm volatile ("nop");
+                    }
+                }
+                while (!(SPSR & _BV(SPIF))); // wait
+                for (decltype(numBytesToSecondChip) i = 0; i < numBytesToSecondChip; ++i) {
+                    if constexpr (kind == OperationKind::Read) {
+                        actualBuf[i] = receiveByte();
+                    } else {
+                        transmitByte(actualBuf[i]);
+                        SPDR = tmp;
+                        tmp = actualBuf[i + 1];
+                        while (!(SPSR & _BV(SPIF))); // wait
+                    }
                 }
             }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            for (decltype(numBytesToSecondChip) i = 0; i < numBytesToSecondChip; ++i) {
-               if constexpr (kind == OperationKind::Read) {
-                   actualBuf[i] = receiveByte();
-               } else {
-                   transmitByte(actualBuf[i]);
-                   SPDR = tmp;
-                   tmp = actualBuf[i + 1];
-                   while (!(SPSR & _BV(SPIF))) ; // wait
-               }
-            }
-            ExternalHardware::end<ExternalHardware::Devices::PSRAM>();
         }
         SPI.endTransaction();
         return capacity;
@@ -179,46 +178,26 @@ public:
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-    static constexpr byte computePortLookup(byte value) noexcept {
-        return (value & 0b111) << 2;
-    }
-    static void setChipId(byte index) noexcept {
-        static constexpr byte theItemMask = 0b00011100;
-        static constexpr byte theInvertedMask = ~theItemMask;
-        static constexpr byte LookupTable[8] {
-                computePortLookup(0),
-                computePortLookup(1),
-                computePortLookup(2),
-                computePortLookup(3),
-                computePortLookup(4),
-                computePortLookup(5),
-                computePortLookup(6),
-                computePortLookup(7),
-        };
-        // since this is specific to type 1 we should speed this up significantly
-        auto contents = PORTC;
-        contents &= theInvertedMask;
-        contents |= LookupTable[index & 0b111];
-        PORTC = contents;
-    }
 public:
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
-            setChipId(0);
+            ExternalHardware::select<TiedToExternalDevice>(0);
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             for (int i = 0; i < NumChips; ++i) {
-                setChipId(i);
+                ExternalHardware::select<TiedToExternalDevice>(i);
                 delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-                ExternalHardware::begin<ExternalHardware::Devices::PSRAM>();
-                SPI.transfer(0x66);
-                ExternalHardware::end<ExternalHardware::Devices::PSRAM>();
+                {
+                    DeviceEnabler enabler;
+                    SPI.transfer(0x66);
+                }
                 asm volatile ("nop");
                 asm volatile ("nop");
-                ExternalHardware::begin<ExternalHardware::Devices::PSRAM>();
-                SPI.transfer(0x99);
-                ExternalHardware::end<ExternalHardware::Devices::PSRAM>();
+                {
+                    DeviceEnabler enabler;
+                    SPI.transfer(0x99);
+                }
             }
             SPI.endTransaction();
         }
@@ -227,12 +206,38 @@ public:
 
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
 namespace ExternalHardware {
-    inline void begin(DeviceIs<Devices::PSRAM>) {
-        digitalWrite<OnboardPSRAMBlock ::EnablePin, LOW>();
+    inline void begin(DeviceIs<Devices::PSRAM>) { digitalWrite<OnboardPSRAMBlock ::EnablePin, LOW>(); }
+    inline void end(DeviceIs<Devices::PSRAM>) { digitalWrite<OnboardPSRAMBlock ::EnablePin, HIGH>(); }
+    inline void configure(DeviceIs<Devices::PSRAM>) { OnboardPSRAMBlock ::begin(); }
+    namespace
+    {
+        constexpr byte
+        computePortLookup(byte value) noexcept {
+            return (value & 0b111) << 2;
+        }
+        void
+        setChipId(byte index) noexcept {
+            static constexpr byte theItemMask = 0b00011100;
+            static constexpr byte theInvertedMask = ~theItemMask;
+            static constexpr byte LookupTable[8]{
+                    computePortLookup(0),
+                    computePortLookup(1),
+                    computePortLookup(2),
+                    computePortLookup(3),
+                    computePortLookup(4),
+                    computePortLookup(5),
+                    computePortLookup(6),
+                    computePortLookup(7),
+            };
+            // since this is specific to type 1 we should speed this up significantly
+            auto contents = PORTC;
+            contents &= theInvertedMask;
+            contents |= LookupTable[index & 0b111];
+            PORTC = contents;
+        }
     }
-
-    inline void end(DeviceIs<Devices::PSRAM>) {
-        digitalWrite<OnboardPSRAMBlock ::EnablePin, HIGH>();
+    inline void select(byte index, DeviceIs<Devices::PSRAM>) {
+        setChipId(index);
     }
 }
 #endif
