@@ -31,29 +31,67 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * ~READY directly to a GPIO, we instead bind it to the decoder array because it is only ever toggled to tell the CPU to either read the
  * data on the bus or get the next value ready. Same thing for INT0, it is always a toggle.
  */
-class ExternalHardware {
-public:
-    /**
-     * @brief The list of devices that are known to be connected to this chipset regardless of actual interface
-     */
-    enum class Devices {
-#define X(v, i) BD ## v ## i
-#define Y(v) X(v, 0), X(v, 1), X(v, 2), X(v, 3), X(v, 4), X(v, 5), X(v, 6), X(v, 7)
-        Y(A), Y(B), Y(C), Y(D), Y(E), Y(F), Y(G), Y(H),
-#undef Y
-#undef X
-        OnboardFlash0 = BDH5,
-        OnboardFlash1 = BDH6,
-        OnboardPSRAM0 = BDH7,
-    };
-public:
-    ExternalHardware() = delete;
-    ~ExternalHardware() = delete;
-    ExternalHardware(const ExternalHardware&) = delete;
-    ExternalHardware(ExternalHardware&&) = delete;
-    ExternalHardware& operator=(const ExternalHardware&) = delete;
-    ExternalHardware& operator=(ExternalHardware&&) = delete;
+ namespace ExternalHardware
+ {
 
-};
+     /**
+      * @brief The list of devices that are known to be connected to this chipset regardless of actual interface
+      */
+     enum class Devices
+     {
+         None,
+         Ready,
+         Int0,
+         GPIO,
+         TFT,
+         SD,
+         PSRAM,
+     };
+     template<Devices device>
+     struct DeviceIs
+     {
+         static constexpr auto TargetDevice = device;
+     };
+     template<Devices device>
+     static void
+     select()
+     noexcept
+ {
+     select(DeviceIs<device>{}
+     );
+ }
+template<Devices device>
+void
+begin()
+noexcept {
+begin(DeviceIs<device>{}
+);
+}
+template<Devices device>
+void
+end()
+noexcept {
+end(DeviceIs<device>{}
+);
+}
+void select(DeviceIs < Devices::Ready > );
+void select(DeviceIs < Devices::Int0 > );
+void select(DeviceIs < Devices::GPIO > );
+void select(DeviceIs < Devices::TFT > );
+void select(DeviceIs < Devices::SD > );
+void select(DeviceIs < Devices::PSRAM > );
+void end(DeviceIs < Devices::Ready > );
+void end(DeviceIs < Devices::Int0 > );
+void end(DeviceIs < Devices::GPIO > );
+void end(DeviceIs < Devices::TFT > );
+void end(DeviceIs < Devices::SD > );
+void end(DeviceIs < Devices::PSRAM > );
+void begin(DeviceIs < Devices::Ready > );
+void begin(DeviceIs < Devices::Int0 > );
+void begin(DeviceIs < Devices::GPIO > );
+void begin(DeviceIs < Devices::TFT > );
+void begin(DeviceIs < Devices::SD > );
+void begin(DeviceIs < Devices::PSRAM > );
+}
 
 #endif //SXCHIPSET_EXTERNALHARDWAREINTERFACE_H
