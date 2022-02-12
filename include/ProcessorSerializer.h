@@ -397,15 +397,13 @@ public:
      * @brief Query the ~BE0 and ~BE1 pins provided by the i960 to denote how the chipset should treat the current word in the transaction
      * @return The LoadStoreStyle derived from the ~BE0 and ~BE1 pins.
      */
-    [[nodiscard]] static auto getStyle() noexcept {
-        return static_cast<LoadStoreStyle>(((PINA >> 4) & 0b11));
-    }
+    [[nodiscard]] static auto getStyle() noexcept { return ExternalHardware::getStyle(); }
     /**
      * @brief Check the W/~R pin to see if we are dealing with a read transaction.
      * Only needs to be queried once at the beginning of a new transaction
      * @return If true, then the current transaction is a read operation. If false, then the current transaction is a write operation.
      */
-    [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
+    [[nodiscard]] static bool isReadOperation() noexcept { return ExternalHardware::isReadOperation(); }
     /**
      * @brief Retrieve the computed cache offset entry start. This is the word index that the current transaction will start at within a
      * target cache line.

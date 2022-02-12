@@ -140,6 +140,14 @@ namespace ExternalHardware
     isBurstLast() noexcept {
         return DigitalPin<i960Pinout::BLAST_>::isAsserted();
     }
+    bool
+    isReadOperation() noexcept {
+        return DigitalPin<i960Pinout::W_R_>::isAsserted();
+    }
 
+    LoadStoreStyle
+    getStyle() noexcept {
+        return static_cast<LoadStoreStyle>(((PINA >> 4) & 0b11));
+    }
 }
 #endif

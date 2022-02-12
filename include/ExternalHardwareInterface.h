@@ -117,6 +117,8 @@ namespace ExternalHardware
     void configure(DeviceIs<Devices::PSRAM>) noexcept;
     void select(byte index, DeviceIs<Devices::PSRAM>) noexcept;
     bool isBurstLast() noexcept;
+    bool isReadOperation() noexcept;
+    LoadStoreStyle getStyle() noexcept;
 } // end namespace ExternalHardware
 
 
