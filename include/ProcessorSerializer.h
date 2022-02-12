@@ -30,13 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "i960SxChipset.h"
 #include "ExternalHardwareInterface.h"
-namespace ExternalHardware {
-    void select(DeviceIs<Devices::GPIO>);
-    void configure(DeviceIs<Devices::GPIO>);
-    void begin(DeviceIs<Devices::GPIO>);
-    void end(DeviceIs<Devices::GPIO>);
-    void pulse(DeviceIs<Devices::Ready>);
-}
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
  */

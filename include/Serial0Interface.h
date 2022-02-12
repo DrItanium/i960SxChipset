@@ -29,9 +29,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_SERIAL0INTERFACE_H
 #define SXCHIPSET_SERIAL0INTERFACE_H
 #include "ExternalHardwareInterface.h"
-namespace ExternalHardware {
-    void pulse(DeviceIs<Devices::Int0>) noexcept;
-}
 template<Address baseAddress, bool addressDebuggingAllowed, bool defaultAddressDebuggingModeTo = false>
 class Serial0Interface {
 public:

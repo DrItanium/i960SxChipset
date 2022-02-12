@@ -35,12 +35,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 #include "ExternalHardwareInterface.h"
 
-namespace ExternalHardware {
-    void begin(DeviceIs<Devices::PSRAM>) noexcept;
-    void end(DeviceIs<Devices::PSRAM>) noexcept;
-    void configure(DeviceIs<Devices::PSRAM>) noexcept;
-    void select(byte index, DeviceIs<Devices::PSRAM>) noexcept;
-}
 /**
  * @brief Interface to the memory connected to the chipset
  * @tparam enablePin The pin that is used to signal chip usage

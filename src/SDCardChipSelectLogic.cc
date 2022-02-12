@@ -27,14 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
 #include <SdFat.h>
-#include "Pinout.h"
-#include "i960SxChipset.h"
 #include "ExternalHardwareInterface.h"
 
-namespace ExternalHardware {
-    void configure(SdCsPin_t, ExternalHardware::DeviceIs<ExternalHardware::Devices::SD>);
-    void changeState(SdCsPin_t, bool, ExternalHardware::DeviceIs<ExternalHardware::Devices::SD>);
-}
 /**
  * @brief Hacked sdCsInit that assumes the only pin we care about is SD_EN, otherwise failure
  * @param pin

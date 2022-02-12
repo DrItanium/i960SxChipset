@@ -26,6 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_EXTERNALHARDWAREINTERFACE_H
 #define SXCHIPSET_EXTERNALHARDWAREINTERFACE_H
 #include "MCUPlatform.h"
+#include <SdFatConfig.h>
 /**
  * @brief Wrapper around a future theoretical decoder interface to reduce pin pressure on the 1284p. For example, instead of binding
  * ~READY directly to a GPIO, we instead bind it to the decoder array because it is only ever toggled to tell the CPU to either read the
@@ -99,7 +100,21 @@ namespace ExternalHardware
         Self operator=(DeviceEnabler&&) = delete;
         Self operator=(const DeviceEnabler&) = delete;
     };
-
+    void configure(DeviceIs<Devices::Reset>);
+    void begin(DeviceIs<Devices::Reset>);
+    void end(DeviceIs<Devices::Reset>);
+    void select(DeviceIs<Devices::GPIO>);
+    void configure(DeviceIs<Devices::GPIO>);
+    void begin(DeviceIs<Devices::GPIO>);
+    void end(DeviceIs<Devices::GPIO>);
+    void pulse(DeviceIs<Devices::Ready>);
+    void configure(SdCsPin_t, DeviceIs<Devices::SD>);
+    void changeState(SdCsPin_t, bool, DeviceIs<Devices::SD>);
+    void pulse(DeviceIs<Devices::Int0>) noexcept;
+    void begin(DeviceIs<Devices::PSRAM>) noexcept;
+    void end(DeviceIs<Devices::PSRAM>) noexcept;
+    void configure(DeviceIs<Devices::PSRAM>) noexcept;
+    void select(byte index, DeviceIs<Devices::PSRAM>) noexcept;
 } // end namespace ExternalHardware
 
 

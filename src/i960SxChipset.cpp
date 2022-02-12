@@ -231,11 +231,6 @@ void setupChipsetVersionSpecificPins() noexcept {
     }
 }
 void setupDispatchTable() noexcept;
-namespace ExternalHardware {
-    void configure(DeviceIs<Devices::Reset>);
-    void begin(DeviceIs<Devices::Reset>);
-    void end(DeviceIs<Devices::Reset>);
-}
 // the setup routine runs once when you press reset:
 void setup() {
     // always do this first to make sure that we put the i960 into reset regardless of target
