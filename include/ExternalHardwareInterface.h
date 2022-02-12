@@ -68,18 +68,19 @@ namespace ExternalHardware
     template<Devices device>
     void
     pulse() noexcept {
+        pulse(DeviceIs<device>{});
+    }
+    template<Devices device>
+    void pulse(DeviceIs<device>) noexcept {
         begin<device>();
         end<device>();
     }
-    template<Devices device>
+    template<Devices device, typename ... Args>
     void
-    changeState(bool value) noexcept {
-        if (value) {
-            begin<device>();
-        } else {
-            end<device>();
-        }
+    changeState(Args... args) noexcept {
+        changeState(args..., DeviceIs<device>{});
     }
+
     template<Devices device, typename ... Args>
     inline void
     configure(Args ... args) noexcept {

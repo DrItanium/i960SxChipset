@@ -39,12 +39,14 @@ void sdCsInit(SdCsPin_t pin) {
     ExternalHardware::configure<ExternalHardware::Devices::SD>(pin);
 }
 
-void sdCsWrite(SdCsPin_t, bool level) {
+void sdCsWrite(SdCsPin_t pin, bool level) {
     // we need to convert from high and low to start and end.
     // in this case, a true would be end, and a false would be begin
     // so just call change state but invert the level
-    ExternalHardware::changeState<ExternalHardware::Devices::SD>(!level);
+    ExternalHardware::changeState<ExternalHardware::Devices::SD>(pin, level);
 }
+
+
 
 namespace ExternalHardware {
     /**
@@ -65,5 +67,9 @@ namespace ExternalHardware {
         } else {
             pinMode(i960Pinout::SD_EN, OUTPUT);
         }
+    }
+    void
+    changeState(SdCsPin_t, bool level, DeviceIs<Devices::SD>) noexcept {
+        digitalWrite<i960Pinout::SD_EN>(level);
     }
 }

@@ -43,10 +43,15 @@ namespace ExternalHardware {
     end(DeviceIs<Devices::GPIO>) {
         DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
     }
+
     void
     configure(DeviceIs<Devices::GPIO>) {
         pinMode(i960Pinout::GPIOSelect, OUTPUT);
         DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
     }
 
+    void
+    pulse(DeviceIs<Devices::Ready>) noexcept {
+        DigitalPin<i960Pinout::Ready>::pulse();
+    }
 }

@@ -35,6 +35,7 @@ namespace ExternalHardware {
     void configure(DeviceIs<Devices::GPIO>);
     void begin(DeviceIs<Devices::GPIO>);
     void end(DeviceIs<Devices::GPIO>);
+    void pulse(DeviceIs<Devices::Ready>);
 }
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
@@ -105,6 +106,9 @@ class ProcessorInterface final {
     using GPIODeviceEnabler = ExternalHardware::DeviceEnabler<ExternalHardware::Devices::GPIO>;
     static void selectGPIO() noexcept {
         ExternalHardware::select<ExternalHardware::Devices::GPIO>();
+    }
+    static void signalReady() noexcept {
+        ExternalHardware::pulse<ExternalHardware::Devices::Ready>();
     }
     /**
      * @brief Read a 16-bit value from a given io expander register
@@ -935,23 +939,23 @@ public:
             auto a6 = line.get(offset+6);
             auto a7 = line.get(offset+7);
             auto isLastRead = setDataBits(a0);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLastRead) {
                 break;
             }
             isLastRead = setDataBits(a1);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLastRead) {
                 break;
             }
             // we are looking at a double word, triple word, or quad word
             isLastRead = setDataBits(a2);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLastRead) {
                 break;
             }
             isLastRead = setDataBits(a3);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLastRead) {
                 break;
             }
@@ -962,19 +966,19 @@ public:
                 break;
             }
             isLastRead = setDataBits(a5);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a quad word operation of some kind
             // perhaps the processor loading instruction into the data cache?
             isLastRead = setDataBits(a6);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLastRead) {
                 break;
             }
             isLastRead = setDataBits(a7);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLastRead) {
                 break;
             }
