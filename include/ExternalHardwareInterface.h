@@ -45,6 +45,7 @@ namespace ExternalHardware
         TFT,
         SD,
         PSRAM,
+        Reset,
     };
     template<Devices device>
     struct DeviceIs {

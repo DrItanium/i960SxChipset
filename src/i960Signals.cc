@@ -61,4 +61,17 @@ namespace ExternalHardware {
             ::pulse<i960Pinout::Int0_>();
         }
     }
+    void
+    begin(DeviceIs<Devices::Reset>) noexcept {
+        DigitalPin<i960Pinout::Reset960>::assertPin();
+    }
+    void
+    end(DeviceIs<Devices::Reset>) noexcept {
+        DigitalPin<i960Pinout::Reset960>::deassertPin();
+    }
+    void
+    configure(DeviceIs<Devices::Reset>) noexcept {
+        pinMode(i960Pinout::Reset960, OUTPUT);
+        DigitalPin<i960Pinout::Reset960>::deassertPin();
+    }
 }
