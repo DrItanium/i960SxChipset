@@ -340,22 +340,6 @@ public:
                 write8<IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::OLATA, false>(0b1000'0000);
                 // write the default value out to the latch to start with
                 write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
-            } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-                writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
-                writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
-                writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
-                write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-                write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-                write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
-                write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
-                write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
-                // use 16-bit versions to be on the safe side
-                write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0001'1000'0001'1000) ;
-                // for some reason, independent interrupts for the upper 16-bits is a no go... unsure why so enable mirroring and reclaim one of the pins
-                write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0101'1000'0101'1000) ;
-                // If I ever figure out why the upper 16 lines do not want to work with independent pins then we will activate this version
-                //write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0001'1000'0001'1000) ;
-                // make sure we clear out any interrupt flags
             } else {
                 /// @todo implement this
             }
@@ -494,10 +478,6 @@ private:
                     case 0b1001'0000: return 0b1111;
                     default: return 0b0000;
                 }
-            } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-                // even though three of the four pins are actually in use, I want to eventually diagnose the problem itself
-                // so this code is ready for that day
-                return PINA & 0b0000'1111;
             } else {
                 return 0;
             }

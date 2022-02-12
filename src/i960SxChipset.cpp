@@ -54,11 +54,11 @@ constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
 constexpr auto UsePSRAMForType2 = false;
-constexpr auto ValidateTransferDuringInstall = TargetBoard::onAtmega1284p_Type2() && UsePSRAMForType2;
+constexpr auto ValidateTransferDuringInstall = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
-constexpr auto UseIOExpanderAddressLineInterrupts = TargetBoard::onAtmega1284p_Type2();
+constexpr auto UseIOExpanderAddressLineInterrupts = false;
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport, AddressDebuggingEnabledOnStartup>;
@@ -226,8 +226,6 @@ void setupChipsetType2() noexcept {
 void setupChipsetVersionSpecificPins() noexcept {
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         setupChipsetType1();
-    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        setupChipsetType2();
     } else {
         // do nothing
     }
