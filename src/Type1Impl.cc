@@ -124,7 +124,8 @@ namespace ExternalHardware
         DigitalPin<i960Pinout::Reset960>::deassertPin();
     }
 
-    void configure(SdCsPin_t pin, DeviceIs<Devices::SD>) {
+    void
+    configure(SdCsPin_t pin, DeviceIs<Devices::SD>) noexcept {
         if (static_cast<i960Pinout>(pin) != i960Pinout::SD_EN) {
             signalHaltState(F("ONLY SD_EN ACCEPTED!"));
         } else {
@@ -135,5 +136,10 @@ namespace ExternalHardware
     changeState(SdCsPin_t, bool level, DeviceIs<Devices::SD>) noexcept {
         digitalWrite<i960Pinout::SD_EN>(level);
     }
+    bool
+    isBurstLast() noexcept {
+        return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    }
+
 }
 #endif

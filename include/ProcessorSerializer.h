@@ -371,7 +371,7 @@ public:
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 {
                     // find out if this is the last transaction while we are talking to the io expander
-                    isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    isLastRead = ExternalHardware::isBurstLast();
                     computedValue = latchedDataOutput.bytes[0];
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
@@ -389,7 +389,7 @@ public:
             }
             return isLastRead;
         } else {
-            return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            return ExternalHardware::isBurstLast();
 
         }
     }
@@ -979,7 +979,7 @@ private:
         {
             GPIODeviceEnabler enabler;
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-        isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        isLast = ExternalHardware::isBurstLast();
         auto &request = transactions[count];
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -1122,7 +1122,7 @@ public:
                 GPIODeviceEnabler enabler;
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
                 {
-                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    isLast = ExternalHardware::isBurstLast();
                 }
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -1183,7 +1183,7 @@ public:
     static inline void performFallbackWrite() noexcept {
         do {
             // put four cycles worth of delay into this to make damn sure we are ready with the i960
-            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            auto isLast = ExternalHardware::isBurstLast();
             __builtin_avr_nops(4);
             signalReady();
             // need to introduce some delay

@@ -46,6 +46,7 @@ namespace ExternalHardware
         SD,
         PSRAM,
         Reset,
+        BurstLast,
     };
     template<Devices device>
     struct DeviceIs {
@@ -100,21 +101,22 @@ namespace ExternalHardware
         Self operator=(DeviceEnabler&&) = delete;
         Self operator=(const DeviceEnabler&) = delete;
     };
-    void configure(DeviceIs<Devices::Reset>);
-    void begin(DeviceIs<Devices::Reset>);
-    void end(DeviceIs<Devices::Reset>);
-    void select(DeviceIs<Devices::GPIO>);
-    void configure(DeviceIs<Devices::GPIO>);
-    void begin(DeviceIs<Devices::GPIO>);
-    void end(DeviceIs<Devices::GPIO>);
-    void pulse(DeviceIs<Devices::Ready>);
-    void configure(SdCsPin_t, DeviceIs<Devices::SD>);
-    void changeState(SdCsPin_t, bool, DeviceIs<Devices::SD>);
+    void configure(DeviceIs<Devices::Reset>) noexcept;
+    void begin(DeviceIs<Devices::Reset>) noexcept;
+    void end(DeviceIs<Devices::Reset>) noexcept;
+    void select(DeviceIs<Devices::GPIO>) noexcept;
+    void configure(DeviceIs<Devices::GPIO>) noexcept;
+    void begin(DeviceIs<Devices::GPIO>) noexcept;
+    void end(DeviceIs<Devices::GPIO>) noexcept;
+    void pulse(DeviceIs<Devices::Ready>) noexcept;
+    void configure(SdCsPin_t, DeviceIs<Devices::SD>) noexcept;
+    void changeState(SdCsPin_t, bool, DeviceIs<Devices::SD>) noexcept;
     void pulse(DeviceIs<Devices::Int0>) noexcept;
     void begin(DeviceIs<Devices::PSRAM>) noexcept;
     void end(DeviceIs<Devices::PSRAM>) noexcept;
     void configure(DeviceIs<Devices::PSRAM>) noexcept;
     void select(byte index, DeviceIs<Devices::PSRAM>) noexcept;
+    bool isBurstLast() noexcept;
 } // end namespace ExternalHardware
 
 
