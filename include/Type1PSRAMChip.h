@@ -28,7 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_TYPE1PSRAMCHIP_H
 #define SXCHIPSET_TYPE1PSRAMCHIP_H
-#ifdef CHIPSET_TYPE1
 #include <Arduino.h>
 #include <SPI.h>
 #include "MCUPlatform.h"
@@ -49,10 +48,8 @@ namespace ExternalHardware {
  * @tparam sel1 The middle pin used to select the target device
  * @tparam sel2 The upper pin used to select the target device
  */
-template<i960Pinout enablePin>
 class MemoryBlock {
 public:
-    static constexpr auto EnablePin = enablePin;
     static constexpr auto TiedToExternalDevice = ExternalHardware::Devices::PSRAM;
     using DeviceEnabler = ExternalHardware::DeviceEnabler<TiedToExternalDevice>;
     static constexpr auto NumChips = 8;
@@ -189,6 +186,7 @@ public:
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
+            ExternalHardware::configure<TiedToExternalDevice>();
             ExternalHardware::select<TiedToExternalDevice>(0);
             SPI.beginTransaction(SPISettings(TargetBoard::runPSRAMAt(), MSBFIRST, SPI_MODE0));
             for (int i = 0; i < NumChips; ++i) {
@@ -210,6 +208,5 @@ public:
     }
 };
 
-using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
-#endif
+using OnboardPSRAMBlock = MemoryBlock;
 #endif //SXCHIPSET_TYPE1PSRAMCHIP_H

@@ -31,15 +31,16 @@ namespace ExternalHardware
 {
     void
     begin(DeviceIs<Devices::PSRAM>) noexcept {
-        digitalWrite<OnboardPSRAMBlock::EnablePin, LOW>();
+        DigitalPin<i960Pinout::PSRAM_EN>::assertPin();
     }
     void
     end(DeviceIs<Devices::PSRAM>) noexcept {
-        digitalWrite<OnboardPSRAMBlock::EnablePin, HIGH>();
+        DigitalPin<i960Pinout::PSRAM_EN>::deassertPin();
     }
     void
     configure(DeviceIs<Devices::PSRAM>) noexcept {
-        OnboardPSRAMBlock::begin();
+        pinMode(i960Pinout::PSRAM_EN, OUTPUT);
+        DigitalPin<i960Pinout::PSRAM_EN>::deassertPin();
     }
     namespace
     {
