@@ -334,4 +334,14 @@ union SplitWord32 {
     SplitWord16 words_[sizeof(uint32_t) / sizeof(SplitWord16)];
     float floatingPointRepresentation_;
 };
+/**
+ * @brief Sx Load/Store styles that the processor will request
+ */
+enum class LoadStoreStyle : uint8_t {
+    // based off of BE0,BE1 pins
+    Full16 = 0,
+    Upper8,
+    Lower8,
+    None,
+};
 #endif //I960SXCHIPSET_MCUPLATFORM_H

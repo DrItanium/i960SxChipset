@@ -46,7 +46,6 @@ namespace ExternalHardware
         SD,
         PSRAM,
         Reset,
-        BurstLast,
     };
     template<Devices device>
     struct DeviceIs {
@@ -119,6 +118,7 @@ namespace ExternalHardware
     bool isBurstLast() noexcept;
     bool isReadOperation() noexcept;
     LoadStoreStyle getStyle() noexcept;
+    void configurePins() noexcept;
 } // end namespace ExternalHardware
 
 

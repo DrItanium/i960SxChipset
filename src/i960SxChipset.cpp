@@ -183,53 +183,6 @@ void installBootImage() noexcept {
     }
 }
 
-void setupChipsetType1() noexcept {
-#ifdef CHIPSET_TYPE1
-    Serial.println(F("Bringing up type1 specific aspects!"));
-    setupPins(OUTPUT,
-              i960Pinout::SPI_OFFSET0,
-              i960Pinout::SPI_OFFSET1,
-              i960Pinout::SPI_OFFSET2,
-              i960Pinout::Int0_);
-    digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
-    digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
-    digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
-    digitalWrite<i960Pinout::Int0_, HIGH>();
-    setupPins(INPUT,
-              i960Pinout::BA1,
-              i960Pinout::BA2,
-              i960Pinout::BA3);
-#endif
-}
-void setupSecondSPIBus() noexcept {
-#ifdef CHIPSET_TYPE2
-    UBRR1 = 0x0000;
-    pinMode(i960Pinout::SCK1, OUTPUT); // setup XCK1 which is actually SCK1
-    UCSR1C = _BV(UMSEL11) | _BV(UMSEL10); // set usart spi mode of operation and SPI data mode 1,1
-    UCSR1B = _BV(TXEN1) | _BV(RXEN1); // enable transmitter and reciever
-    // set the baud rate. IMPORTANT: The Baud Rate must be set after the Transmitter is enabled
-    UBRR1 = 0x0000; // where maximum speed of FCPU/2 = 0x0000
-    // make sure we setup the PSRAM enable pins
-#endif
-}
-void setupChipsetType2() noexcept {
-#ifdef CHIPSET_TYPE2
-    Serial.println(F("Bringing up type2 specific aspects!"));
-    setupSecondSPIBus();
-    pinMode(i960Pinout::INT_EN2, INPUT);
-    pinMode(i960Pinout::INT_EN3, INPUT);
-    pinMode(i960Pinout::PSRAM_EN1, OUTPUT);
-    digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
-#endif
-}
-
-void setupChipsetVersionSpecificPins() noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-        setupChipsetType1();
-    } else {
-        // do nothing
-    }
-}
 void setupDispatchTable() noexcept;
 // the setup routine runs once when you press reset:
 void setup() {
@@ -248,28 +201,7 @@ void setup() {
         // duration of the setup function
         // get SPI setup ahead of time
         SPI.begin();
-        setupChipsetVersionSpecificPins();
-        setupPins(OUTPUT,
-                  i960Pinout::PSRAM_EN,
-                  i960Pinout::SD_EN,
-                  i960Pinout::Ready,
-                  i960Pinout::GPIOSelect);
-        // all of these pins need to be pulled high
-        digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-        digitalWrite<i960Pinout::SD_EN, HIGH>();
-        digitalWrite<i960Pinout::Ready, HIGH>();
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        // setup the pins that could be attached to an io expander separately
-        setupPins(INPUT,
-                  i960Pinout::BE0,
-                  i960Pinout::BE1,
-                  i960Pinout::BLAST_,
-                  i960Pinout::W_R_,
-                  i960Pinout::DEN_,
-                  i960Pinout::FAIL,
-                  i960Pinout::INT_EN0,
-                  i960Pinout::INT_EN1
-        );
+        ExternalHardware::configurePins();
         //pinMode(i960Pinout::MISO, INPUT_PULLUP);
         theCache.begin();
         // purge the cache pages

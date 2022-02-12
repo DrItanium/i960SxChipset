@@ -149,5 +149,47 @@ namespace ExternalHardware
     getStyle() noexcept {
         return static_cast<LoadStoreStyle>(((PINA >> 4) & 0b11));
     }
+    void setupChipsetType1() noexcept {
+        Serial.println(F("Bringing up type1 specific aspects!"));
+        setupPins(OUTPUT,
+                  i960Pinout::SPI_OFFSET0,
+                  i960Pinout::SPI_OFFSET1,
+                  i960Pinout::SPI_OFFSET2,
+                  i960Pinout::Int0_);
+        digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
+        digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
+        digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
+        digitalWrite<i960Pinout::Int0_, HIGH>();
+        setupPins(INPUT,
+                  i960Pinout::BA1,
+                  i960Pinout::BA2,
+                  i960Pinout::BA3);
+    }
+
+    void
+    configurePins() noexcept {
+        setupChipsetType1();
+        setupPins(OUTPUT,
+                  i960Pinout::PSRAM_EN,
+                  i960Pinout::SD_EN,
+                  i960Pinout::Ready,
+                  i960Pinout::GPIOSelect);
+        // all of these pins need to be pulled high
+        digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+        digitalWrite<i960Pinout::SD_EN, HIGH>();
+        digitalWrite<i960Pinout::Ready, HIGH>();
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        // setup the pins that could be attached to an io expander separately
+        setupPins(INPUT,
+                  i960Pinout::BE0,
+                  i960Pinout::BE1,
+                  i960Pinout::BLAST_,
+                  i960Pinout::W_R_,
+                  i960Pinout::DEN_,
+                  i960Pinout::FAIL,
+                  i960Pinout::INT_EN0,
+                  i960Pinout::INT_EN1
+        );
+    }
 }
 #endif
