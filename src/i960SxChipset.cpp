@@ -33,14 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SdFat.h>
 #include "Pinout.h"
 
-#include "CacheEntry.h"
-#include "DirectMappedCacheWay.h"
-#include "TwoWayLRUCacheEntry.h"
-#include "FourWayPseudoLRUEntry.h"
-#include "EightWayPseudoLRUEntry.h"
-#include "SixteenWayPseudoLRUEntry.h"
 #include "EightWayRandPLRUEntry.h"
-#include "EightWayTreePLRUEntry.h"
 #include "SinglePoolCache.h"
 
 #include "ProcessorSerializer.h"
@@ -51,9 +44,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 #include "RTCInterface.h"
 #include "i960SxChipset.h"
-#include "type_traits.h"
-#include "23LC1024.h"
-#include "SRAMDataContainer.h"
 #include "ExternalHardwareInterface.h"
 
 constexpr auto RTCBaseAddress = 0xFA00'0000;
