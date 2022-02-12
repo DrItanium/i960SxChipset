@@ -25,7 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_EXTERNALHARDWAREINTERFACE_H
 #define SXCHIPSET_EXTERNALHARDWAREINTERFACE_H
-
+#include "MCUPlatform.h"
 /**
  * @brief Wrapper around a future theoretical decoder interface to reduce pin pressure on the 1284p. For example, instead of binding
  * ~READY directly to a GPIO, we instead bind it to the decoder array because it is only ever toggled to tell the CPU to either read the
@@ -33,7 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 namespace ExternalHardware
 {
-
     /**
      * @brief The list of devices that are known to be connected to this chipset regardless of actual interface
      */
@@ -89,6 +88,7 @@ namespace ExternalHardware
         return read(args..., DeviceIs<device>{});
     }
 
+
     template<Devices target>
     struct DeviceEnabler final {
         using Self = DeviceEnabler<target>;
@@ -101,5 +101,6 @@ namespace ExternalHardware
     };
 
 } // end namespace ExternalHardware
+
 
 #endif //SXCHIPSET_EXTERNALHARDWAREINTERFACE_H

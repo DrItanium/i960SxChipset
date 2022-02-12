@@ -31,6 +31,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "i960SxChipset.h"
 #include "ExternalHardwareInterface.h"
 
+namespace ExternalHardware {
+    void configure(SdCsPin_t, ExternalHardware::DeviceIs<ExternalHardware::Devices::SD>);
+    void changeState(SdCsPin_t, bool, ExternalHardware::DeviceIs<ExternalHardware::Devices::SD>);
+}
 /**
  * @brief Hacked sdCsInit that assumes the only pin we care about is SD_EN, otherwise failure
  * @param pin
@@ -47,29 +51,3 @@ void sdCsWrite(SdCsPin_t pin, bool level) {
 }
 
 
-
-namespace ExternalHardware {
-    /**
-     * @brief Pulls SD_EN low
-     */
-    inline void begin(DeviceIs<Devices::SD>) {
-        digitalWrite<i960Pinout::SD_EN, LOW>();
-    }
-    /**
-     * @brief Pulls SD_EN high
-     */
-    inline void end(DeviceIs<Devices::SD>) {
-        digitalWrite<i960Pinout::SD_EN, HIGH>();
-    }
-    inline void configure(SdCsPin_t pin, DeviceIs<Devices::SD>) {
-        if (static_cast<i960Pinout>(pin) != i960Pinout::SD_EN) {
-            signalHaltState(F("ONLY SD_EN ACCEPTED!"));
-        } else {
-            pinMode(i960Pinout::SD_EN, OUTPUT);
-        }
-    }
-    void
-    changeState(SdCsPin_t, bool level, DeviceIs<Devices::SD>) noexcept {
-        digitalWrite<i960Pinout::SD_EN>(level);
-    }
-}

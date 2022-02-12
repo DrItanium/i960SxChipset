@@ -25,8 +25,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // Created by jwscoggins on 2/11/22.
 //
+#ifdef CHIPSET_TYPE1
 #include "PSRAMChip.h"
 #include "ExternalHardwareInterface.h"
+#include "SdFatConfig.h"
+#include "i960SxChipset.h"
 namespace ExternalHardware
 {
     void
@@ -121,4 +124,16 @@ namespace ExternalHardware
         DigitalPin<i960Pinout::Reset960>::deassertPin();
     }
 
+    void configure(SdCsPin_t pin, DeviceIs<Devices::SD>) {
+        if (static_cast<i960Pinout>(pin) != i960Pinout::SD_EN) {
+            signalHaltState(F("ONLY SD_EN ACCEPTED!"));
+        } else {
+            pinMode(i960Pinout::SD_EN, OUTPUT);
+        }
+    }
+    void
+    changeState(SdCsPin_t, bool level, DeviceIs<Devices::SD>) noexcept {
+        digitalWrite<i960Pinout::SD_EN>(level);
+    }
 }
+#endif
