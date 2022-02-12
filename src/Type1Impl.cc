@@ -75,4 +75,49 @@ namespace ExternalHardware
         }
     }
 
+    void
+    select(DeviceIs<Devices::GPIO>) noexcept {
+        // nothing to do for this target but who knows in the future
+    }
+
+    void
+    begin(DeviceIs<Devices::GPIO>) noexcept {
+        DigitalPin<i960Pinout::GPIOSelect>::assertPin();
+    }
+    void
+    end(DeviceIs<Devices::GPIO>) noexcept {
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
+    }
+
+    void
+    configure(DeviceIs<Devices::GPIO>) noexcept {
+        pinMode(i960Pinout::GPIOSelect, OUTPUT);
+        DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
+    }
+
+    void
+    pulse(DeviceIs<Devices::Ready>) noexcept {
+        DigitalPin<i960Pinout::Ready>::pulse();
+    }
+
+    void
+    pulse(DeviceIs<Devices::Int0>) noexcept {
+        if (TargetBoard::onAtmega1284p_Type1()) {
+            ::pulse<i960Pinout::Int0_>();
+        }
+    }
+    void
+    begin(DeviceIs<Devices::Reset>) noexcept {
+        DigitalPin<i960Pinout::Reset960>::assertPin();
+    }
+    void
+    end(DeviceIs<Devices::Reset>) noexcept {
+        DigitalPin<i960Pinout::Reset960>::deassertPin();
+    }
+    void
+    configure(DeviceIs<Devices::Reset>) noexcept {
+        pinMode(i960Pinout::Reset960, OUTPUT);
+        DigitalPin<i960Pinout::Reset960>::deassertPin();
+    }
+
 }
