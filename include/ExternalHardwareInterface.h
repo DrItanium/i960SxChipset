@@ -83,6 +83,12 @@ namespace ExternalHardware
         configure(args..., DeviceIs<device>{});
     }
 
+    template<Devices device, typename ... Args>
+    inline int
+    read(Args ... args) noexcept {
+        return read(args..., DeviceIs<device>{});
+    }
+
     template<Devices target>
     struct DeviceEnabler final {
         using Self = DeviceEnabler<target>;

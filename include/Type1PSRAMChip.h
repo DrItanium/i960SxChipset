@@ -35,6 +35,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "TaggedCacheAddress.h"
 #include "ExternalHardwareInterface.h"
+
+namespace ExternalHardware {
+    void begin(DeviceIs<Devices::PSRAM>) noexcept;
+    void end(DeviceIs<Devices::PSRAM>) noexcept;
+    void configure(DeviceIs<Devices::PSRAM>) noexcept;
+    void select(byte index, DeviceIs<Devices::PSRAM>) noexcept;
+}
 /**
  * @brief Interface to the memory connected to the chipset
  * @tparam enablePin The pin that is used to signal chip usage
@@ -177,7 +184,6 @@ public:
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
-private:
 public:
     static void begin() noexcept {
         static bool initialized_ = false;
@@ -205,43 +211,5 @@ public:
 };
 
 using OnboardPSRAMBlock = MemoryBlock<i960Pinout::PSRAM_EN>;
-namespace ExternalHardware {
-    inline void begin(DeviceIs<Devices::PSRAM>) { digitalWrite<OnboardPSRAMBlock ::EnablePin, LOW>(); }
-    inline void end(DeviceIs<Devices::PSRAM>) { digitalWrite<OnboardPSRAMBlock ::EnablePin, HIGH>(); }
-    inline void configure(DeviceIs<Devices::PSRAM>) { OnboardPSRAMBlock ::begin(); }
-    namespace
-    {
-        constexpr byte
-        computePortLookup(byte value) noexcept {
-            return (value & 0b111) << 2;
-        }
-        void
-        setChipId(byte index) noexcept {
-            static constexpr byte theItemMask = 0b00011100;
-            static constexpr byte theInvertedMask = ~theItemMask;
-            static constexpr byte LookupTable[8]{
-                    computePortLookup(0),
-                    computePortLookup(1),
-                    computePortLookup(2),
-                    computePortLookup(3),
-                    computePortLookup(4),
-                    computePortLookup(5),
-                    computePortLookup(6),
-                    computePortLookup(7),
-            };
-            // since this is specific to type 1 we should speed this up significantly
-            auto contents = PORTC;
-            contents &= theInvertedMask;
-            contents |= LookupTable[index & 0b111];
-            PORTC = contents;
-        }
-    }
-    inline void select(byte index, DeviceIs<Devices::PSRAM>) {
-        static byte currentIndex = 0xFF;
-        if (currentIndex != index) {
-            setChipId(index);
-        }
-    }
-}
 #endif
 #endif //SXCHIPSET_TYPE1PSRAMCHIP_H
