@@ -961,7 +961,7 @@ public:
             }
             // okay so we are looking at a triple word or quad word operation
             isLastRead = setDataBits(a4);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLastRead) {
                 break;
             }
@@ -1049,49 +1049,49 @@ public:
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         for (auto offset = getCacheOffsetEntry();;offset += 8) {
             auto isLast = getDataBits<0>(offset);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 commitTransactions<1, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<1>(offset);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 commitTransactions<2, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<2>(offset);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 commitTransactions<3, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<3>(offset);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 commitTransactions<4, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<4>(offset);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 commitTransactions<5, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<5>(offset);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 commitTransactions<6, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<6>(offset);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 commitTransactions<7, CacheLine>(line);
                 break;
             }
             isLast = getDataBits<7>(offset);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             // perform the commit at this point
             commitTransactions<8, CacheLine>(line);
             if (isLast) {
@@ -1123,7 +1123,7 @@ public:
                 Serial.println(result, HEX);
             }
             auto isLast = setDataBits(result);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 return;
             }
@@ -1183,7 +1183,7 @@ public:
                      currLSS,
                      dataBits);
             // we could actually pulse the cpu and then perform the write, unsure at this point
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             if (isLast) {
                 break;
             }
@@ -1196,7 +1196,7 @@ public:
     static inline void performFallbackRead() noexcept {
         do {
             auto isLast = setDataBits(0);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             // need to introduce some delay
             if (isLast) {
                 break;
@@ -1212,7 +1212,7 @@ public:
             // put four cycles worth of delay into this to make damn sure we are ready with the i960
             auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             __builtin_avr_nops(4);
-            DigitalPin<i960Pinout::Ready>::pulse();
+            signalReady();
             // need to introduce some delay
             if (isLast) {
                 break;

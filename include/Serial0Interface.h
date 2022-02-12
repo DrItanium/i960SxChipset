@@ -28,7 +28,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_SERIAL0INTERFACE_H
 #define SXCHIPSET_SERIAL0INTERFACE_H
-
+#include "ExternalHardwareInterface.h"
+namespace ExternalHardware {
+    void pulse(DeviceIs<Devices::Int0>) noexcept;
+}
 template<Address baseAddress, bool addressDebuggingAllowed, bool defaultAddressDebuggingModeTo = false>
 class Serial0Interface {
 public:
@@ -107,9 +110,7 @@ public:
     static void write(uint8_t, uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
-                if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-                    pulse<i960Pinout::Int0_>();
-                }
+                ExternalHardware::pulse<ExternalHardware::Devices::Int0>();
                 break;
             case Registers::ConsoleFlush:
                 Serial.flush();

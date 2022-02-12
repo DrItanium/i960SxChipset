@@ -31,21 +31,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace ExternalHardware {
     void
-    select(DeviceIs<Devices::GPIO>) {
+    select(DeviceIs<Devices::GPIO>) noexcept {
         // nothing to do for this target but who knows in the future
     }
 
     void
-    begin(DeviceIs<Devices::GPIO>) {
+    begin(DeviceIs<Devices::GPIO>) noexcept {
         DigitalPin<i960Pinout::GPIOSelect>::assertPin();
     }
     void
-    end(DeviceIs<Devices::GPIO>) {
+    end(DeviceIs<Devices::GPIO>) noexcept {
         DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
     }
 
     void
-    configure(DeviceIs<Devices::GPIO>) {
+    configure(DeviceIs<Devices::GPIO>) noexcept {
         pinMode(i960Pinout::GPIOSelect, OUTPUT);
         DigitalPin<i960Pinout::GPIOSelect>::deassertPin();
     }
@@ -53,5 +53,12 @@ namespace ExternalHardware {
     void
     pulse(DeviceIs<Devices::Ready>) noexcept {
         DigitalPin<i960Pinout::Ready>::pulse();
+    }
+
+    void
+    pulse(DeviceIs<Devices::Int0>) noexcept {
+        if (TargetBoard::onAtmega1284p_Type1()) {
+            ::pulse<i960Pinout::Int0_>();
+        }
     }
 }
