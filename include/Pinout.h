@@ -350,9 +350,6 @@ DefSPICSPin(i960Pinout::GPIOSelect);
 DefSPICSPin(i960Pinout::SD_EN);
 DefSPICSPin(i960Pinout::PSRAM_EN);
 DefSPICSPin(i960Pinout::CACHE_EN);
-#ifdef CHIPSET_TYPE2
-DefSPICSPin(i960Pinout::PSRAM_EN1);
-#endif
 
 DefOutputPin(i960Pinout::Reset960, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);

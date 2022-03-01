@@ -1,7 +1,7 @@
     #include "1284pPinout.def"
-    Ready = PORT_B0,
+    FAIL = PORT_B0,
     CLOCK_OUT= PORT_B1,
-    AS_ = PORT_B2, // in next version we can drop this
+    READY_ = PORT_B2,
     PSRAM_EN = PORT_B3,
     GPIOSelect = PORT_B4,
     MOSI = PORT_B5,
@@ -9,25 +9,34 @@
     SCK = PORT_B7,
     RX0 = PORT_D0,
     TX0 = PORT_D1,
-    DEN_ = PORT_D2,
-    CACHE_EN = PORT_D3, // in the next version we can drop this
-    INT_EN0 = PORT_D4,
-    Reset960 = PORT_D5,
-    Int0_ = PORT_D6,
-    INT_EN1 = PORT_D7,
+    BLAST_ = PORT_D2,
+    DEN_ = PORT_D3,
+    W_R_ = PORT_D4,
+    RAM_SPACE_ = PORT_D5,
+    IO_SPACE_ = PORT_D6,
+    MEMBLK0_ = PORT_D7,
     SCL = PORT_C0,
     SDA = PORT_C1,
-    SPI_OFFSET0 = PORT_C2,
-    SPI_OFFSET1 = PORT_C3,
-    SPI_OFFSET2 = PORT_C4,
-    TFT_CS = PORT_C5,
-    TFT_DC = PORT_C6,
-    SD_EN = PORT_C7,
-    W_R_ = PORT_A0,
-    BA1 = PORT_A1,  // in the next version we can drop this
-    BA2 = PORT_A2,  // in the next version we can drop this
-    BA3 = PORT_A3,  // in the next version we can drop this
-    BE0 = PORT_A4,
-    BE1 = PORT_A5,
-    BLAST_ = PORT_A6,
-    FAIL = PORT_A7,
+    TFT_CS = PORT_C2,
+    TFT_DC = PORT_C3,
+    SD_EN = PORT_C4,
+    SPI_OFFSET0 = PORT_C5,
+    SPI_OFFSET1 = PORT_C6,
+    SPI_OFFSET2 = PORT_C7,
+    BE0 = PORT_A0,
+    BE1 = PORT_A1,
+    MEMBLK0_A0 = PORT_A2,
+    MEMBLK0_A1 = PORT_A3,
+    IOEXP_INT0 = PORT_A4,
+    IOEXP_INT1 = PORT_A5,
+    IOEXP_INT2 = PORT_A6,
+    IOEXP_INT3 = PORT_A7,
+
+    // RESET960 -> P48 (IOEXP)
+    // ~INT0 -> P49 (IOEXP)
+    // INT1 -> P50 (IOEXP)
+    // INT2 -> P51 (IOEXP)
+    // ~INT3 -> P52 (IOEXP)
+    // HOLD -> P53 (IOEXP)
+    // HLDA -> P54 (IOEXP)
+    // ~LOCK -> P55 (IOEXP)

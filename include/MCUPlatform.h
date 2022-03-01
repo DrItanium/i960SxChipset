@@ -106,17 +106,9 @@ static_assert(!is_same_v<ClosestBitValue_t<10>, ClosestBitValue_t<4>>);
  */
 enum class TargetMCU {
     /**
-     * @brief
+     * @brief Type 1.01 redesign
      */
     ATmega1284p_Type1,
-    /**
-     * @brief Redesign of Type 1 with more features but different pinout
-     */
-    ATmega1284p_Type1_01,
-    /**
-     * @brief Abandoned experimental design which was supposed to be a parallel design
-     */
-    ATmega1284p_Type2,
     Unknown,
 };
 /**
@@ -167,22 +159,9 @@ template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         16_KB,
         10_MHz,
-        5_MHz // due to the current design, we have to run the psram at 5 Mhz
-};
-template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1_01> = {
-        16_KB,
-        10_MHz,
         5_MHz, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
         10_MHz, // the addin card allows 10MHz 3.3v operation on flash
         10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
-};
-
-template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type2> = {
-        16_KB,
-        10_MHz,
-        10_MHz,
 };
 
 /**
@@ -203,10 +182,6 @@ public:
 #ifdef ARDUINO_AVR_ATmega1284
 #ifdef CHIPSET_TYPE1
         return TargetMCU::ATmega1284p_Type1;
-#elif defined(CHIPSET_TYPE1_01)
-        return TargetMCU::ATmega1284p_Type1_01;
-#elif defined(CHIPSET_TYPE2)
-        return TargetMCU::ATmega1284p_Type2;
 #else
         return TargetMCU::Unknown;
 #endif
@@ -236,15 +211,10 @@ public:
      */
     [[nodiscard]] static constexpr auto onAtmega1284p_Type1() noexcept { return targetMCUIs<TargetMCU::ATmega1284p_Type1>(); }
     /**
-     * @brief Are we running on an atmega1284p in a type 2 board configuration?
-     * @return True if we are running on a 1284p in a type2 config
-     */
-    [[nodiscard]] static constexpr auto onAtmega1284p_Type2() noexcept { return targetMCUIs<TargetMCU::ATmega1284p_Type2>(); }
-    /**
      * @brief Regardless of configuration are we running on a atmega1284p?
      * @return True if the microcontroller is an atmega1284p
      */
-    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return targetMCUIsOneOfThese<TargetMCU::ATmega1284p_Type1, TargetMCU::ATmega1284p_Type2>(); }
+    [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return targetMCUIsOneOfThese<TargetMCU::ATmega1284p_Type1>(); }
     /**
      * @brief Are we on an undeclared microcontroller target?
      * @return True if we were unable to determine the microcontroller target
