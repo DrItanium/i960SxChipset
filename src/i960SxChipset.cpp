@@ -63,11 +63,11 @@ constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
 constexpr auto UsePSRAMForType2 = false;
-constexpr auto ValidateTransferDuringInstall = TargetBoard::onAtmega1284p_Type2() && UsePSRAMForType2;
+constexpr auto ValidateTransferDuringInstall = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
-constexpr auto UseIOExpanderAddressLineInterrupts = TargetBoard::onAtmega1284p_Type2();
+constexpr auto UseIOExpanderAddressLineInterrupts = true;
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport, AddressDebuggingEnabledOnStartup>;
@@ -193,50 +193,11 @@ void installBootImage() noexcept {
 }
 
 void setupChipsetType1() noexcept {
-#ifdef CHIPSET_TYPE1
-    Serial.println(F("Bringing up type1 specific aspects!"));
-    setupPins(OUTPUT,
-              i960Pinout::SPI_OFFSET0,
-              i960Pinout::SPI_OFFSET1,
-              i960Pinout::SPI_OFFSET2,
-              i960Pinout::Int0_);
-    digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
-    digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
-    digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
-    digitalWrite<i960Pinout::Int0_, HIGH>();
-    setupPins(INPUT,
-              i960Pinout::BA1,
-              i960Pinout::BA2,
-              i960Pinout::BA3);
-#endif
-}
-void setupSecondSPIBus() noexcept {
-#ifdef CHIPSET_TYPE2
-    UBRR1 = 0x0000;
-    pinMode(i960Pinout::SCK1, OUTPUT); // setup XCK1 which is actually SCK1
-    UCSR1C = _BV(UMSEL11) | _BV(UMSEL10); // set usart spi mode of operation and SPI data mode 1,1
-    UCSR1B = _BV(TXEN1) | _BV(RXEN1); // enable transmitter and reciever
-    // set the baud rate. IMPORTANT: The Baud Rate must be set after the Transmitter is enabled
-    UBRR1 = 0x0000; // where maximum speed of FCPU/2 = 0x0000
-    // make sure we setup the PSRAM enable pins
-#endif
-}
-void setupChipsetType2() noexcept {
-#ifdef CHIPSET_TYPE2
-    Serial.println(F("Bringing up type2 specific aspects!"));
-    setupSecondSPIBus();
-    pinMode(i960Pinout::INT_EN2, INPUT);
-    pinMode(i960Pinout::INT_EN3, INPUT);
-    pinMode(i960Pinout::PSRAM_EN1, OUTPUT);
-    digitalWrite<i960Pinout::PSRAM_EN1, HIGH>();
-#endif
 }
 
 void setupChipsetVersionSpecificPins() noexcept {
     if constexpr (TargetBoard::onAtmega1284p_Type1()) {
         setupChipsetType1();
-    } else if constexpr (TargetBoard::onAtmega1284p_Type2()) {
-        setupChipsetType2();
     } else {
         // do nothing
     }
@@ -258,7 +219,19 @@ void setup() {
     // duration of the setup function
     // get SPI setup ahead of time
     SPI.begin();
-    setupChipsetVersionSpecificPins();
+    /// @todo pull the i960 into reset at this point
+    Serial.println(F("Bringing up type1 specific aspects!"));
+    setupPins(OUTPUT,
+              i960Pinout::SPI_OFFSET0,
+              i960Pinout::SPI_OFFSET1,
+              i960Pinout::SPI_OFFSET2,
+              i960Pinout::MEMBLK0_A0,
+              i960Pinout::MEMBLK0_A1);
+    digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
+    digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
+    digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
+    digitalWrite<i960Pinout::MEMBLK0_A0, LOW>();
+    digitalWrite<i960Pinout::MEMBLK0_A1, LOW>();
     setupPins(OUTPUT,
               i960Pinout::PSRAM_EN,
               i960Pinout::SD_EN,
@@ -277,8 +250,10 @@ void setup() {
               i960Pinout::W_R_,
               i960Pinout::DEN_,
               i960Pinout::FAIL,
-              i960Pinout::INT_EN0,
-              i960Pinout::INT_EN1
+              i960Pinout::IOEXP_INT0,
+              i960Pinout::IOEXP_INT1,
+              i960Pinout::IOEXP_INT2,
+              i960Pinout::IOEXP_INT3
     );
     //pinMode(i960Pinout::MISO, INPUT_PULLUP);
     theCache.begin();

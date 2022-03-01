@@ -31,7 +31,6 @@
     IOEXP_INT1 = PORT_A5,
     IOEXP_INT2 = PORT_A6,
     IOEXP_INT3 = PORT_A7,
-
     Data0 = IOEXP_PA0,
     Data1 = IOEXP_PA1,
     Data2 = IOEXP_PA2,
@@ -83,10 +82,10 @@
     Address31 = IOEXP_PC15,
     // IO Expander connected pins
     RESET960 = IOEXP_PD0,
-    INT0_ = IOEXP_PD1,
-    INT1 = IOEXP_PD2,
-    INT2 = IOEXP_PD3,
-    INT3_ = IOEXP_PD4,
+    INT960_0_ = IOEXP_PD1,
+    INT960_1 = IOEXP_PD2,
+    INT960_2 = IOEXP_PD3,
+    INT960_3_ = IOEXP_PD4,
     HOLD = IOEXP_PD5,
     HLDA = IOEXP_PD6,
     LOCK_ = IOEXP_PD7,

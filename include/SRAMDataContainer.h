@@ -38,11 +38,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * of the caching that is going on.
  * @tparam T The underlying type to talk to when we don't contain the given data here
  */
-template<typename T>
+template<typename T, i960Pinout en>
 class SRAMDataContainer {
 public:
     using BackingStore = T;
-    using SRAM = SRAM_23LC1024Chip<i960Pinout::CACHE_EN>;
+    using SRAM = SRAM_23LC1024Chip<en>;
     static constexpr auto Capacity = SRAM::Capacity;
     static constexpr auto CacheLineSize = 512; // bytes
     static constexpr auto CacheLineBits = getNumberOfBitsForNumberOfEntries(CacheLineSize);

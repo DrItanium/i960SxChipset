@@ -108,7 +108,7 @@ public:
         switch (static_cast<Registers>(offset)) {
             case Registers::TriggerInterrupt:
                 if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-                    pulse<i960Pinout::Int0_>();
+                    pulse<i960Pinout::INT960_0_>();
                 }
                 break;
             case Registers::ConsoleFlush:
