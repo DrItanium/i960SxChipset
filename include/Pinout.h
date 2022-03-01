@@ -42,10 +42,10 @@ enum class LoadStoreStyle : uint8_t {
 enum class i960Pinout : int {
 #ifdef CHIPSET_TYPE1
 #include "Type1Pinout.def"
+#elif defined(CHIPSET_TYPE1_01)
+#include "Type1_01Pinout.def"
 #elif defined(CHIPSET_TYPE2)
 #include "Type2Pinout.def"
-#elif defined(CHIPSET_TYPE1_4)
-#include "Type1_4Pinout.def"
 #else
 #error "Target Chipset Hardware has no pinout defined"
 #endif

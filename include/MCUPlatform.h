@@ -109,6 +109,13 @@ enum class TargetMCU {
      * @brief
      */
     ATmega1284p_Type1,
+    /**
+     * @brief Redesign of Type 1 with more features but different pinout
+     */
+    ATmega1284p_Type1_01,
+    /**
+     * @brief Abandoned experimental design which was supposed to be a parallel design
+     */
     ATmega1284p_Type2,
     Unknown,
 };
@@ -125,11 +132,16 @@ public:
      */
     constexpr MCUConfiguration(uint32_t sramSize,
                                uint32_t ioExpanderSpeedCap,
-                               uint32_t psramSpeedCap
+                               uint32_t psramSpeedCap,
+                               uint32_t flashSpeedCap,
+                               uint32_t psramPool2SpeedCap
     ) noexcept : sramAmount_(sramSize),
                  ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
-                 psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap) { }
-
+                 psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap),
+                 flashSpeedCap_(flashSpeedCap),
+                 psramPool2SpeedCap_(psramPool2SpeedCap > 33_MHz ? 33_MHz : psramPool2SpeedCap) {
+    }
+    constexpr MCUConfiguration(uint32_t sramSize, uint32_t ioExpanderSpeedCap, uint32_t psramSpeedCap) : MCUConfiguration(sramSize, ioExpanderSpeedCap, psramSpeedCap, psramSpeedCap, psramSpeedCap) {}
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
     [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
@@ -137,6 +149,8 @@ private:
     uint32_t sramAmount_;
     uint32_t ioExpanderPeripheralSpeed_;
     uint32_t psramSpeedCap_;
+    uint32_t flashSpeedCap_;
+    uint32_t psramPool2SpeedCap_;
 };
 /**
  * @brief A generic configuration for an unknown MCU target. This is the fallback case and is designed to generate an error. Designed to be specialized!
@@ -155,12 +169,20 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         10_MHz,
         5_MHz // due to the current design, we have to run the psram at 5 Mhz
 };
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1_01> = {
+        16_KB,
+        10_MHz,
+        5_MHz, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
+        10_MHz, // the addin card allows 10MHz 3.3v operation on flash
+        10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
+};
 
 template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type2> = {
         16_KB,
         10_MHz,
-        10_MHz
+        10_MHz,
 };
 
 /**
@@ -181,6 +203,8 @@ public:
 #ifdef ARDUINO_AVR_ATmega1284
 #ifdef CHIPSET_TYPE1
         return TargetMCU::ATmega1284p_Type1;
+#elif defined(CHIPSET_TYPE1_01)
+        return TargetMCU::ATmega1284p_Type1_01;
 #elif defined(CHIPSET_TYPE2)
         return TargetMCU::ATmega1284p_Type2;
 #else
