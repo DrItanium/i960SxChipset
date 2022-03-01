@@ -205,6 +205,10 @@ void setupChipsetVersionSpecificPins() noexcept {
 void setupDispatchTable() noexcept;
 // the setup routine runs once when you press reset:
 void setup() {
+    // startup SPI as soon as possible in this design
+    SPI.begin();
+    ProcessorInterface::begin();
+
     // always do this first to make sure that we put the i960 into reset regardless of target
     pinMode(i960Pinout::Reset960, OUTPUT) ;
     digitalWrite<i960Pinout::Reset960, LOW>();
@@ -218,7 +222,6 @@ void setup() {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     // get SPI setup ahead of time
-    SPI.begin();
     /// @todo pull the i960 into reset at this point
     Serial.println(F("Bringing up type1 specific aspects!"));
     setupPins(OUTPUT,
@@ -260,7 +263,6 @@ void setup() {
     // purge the cache pages
     ConfigurationSpace::begin();
     Serial.println(F("i960Sx chipset bringup"));
-    ProcessorInterface::begin();
     BackingMemoryStorage_t::begin();
     setupDispatchTable();
     installBootImage();
