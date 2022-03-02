@@ -192,6 +192,7 @@ void installBootImage() noexcept {
         // dump the first four megabytes of spi flash out
         digitalWrite(i960Pinout::MEMBLK0_A0, LOW);
         digitalWrite(i960Pinout::MEMBLK0_A1, LOW);
+        /// @todo reimplement to copy data over to PSRAM for testing purposes
         SPI.beginTransaction(SPISettings(TargetBoard::runFlashAt(), MSBFIRST, SPI_MODE0));
         SplitWord32 container[16/sizeof(SplitWord32)];
         for (Address addr = 0; addr < 4_MB; addr += 16) {
@@ -203,14 +204,11 @@ void installBootImage() noexcept {
             SPI.transfer(currentAddress.bytes[0]);
             SPI.transfer(container, 16);
             digitalWrite(i960Pinout::MEMBLK0_, HIGH);
-            Serial.print(F("0x"));
-            Serial.print(addr, HEX);
-            Serial.print(F(": "));
+            Serial.printf(F("0x%08lX: "), addr);
             for (auto element : container) {
-                Serial.printf(F("%8lX "), element.wholeValue_);
+                Serial.printf(F("%08lX "), element.wholeValue_);
             }
             Serial.println();
-            delay(100);
         }
         SPI.endTransaction();
     }
