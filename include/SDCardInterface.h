@@ -306,8 +306,8 @@ public:
             }
             Serial.println(F("SD CARD UP!"));
             clusterCount_ = SplitWord32(SD.clusterCount());
-            volumeSectorCount_ = SplitWord32(SD.volumeSectorCount());
-            bytesPerSector_ = SD.bytesPerSector();
+            volumeSectorCount_ = SplitWord32(SD.clusterCount() / SD.sectorsPerCluster());
+            bytesPerSector_ = SD.bytesPerCluster() / SD.sectorsPerCluster();
             initialized_ = true;
         }
     }

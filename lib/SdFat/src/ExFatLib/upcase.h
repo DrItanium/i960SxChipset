@@ -25,6 +25,7 @@
 #ifndef upcase_h
 #define upcase_h
 #include "ExFatFile.h"
+using ExChar16_t = char16_t;
 bool exFatCmpName(const DirName_t* unicode,
                   const char* name, size_t offset, size_t n);
 bool exFatCmpName(const DirName_t* unicode,
