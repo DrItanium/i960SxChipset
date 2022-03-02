@@ -210,8 +210,7 @@ void setup() {
     ProcessorInterface::begin();
 
     // always do this first to make sure that we put the i960 into reset regardless of target
-    pinMode(i960Pinout::Reset960, OUTPUT) ;
-    digitalWrite<i960Pinout::Reset960, LOW>();
+    ProcessorInterface::putCPUIntoReset();
     Serial.begin(115200);
     while (!Serial) {
         delay(10);
@@ -268,7 +267,7 @@ void setup() {
     installBootImage();
     delay(100);
     Serial.println(F("i960Sx chipset brought up fully!"));
-    digitalWrite<i960Pinout::Reset960, HIGH>();
+    ProcessorInterface::pullCPUOutOfReset();
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {

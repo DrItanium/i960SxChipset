@@ -297,23 +297,24 @@ public:
             // should receive it.
             // so do a begin operation on all chips (0b000)
             // set IOCON.HAEN on all chips
-            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(0b0000'1000);
-            write8<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0000'1000);
-            write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0000'1000);
-            write8<ProcessorInterface::IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IOCON, false>(0b0000'1000);
+            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+            write8<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+            write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+            write8<ProcessorInterface::IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             // immediately pull the i960 into reset as soon as possible
-            writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(0b00000000'00100000);
-            writeGPIO16<IOExpanderAddress::MemoryCommitExtras, false>(0b00000000'100'10010);
+            writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(currentGPIO4Direction_);
+            writeGPIO16<IOExpanderAddress::MemoryCommitExtras, false>(currentGPIO4Status_);
             // now all devices tied to this ~CS pin have separate addresses
             // make each of these inputs
             writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
             writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
-            writeDirection<IOExpanderAddress::DataLines, false>(0xFFFF);
             // enable pin change interrupts on address lines
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+            // setup the direction pins in the
+            writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
             // write the default value out to the latch to start with
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
             SPI.endTransaction();
@@ -684,6 +685,38 @@ private:
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
+private:
+    static void updateGPIO4Pins(uint16_t value) noexcept {
+        if (value != currentGPIO4Status_) {
+            // only update the io expander when needed
+            currentGPIO4Status_ = value;
+            writeGPIO16<IOExpanderAddress::MemoryCommitExtras>(currentGPIO4Status_);
+        }
+    }
+public:
+    static void putCPUIntoReset() noexcept {
+        updateGPIO4Pins(currentGPIO4Status_ & 0xFFFE);
+    }
+    static void pullCPUOutOfReset() noexcept {
+        updateGPIO4Pins(currentGPIO4Status_ | 1);
+    }
+    static void triggerInt0() noexcept {
+        updateGPIO4Pins(currentGPIO4Status_ & 0xFFFD);
+        updateGPIO4Pins(currentGPIO4Status_ | 0b10);
+    }
+    static void triggerInt1() noexcept {
+        updateGPIO4Pins(currentGPIO4Status_ | 0b100);
+        updateGPIO4Pins(currentGPIO4Status_ & 0xFFFB);
+    }
+    static void triggerInt2() noexcept {
+        updateGPIO4Pins(currentGPIO4Status_ | 0b1000);
+        updateGPIO4Pins(currentGPIO4Status_ & 0xFFF7);
+    }
+    static void triggerInt3() noexcept {
+        updateGPIO4Pins(currentGPIO4Status_ & 0xFFEF);
+        updateGPIO4Pins(currentGPIO4Status_ | 0b1'0000);
+    }
+    /// @todo implement HOLD and LOCK functionality
 private:
     /**
      * @brief save the read and write function pointers for a given index
@@ -1156,6 +1189,9 @@ private:
     static inline BodyFunction lastReadDebug_ = nullptr;
     static inline BodyFunction lastWrite_ = nullptr;
     static inline BodyFunction lastWriteDebug_ = nullptr;
+    static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
+    static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
+    static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
