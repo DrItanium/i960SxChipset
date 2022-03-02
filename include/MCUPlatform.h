@@ -161,10 +161,9 @@ template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         16_KB,
         10_MHz,
-        //5_MHz, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
-        //10_MHz, // the addin card allows 10MHz 3.3v operation on flash
-        //10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
-        1,1,1
+        5_MHz, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
+        10_MHz, // the addin card allows 10MHz 3.3v operation on flash
+        10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
 };
 
 /**
