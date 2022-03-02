@@ -128,13 +128,11 @@ public:
     static void begin() noexcept {
         pinMode(i960Pinout::SD_EN, OUTPUT);
         digitalWrite<i960Pinout::SD_EN, HIGH>();
-#ifdef CHIPSET_TYPE1
-            pinMode(i960Pinout::TFT_CS, OUTPUT);
-            digitalWrite<i960Pinout::TFT_CS, HIGH>();
-            Wire.begin();
-            if (!displayShield_.begin()) {
-                signalHaltState(F("display shield seesaw could not be initialized!"));
-            }
+        pinMode(i960Pinout::TFT_CS, OUTPUT);
+        digitalWrite<i960Pinout::TFT_CS, HIGH>();
+        Wire.begin();
+        if (displayShield_.begin()) {
+            initialized_ = true;
             Serial.println(F("Display seesaw started"));
             Serial.print(F("Version: "));
             Serial.println(displayShield_.getVersion(), HEX);
@@ -147,48 +145,42 @@ public:
             tft.fillScreen(ST7735_CYAN);
             delay(1000);
             tft.fillScreen(ST7735_BLACK);
-#elif defined(CHIPSET_TYPE2)
-            // this code is not usable right now because the touchscreen shield isn't properly mapped to the 1284p
-#if 0
-        tft.begin();
-        tft.fillScreen(ILI9341_BLACK);
-        if (!touchController_.begin(40)) {
-            Serial.println(F("Couldn't start FT6206 touchscreen controller"));
-            while (1);
         } else {
-            Serial.println(F("FT6206 touchscreen initialized"));
+            Serial.println(F("No Display Shield Found!"));
         }
-#endif
-#endif
     }
 private:
     static void setBacklightIntensity(uint16_t value) noexcept {
-#ifdef CHIPSET_TYPE1
             backlightIntensity_ = value;
             displayShield_.setBacklight(backlightIntensity_);
-#endif
     }
 public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        switch (targetPage) {
-            case SeesawPage:
-                return handleSeesawReads(offset, lss);
-            case DisplayPage:
-                return handleDisplayRead(offset, lss);
-            default:
-                return 0;
+        if (initialized_) {
+            switch (targetPage) {
+                case SeesawPage:
+                    return handleSeesawReads(offset, lss);
+                case DisplayPage:
+                    return handleDisplayRead(offset, lss);
+                default:
+                    return 0;
+            }
+        } else {
+            return 0;
         }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        switch (targetPage) {
-            case SeesawPage:
-                handleSeesawWrite(offset, lss, value);
-                break;
-            case DisplayPage:
-                handleDisplayWrite(offset, lss, value);
-                break;
-            default:
-                break;
+        if (initialized_) {
+            switch (targetPage) {
+                case SeesawPage:
+                    handleSeesawWrite(offset, lss, value);
+                    break;
+                case DisplayPage:
+                    handleDisplayWrite(offset, lss, value);
+                    break;
+                default:
+                    break;
+            }
         }
     }
 private:
@@ -326,15 +318,11 @@ return 0;
 #endif
     }
 private:
-#ifdef CHIPSET_TYPE1
+    static inline bool initialized_ = false;
     static inline Adafruit_TFTShield18 displayShield_;
     static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
-#elif defined(CHIPSET_TYPE2)
-//static inline Adafruit_ILI9341 tft {static_cast<int>(i960Pinout::TFT_CS), static_cast<int>(i960Pinout::TFT_DC) };
-//static inline Adafruit_FT6206 touchController_{};
-#endif
     static inline uint16_t backlightIntensity_ = 0;
     static inline uint16_t fields_[8] { 0 };
 };
