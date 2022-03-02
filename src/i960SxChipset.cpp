@@ -62,8 +62,7 @@ constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
 constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto AddressDebuggingEnabledOnStartup = false;
-constexpr auto UsePSRAMForType2 = false;
-constexpr auto ValidateTransferDuringInstall = false;
+constexpr auto ValidateTransferDuringInstall = true;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
@@ -206,6 +205,45 @@ void setupDispatchTable() noexcept;
 // the setup routine runs once when you press reset:
 void setup() {
     // startup SPI as soon as possible in this design
+    setupPins(OUTPUT,
+              i960Pinout::SPI_OFFSET0,
+              i960Pinout::SPI_OFFSET1,
+              i960Pinout::SPI_OFFSET2,
+              i960Pinout::MEMBLK0_A0,
+              i960Pinout::MEMBLK0_A1,
+              i960Pinout::MEMBLK0_,
+              i960Pinout::PSRAM_EN,
+              i960Pinout::TFT_CS,
+              i960Pinout::TFT_DC,
+              i960Pinout::SD_EN,
+              i960Pinout::Ready,
+              i960Pinout::GPIOSelect);
+    // all of these pins need to be pulled high
+    digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
+    digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
+    digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
+    digitalWrite<i960Pinout::MEMBLK0_A0, LOW>();
+    digitalWrite<i960Pinout::MEMBLK0_A1, LOW>();
+    digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+    digitalWrite<i960Pinout::SD_EN, HIGH>();
+    digitalWrite<i960Pinout::Ready, HIGH>();
+    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+    digitalWrite<i960Pinout::MEMBLK0_, HIGH>();
+    digitalWrite<i960Pinout::TFT_CS, HIGH>();
+    // setup the pins that could be attached to an io expander separately
+    setupPins(INPUT,
+              i960Pinout::RAM_SPACE_,
+              i960Pinout::IO_SPACE_,
+              i960Pinout::BE0,
+              i960Pinout::BE1,
+              i960Pinout::BLAST_,
+              i960Pinout::W_R_,
+              i960Pinout::DEN_,
+              i960Pinout::FAIL,
+              i960Pinout::IOEXP_INT0,
+              i960Pinout::IOEXP_INT1,
+              i960Pinout::IOEXP_INT2,
+              i960Pinout::IOEXP_INT3);
     SPI.begin();
     ProcessorInterface::begin();
 
@@ -222,41 +260,6 @@ void setup() {
     // duration of the setup function
     // get SPI setup ahead of time
     /// @todo pull the i960 into reset at this point
-    Serial.println(F("Bringing up type1 specific aspects!"));
-    setupPins(OUTPUT,
-              i960Pinout::SPI_OFFSET0,
-              i960Pinout::SPI_OFFSET1,
-              i960Pinout::SPI_OFFSET2,
-              i960Pinout::MEMBLK0_A0,
-              i960Pinout::MEMBLK0_A1);
-    digitalWrite<i960Pinout::SPI_OFFSET0, LOW>();
-    digitalWrite<i960Pinout::SPI_OFFSET1, LOW>();
-    digitalWrite<i960Pinout::SPI_OFFSET2, LOW>();
-    digitalWrite<i960Pinout::MEMBLK0_A0, LOW>();
-    digitalWrite<i960Pinout::MEMBLK0_A1, LOW>();
-    setupPins(OUTPUT,
-              i960Pinout::PSRAM_EN,
-              i960Pinout::SD_EN,
-              i960Pinout::Ready,
-              i960Pinout::GPIOSelect);
-    // all of these pins need to be pulled high
-    digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
-    digitalWrite<i960Pinout::SD_EN, HIGH>();
-    digitalWrite<i960Pinout::Ready, HIGH>();
-    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-    // setup the pins that could be attached to an io expander separately
-    setupPins(INPUT,
-              i960Pinout::BE0,
-              i960Pinout::BE1,
-              i960Pinout::BLAST_,
-              i960Pinout::W_R_,
-              i960Pinout::DEN_,
-              i960Pinout::FAIL,
-              i960Pinout::IOEXP_INT0,
-              i960Pinout::IOEXP_INT1,
-              i960Pinout::IOEXP_INT2,
-              i960Pinout::IOEXP_INT3
-    );
     //pinMode(i960Pinout::MISO, INPUT_PULLUP);
     theCache.begin();
     // purge the cache pages
