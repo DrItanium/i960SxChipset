@@ -190,13 +190,13 @@ void installBootImage() noexcept {
         }
     } else {
         // dump the first four megabytes of spi flash out
-        digitalWrite(i960Pinout::MEMBLK0_A0, HIGH);
+        digitalWrite(i960Pinout::MEMBLK0_A0, LOW);
         digitalWrite(i960Pinout::MEMBLK0_A1, LOW);
         SPI.beginTransaction(SPISettings(TargetBoard::runFlashAt(), MSBFIRST, SPI_MODE0));
         for (Address addr = 0; addr < 4_MB; addr += 16) {
             SplitWord32 currentAddress{addr};
-            digitalWrite(i960Pinout::MEMBLK0_, LOW);
             byte container[16] = { 0};
+            digitalWrite(i960Pinout::MEMBLK0_, LOW);
             SPI.transfer(0x03);
             SPI.transfer(currentAddress.bytes[2]);
             SPI.transfer(currentAddress.bytes[1]);
@@ -207,11 +207,10 @@ void installBootImage() noexcept {
             Serial.print(addr, HEX);
             Serial.print(F(": "));
             for (auto element : container) {
-                Serial.print(F("0x"));
-                Serial.print(element, HEX);
-                Serial.print(F(" "));
+                Serial.printf(F("%x.2 "), element);
             }
             Serial.println();
+            delay(100);
         }
         SPI.endTransaction();
     }
