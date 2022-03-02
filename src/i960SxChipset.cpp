@@ -121,7 +121,7 @@ template<bool allowAddressDebuggingCodePath, bool useInterrupts>
         invocationBody<false, useInterrupts>();
     }
 }
-template<bool testFlashChips = true>
+template<bool testFlashChips = false>
 void installBootImage() noexcept {
     if constexpr (!testFlashChips) {
         // okay now we need to actually open boot.system and copy it into the ramBlock
@@ -204,7 +204,7 @@ void installBootImage() noexcept {
             SPI.transfer(currentAddress.bytes[0]);
             SPI.transfer(container, 16);
             digitalWrite(i960Pinout::MEMBLK0_, HIGH);
-            Serial.printf(F("0x%08lX: %08lX %08lX %08lX %08lX%n"), addr, container[0], container[1], container[2], container[3]);
+            Serial.printf(F("0x%08lX: %08lX %08lX %08lX %08lX\n"), addr, container[0], container[1], container[2], container[3]);
         }
         SPI.endTransaction();
     }

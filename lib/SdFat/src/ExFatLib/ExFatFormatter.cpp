@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2011-2020 Bill Greiman
+ * Copyright (c) 2011-2021 Bill Greiman
  * This file is part of the SdFat library for SD memory cards.
  *
  * MIT License
@@ -24,7 +24,8 @@
  */
 #define DBG_FILE "ExFatFormatter.cpp"
 #include "../common/DebugMacros.h"
-#include "ExFatFormatter.h"
+#include "../common/upcase.h"
+#include "ExFatLib.h"
 //------------------------------------------------------------------------------
 // Formatter assumes 512 byte sectors.
 const uint32_t BOOT_BACKUP_OFFSET = 12;
@@ -45,7 +46,7 @@ const uint32_t ROOT_CLUSTER = 4;
 #define writeMsg(pr, str) if (pr) pr->write(str)
 #endif  // PRINT_FORMAT_PROGRESS
 //------------------------------------------------------------------------------
-bool ExFatFormatter::format(BlockDevice* dev, uint8_t* secBuf, print_t* pr) {
+bool ExFatFormatter::format(FsBlockDevice* dev, uint8_t* secBuf, print_t* pr) {
 #if !PRINT_FORMAT_PROGRESS
 (void)pr;
 #endif  //  !PRINT_FORMAT_PROGRESS
@@ -257,14 +258,14 @@ bool ExFatFormatter::format(BlockDevice* dev, uint8_t* secBuf, print_t* pr) {
   label = reinterpret_cast<DirLabel_t*>(secBuf);
   label->type = EXFAT_TYPE_LABEL & 0X7F;
 
-  // bitmap directory  entry.
+  // bitmap directory entry.
   dbm = reinterpret_cast<DirBitmap_t*>(secBuf + 32);
   dbm->type = EXFAT_TYPE_BITMAP;
   setLe32(dbm->firstCluster, BITMAP_CLUSTER);
   setLe64(dbm->size, bitmapSize);
 
   // upcase directory entry.
-  dup = reinterpret_cast<DirUpcase_t*>(secBuf +64);
+  dup = reinterpret_cast<DirUpcase_t*>(secBuf + 64);
   dup->type = EXFAT_TYPE_UPCASE;
   setLe32(dup->checksum, m_upcaseChecksum);
   setLe32(dup->firstCluster, UPCASE_CLUSTER);

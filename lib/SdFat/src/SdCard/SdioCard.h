@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2011-2020 Bill Greiman
+ * Copyright (c) 2011-2021 Bill Greiman
  * This file is part of the SdFat library for SD memory cards.
  *
  * MIT License
@@ -61,13 +61,12 @@ class SdioCard : public SdCardInterface {
    */
   bool begin(SdioConfig sdioConfig);
   /** Disable an SDIO card.
-   * \return false - not implemented.
+   * not implemented.
    */
-  bool end() {return false;}
+  void end() {}
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  // Use sectorCount(). cardSize() will be removed in the future.
-  uint32_t cardSize() __attribute__ ((deprecated)) {return sectorCount();}
+    uint32_t __attribute__((error("use sectorCount()"))) cardSize();
 #endif  // DOXYGEN_SHOULD_SKIP_THIS
   /** Erase a range of sectors.
    *
@@ -149,7 +148,7 @@ class SdioCard : public SdCardInterface {
   bool readOCR(uint32_t* ocr);
   /** Start a read multiple sectors sequence.
    *
-   * \param[in] sector RawAddress of first sector in sequence.
+   * \param[in] sector Address of first sector in sequence.
    *
    * \note This function is used with readData() and readStop() for optimized
    * multiple sector reads.  SPI chipSelect must be low for the entire sequence.
@@ -159,7 +158,7 @@ class SdioCard : public SdCardInterface {
   bool readStart(uint32_t sector);
   /** Start a read multiple sectors sequence.
    *
-   * \param[in] sector RawAddress of first sector in sequence.
+   * \param[in] sector Address of first sector in sequence.
    * \param[in] count Maximum sector count.
    * \note This function is used with readData() and readStop() for optimized
    * multiple sector reads.  SPI chipSelect must be low for the entire sequence.
@@ -219,7 +218,7 @@ class SdioCard : public SdCardInterface {
   bool writeData(const uint8_t* src);
   /** Start a write multiple sectors sequence.
    *
-   * \param[in] sector RawAddress of first sector in sequence.
+   * \param[in] sector Address of first sector in sequence.
    *
    * \note This function is used with writeData() and writeStop()
    * for optimized multiple sector writes.
@@ -229,7 +228,7 @@ class SdioCard : public SdCardInterface {
   bool writeStart(uint32_t sector);
   /** Start a write multiple sectors sequence.
    *
-   * \param[in] sector RawAddress of first sector in sequence.
+   * \param[in] sector Address of first sector in sequence.
    * \param[in] count Maximum sector count.
    * \note This function is used with writeData() and writeStop()
    * for optimized multiple sector writes.
