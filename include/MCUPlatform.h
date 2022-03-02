@@ -137,6 +137,8 @@ public:
     [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
     [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
+    [[nodiscard]] constexpr auto runFlashAt() const noexcept { return flashSpeedCap_; }
+    [[nodiscard]] constexpr auto runPSRAM2At() const noexcept { return psramPool2SpeedCap_; }
 private:
     uint32_t sramAmount_;
     uint32_t ioExpanderPeripheralSpeed_;
@@ -158,10 +160,10 @@ constexpr MCUConfiguration BoardDescription = {
 template<>
 constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         16_KB,
-        1,
-        1, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
-        1, // the addin card allows 10MHz 3.3v operation on flash
-        1, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
+        10_MHz,
+        5_MHz, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
+        10_MHz, // the addin card allows 10MHz 3.3v operation on flash
+        10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
 };
 
 /**
@@ -235,6 +237,8 @@ public:
      * @return The highest clock speed (in hz) that this target's SPI bus can run the psram at
      */
     [[nodiscard]] static constexpr auto runPSRAMAt() noexcept { return BoardDescription<getMCUTarget()>.runPSRAMAt(); }
+    [[nodiscard]] static constexpr auto runPSRAM2At() noexcept { return BoardDescription<getMCUTarget()>.runPSRAM2At(); }
+    [[nodiscard]] static constexpr auto runFlashAt() noexcept { return BoardDescription<getMCUTarget()>.runFlashAt(); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;

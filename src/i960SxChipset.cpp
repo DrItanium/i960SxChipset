@@ -189,8 +189,10 @@ void installBootImage() noexcept {
             theFile.close();
         }
     } else {
+        // dump the first four megabytes of spi flash out
         digitalWrite(i960Pinout::MEMBLK0_A0, HIGH);
         digitalWrite(i960Pinout::MEMBLK0_A1, LOW);
+        SPI.beginTransaction(SPISettings(TargetBoard::runFlashAt(), MSBFIRST, SPI_MODE0));
         for (Address addr = 0; addr < 4_MB; addr += 16) {
             SplitWord32 currentAddress{addr};
             digitalWrite(i960Pinout::MEMBLK0_, LOW);
@@ -211,6 +213,7 @@ void installBootImage() noexcept {
             }
             Serial.println();
         }
+        SPI.endTransaction();
     }
     // clear both caches to be on the safe side
     theCache.clear();
