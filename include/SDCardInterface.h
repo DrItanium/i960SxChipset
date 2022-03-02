@@ -293,11 +293,16 @@ public:
     static constexpr bool respondsTo(byte targetPage) noexcept {
         return targetPage >= StartPage && targetPage < EndPage;
     }
+    template<bool skipInitOnFirstFailure = true>
     static void begin() noexcept {
         if (!initialized_) {
             while (!tryMountSDCard()) {
-                Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
-                delay(1000);
+                if constexpr (skipInitOnFirstFailure) {
+                    return;
+                } else {
+                    Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
+                    delay(1000);
+                }
             }
             Serial.println(F("SD CARD UP!"));
             clusterCount_ = SplitWord32(SD.clusterCount());
