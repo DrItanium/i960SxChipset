@@ -451,8 +451,16 @@ private:
                                              pinToPortBit<i960Pinout::IOEXP_INT3>();
                 // even though three of the four pins are actually in use, I want to eventually diagnose the problem itself
                 // so this code is ready for that day
-                /// @todo figure out how to auto compute shifts
-                return (getAssociatedInputPort<i960Pinout::IOEXP_INT0>() & Mask) >> 4;
+                union {
+                    struct
+                    {
+                        byte lower: 4;
+                        byte upper: 4;
+                    };
+                    byte complete;
+                } thingy;
+                thingy.complete = getAssociatedInputPort<i960Pinout::IOEXP_INT0>()  & Mask;
+                return thingy.upper;
             } else {
                 return 0;
             }
