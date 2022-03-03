@@ -351,7 +351,7 @@ public:
                 latchedDataOutput.wholeValue_ = value;
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+            SPDR = static_cast<byte>(MCP23x17Registers::OLAT); // instead of GPIO (which still writes to OLAT automatically), do the OLAT to be very explicit
             {
                 // find out if this is the last transaction while we are talking to the io expander
                 isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
