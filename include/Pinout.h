@@ -62,6 +62,55 @@ inline auto digitalRead(i960Pinout ip) {
 template<i960Pinout pin>
 constexpr auto isValidPin960_v = static_cast<int>(pin) < static_cast<int>(i960Pinout::Count);
 
+template<i960Pinout pin>
+[[gnu::always_inline]]
+[[nodiscard]] constexpr byte pinToPortBit() noexcept {
+    static_assert(isValidPin960_v<pin>);
+    switch (pin) {
+        case i960Pinout::PORT_A0:
+        case i960Pinout::PORT_B0:
+        case i960Pinout::PORT_C0:
+        case i960Pinout::PORT_D0:
+            return 0b0000'0001;
+        case i960Pinout::PORT_A1:
+        case i960Pinout::PORT_B1:
+        case i960Pinout::PORT_C1:
+        case i960Pinout::PORT_D1:
+            return 0b0000'0010;
+        case i960Pinout::PORT_A2:
+        case i960Pinout::PORT_B2:
+        case i960Pinout::PORT_C2:
+        case i960Pinout::PORT_D2:
+            return 0b0000'0100;
+        case i960Pinout::PORT_A3:
+        case i960Pinout::PORT_B3:
+        case i960Pinout::PORT_C3:
+        case i960Pinout::PORT_D3:
+            return 0b0000'1000;
+        case i960Pinout::PORT_A4:
+        case i960Pinout::PORT_B4:
+        case i960Pinout::PORT_C4:
+        case i960Pinout::PORT_D4:
+            return 0b0001'0000;
+        case i960Pinout::PORT_A5:
+        case i960Pinout::PORT_B5:
+        case i960Pinout::PORT_C5:
+        case i960Pinout::PORT_D5:
+            return 0b0010'0000;
+        case i960Pinout::PORT_A6:
+        case i960Pinout::PORT_B6:
+        case i960Pinout::PORT_C6:
+        case i960Pinout::PORT_D6:
+            return 0b0100'0000;
+        case i960Pinout::PORT_A7:
+        case i960Pinout::PORT_B7:
+        case i960Pinout::PORT_C7:
+        case i960Pinout::PORT_D7:
+            return 0b1000'0000;
+        default:
+            return 0b1111'1111;
+    }
+}
 /**
  * @brief Get the output port associated with a given pin. A compile-time error will be generated if the pin is not valid
  * @tparam pin The pin whose output port will be retrieved
