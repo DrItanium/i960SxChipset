@@ -438,7 +438,7 @@ private:
      * Each zero found in the code signifies that that 8-bit quantity must be updated. If useInterrupts is off then zero is returned which
      * means the whole address must be updated.
      */
-    template<bool useInterrupts = true>
+    template<bool useInterrupts>
     static byte getUpdateKind() noexcept {
         if constexpr (!useInterrupts) {
             return 0;
@@ -748,111 +748,64 @@ public:
      * cache entry class that the L1 cache uses
      * @tparam useInterrupts If true, then query the directly connected interrupt pins to get a proper update mask
      */
-    template<bool inDebugMode, typename C, bool useInterrupts = true, bool useLookupTable = false>
+    template<bool inDebugMode, typename C, bool useInterrupts = true>
     static void newDataCycle() noexcept {
 
-        if constexpr (useLookupTable) {
-            using Operation = void (*)();
-            constexpr Operation operations[16]{
-                    full32BitUpdate<C, inDebugMode>,
-                    []() {
-                        updateLower8();
-                        upper16Update<inDebugMode>();
-                    },
-                    []() {
-                        updateLowest8<C>();
-                        upper16Update<inDebugMode>();
-                    },
-                    upper16Update<inDebugMode>,
-                    []() {
-                        lower16Update<C>();
-                        updateHighest8<inDebugMode>();
-                    },
-                    []() {
-                        updateLower8();
-                        updateHighest8<inDebugMode>();
-                    },
-                    []() {
-                        updateLowest8<C>();
-                        updateHighest8<inDebugMode>();
-                    },
-                    updateHighest8<inDebugMode>,
-                    []() {
-                        lower16Update<C>();
-                        updateHigher8();
-                    },
-                    []() {
-                        updateHigher8();
-                        updateLower8();
-                    },
-                    []() {
-                        updateHigher8();
-                        updateLowest8<C>();
-                    },
-                    updateHigher8,
-                    lower16Update<C>,
-                    updateLower8,
-                    updateLowest8<C>,
-                    []() {},
-            };
-            operations[getUpdateKind<useInterrupts>()]();
-        } else {
-            switch (getUpdateKind<useInterrupts>()) {
-                case 0b0001:
-                    updateLower8();
-                    upper16Update<inDebugMode>();
-                    break;
-                case 0b0010:
-                    updateLowest8<C>();
-                    upper16Update<inDebugMode>();
-                    break;
-                case 0b0011:
-                    upper16Update<inDebugMode>();
-                    break;
-                case 0b0100:
-                    lower16Update<C>();
-                    updateHighest8<inDebugMode>();
-                    break;
-                case 0b0101:
-                    updateLower8();
-                    updateHighest8<inDebugMode>();
-                    break;
-                case 0b0110:
-                    updateLowest8<C>();
-                    updateHighest8<inDebugMode>();
-                    break;
-                case 0b0111:
-                    updateHighest8<inDebugMode>();
-                    break;
-                case 0b1000:
-                    lower16Update<C>();
-                    updateHigher8();
-                    break;
-                case 0b1001:
-                    updateHigher8();
-                    updateLower8();
-                    break;
-                case 0b1010:
-                    updateHigher8();
-                    updateLowest8<C>();
-                    break;
-                case 0b1011:
-                    updateHigher8();
-                    break;
-                case 0b1100:
-                    lower16Update<C>();
-                    break;
-                case 0b1101:
-                    updateLower8();
-                    break;
-                case 0b1110:
-                    updateLowest8<C>();
-                    break;
-                case 0b1111: break;
-                default:
-                    full32BitUpdate<C, inDebugMode>();
-                    break;
-            }
+        switch (getUpdateKind<useInterrupts>()) {
+            case 0b0001:
+                updateLower8();
+                upper16Update<inDebugMode>();
+                break;
+            case 0b0010:
+                updateLowest8<C>();
+                upper16Update<inDebugMode>();
+                break;
+            case 0b0011:
+                upper16Update<inDebugMode>();
+                break;
+            case 0b0100:
+                lower16Update<C>();
+                updateHighest8<inDebugMode>();
+                break;
+            case 0b0101:
+                updateLower8();
+                updateHighest8<inDebugMode>();
+                break;
+            case 0b0110:
+                updateLowest8<C>();
+                updateHighest8<inDebugMode>();
+                break;
+            case 0b0111:
+                updateHighest8<inDebugMode>();
+                break;
+            case 0b1000:
+                lower16Update<C>();
+                updateHigher8();
+                break;
+            case 0b1001:
+                updateHigher8();
+                updateLower8();
+                break;
+            case 0b1010:
+                updateHigher8();
+                updateLowest8<C>();
+                break;
+            case 0b1011:
+                updateHigher8();
+                break;
+            case 0b1100:
+                lower16Update<C>();
+                break;
+            case 0b1101:
+                updateLower8();
+                break;
+            case 0b1110:
+                updateLowest8<C>();
+                break;
+            case 0b1111: break;
+            default:
+                full32BitUpdate<C, inDebugMode>();
+                break;
         }
         if constexpr (inDebugMode) {
             Serial.print(F("Target Address: 0x"));
