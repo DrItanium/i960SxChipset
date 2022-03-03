@@ -61,7 +61,62 @@ inline auto digitalRead(i960Pinout ip) {
 }
 template<i960Pinout pin>
 constexpr auto isValidPin960_v = static_cast<int>(pin) < static_cast<int>(i960Pinout::Count);
-
+/**
+ * @brief Represents a type safe look at the ports available on the 1284p
+ */
+enum class PortId
+{
+    None,
+    PortA,
+    PortB,
+    PortC,
+    PortD,
+    // more ports go here
+};
+template<i960Pinout pin>
+[[gnu::always_inline]]
+[[nodiscard]] constexpr PortId portFromPin() noexcept {
+    switch (pin) {
+        case i960Pinout::PORT_A0:
+        case i960Pinout::PORT_A1:
+        case i960Pinout::PORT_A2:
+        case i960Pinout::PORT_A3:
+        case i960Pinout::PORT_A4:
+        case i960Pinout::PORT_A5:
+        case i960Pinout::PORT_A6:
+        case i960Pinout::PORT_A7:
+            return PortId::PortA;
+        case i960Pinout::PORT_B0:
+        case i960Pinout::PORT_B1:
+        case i960Pinout::PORT_B2:
+        case i960Pinout::PORT_B3:
+        case i960Pinout::PORT_B4:
+        case i960Pinout::PORT_B5:
+        case i960Pinout::PORT_B6:
+        case i960Pinout::PORT_B7:
+            return PortId::PortB;
+        case i960Pinout::PORT_C0:
+        case i960Pinout::PORT_C1:
+        case i960Pinout::PORT_C2:
+        case i960Pinout::PORT_C3:
+        case i960Pinout::PORT_C4:
+        case i960Pinout::PORT_C5:
+        case i960Pinout::PORT_C6:
+        case i960Pinout::PORT_C7:
+            return PortId::PortC;
+        case i960Pinout::PORT_D0:
+        case i960Pinout::PORT_D1:
+        case i960Pinout::PORT_D2:
+        case i960Pinout::PORT_D3:
+        case i960Pinout::PORT_D4:
+        case i960Pinout::PORT_D5:
+        case i960Pinout::PORT_D6:
+        case i960Pinout::PORT_D7:
+            return PortId::PortD;
+        default:
+            return PortId::None;
+    }
+}
 template<i960Pinout pin>
 [[gnu::always_inline]]
 [[nodiscard]] constexpr byte pinToPortBit() noexcept {

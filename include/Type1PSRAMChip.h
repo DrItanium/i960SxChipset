@@ -49,8 +49,13 @@ public:
     static constexpr auto Select1 = i960Pinout::SPI_OFFSET1;
     static constexpr auto Select2 = i960Pinout::SPI_OFFSET2;
     static constexpr auto NumChips = 8;
+    static inline auto TargetSelectPort = getAssociatedOutputPort<Select0>();
+    static_assert (portFromPin<Select0>() == portFromPin<Select1>() && portFromPin<Select2>() == portFromPin<Select0>(), "All Select Bits must be on the same port");
+    static_assert (((static_cast<int>(Select0) + 1) == static_cast<int>(Select1)) && (static_cast<int>(Select1) + 1) == static_cast<int>(Select2), "All Select Bits must be a contiguous mask");
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
+    static constexpr auto SelectMask = pinToPortBit<Select0>() | pinToPortBit<Select1>() | pinToPortBit<Select2>();
+
 public:
     MemoryBlock() = delete;
     ~MemoryBlock() = delete;
@@ -182,23 +187,23 @@ private:
         return (value & 0b111) << 2;
     }
     static void setChipId(byte index) noexcept {
-        static constexpr byte theItemMask = 0b00011100;
-        static constexpr byte theInvertedMask = ~theItemMask;
-        static constexpr byte LookupTable[8] {
-                computePortLookup(0),
-                computePortLookup(1),
-                computePortLookup(2),
-                computePortLookup(3),
-                computePortLookup(4),
-                computePortLookup(5),
-                computePortLookup(6),
-                computePortLookup(7),
+        static constexpr byte theItemMask = SelectMask;
+        static constexpr byte theInvertedMask = static_cast<byte>(~theItemMask);
+        static constexpr byte LookupTable[8]{
+                0,
+                pinToPortBit<Select0>(),
+                pinToPortBit<Select1>(),
+                pinToPortBit<Select0>() | pinToPortBit<Select1>(),
+                pinToPortBit<Select2>(),
+                pinToPortBit<Select0>() | pinToPortBit<Select2>(),
+                pinToPortBit<Select1>() | pinToPortBit<Select2>(),
+                pinToPortBit<Select0>() | pinToPortBit<Select1>() | pinToPortBit<Select2>(),
         };
         // since this is specific to type 1 we should speed this up significantly
-        auto contents = PORTC;
+        auto contents = TargetSelectPort;
         contents &= theInvertedMask;
         contents |= LookupTable[index & 0b111];
-        PORTC = contents;
+        TargetSelectPort = contents;
     }
 public:
     static void begin() noexcept {
