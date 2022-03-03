@@ -297,8 +297,7 @@ public:
             // should receive it.
             // so do a begin operation on all chips (0b000)
             // set IOCON.HAEN on all chips
-            //write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
-            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(0b0100'1000);
+            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             // mirror the interrupts for the upper 16-bits, for some reason, the upper most 8-bits are never marked as changed
             write8<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
             write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
