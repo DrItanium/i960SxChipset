@@ -775,6 +775,7 @@ public:
                 full32BitUpdate<C, inDebugMode>();
                 break;
         }
+        /// @todo use the new ram_space and io space pins to accelerate decoding
         if constexpr (inDebugMode) {
             Serial.print(F("Target Address: 0x"));
             Serial.println(address_.getWholeValue(), HEX);
