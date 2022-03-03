@@ -131,23 +131,21 @@ public:
         pinMode(i960Pinout::TFT_CS, OUTPUT);
         digitalWrite<i960Pinout::TFT_CS, HIGH>();
         Wire.begin();
-        if (displayShield_.begin()) {
-            initialized_ = true;
-            Serial.println(F("Display seesaw started"));
-            Serial.print(F("Version: "));
-            Serial.println(displayShield_.getVersion(), HEX);
-
-            setBacklightIntensity(TFTSHIELD_BACKLIGHT_OFF);
-            displayShield_.tftReset();
-            tft.initR(INITR_BLACKTAB);
-            setBacklightIntensity(TFTSHIELD_BACKLIGHT_ON);
-            Serial.println(F("TFT UP AND OK!"));
-            tft.fillScreen(ST7735_CYAN);
-            delay(1000);
-            tft.fillScreen(ST7735_BLACK);
-        } else {
-            Serial.println(F("No Display Shield Found!"));
+        if (!displayShield_.begin()) {
+            signalHaltState(F("No Display Shield Found!"));
         }
+        Serial.println(F("Display seesaw started"));
+        Serial.print(F("Version: "));
+        Serial.println(displayShield_.getVersion(), HEX);
+
+        setBacklightIntensity(TFTSHIELD_BACKLIGHT_OFF);
+        displayShield_.tftReset();
+        tft.initR(INITR_BLACKTAB);
+        setBacklightIntensity(TFTSHIELD_BACKLIGHT_ON);
+        Serial.println(F("TFT UP AND OK!"));
+        tft.fillScreen(ST7735_CYAN);
+        delay(1000);
+        tft.fillScreen(ST7735_BLACK);
     }
 private:
     static void setBacklightIntensity(uint16_t value) noexcept {
@@ -156,7 +154,6 @@ private:
     }
 public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
-        if (initialized_) {
             switch (targetPage) {
                 case SeesawPage:
                     return handleSeesawReads(offset, lss);
@@ -165,12 +162,8 @@ public:
                 default:
                     return 0;
             }
-        } else {
-            return 0;
-        }
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-        if (initialized_) {
             switch (targetPage) {
                 case SeesawPage:
                     handleSeesawWrite(offset, lss, value);
@@ -181,7 +174,6 @@ public:
                 default:
                     break;
             }
-        }
     }
 private:
     enum class InvokeOpcodes : uint8_t {
@@ -318,7 +310,6 @@ return 0;
 #endif
     }
 private:
-    static inline bool initialized_ = false;
     static inline Adafruit_TFTShield18 displayShield_;
     static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
                                       static_cast<int>(i960Pinout::TFT_DC),
