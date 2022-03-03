@@ -49,7 +49,6 @@ public:
     static constexpr auto Select1 = i960Pinout::SPI_OFFSET1;
     static constexpr auto Select2 = i960Pinout::SPI_OFFSET2;
     static constexpr auto NumChips = 8;
-    static inline auto& TargetSelectPort = getAssociatedOutputPort<Select0>();
     static_assert (portFromPin<Select0>() == portFromPin<Select1>() && portFromPin<Select2>() == portFromPin<Select0>(), "All Select Bits must be on the same port");
     static_assert (((static_cast<int>(Select0) + 1) == static_cast<int>(Select1)) && (static_cast<int>(Select1) + 1) == static_cast<int>(Select2), "All Select Bits must be a contiguous mask");
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
@@ -187,6 +186,7 @@ private:
         return (value & 0b111) << 2;
     }
     static void setChipId(byte index) noexcept {
+        static auto& TargetSelectPort = getAssociatedOutputPort<Select0>();
         static constexpr byte theItemMask = SelectMask;
         static constexpr byte theInvertedMask = static_cast<byte>(~theItemMask);
         static constexpr byte LookupTable[8]{
