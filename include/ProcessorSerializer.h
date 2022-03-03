@@ -90,10 +90,10 @@ class ProcessorInterface final {
         OtherDevice2 = 0b1100,
         OtherDevice3 = 0b1110,
     };
-    static constexpr byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
+    static consteval byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0001 | static_cast<uint8_t>(address);
     }
-    static constexpr byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
+    static consteval byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
         return 0b0100'0000 | static_cast<uint8_t>(address);
     }
     /**
