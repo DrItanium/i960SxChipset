@@ -377,7 +377,11 @@ public:
      * @return The LoadStoreStyle derived from the ~BE0 and ~BE1 pins.
      */
     [[nodiscard]] static auto getStyle() noexcept {
-        return static_cast<LoadStoreStyle>(((PINA >> 4) & 0b11));
+        static auto TargetInputPort = getAssociatedInputPort<i960Pinout::BE0>();
+        static constexpr auto Mask = pinToPortBit<i960Pinout::BE0>() |
+                                     pinToPortBit<i960Pinout::BE1>();
+        /// @todo figure out how to auto compute the shift amount
+        return static_cast<LoadStoreStyle>(((TargetInputPort) & Mask));
     }
     /**
      * @brief Check the W/~R pin to see if we are dealing with a read transaction.
@@ -441,9 +445,15 @@ private:
             return 0;
         } else {
             if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+                static auto TargetInputPort = getAssociatedInputPort<i960Pinout::IOEXP_INT0>();
+                static constexpr auto Mask = pinToPortBit<i960Pinout::IOEXP_INT0>() |
+                                             pinToPortBit<i960Pinout::IOEXP_INT1>() |
+                                             pinToPortBit<i960Pinout::IOEXP_INT2>() |
+                                             pinToPortBit<i960Pinout::IOEXP_INT3>();
                 // even though three of the four pins are actually in use, I want to eventually diagnose the problem itself
                 // so this code is ready for that day
-                return PINA & 0b0000'1111;
+                /// @todo figure out how to auto compute shifts
+                return (TargetInputPort & Mask) >> 4;
             } else {
                 return 0;
             }
@@ -845,6 +855,10 @@ public:
                     full32BitUpdate<C, inDebugMode>();
                     break;
             }
+        }
+        if constexpr (inDebugMode) {
+            Serial.print(F("Target Address: 0x"));
+            Serial.println(address_.getWholeValue(), HEX);
         }
         if (isReadOperation()) {
             setupDataLinesForRead();

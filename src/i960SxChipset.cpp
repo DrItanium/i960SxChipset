@@ -60,13 +60,13 @@ constexpr auto Serial0BaseAddress = 0xFB00'0000;
 constexpr auto DisplayBaseAddress = 0xFC00'0000;
 constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
-constexpr auto CompileInAddressDebuggingSupport = false;
-constexpr auto AddressDebuggingEnabledOnStartup = false;
-constexpr auto ValidateTransferDuringInstall = true;
+constexpr auto CompileInAddressDebuggingSupport = true;
+constexpr auto AddressDebuggingEnabledOnStartup = true;
+constexpr auto ValidateTransferDuringInstall = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
-constexpr auto UseIOExpanderAddressLineInterrupts = true;
+constexpr auto UseIOExpanderAddressLineInterrupts = false;
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
 using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport, AddressDebuggingEnabledOnStartup>;
