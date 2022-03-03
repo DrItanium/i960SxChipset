@@ -297,10 +297,12 @@ public:
             // should receive it.
             // so do a begin operation on all chips (0b000)
             // set IOCON.HAEN on all chips
-            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             // mirror the interrupts for the upper 16-bits, for some reason, the upper most 8-bits are never marked as changed
+            // mirror the interrupts on the lower 16-bits to free up two pins at the cost of update accuracy
+            // we want two separate pins free for the data lines io expander
+            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             write8<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
-            write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+            write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
             write8<ProcessorInterface::IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             // immediately pull the i960 into reset as soon as possible
             writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(currentGPIO4Direction_);
@@ -314,6 +316,7 @@ public:
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+            // enable interrupts for accelerating write operations in the future
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0x0000) ;
             // setup the direction pins in the
@@ -434,6 +437,12 @@ public:
         }
     }
 private:
+    enum class AddressUpdateKind : byte {
+        Full32 = 0,
+        Lower16 = pinToPortBit<i960Pinout::ADDRESS_HI_INT>(), // the upper 16 is marked as high
+        Upper16 = pinToPortBit<i960Pinout::ADDRESS_LO_INT>(), // the lower 16 is marked as high
+        Neither = pinToPortBit<i960Pinout::ADDRESS_HI_INT>() | pinToPortBit<i960Pinout::ADDRESS_LO_INT>(), // both are marked high
+    };
     /**
      * @brief Query the MCP23S17 interrupt pins to figure out which ports on the address lines had actually changed since the last transaction
      * @tparam useInterrupts When true, query the interrupt lines to generate a difference mask. When false, 0 is returned which means all have changed
@@ -442,29 +451,20 @@ private:
      * means the whole address must be updated.
      */
     template<bool useInterrupts>
-    static byte getUpdateKind() noexcept {
+    static AddressUpdateKind getUpdateKind() noexcept {
         if constexpr (!useInterrupts) {
-            return 0;
+            return AddressUpdateKind::Full32;
         } else {
             if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-                static constexpr auto Mask = pinToPortBit<i960Pinout::IOEXP_INT0>() |
-                                             pinToPortBit<i960Pinout::IOEXP_INT1>() |
-                                             pinToPortBit<i960Pinout::IOEXP_INT2>() |
-                                             pinToPortBit<i960Pinout::IOEXP_INT3>();
+                // enable address mirroring on address lines to free up two pins, we bind those to IOEXP_INT2 and IOEXP_INT3
+
+                static constexpr auto Mask = pinToPortBit<i960Pinout::ADDRESS_HI_INT>() |
+                                             pinToPortBit<i960Pinout::ADDRESS_LO_INT>();
                 // even though three of the four pins are actually in use, I want to eventually diagnose the problem itself
                 // so this code is ready for that day
-                union {
-                    struct
-                    {
-                        byte lower: 4;
-                        byte upper: 4;
-                    };
-                    byte complete;
-                } thingy;
-                thingy.complete = getAssociatedInputPort<i960Pinout::IOEXP_INT0>()  & Mask;
-                return thingy.upper;
+                return static_cast<AddressUpdateKind>(getAssociatedInputPort<i960Pinout::ADDRESS_LO_INT>() & Mask);
             } else {
-                return 0;
+                return AddressUpdateKind::Full32;
             }
         }
     }
@@ -763,57 +763,14 @@ public:
     static void newDataCycle() noexcept {
 
         switch (getUpdateKind<useInterrupts>()) {
-            case 0b0001:
-                updateLower8();
-                upper16Update<inDebugMode>();
+            case AddressUpdateKind::Neither:
                 break;
-            case 0b0010:
-                updateLowest8<C>();
-                upper16Update<inDebugMode>();
-                break;
-            case 0b0011:
-                upper16Update<inDebugMode>();
-                break;
-            case 0b0100:
-                lower16Update<C>();
-                updateHighest8<inDebugMode>();
-                break;
-            case 0b0101:
-                updateLower8();
-                updateHighest8<inDebugMode>();
-                break;
-            case 0b0110:
-                updateLowest8<C>();
-                updateHighest8<inDebugMode>();
-                break;
-            case 0b0111:
-                updateHighest8<inDebugMode>();
-                break;
-            case 0b1000:
-                lower16Update<C>();
-                updateHigher8();
-                break;
-            case 0b1001:
-                updateHigher8();
-                updateLower8();
-                break;
-            case 0b1010:
-                updateHigher8();
-                updateLowest8<C>();
-                break;
-            case 0b1011:
-                updateHigher8();
-                break;
-            case 0b1100:
+            case AddressUpdateKind::Lower16:
                 lower16Update<C>();
                 break;
-            case 0b1101:
-                updateLower8();
+            case AddressUpdateKind::Upper16:
+                upper16Update<inDebugMode>();
                 break;
-            case 0b1110:
-                updateLowest8<C>();
-                break;
-            case 0b1111: break;
             default:
                 full32BitUpdate<C, inDebugMode>();
                 break;

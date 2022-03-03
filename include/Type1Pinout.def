@@ -89,3 +89,8 @@
     HOLD = IOEXP_PD5,
     HLDA = IOEXP_PD6,
     LOCK_ = IOEXP_PD7,
+    // further aliases
+    DATA_LO8_INT = IOEXP_INT0,
+    DATA_HI8_INT = IOEXP_INT1,
+    ADDRESS_LO_INT = IOEXP_INT2,
+    ADDRESS_HI_INT = IOEXP_INT3,
