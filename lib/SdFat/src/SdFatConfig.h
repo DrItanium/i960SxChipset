@@ -174,7 +174,7 @@
  * 2 - No internal definition and must be defined in the application.
  */
 #ifndef SD_CHIP_SELECT_MODE
-#define SD_CHIP_SELECT_MODE 0
+#define SD_CHIP_SELECT_MODE 2
 #endif  // SD_CHIP_SELECT_MODE
 /** Type for card chip select pin. */
 typedef uint8_t SdCsPin_t;
