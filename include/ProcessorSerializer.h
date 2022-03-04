@@ -895,10 +895,21 @@ private:
     [[gnu::always_inline]]
     static inline bool getDataBits(byte offset) noexcept {
         // getDataBits will be expanded here
-        auto doFullTransfer = [](auto& request, byte offset) {
+        static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
+                                     pinToPortBit<i960Pinout::DATA_HI8_INT>();
+        auto& request = transactions[count];
+        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
+        Serial.print(F("STATUS: 0b"));
+        Serial.println(static_cast<byte>(status), BIN);
+        if (status == DataUpdateKind::Neither && count > 0) {
+            // to start with, don't access the io expander lines when no change is detected otherwise do the full thing
+            request.style = getStyle();
+            request.offset = offset + count;
+            request.value = latchedDataInput;
+        } else {
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
             SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             while (!(SPSR & _BV(SPIF))); // wait
             SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
             {
@@ -921,21 +932,8 @@ private:
             request.value.bytes[1] = upper;
             latchedDataInput.bytes[1] = upper;
             digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            return isLast;
-        };
-        static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
-                                     pinToPortBit<i960Pinout::DATA_HI8_INT>();
-        auto& request = transactions[count];
-        switch (static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask)) {
-            // to start with, don't access the io expander lines when no change is detected otherwise do the full thing
-            case DataUpdateKind::Neither:
-                request.style = getStyle();
-                request.offset = offset + count;
-                request.value = latchedDataInput;
-                return DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            default:
-                return doFullTransfer(request, offset);
         }
+        return isLast;
     }
     template<byte count, typename C>
     static inline void commitTransactions(C& line) noexcept {
