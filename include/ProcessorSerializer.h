@@ -898,10 +898,13 @@ private:
     };
     template<byte count, byte index, MCP23x17Registers reg>
     static bool grab8Data(byte offset) noexcept {
-        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        bool isLast = false;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+        {
+            isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(reg);
         {
@@ -913,21 +916,23 @@ private:
             request.offset = offset + count;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        auto upper = SPDR;
-        request.value.bytes[index] = upper;
-        latchedDataInput_.bytes[index] = upper;
+        latchedDataInput_.bytes[index] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        request.value = latchedDataInput_;
         return isLast;
     }
     template<byte count>
+    [[gnu::noinline]]
     static bool upper8DataGrab(byte offset) noexcept {
         return grab8Data<count, 1, MCP23x17Registers::GPIOB>(offset);
     }
     template<byte count>
+    [[gnu::noinline]]
     static bool lower8DataGrab(byte offset) noexcept {
         return grab8Data<count, 0, MCP23x17Registers::GPIOA>(offset);
     }
     template<byte count>
+    [[gnu::noinline]]
     static bool fullDataLineGrab(byte offset) noexcept {
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
