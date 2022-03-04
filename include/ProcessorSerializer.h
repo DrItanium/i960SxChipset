@@ -898,10 +898,13 @@ private:
     };
     template<byte count, byte index, MCP23x17Registers reg>
     static bool grab8Data(byte offset) noexcept {
+        bool isLast = false;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-        asm volatile ("nop");
         auto& request = transactions[count];
+        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+        {
+            isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(reg);
         {
@@ -916,17 +919,19 @@ private:
         latchedDataInput_.bytes[index] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         request.value = latchedDataInput_;
+        return isLast;
     }
     template<byte count>
-    static void upper8DataGrab(byte offset) noexcept {
-        grab8Data<count, 1, MCP23x17Registers::GPIOB>(offset);
+    static bool upper8DataGrab(byte offset) noexcept {
+        return grab8Data<count, 1, MCP23x17Registers::GPIOB>(offset);
     }
     template<byte count>
-    static void lower8DataGrab(byte offset) noexcept {
-        grab8Data<count, 0, MCP23x17Registers::GPIOA>(offset);
+    static bool lower8DataGrab(byte offset) noexcept {
+        return grab8Data<count, 0, MCP23x17Registers::GPIOA>(offset);
     }
     template<byte count>
-    static void fullDataLineGrab(byte offset) noexcept {
+    static bool fullDataLineGrab(byte offset) noexcept {
+        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
@@ -952,6 +957,7 @@ private:
         request.value.bytes[1] = upper;
         latchedDataInput_.bytes[1] = upper;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        return isLast;
     }
     template<byte count>
     [[nodiscard]]
@@ -959,7 +965,7 @@ private:
         // getDataBits will be expanded here
         if (forceUpdateLatchedDataInput_) {
             forceUpdateLatchedDataInput_ = false;
-            fullDataLineGrab<count>(offset);
+            return fullDataLineGrab<count>(offset);
         } else {
             static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
                                          pinToPortBit<i960Pinout::DATA_HI8_INT>();
@@ -971,20 +977,16 @@ private:
                     request.value = latchedDataInput_;
                     request.style = getStyle();
                     request.offset = count + offset;
-                    break;
+                    return DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 }
                 case DataUpdateKind::Upper8:
-                    upper8DataGrab<count>(offset);
-                    break;
+                    return upper8DataGrab<count>(offset);
                 case DataUpdateKind::Lower8:
-                    lower8DataGrab<count>(offset);
-                    break;
+                    return lower8DataGrab<count>(offset);
                 default:
-                    fullDataLineGrab<count>(offset);
-                    break;
+                    return fullDataLineGrab<count>(offset);
             }
         }
-        return DigitalPin<i960Pinout::BLAST_>::isAsserted();
     }
     template<byte count, typename C>
     static inline void commitTransactions(C& line) noexcept {
