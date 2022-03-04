@@ -845,11 +845,11 @@ private:
     }
     template<byte count>
     static bool upper8DataGrab(byte offset) noexcept {
-        return grab8Data<count, 1, MCP23x17Registers::GPIOB>(offset);
+        return grab8Data<count, 1, MCP23x17Registers::INTCAPB>(offset);
     }
     template<byte count>
     static bool lower8DataGrab(byte offset) noexcept {
-        return grab8Data<count, 0, MCP23x17Registers::GPIOA>(offset);
+        return grab8Data<count, 0, MCP23x17Registers::INTCAPA>(offset);
     }
     template<byte count>
     static bool fullDataLineGrab(byte offset) noexcept {
@@ -858,7 +858,7 @@ private:
         auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+        SPDR = static_cast<byte>(MCP23x17Registers::INTCAP);
         {
             request.style = getStyle();
         }
@@ -885,10 +885,10 @@ private:
     [[nodiscard]]
     static inline bool getDataBits(byte offset) noexcept {
         // getDataBits will be expanded here
-        if (forceUpdateLatchedDataInput_) {
-            forceUpdateLatchedDataInput_ = false;
-            return fullDataLineGrab<count>(offset);
-        } else {
+        //if (forceUpdateLatchedDataInput_) {
+        //    forceUpdateLatchedDataInput_ = false;
+        //    return fullDataLineGrab<count>(offset);
+        //} else {
             static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
                                          pinToPortBit<i960Pinout::DATA_HI8_INT>();
             auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
@@ -908,7 +908,7 @@ private:
                 default:
                     return fullDataLineGrab<count>(offset);
             }
-        }
+        //}
     }
     template<byte count, typename C>
     static inline void commitTransactions(C& line) noexcept {
