@@ -1094,6 +1094,8 @@ public:
             updateTargetFunctions<true>(0);
         }
     }
+    [[nodiscard]] static inline auto inRAMSpace() noexcept { return inRAMSpace_; }
+    [[nodiscard]] static inline auto inIOSpace() noexcept { return inIOSpace_; }
 private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
