@@ -889,6 +889,11 @@ private:
     [[gnu::always_inline]]
     static inline bool getDataBits(byte offset) noexcept {
         // getDataBits will be expanded here
+        static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
+                                     pinToPortBit<i960Pinout::DATA_HI8_INT>();
+        Serial.print(F("Interrupt Status: 0b"));
+        Serial.print(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask, BIN);
+        Serial.print(F(" -> 0x"));
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -908,10 +913,14 @@ private:
         SPDR = 0;
         {
             request.value.bytes[0] = lower;
+            latchedDataInput.bytes[0] = lower;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        request.value.bytes[1] = SPDR;
+        auto upper = SPDR;
+        request.value.bytes[1] = upper;
+        latchedDataInput.bytes[1] = upper;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        Serial.println(latchedDataInput.wholeValue_, HEX);
         return isLast;
     }
     template<byte count, typename C>
@@ -1126,6 +1135,7 @@ private:
     static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
+    static inline SplitWord16 latchedDataInput {0};
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
