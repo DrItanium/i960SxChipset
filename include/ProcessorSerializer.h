@@ -441,36 +441,12 @@ private:
 public:
     inline static void setupDataLinesForWrite() noexcept {
         if (!dataLinesDirection_) {
-            // okay so we have actually changed directions
             invertDataLinesDirection();
-            // We are constantly swapping between input and output with the data lines io expanders.
-            // It is necessary to assume that the input interrupt flags set during the previous write cycle
-            // are no longer valid. This makes it more expensive but always correct.
-            //
-            // The way the interrupt on pin change mode works on the MCP23S17 is very interesting.
-            // An pin change event causes the port contents to be copied into INTCAP. Until the
-            // interrupt is cleared (by reading GPIO or INTCAP) no further interrupt triggers can take
-            // place. According to the datasheet, "Pins defined as an output have no effect on the interrupt output pin."
-            // I take this to mean that INTA and INTB outputs are not affected by the GPIOs marked as OUTPUT. Only those
-            // pins marked as input factor into interrupt triggering.
-            //
-            // If we treat the data lines the same way we do for the address lines then the lazy approach to
-            // switching data lines direction causes a desync problem. Solving the problem may require that
-            // we disable interrupts in between. We could also switch over to reading INTCAP instead of GPIO for
-            // data line reads. That way we only clear interrupts when we need them.
-            //
-            // Reading from INTCAP didn't solve the issue either. We have to force a synchronization each time we change direction!
-            //forceUpdateLatchedDataInput_ = true;
         }
     }
     inline static void setupDataLinesForRead() noexcept {
         if (dataLinesDirection_) {
-            if (getDataLineInputUpdateKind() != DataUpdateKind::Neither) {
-                // We were in receive mode so read INTCAP to clear it out before we switch over if there is a need
-                read16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCAP>();
-            }
             invertDataLinesDirection();
-            //write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN>(0x0000);
         }
     }
 private:
@@ -1133,7 +1109,6 @@ private:
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput_ {0};
-    static inline bool forceUpdateLatchedDataInput_ = true;
     static inline bool inIOSpace_ = false;
     static inline bool inRAMSpace_ = false;
 };
