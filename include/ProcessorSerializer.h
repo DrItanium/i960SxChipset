@@ -430,10 +430,24 @@ private:
 public:
     inline static void setupDataLinesForWrite() noexcept {
         if (!dataLinesDirection_) {
+            // okay so we have actually changed directions
             invertDataLinesDirection();
+            // We are constantly swapping between input and output with the data lines io expanders.
+            // It is necessary to assume that the input interrupt flags set during the previous write cycle
+            // are no longer valid. This makes it more expensive but always correct.
+            //
+            // The way the interrupt on pin change mode works on the MCP23S17 is very interesting.
+            // An pin change event causes the port contents to be copied into INTCAP. Until the
+            // interrupt is cleared (by reading GPIO or INTCAP) no further interrupt triggers can take
+            // place. According to the datasheet, "Pins defined as an output have no effect on the interrupt output pin."
+            // I take this to mean that INTA and INTB outputs are not affected by the GPIOs marked as OUTPUT. Only those
+            // pins marked as input factor into interrupt triggering.
+            //
+            // If we treat the data lines the same way we do for the address lines then the lazy approach to
+            // switching data lines direction causes a desync problem. Solving the problem may require that
+            // we disable interrupts in between. We could also switch over to reading INTCAP instead of GPIO for
+            // data line reads. That way we only clear interrupts when we need them.
             forceUpdateLatchedDataInput_ = true;
-            // okay now we need to just go ahead and update data latch contents regardless if there is an interrupt or not
-            //write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN>(0xFFFF);
         }
     }
     inline static void setupDataLinesForRead() noexcept {
@@ -458,9 +472,7 @@ private:
      */
     template<bool useInterrupts>
     static AddressUpdateKind getUpdateKind() noexcept {
-        if constexpr (!useInterrupts) {
-            return AddressUpdateKind::Full32;
-        } else {
+        if constexpr (useInterrupts) {
             if constexpr (TargetBoard::onAtmega1284p_Type1()) {
                 // enable address mirroring on address lines to free up two pins, we bind those to IOEXP_INT2 and IOEXP_INT3
 
@@ -469,10 +481,10 @@ private:
                 // even though three of the four pins are actually in use, I want to eventually diagnose the problem itself
                 // so this code is ready for that day
                 return static_cast<AddressUpdateKind>(getAssociatedInputPort<i960Pinout::ADDRESS_LO_INT>() & Mask);
-            } else {
-                return AddressUpdateKind::Full32;
             }
         }
+        // otherwise we want to always do a full 32-bit address update
+        return AddressUpdateKind::Full32;
     }
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
