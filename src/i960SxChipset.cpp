@@ -317,6 +317,7 @@ void setup() {
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
+    ProcessorInterface::activateDataLineInterrupts();
     Serial.println(F("SYSTEM BOOT SUCCESSFUL!"));
 }
 // ----------------------------------------------------------------

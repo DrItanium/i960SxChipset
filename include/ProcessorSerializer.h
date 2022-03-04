@@ -316,15 +316,20 @@ public:
             write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
-            // enable interrupts for accelerating write operations in the future
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0x0000) ;
             // setup the direction pins in the
             writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
             // write the default value out to the latch to start with
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
+            // enable interrupts for accelerating write operations in the future
             SPI.endTransaction();
         }
+    }
+    static void activateDataLineInterrupts() noexcept {
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0x0000) ;
+        write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+        latchedDataInput = read16<IOExpanderAddress::DataLines, MCP23x17Registers::GPIO, false>();
+        SPI.endTransaction();
     }
     /**
      * @brief Get the address for the current transaction
@@ -890,6 +895,8 @@ private:
         Lower8 = pinToPortBit<i960Pinout::DATA_HI8_INT>(),
         Neither = pinToPortBit<i960Pinout::DATA_LO8_INT>() | pinToPortBit<i960Pinout::DATA_HI8_INT>(),
     };
+
+
     template<byte count>
     [[nodiscard]]
     [[gnu::always_inline]]
@@ -900,8 +907,6 @@ private:
         auto& request = transactions[count];
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
-        Serial.print(F("STATUS: 0b"));
-        Serial.println(static_cast<byte>(status), BIN);
         if (status == DataUpdateKind::Neither && count > 0) {
             // to start with, don't access the io expander lines when no change is detected otherwise do the full thing
             request.style = getStyle();
@@ -1136,7 +1141,7 @@ public:
 private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
-    static inline byte dataLinesDirection_ = 0xFF;
+    static inline byte dataLinesDirection_ = 0;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
     static inline bool initialDispatchFunctionsInitialized_ = false;
