@@ -318,18 +318,23 @@ public:
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             // setup the direction pins in the
             writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
+            // configure INTCON to be the correct action
+            write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0x0000) ;
+            // disable all interrupts for now
+            write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0x0000) ;
             // write the default value out to the latch to start with
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
+            dataLineInterruptsActive_ = false;
             // enable interrupts for accelerating write operations in the future
             SPI.endTransaction();
         }
     }
     static void activateDataLineInterrupts() noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0x0000) ;
         write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
         latchedDataInput = read16<IOExpanderAddress::DataLines, MCP23x17Registers::GPIO, false>();
         SPI.endTransaction();
+        dataLineInterruptsActive_ = true;
     }
     /**
      * @brief Get the address for the current transaction
@@ -1153,6 +1158,7 @@ private:
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput {0};
+    static inline bool dataLineInterruptsActive_ = false;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
