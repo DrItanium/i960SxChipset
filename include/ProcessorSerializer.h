@@ -884,44 +884,58 @@ private:
         }
     };
     static inline CacheWriteRequest transactions[8];
+    enum class DataUpdateKind : byte {
+        Full16 = 0,
+        Upper8 = pinToPortBit<i960Pinout::DATA_LO8_INT>(),
+        Lower8 = pinToPortBit<i960Pinout::DATA_HI8_INT>(),
+        Neither = pinToPortBit<i960Pinout::DATA_LO8_INT>() | pinToPortBit<i960Pinout::DATA_HI8_INT>(),
+    };
     template<byte count>
     [[nodiscard]]
     [[gnu::always_inline]]
     static inline bool getDataBits(byte offset) noexcept {
         // getDataBits will be expanded here
+        auto doFullTransfer = [](auto& request, byte offset) {
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+            {
+                request.style = getStyle();
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = 0;
+            {
+                request.offset = offset + count;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto lower = SPDR;
+            SPDR = 0;
+            {
+                request.value.bytes[0] = lower;
+                latchedDataInput.bytes[0] = lower;
+            }
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto upper = SPDR;
+            request.value.bytes[1] = upper;
+            latchedDataInput.bytes[1] = upper;
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            return isLast;
+        };
         static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
                                      pinToPortBit<i960Pinout::DATA_HI8_INT>();
-        Serial.print(F("Interrupt Status: 0b"));
-        Serial.print(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask, BIN);
-        Serial.print(F(" -> 0x"));
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         auto& request = transactions[count];
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-        {
-            request.style = getStyle();
+        switch (static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask)) {
+            // to start with, don't access the io expander lines when no change is detected otherwise do the full thing
+            case DataUpdateKind::Neither:
+                request.style = getStyle();
+                request.offset = offset + count;
+                request.value = latchedDataInput;
+                return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            default:
+                return doFullTransfer(request, offset);
         }
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        {
-            request.offset = offset + count;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lower = SPDR;
-        SPDR = 0;
-        {
-            request.value.bytes[0] = lower;
-            latchedDataInput.bytes[0] = lower;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto upper = SPDR;
-        request.value.bytes[1] = upper;
-        latchedDataInput.bytes[1] = upper;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        Serial.println(latchedDataInput.wholeValue_, HEX);
-        return isLast;
     }
     template<byte count, typename C>
     static inline void commitTransactions(C& line) noexcept {
