@@ -31,13 +31,6 @@ using Address = uint32_t;
 /**
  * @brief Sx Load/Store styles that the processor will request
  */
-enum class LoadStoreStyle : uint8_t {
-    // based off of BE0,BE1 pins
-    Full16 = 0,
-    Upper8,
-    Lower8,
-    None,
-};
 enum class i960Pinout : int {
 #ifdef CHIPSET_TYPE1
 #include "Type1Pinout.def"
@@ -501,6 +494,13 @@ public:
     static_assert(DigitalPin<pinId>::isOutputPin());
     PinAsserter() { DigitalPin<pinId>::assertPin(); }
     ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
+};
+enum class LoadStoreStyle : uint8_t {
+    // based off of BE0,BE1 pins
+    Full16 = 0,
+    Upper8 = pinToPortBit<i960Pinout::BE0>(),
+    Lower8 = pinToPortBit<i960Pinout::BE1>(),
+    None = pinToPortBit<i960Pinout::BE0>() | pinToPortBit<i960Pinout::BE1>(),
 };
 
 #endif //ARDUINO_PINOUT_H
