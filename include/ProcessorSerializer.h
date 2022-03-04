@@ -427,6 +427,17 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
+    enum class DataUpdateKind : byte {
+        Full16 = 0,
+        Upper8 = pinToPortBit<i960Pinout::DATA_LO8_INT>(),
+        Lower8 = pinToPortBit<i960Pinout::DATA_HI8_INT>(),
+        Neither = pinToPortBit<i960Pinout::DATA_LO8_INT>() | pinToPortBit<i960Pinout::DATA_HI8_INT>(),
+    };
+    static inline DataUpdateKind getDataLineInputUpdateKind() noexcept {
+        static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
+                                     pinToPortBit<i960Pinout::DATA_HI8_INT>();
+        return static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
+    }
 public:
     inline static void setupDataLinesForWrite() noexcept {
         if (!dataLinesDirection_) {
@@ -454,8 +465,10 @@ public:
     }
     inline static void setupDataLinesForRead() noexcept {
         if (dataLinesDirection_) {
-            // We were in receive mode so read INTCAP
-            read16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCAP>();
+            if (getDataLineInputUpdateKind() != DataUpdateKind::Neither) {
+                // We were in receive mode so read INTCAP to clear it out before we switch over if there is a need
+                read16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCAP>();
+            }
             invertDataLinesDirection();
             //write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN>(0x0000);
         }
@@ -816,12 +829,6 @@ private:
         }
     };
     static inline CacheWriteRequest transactions[8];
-    enum class DataUpdateKind : byte {
-        Full16 = 0,
-        Upper8 = pinToPortBit<i960Pinout::DATA_LO8_INT>(),
-        Lower8 = pinToPortBit<i960Pinout::DATA_HI8_INT>(),
-        Neither = pinToPortBit<i960Pinout::DATA_LO8_INT>() | pinToPortBit<i960Pinout::DATA_HI8_INT>(),
-    };
     template<byte count, byte index, MCP23x17Registers reg>
     static bool grab8Data(byte offset) noexcept {
         bool isLast = false;
@@ -889,15 +896,11 @@ private:
     [[nodiscard]]
     static inline bool getDataBits(byte offset) noexcept {
         // getDataBits will be expanded here
-        if (forceUpdateLatchedDataInput_) {
-            forceUpdateLatchedDataInput_ = false;
-            return fullDataLineGrab<count>(offset);
-        } else {
-            static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
-                                         pinToPortBit<i960Pinout::DATA_HI8_INT>();
-            auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
-            //SplitWord16 oldLatchedContents(latchedDataInput_);
-            switch (status) {
+        //if (forceUpdateLatchedDataInput_) {
+        //    forceUpdateLatchedDataInput_ = false;
+        //    return fullDataLineGrab<count>(offset);
+        //} else {
+            switch (getDataLineInputUpdateKind()) {
                 case DataUpdateKind::Neither: {
                     auto &request = transactions[count];
                     request.value = latchedDataInput_;
@@ -912,7 +915,7 @@ private:
                 default:
                     return fullDataLineGrab<count>(offset);
             }
-        }
+        //}
     }
     template<byte count, typename C>
     static inline void commitTransactions(C& line) noexcept {
