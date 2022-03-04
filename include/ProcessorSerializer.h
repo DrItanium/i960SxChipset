@@ -905,13 +905,7 @@ private:
         auto& request = transactions[count];
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
-        Serial.print(F("DataUpdateKind: 0b"));
-        Serial.println(static_cast<byte>(status), BIN);
-        if (status == DataUpdateKind::Neither) {
-            Serial.println(F("\tNeither"));
-            Serial.print(F("\tCurrent Latched Contents: 0x"));
-            Serial.println(latchedDataInput_.getWholeValue(), HEX);
-        }
+        SplitWord16 oldLatchedContents(latchedDataInput_);
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         while (!(SPSR & _BV(SPIF))); // wait
@@ -937,8 +931,14 @@ private:
         latchedDataInput_.bytes[1] = upper;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (status == DataUpdateKind::Neither) {
-            Serial.print(F("\tNew Latched Contents: 0x"));
-            Serial.println(latchedDataInput_.getWholeValue(), HEX);
+            if (oldLatchedContents.getWholeValue() != latchedDataInput_.getWholeValue()) {
+                Serial.println(F("\tNeither"));
+                Serial.print(F("\tCurrent Latched Contents: 0x"));
+                Serial.println(oldLatchedContents.getWholeValue(), HEX);
+                Serial.print(F("\tNew Latched Contents: 0x"));
+                Serial.println(latchedDataInput_.getWholeValue(), HEX);
+                Serial.println(F("\tMISMATCH!!!"));
+            }
         }
         return isLast;
     }
