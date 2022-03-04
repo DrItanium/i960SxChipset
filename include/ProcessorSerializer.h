@@ -449,11 +449,13 @@ public:
             // data line reads. That way we only clear interrupts when we need them.
             //
             // Reading from INTCAP didn't solve the issue either. We have to force a synchronization each time we change direction!
-            forceUpdateLatchedDataInput_ = true;
+            //forceUpdateLatchedDataInput_ = true;
         }
     }
     inline static void setupDataLinesForRead() noexcept {
         if (dataLinesDirection_) {
+            // We were in receive mode so read INTCAP
+            read16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCAP>();
             invertDataLinesDirection();
             //write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN>(0x0000);
         }
