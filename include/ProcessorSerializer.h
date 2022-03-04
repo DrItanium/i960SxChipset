@@ -894,12 +894,14 @@ private:
     }
     template<byte count>
     [[nodiscard]]
-    static inline bool getDataBits(byte offset) noexcept {
+    [[gnu::noinline]]
+    static bool getDataBits(byte offset) noexcept {
         // getDataBits will be expanded here
         //if (forceUpdateLatchedDataInput_) {
         //    forceUpdateLatchedDataInput_ = false;
         //    return fullDataLineGrab<count>(offset);
         //} else {
+        {
             switch (getDataLineInputUpdateKind()) {
                 case DataUpdateKind::Neither: {
                     auto &request = transactions[count];
@@ -915,6 +917,7 @@ private:
                 default:
                     return fullDataLineGrab<count>(offset);
             }
+        }
         //}
     }
     template<byte count, typename C>
