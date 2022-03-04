@@ -283,6 +283,8 @@ public:
     ProcessorInterface& operator=(const ProcessorInterface&) = delete;
     ProcessorInterface& operator=(ProcessorInterface&&) = delete;
 public:
+    [[nodiscard]] static inline auto inRAMSpace() noexcept { return DigitalPin<i960Pinout::RAM_SPACE_>::isAsserted(); }
+    [[nodiscard]] static inline auto inIOSpace() noexcept { return DigitalPin<i960Pinout::IO_SPACE_>::isAsserted(); }
     /**
      * @brief Setup the processor interface on chipset startup.
      */
@@ -498,14 +500,10 @@ private:
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-        {
-            inRAMSpace_ = DigitalPin<i960Pinout::RAM_SPACE_>::isAsserted();
-        }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
-        {
-            inIOSpace_ = DigitalPin<i960Pinout::IO_SPACE_>::isAsserted();
-        }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         auto higher = SPDR;
         SPDR = 0;
@@ -565,14 +563,10 @@ private:
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
-        {
-            inRAMSpace_ = DigitalPin<i960Pinout::RAM_SPACE_>::isAsserted();
-        }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-        {
-            inIOSpace_ = DigitalPin<i960Pinout::IO_SPACE_>::isAsserted();
-        }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
@@ -600,14 +594,10 @@ private:
         // only read the upper 16-bits
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
-        {
-            inRAMSpace_ = DigitalPin<i960Pinout::RAM_SPACE_>::isAsserted();
-        }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-        {
-            inIOSpace_ = DigitalPin<i960Pinout::IO_SPACE_>::isAsserted();
-        }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
@@ -1094,8 +1084,6 @@ public:
             updateTargetFunctions<true>(0);
         }
     }
-    [[nodiscard]] static inline auto inRAMSpace() noexcept { return inRAMSpace_; }
-    [[nodiscard]] static inline auto inIOSpace() noexcept { return inIOSpace_; }
 private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
@@ -1111,8 +1099,6 @@ private:
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput_ {0};
-    static inline bool inIOSpace_ = false;
-    static inline bool inRAMSpace_ = false;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
