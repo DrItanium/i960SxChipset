@@ -301,7 +301,7 @@ public:
             // mirror the interrupts on the lower 16-bits to free up two pins at the cost of update accuracy
             // we want two separate pins free for the data lines io expander
             // we want mirroring on the data lines interrupts
-            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(0b0100'1000);
+            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             write8<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
             write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
             write8<ProcessorInterface::IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
@@ -319,10 +319,8 @@ public:
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             // setup the direction pins in the
             writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
-            // configure INTCON to be a comparison against zero
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0xFFFF) ;
-            // If we get zero then no need to transfer it out.
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::DEFVAL, false>(0);
+            // configure INTCON to be compare against previous value
+            write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0) ;
             // disable all interrupts for now
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             // write the default value out to the latch to start with
@@ -907,34 +905,40 @@ private:
         auto& request = transactions[count];
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
+        Serial.print(F("DataUpdateKind: 0b"));
+        Serial.println(static_cast<byte>(status), BIN);
         if (status == DataUpdateKind::Neither) {
-            // if we get a neither state then the value being provided is zero so skip ahead
+            Serial.println(F("\tNeither"));
+            Serial.print(F("\tCurrent Latched Contents: 0x"));
+            Serial.println(latchedDataInput_.getWholeValue(), HEX);
+        }
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+        {
             request.style = getStyle();
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        {
             request.offset = offset + count;
-            request.value.wholeValue_ = 0;
-        } else {
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-            {
-                request.style = getStyle();
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = 0;
-            {
-                request.offset = offset + count;
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            auto lower = SPDR;
-            SPDR = 0;
-            {
-                request.value.bytes[0] = lower;
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            auto upper = SPDR;
-            request.value.bytes[1] = upper;
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto lower = SPDR;
+        SPDR = 0;
+        {
+            request.value.bytes[0] = lower;
+            latchedDataInput_.bytes[0] = lower;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto upper = SPDR;
+        request.value.bytes[1] = upper;
+        latchedDataInput_.bytes[1] = upper;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if (status == DataUpdateKind::Neither) {
+            Serial.print(F("\tNew Latched Contents: 0x"));
+            Serial.println(latchedDataInput_.getWholeValue(), HEX);
         }
         return isLast;
     }
@@ -1150,6 +1154,7 @@ private:
     static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
+    static inline SplitWord16 latchedDataInput_ {0};
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
