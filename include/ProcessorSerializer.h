@@ -300,7 +300,8 @@ public:
             // mirror the interrupts for the upper 16-bits, for some reason, the upper most 8-bits are never marked as changed
             // mirror the interrupts on the lower 16-bits to free up two pins at the cost of update accuracy
             // we want two separate pins free for the data lines io expander
-            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+            // we want mirroring on the data lines interrupts
+            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(0b0100'1000);
             write8<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
             write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
             write8<ProcessorInterface::IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
@@ -318,23 +319,17 @@ public:
             write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             // setup the direction pins in the
             writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
-            // configure INTCON to be the correct action
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0x0000) ;
+            // configure INTCON to be a comparison against zero
+            write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0xFFFF) ;
+            // If we get zero then no need to transfer it out.
+            write16<IOExpanderAddress::DataLines, MCP23x17Registers::DEFVAL, false>(0);
             // disable all interrupts for now
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0x0000) ;
+            write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             // write the default value out to the latch to start with
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
-            dataLineInterruptsActive_ = false;
             // enable interrupts for accelerating write operations in the future
             SPI.endTransaction();
         }
-    }
-    static void activateDataLineInterrupts() noexcept {
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-        latchedDataInput = read16<IOExpanderAddress::DataLines, MCP23x17Registers::GPIO, false>();
-        SPI.endTransaction();
-        dataLineInterruptsActive_ = true;
     }
     /**
      * @brief Get the address for the current transaction
@@ -912,11 +907,11 @@ private:
         auto& request = transactions[count];
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
-        if (status == DataUpdateKind::Neither && count > 0) {
-            // to start with, don't access the io expander lines when no change is detected otherwise do the full thing
+        if (status == DataUpdateKind::Neither) {
+            // if we get a neither state then the value being provided is zero so skip ahead
             request.style = getStyle();
             request.offset = offset + count;
-            request.value = latchedDataInput;
+            request.value.wholeValue_ = 0;
         } else {
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
             SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
@@ -935,12 +930,10 @@ private:
             SPDR = 0;
             {
                 request.value.bytes[0] = lower;
-                latchedDataInput.bytes[0] = lower;
             }
             while (!(SPSR & _BV(SPIF))); // wait
             auto upper = SPDR;
             request.value.bytes[1] = upper;
-            latchedDataInput.bytes[1] = upper;
             digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         }
         return isLast;
@@ -1157,8 +1150,6 @@ private:
     static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
-    static inline SplitWord16 latchedDataInput {0};
-    static inline bool dataLineInterruptsActive_ = false;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
