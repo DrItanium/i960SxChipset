@@ -447,6 +447,8 @@ public:
             // switching data lines direction causes a desync problem. Solving the problem may require that
             // we disable interrupts in between. We could also switch over to reading INTCAP instead of GPIO for
             // data line reads. That way we only clear interrupts when we need them.
+            //
+            // Reading from INTCAP didn't solve the issue either. We have to force a synchronization each time we change direction!
             forceUpdateLatchedDataInput_ = true;
         }
     }
@@ -845,11 +847,11 @@ private:
     }
     template<byte count>
     static bool upper8DataGrab(byte offset) noexcept {
-        return grab8Data<count, 1, MCP23x17Registers::INTCAPB>(offset);
+        return grab8Data<count, 1, MCP23x17Registers::GPIOB>(offset);
     }
     template<byte count>
     static bool lower8DataGrab(byte offset) noexcept {
-        return grab8Data<count, 0, MCP23x17Registers::INTCAPA>(offset);
+        return grab8Data<count, 0, MCP23x17Registers::GPIOA>(offset);
     }
     template<byte count>
     static bool fullDataLineGrab(byte offset) noexcept {
@@ -858,7 +860,7 @@ private:
         auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = static_cast<byte>(MCP23x17Registers::INTCAP);
+        SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
         {
             request.style = getStyle();
         }
@@ -885,10 +887,10 @@ private:
     [[nodiscard]]
     static inline bool getDataBits(byte offset) noexcept {
         // getDataBits will be expanded here
-        //if (forceUpdateLatchedDataInput_) {
-        //    forceUpdateLatchedDataInput_ = false;
-        //    return fullDataLineGrab<count>(offset);
-        //} else {
+        if (forceUpdateLatchedDataInput_) {
+            forceUpdateLatchedDataInput_ = false;
+            return fullDataLineGrab<count>(offset);
+        } else {
             static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
                                          pinToPortBit<i960Pinout::DATA_HI8_INT>();
             auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
@@ -908,7 +910,7 @@ private:
                 default:
                     return fullDataLineGrab<count>(offset);
             }
-        //}
+        }
     }
     template<byte count, typename C>
     static inline void commitTransactions(C& line) noexcept {
