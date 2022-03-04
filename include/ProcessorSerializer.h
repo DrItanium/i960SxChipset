@@ -321,7 +321,6 @@ public:
             writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
             // configure INTCON to be compare against previous value
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0) ;
-            // disable all interrupts for now
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             // write the default value out to the latch to start with
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
@@ -432,11 +431,15 @@ public:
     inline static void setupDataLinesForWrite() noexcept {
         if (!dataLinesDirection_) {
             invertDataLinesDirection();
+            forceUpdateLatchedDataInput_ = true;
+            // okay now we need to just go ahead and update data latch contents regardless if there is an interrupt or not
+            //write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN>(0xFFFF);
         }
     }
     inline static void setupDataLinesForRead() noexcept {
         if (dataLinesDirection_) {
             invertDataLinesDirection();
+            //write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN>(0x0000);
         }
     }
 private:
@@ -893,20 +896,42 @@ private:
         Lower8 = pinToPortBit<i960Pinout::DATA_HI8_INT>(),
         Neither = pinToPortBit<i960Pinout::DATA_LO8_INT>() | pinToPortBit<i960Pinout::DATA_HI8_INT>(),
     };
-
-
-    template<byte count>
-    [[nodiscard]]
-    [[gnu::always_inline]]
-    static inline bool getDataBits(byte offset) noexcept {
-        // getDataBits will be expanded here
-        static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
-                                     pinToPortBit<i960Pinout::DATA_HI8_INT>();
-        auto& request = transactions[count];
+    template<byte count, byte index, MCP23x17Registers reg>
+    static bool grab8Data(byte offset) noexcept {
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-        auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
-        SplitWord16 oldLatchedContents(latchedDataInput_);
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        auto& request = transactions[count];
+        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = static_cast<byte>(reg);
+        {
+            request.style = getStyle();
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        {
+            request.offset = offset + count;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto upper = SPDR;
+        request.value.bytes[index] = upper;
+        latchedDataInput_.bytes[index] = upper;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        return isLast;
+    }
+    template<byte count>
+    static bool upper8DataGrab(byte offset) noexcept {
+        return grab8Data<count, 1, MCP23x17Registers::GPIOB>(offset);
+    }
+    template<byte count>
+    static bool lower8DataGrab(byte offset) noexcept {
+        return grab8Data<count, 0, MCP23x17Registers::GPIOA>(offset);
+    }
+    template<byte count>
+    static bool fullDataLineGrab(byte offset) noexcept {
+        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -930,17 +955,35 @@ private:
         request.value.bytes[1] = upper;
         latchedDataInput_.bytes[1] = upper;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        if (status == DataUpdateKind::Neither) {
-            if (oldLatchedContents.getWholeValue() != latchedDataInput_.getWholeValue()) {
-                Serial.println(F("\tNeither"));
-                Serial.print(F("\tCurrent Latched Contents: 0x"));
-                Serial.println(oldLatchedContents.getWholeValue(), HEX);
-                Serial.print(F("\tNew Latched Contents: 0x"));
-                Serial.println(latchedDataInput_.getWholeValue(), HEX);
-                Serial.println(F("\tMISMATCH!!!"));
-            }
-        }
         return isLast;
+    }
+    template<byte count>
+    [[nodiscard]]
+    static inline bool getDataBits(byte offset) noexcept {
+        // getDataBits will be expanded here
+        if (forceUpdateLatchedDataInput_) {
+            forceUpdateLatchedDataInput_ = false;
+            return fullDataLineGrab<count>(offset);
+        }
+        static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
+                                     pinToPortBit<i960Pinout::DATA_HI8_INT>();
+        auto status = static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
+        //SplitWord16 oldLatchedContents(latchedDataInput_);
+        switch (status) {
+            case DataUpdateKind::Neither: {
+                auto& request = transactions[count];
+                request.value = latchedDataInput_;
+                request.style = getStyle();
+                request.offset = count + offset;
+                return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            }
+            case DataUpdateKind::Upper8:
+                return upper8DataGrab<count>(offset);
+            case DataUpdateKind::Lower8:
+                return lower8DataGrab<count>(offset);
+            default:
+                return fullDataLineGrab<count>(offset);
+        }
     }
     template<byte count, typename C>
     static inline void commitTransactions(C& line) noexcept {
@@ -1155,6 +1198,7 @@ private:
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput_ {0};
+    static inline bool forceUpdateLatchedDataInput_ = true;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
