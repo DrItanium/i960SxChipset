@@ -987,48 +987,56 @@ public:
     static inline void performExternalDeviceWrite() noexcept {
         // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
         // so you may still be reading the previous i960 cycle state!
+        bool isLast;
         for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
-            bool isLast;
-            LoadStoreStyle currLSS;
-            SplitWord16 dataBits;
-            byte pageIndex;
-            // getDataBits will be expanded here
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-            {
+            if (auto kind = getDataLineInputUpdateKind(); kind == DataUpdateKind::Neither) {
                 isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                T::write(getPageIndex(),
+                         pageOffset,
+                         getStyle(),
+                         latchedDataInput_);
+            } else {
+                LoadStoreStyle currLSS ;
+                SplitWord16 dataBits;
+                byte pageIndex;
+                // getDataBits will be expanded here
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                {
+                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO) ;
+                {
+                    currLSS = getStyle();
+                }
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = 0;
+                {
+                    pageIndex = getPageIndex();
+                }
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                auto lower = SPDR;
+                SPDR = 0;
+                {
+                    dataBits.bytes[0] = lower;
+                }
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                dataBits.bytes[1] = SPDR;
+                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                if constexpr (inDebugMode) {
+                    Serial.print(F("\tPage Index: 0x"));
+                    Serial.println(pageIndex, HEX);
+                    Serial.print(F("\tPage Offset: 0x"));
+                    Serial.println(pageOffset, HEX);
+                    Serial.print(F("\tData To Write: 0x"));
+                    Serial.println(dataBits.getWholeValue(), HEX);
+                }
+                T::write(pageIndex,
+                         pageOffset,
+                         currLSS,
+                         dataBits);
             }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::GPIO) ;
-            {
-                currLSS = getStyle();
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            SPDR = 0;
-            {
-                pageIndex = getPageIndex();
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            auto lower = SPDR;
-            SPDR = 0;
-            {
-                dataBits.bytes[0] = lower;
-            }
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            dataBits.bytes[1] = SPDR;
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x"));
-                Serial.println(pageIndex, HEX);
-                Serial.print(F("\tPage Offset: 0x"));
-                Serial.println(pageOffset, HEX);
-                Serial.print(F("\tData To Write: 0x"));
-                Serial.println(dataBits.getWholeValue(), HEX);
-            }
-            T::write(pageIndex,
-                     pageOffset,
-                     currLSS,
-                     dataBits);
             // we could actually pulse the cpu and then perform the write, unsure at this point
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
