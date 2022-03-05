@@ -1014,14 +1014,26 @@ public:
                     while (!(SPSR & _BV(SPIF))) ; // wait
                     latchedDataInput_.bytes[0] = SPDR;
                     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                    if constexpr (inDebugMode) {
-                        Serial.print(F("\tPage Index: 0x"));
-                        Serial.println(pageIndex, HEX);
-                        Serial.print(F("\tPage Offset: 0x"));
-                        Serial.println(pageOffset, HEX);
-                        Serial.print(F("\tData To Write: 0x"));
-                        Serial.println(latchedDataInput_.getWholeValue(), HEX);
+                    break;
+                }
+                case DataUpdateKind::Upper8: {
+                    // getDataBits will be expanded here
+                    digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                    SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                    asm volatile ("nop");
+                    while (!(SPSR & _BV(SPIF))) ; // wait
+                    SPDR = static_cast<byte>(MCP23x17Registers::GPIOB) ;
+                    {
+                        currLSS = getStyle();
                     }
+                    while (!(SPSR & _BV(SPIF))) ; // wait
+                    SPDR = 0;
+                    {
+                        pageIndex = getPageIndex();
+                    }
+                    while (!(SPSR & _BV(SPIF))) ; // wait
+                    latchedDataInput_.bytes[1] = SPDR;
+                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
                     break;
                 }
                 default: {
@@ -1048,16 +1060,16 @@ public:
                     while (!(SPSR & _BV(SPIF))) ; // wait
                     latchedDataInput_.bytes[1] = SPDR;
                     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                    if constexpr (inDebugMode) {
-                        Serial.print(F("\tPage Index: 0x"));
-                        Serial.println(pageIndex, HEX);
-                        Serial.print(F("\tPage Offset: 0x"));
-                        Serial.println(pageOffset, HEX);
-                        Serial.print(F("\tData To Write: 0x"));
-                        Serial.println(latchedDataInput_.getWholeValue(), HEX);
-                    }
                     break;
                 }
+            }
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tPage Index: 0x"));
+                Serial.println(pageIndex, HEX);
+                Serial.print(F("\tPage Offset: 0x"));
+                Serial.println(pageOffset, HEX);
+                Serial.print(F("\tData To Write: 0x"));
+                Serial.println(latchedDataInput_.getWholeValue(), HEX);
             }
             T::write(pageIndex,
                      pageOffset,
