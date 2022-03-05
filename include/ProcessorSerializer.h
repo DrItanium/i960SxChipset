@@ -834,6 +834,7 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+        asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
         {
