@@ -374,8 +374,11 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
     }
 }
 
+using DispatchTable = BodyFunction[256];
 extern DispatchTable lookupTableRead_Debug;
 extern DispatchTable lookupTableWrite_Debug;
+extern DispatchTable lookupTableRead;
+extern DispatchTable lookupTableWrite;
 template<typename T>
 void
 registerExternalDeviceWithLookupTable() noexcept {
@@ -439,6 +442,13 @@ getDebugWriteBody(byte index) noexcept {
     } else {
         return ProcessorInterface::performFallbackWrite;
     }
+}
+BodyFunction
+getNonDebugReadBody(byte index) noexcept {
+    return lookupTableRead[index];
+}
+BodyFunction getNonDebugWriteBody(byte index) noexcept {
+    return lookupTableWrite[index];
 }
 
 SdFat SD;

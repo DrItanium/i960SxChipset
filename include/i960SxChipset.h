@@ -30,11 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SXCHIPSET_I960SXCHIPSET_H
 
 using BodyFunction = void (*)();
-using DispatchTable = BodyFunction[256];
-extern DispatchTable lookupTableRead;
-extern DispatchTable lookupTableWrite;
-inline BodyFunction getNonDebugReadBody(byte index) noexcept { return lookupTableRead[index]; }
-inline BodyFunction getNonDebugWriteBody(byte index) noexcept { return lookupTableWrite[index]; }
+BodyFunction getNonDebugReadBody(byte index) noexcept;
+BodyFunction getNonDebugWriteBody(byte index) noexcept;
 BodyFunction getDebugReadBody(byte index) noexcept;
 BodyFunction getDebugWriteBody(byte index) noexcept;
 
