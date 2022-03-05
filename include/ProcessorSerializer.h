@@ -989,12 +989,10 @@ public:
         // so you may still be reading the previous i960 cycle state!
         bool isLast;
         LoadStoreStyle currLSS ;
-        SplitWord16 dataBits;
         byte pageIndex;
         for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
             if (auto kind = getDataLineInputUpdateKind(); kind == DataUpdateKind::Neither) {
                 isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                dataBits = latchedDataInput_;
                 currLSS = getStyle();
                 pageIndex = getPageIndex();
             } else {
@@ -1018,10 +1016,10 @@ public:
                 auto lower = SPDR;
                 SPDR = 0;
                 {
-                    dataBits.bytes[0] = lower;
+                    latchedDataInput_.bytes[0] = lower;
                 }
                 while (!(SPSR & _BV(SPIF))) ; // wait
-                dataBits.bytes[1] = SPDR;
+                latchedDataInput_.bytes[1] = SPDR;
                 digitalWrite<i960Pinout::GPIOSelect, HIGH>();
                 if constexpr (inDebugMode) {
                     Serial.print(F("\tPage Index: 0x"));
@@ -1029,13 +1027,13 @@ public:
                     Serial.print(F("\tPage Offset: 0x"));
                     Serial.println(pageOffset, HEX);
                     Serial.print(F("\tData To Write: 0x"));
-                    Serial.println(dataBits.getWholeValue(), HEX);
+                    Serial.println(latchedDataInput_.getWholeValue(), HEX);
                 }
             }
             T::write(pageIndex,
                      pageOffset,
                      currLSS,
-                     dataBits);
+                     latchedDataInput_);
             // we could actually pulse the cpu and then perform the write, unsure at this point
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
