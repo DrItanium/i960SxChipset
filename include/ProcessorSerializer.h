@@ -987,21 +987,18 @@ public:
     static inline void performExternalDeviceWrite() noexcept {
         // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
         // so you may still be reading the previous i960 cycle state!
-        bool isLast;
-        LoadStoreStyle currLSS ;
-        byte pageIndex;
         for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
+            bool isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            LoadStoreStyle currLSS ;
+            byte pageIndex;
             if (auto kind = getDataLineInputUpdateKind(); kind == DataUpdateKind::Neither) {
-                isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 currLSS = getStyle();
                 pageIndex = getPageIndex();
             } else {
                 // getDataBits will be expanded here
                 digitalWrite<i960Pinout::GPIOSelect, LOW>();
                 SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-                {
-                    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                }
+                asm volatile ("nop");
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO) ;
                 {
