@@ -830,11 +830,10 @@ private:
     }
     template<byte count>
     static bool fullDataLineGrab(byte offset) noexcept {
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-        asm volatile ("nop"); // make sure that we actually create a synchronization point
-        auto& request = transactions[count];
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        auto& request = transactions[count];
+        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
         {
