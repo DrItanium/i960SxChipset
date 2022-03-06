@@ -33,9 +33,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenFileHandle.h"
 #include <SdFat.h>
 extern SdFat SD;
-template<Address startAddress>
+template<Address startAddress, Address maxFileCount = MaximumNumberOfOpenFiles>
 class SDCardInterface {
 public:
+    static constexpr auto MaximumNumberOfFiles = maxFileCount;
     static constexpr auto StartAddress = startAddress;
     static constexpr auto ControlBaseAddress = startAddress;
     static constexpr auto ControlEndAddress = ControlBaseAddress + 0x100;
