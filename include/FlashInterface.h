@@ -1,6 +1,6 @@
 /*
 i960SxChipset
-Copyright (c) 2020-2021, Joshua Scoggins
+Copyright (c) 2020-2022, Joshua Scoggins
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -23,48 +23,54 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 //
-// Created by jwscoggins on 12/9/21.
+// Created by jwscoggins on 3/5/22.
 //
 
-#ifndef SXCHIPSET_TYPE1PSRAMCHIP_POOL2_H
-#define SXCHIPSET_TYPE1PSRAMCHIP_POOL2_H
-#ifdef CHIPSET_TYPE1
-#include <Arduino.h>
-#include <SPI.h>
-#include "MCUPlatform.h"
+#ifndef SXCHIPSET_FLASHINTERFACE_H
+#define SXCHIPSET_FLASHINTERFACE_H
 #include "Pinout.h"
-#include "TaggedCacheAddress.h"
 /**
- * @brief Interface to the second memory pool found in the type 1.01 chipset. It is different than pool1 in that it is faster, smaller, and linked up with some flash memory as well.
- * The flash memory is _not_ controlled by this class, only the psram
- * @tparam enablePin The pin that is used to signal this pool of memory
+ * @brief Interface to the two flash chips in memblk0 on the type 1.01 flash and psram card
  */
-template<i960Pinout enablePin>
-class MemoryBlock_Pool2 {
+class FlashInterface final {
 public:
-    static constexpr auto EnablePin = enablePin;
+    static constexpr auto EnablePin = i960Pinout::MEMBLK0_;
     static constexpr auto Select0 = i960Pinout::MEMBLK0_A0;
     static constexpr auto Select1 = i960Pinout::MEMBLK0_A1;
-    static constexpr auto NumChips = 2;
-    static constexpr auto NumSections = NumChips / 2;
-    using Self = MemoryBlock_Pool2<EnablePin>;
+    FlashInterface() = delete;
+    ~FlashInterface() = delete;
+private:
+    static void setFirstChip() noexcept {
+        // with MEMBLK0 0b00 is Flash0
+        digitalWrite<Select0, LOW>();
+        digitalWrite<Select1, LOW>();
+    }
+    static void setSecondChip() noexcept {
+        // with memblk0 0b10 is Flash1
+        digitalWrite<Select0, LOW>();
+        digitalWrite<Select1, HIGH>();
 
-public:
-    MemoryBlock_Pool2() = delete;
-    ~MemoryBlock_Pool2() = delete;
-    union PSRAMBlockAddress {
-        constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
-        constexpr auto getAddress() const noexcept { return base; }
-        constexpr auto getOffset() const noexcept { return offset; }
-        constexpr auto getIndex() const noexcept { return index; }
+    }
+    static void setChipId(byte index) noexcept {
+        // do not attempt to cache anything since we could eventually want to directly reference the flash text chip at some point
+        if ((index & 1) == 0) {
+            setFirstChip();
+        } else {
+            setSecondChip();
+        }
+    }
+    union BlockAddress {
+        constexpr explicit BlockAddress(Address value = 0) : base(value) { }
+        [[nodiscard]] constexpr auto getAddress() const noexcept { return base; }
+        [[nodiscard]] constexpr auto getOffset() const noexcept { return offset; }
+        [[nodiscard]] constexpr auto getIndex() const noexcept { return index; }
         Address base;
         struct {
-            Address offset : 23;
+            Address offset : 22;
             byte index : 1;
         };
         byte bytes_[4];
     };
-private:
     [[gnu::always_inline]] static inline void transmitByte(byte value) noexcept {
         SPDR = value;
         asm volatile("nop");
@@ -82,22 +88,22 @@ private:
 
     template<byte opcode, OperationKind kind>
     inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
-        static_assert(kind == OperationKind::Read || kind == OperationKind::Write, "Must be a valid OperationKind type");
+        static_assert(kind == OperationKind::Read, "Must be a valid OperationKind type");
         if (capacity == 0) {
             return 0;
         }
-        PSRAMBlockAddress end;
+        BlockAddress end;
         uint32_t numBytesToSecondChip;
         uint32_t numBytesToFirstChip;
         bool localToASingleChip, spansMultipleChips;
         byte tmp;
-        PSRAMBlockAddress curr(address);
+        BlockAddress curr(address);
         setChipId(curr.getIndex());
-        SPI.beginTransaction(SPISettings(TargetBoard::runPSRAM2At(), MSBFIRST, SPI_MODE0));
+        SPI.beginTransaction(SPISettings(TargetBoard::runFlashAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         SPDR = opcode;
         {
-            end = PSRAMBlockAddress(address + capacity);
+            end = BlockAddress(address + capacity);
             numBytesToSecondChip = end.getOffset();
             tmp = curr.bytes_[2];
         }
@@ -123,13 +129,13 @@ private:
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         for (decltype(numBytesToFirstChip) i = 0; i < numBytesToFirstChip; ++i) {
-           if constexpr (kind == OperationKind::Read)  {
-               buf[i] = receiveByte();
-           } else {
-               SPDR = tmp;
-               tmp = buf[i + 1];
-               while (!(SPSR & _BV(SPIF))) ; // wait
-           }
+            if constexpr (kind == OperationKind::Read)  {
+                buf[i] = receiveByte();
+            } else {
+                SPDR = tmp;
+                tmp = buf[i + 1];
+                while (!(SPSR & _BV(SPIF))) ; // wait
+            }
         }
         digitalWrite<EnablePin, HIGH>();
         if (spansMultipleChips) {
@@ -154,14 +160,14 @@ private:
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
             for (decltype(numBytesToSecondChip) i = 0; i < numBytesToSecondChip; ++i) {
-               if constexpr (kind == OperationKind::Read) {
-                   actualBuf[i] = receiveByte();
-               } else {
-                   transmitByte(actualBuf[i]);
-                   SPDR = tmp;
-                   tmp = actualBuf[i + 1];
-                   while (!(SPSR & _BV(SPIF))) ; // wait
-               }
+                if constexpr (kind == OperationKind::Read) {
+                    actualBuf[i] = receiveByte();
+                } else {
+                    transmitByte(actualBuf[i]);
+                    SPDR = tmp;
+                    tmp = actualBuf[i + 1];
+                    while (!(SPSR & _BV(SPIF))) ; // wait
+                }
             }
             digitalWrite<EnablePin, HIGH>();
         }
@@ -169,56 +175,18 @@ private:
         return capacity;
     }
 public:
+    static void begin() noexcept {
+    }
+    [[nodiscard]] static constexpr uint32_t length() noexcept { return 8_MB; }
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
+        // disallow writing
+        //return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
+        return 0;
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-    static void setFirstChip() noexcept {
-        // with MEMBLK0 0b01 is PSRAM0
-        digitalWrite<Select0, HIGH>();
-        digitalWrite<Select1, LOW>();
-    }
-    static void setSecondChip() noexcept {
-        // with memblk0 0b11 is PSRAM1
-        digitalWrite<Select0, HIGH>();
-        digitalWrite<Select1, HIGH>();
-
-    }
-    static void setChipId(byte index) noexcept {
-        // do not attempt to cache anything since we could eventually want to directly reference the flash text chip at some point
-        if ((index & 1) == 0) {
-            setFirstChip();
-        } else {
-            setSecondChip();
-        }
-    }
-public:
-    static void begin() noexcept {
-        static bool initialized_ = false;
-        if (!initialized_) {
-            initialized_ = true;
-            setChipId(0);
-            SPI.beginTransaction(SPISettings(TargetBoard::runPSRAM2At(), MSBFIRST, SPI_MODE0));
-            for (int i = 0; i < NumChips; ++i) {
-                setChipId(i);
-                delayMicroseconds(200); // give the psram enough time to come up regardless of where you call begin
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(0x66);
-                digitalWrite<enablePin, HIGH>();
-                asm volatile ("nop");
-                asm volatile ("nop");
-                digitalWrite<enablePin, LOW>();
-                SPI.transfer(0x99);
-                digitalWrite<enablePin, HIGH>();
-            }
-            SPI.endTransaction();
-        }
-    }
 };
 
-using OnboardPSRAMBlock_Pool2 = MemoryBlock_Pool2<i960Pinout::MEMBLK0_>;
-#endif
-#endif //SXCHIPSET_TYPE1PSRAMCHIP_POOL2_H
+#endif //SXCHIPSET_FLASHINTERFACE_H

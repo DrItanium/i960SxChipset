@@ -66,9 +66,8 @@ template<bool useInterrupts>
         invocationBody<false, useInterrupts>();
     }
 }
-template<bool testFlashChips = false>
 void installBootImage() noexcept {
-    if constexpr (!testFlashChips) {
+    if constexpr (is_same_v<BootImageSource, TheSDInterface>) {
         // okay now we need to actually open boot.system and copy it into the ramBlock
         if (!SD.exists(const_cast<char *>("boot.sys"))) {
             // delete the file and start a new

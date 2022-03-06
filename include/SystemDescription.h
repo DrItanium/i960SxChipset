@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardAsRam.h"
 #include "TaggedCacheAddress.h"
 #include "RTCInterface.h"
+#include "FlashInterface.h"
 
 
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
@@ -46,5 +47,8 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheSDInterface,
         TheDisplayInterface,
         TheRTCInterface>;
-
+/**
+ * @brief Describes where we want to get the boot.sys from
+ */
+using BootImageSource = TheSDInterface;
 #endif //SXCHIPSET_SYSTEMDESCRIPTION_H
