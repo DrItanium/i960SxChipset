@@ -23,14 +23,32 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 //
-// Created by jwscoggins on 10/31/21.
+// Created by jwscoggins on 3/5/22.
 //
 
-#ifndef SXCHIPSET_I960SXCHIPSET_H
-#define SXCHIPSET_I960SXCHIPSET_H
+#include "ProcessorSerializer.h"
 
-using BodyFunction = void (*)();
-using DispatchTable = BodyFunction[256];
-
-[[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
-#endif //SXCHIPSET_I960SXCHIPSET_H
+void
+ProcessorInterface::performFallbackRead() noexcept {
+    do {
+        auto isLast = setDataBits(0);
+        DigitalPin<i960Pinout::Ready>::pulse();
+        // need to introduce some delay
+        if (isLast) {
+            break;
+        }
+    } while (true);
+}
+void
+ProcessorInterface::performFallbackWrite() noexcept {
+    do {
+        // put four cycles worth of delay into this to make damn sure we are ready with the i960
+        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        __builtin_avr_nops(4);
+        DigitalPin<i960Pinout::Ready>::pulse();
+        // need to introduce some delay
+        if (isLast) {
+            break;
+        }
+    } while (true);
+}

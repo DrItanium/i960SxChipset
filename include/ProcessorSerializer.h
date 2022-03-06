@@ -1202,32 +1202,12 @@ public:
      * @brief Used when the transaction is reading from unmapped memory in the i960's memory space. Zero will be sent to the i960 for the duration of the transaction
      * @tparam inDebugMode are we in debug mode?
      */
-    static inline void performFallbackRead() noexcept {
-        do {
-            auto isLast = setDataBits(0);
-            DigitalPin<i960Pinout::Ready>::pulse();
-            // need to introduce some delay
-            if (isLast) {
-                break;
-            }
-        } while (true);
-    }
+    static void performFallbackRead() noexcept;
     /**
      * @brief Used when the transaction is writing to unmapped memory in the i960's memory space. Nothing will be written but an artificial delay will be introduced to be on the safe side.
      * @tparam inDebugMode are we in debug mode?
      */
-    static inline void performFallbackWrite() noexcept {
-        do {
-            // put four cycles worth of delay into this to make damn sure we are ready with the i960
-            auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            __builtin_avr_nops(4);
-            DigitalPin<i960Pinout::Ready>::pulse();
-            // need to introduce some delay
-            if (isLast) {
-                break;
-            }
-        } while (true);
-    }
+    static void performFallbackWrite() noexcept;
 public:
     /**
      * @brief Complete the process of setting up the processor interface by seeding the cached function pointers with valid addresses.
