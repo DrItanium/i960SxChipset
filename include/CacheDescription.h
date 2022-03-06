@@ -55,5 +55,6 @@ template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
 
 using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
+using CacheLine = L1Cache::CacheEntry;
 extern L1Cache theCache;
 #endif //SXCHIPSET_CACHEDESCRIPTION_H

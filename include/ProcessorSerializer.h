@@ -570,13 +570,12 @@ private:
 public:
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
-     * @tparam C The cache line type used by the L1 cache
      * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
      */
-    template<typename C, bool inDebugMode>
+    template<bool inDebugMode>
     inline static void full32BitUpdate() noexcept {
-        static constexpr auto OffsetMask = C::CacheEntryMask;
-        static constexpr auto OffsetShiftAmount = C::CacheEntryShiftAmount;
+        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -637,12 +636,10 @@ public:
     }
     /**
      * @brief Only update the lower 16 bits of the current transaction's base address
-     * @tparam C The cache line type used by the L1 cache
      */
-    template<typename C>
     static void lower16Update() noexcept {
-        static constexpr auto OffsetMask = C::CacheEntryMask;
-        static constexpr auto OffsetShiftAmount = C::CacheEntryShiftAmount;
+        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
         constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
         constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // read only the lower half
@@ -774,25 +771,22 @@ public:
     /**
      * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
      * @tparam inDebugMode When true, use debug versions of the read/write function pointers to fulfill the request. This is passed to direct children as well.
-     * @tparam C The cache line type useful for computing the offset mask and other components
-     * @tparam offsetMask The cache address offset mask. It is used when computing the starting cache offset entry. It must be provided by the
-     * cache entry class that the L1 cache uses
      * @tparam useInterrupts If true, then query the directly connected interrupt pins to get a proper update mask
      */
-    template<bool inDebugMode, typename C, bool useInterrupts = true>
+    template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
 
         switch (getUpdateKind<useInterrupts>()) {
             case AddressUpdateKind::Neither:
                 break;
             case AddressUpdateKind::Lower16:
-                lower16Update<C>();
+                lower16Update();
                 break;
             case AddressUpdateKind::Upper16:
                 upper16Update<inDebugMode>();
                 break;
             default:
-                full32BitUpdate<C, inDebugMode>();
+                full32BitUpdate<inDebugMode>();
                 break;
         }
         /// @todo use the new ram_space and io space pins to accelerate decoding
@@ -829,11 +823,10 @@ public:
 
     /**
      * @brief loads a cache line based on base transaction address and then bursts up to 16 bytes to the i960
-     * @tparam CacheLine The type of a single cache line
      * @tparam inDebugMode Are we in debug mode?
      * @param line The cache line which we will be using for this transaction
      */
-    template<typename CacheLine, bool inDebugMode>
+    template<bool inDebugMode>
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         // read 32-bits at a time instead of 16 just to keep the throughput increased
@@ -911,8 +904,7 @@ private:
          * @tparam CacheLine The type of the cache line being used by the data cache
          * @param line The cache line to write to
          */
-        template<typename CacheLine>
-        inline void set(CacheLine& line) noexcept {
+        inline void set(CacheLine& line) const noexcept {
             line.set(offset, style, value);
         }
     };
@@ -1004,8 +996,8 @@ private:
                 return fullDataLineGrab<count>(offset);
         }
     }
-    template<byte count, typename C>
-    static inline void commitTransactions(C& line) noexcept {
+    template<byte count>
+    static inline void commitTransactions(CacheLine& line) noexcept {
         static_assert(count <= 8, "Can only transmit 8 transactions at a time");
         for (byte i = 0; i < count; ++i) {
             transactions[i].set(line);
@@ -1014,60 +1006,59 @@ private:
 public:
     /**
      * @brief commit up to 16-bytes of data from the i960 to a specified cache line
-     * @tparam CacheLine The type of the cache line to write to
      * @tparam inDebugMode are we in debug mode?
      * @param line The cache line to write to.
      */
-    template<typename CacheLine, bool inDebugMode>
+    template<bool inDebugMode>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         for (auto offset = getCacheOffsetEntry();;offset += 8) {
             auto isLast = getDataBits<0>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<1, CacheLine>(line);
+                commitTransactions<1>(line);
                 break;
             }
             isLast = getDataBits<1>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<2, CacheLine>(line);
+                commitTransactions<2>(line);
                 break;
             }
             isLast = getDataBits<2>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<3, CacheLine>(line);
+                commitTransactions<3>(line);
                 break;
             }
             isLast = getDataBits<3>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<4, CacheLine>(line);
+                commitTransactions<4>(line);
                 break;
             }
             isLast = getDataBits<4>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<5, CacheLine>(line);
+                commitTransactions<5>(line);
                 break;
             }
             isLast = getDataBits<5>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<6, CacheLine>(line);
+                commitTransactions<6>(line);
                 break;
             }
             isLast = getDataBits<6>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<7, CacheLine>(line);
+                commitTransactions<7>(line);
                 break;
             }
             isLast = getDataBits<7>(offset);
             DigitalPin<i960Pinout::Ready>::pulse();
             // perform the commit at this point
-            commitTransactions<8, CacheLine>(line);
+            commitTransactions<8>(line);
             if (isLast) {
                 break;
             }
