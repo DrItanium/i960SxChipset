@@ -50,5 +50,6 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
 /**
  * @brief Describes where we want to get the boot.sys from
  */
-using BootImageSource = TheSDInterface;
+using BootImageSource = FlashInterface;
+//using BootImageSource = TheSDInterface;
 #endif //SXCHIPSET_SYSTEMDESCRIPTION_H
