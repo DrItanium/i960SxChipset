@@ -40,6 +40,11 @@ constexpr auto UseIOExpanderAddressLineInterrupts = true;
  * lookup table will go to waste.
  */
 constexpr auto UseSpacePins = true;
+
+/**
+ * @brief Set to true (if safe) to allow bitfields to be the exact width needed instead of the integral type. This is safe on AVR and nowhere els
+ */
+constexpr auto UseSpecificTypesForDifferentAddressComponents = true;
 /**
  * @brief Maximum number of concurrently open files allowed, increasing this number will increase sram usage
  */
