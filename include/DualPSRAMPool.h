@@ -28,11 +28,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef CHIPSET_TYPE1
 #include "PSRAMChip.h"
 
+/**
+ * @brief Wrapper over pools 1 and 2. Pool 2 is mapped first followed by pool 1
+ */
 class DualPoolPSRAM {
 public:
-    static constexpr auto NumChips = 8;
-    static constexpr auto NumSections = NumChips / 2;
-
+    using Pool1 = OnboardPSRAMBlock;
+    using Pool2 = OnboardPSRAMBlock_Pool2;
+    static constexpr auto NumChips = Pool1::NumChips + Pool2::NumChips;
+    static constexpr auto NumSections = Pool1::NumSections + Pool2::NumSections;
 public:
     DualPoolPSRAM() = delete;
     ~DualPoolPSRAM() = delete;
@@ -48,23 +52,51 @@ public:
         };
         byte bytes_[4];
     };
-private:
-public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return 0;
+        switch (PSRAMBlockAddress addr(address); addr.getIndex()) {
+            case 0:
+            case 1:
+                return Pool2::write(address, buf, capacity);
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+                return Pool1::write(address, buf, capacity);
+            default:
+                return 0;
+        }
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-    return 0;
+        switch (PSRAMBlockAddress addr(address); addr.getIndex()) {
+            case 0:
+            case 1:
+                return Pool2::read(address, buf, capacity);
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+                return Pool1::read(address, buf, capacity);
+            default:
+                return 0;
+        }
     }
-private:
-public:
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
+            Pool1::begin();
+            Pool2::begin();
         }
     }
 };
-
+using DualPoolMemoryBlock = DualPoolPSRAM;
 #endif // end CHIPSET_TYPE1
 #endif //SXCHIPSET_DUALPSRAMPOOL_H
