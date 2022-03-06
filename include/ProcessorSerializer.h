@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include "Pinout.h"
 #include "ConfigurationFlags.h"
+#include "CacheDescription.h"
 #include "i960SxChipset.h"
 
 /**

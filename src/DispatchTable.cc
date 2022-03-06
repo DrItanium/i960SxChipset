@@ -28,19 +28,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CacheDescription.h"
 void
 ProcessorInterface::readCacheLine_NonDebug() noexcept {
-    performCacheRead<typename L1Cache::CacheEntry, false>(theCache.getLine());
+    performCacheRead<typename L1Cache::CacheEntry, false>(theCache.getLine(address_));
 }
 void
 ProcessorInterface::readCacheLine_Debug() noexcept {
-    performCacheRead<typename L1Cache::CacheEntry, true>(theCache.getLine());
+    performCacheRead<typename L1Cache::CacheEntry, true>(theCache.getLine(address_));
 }
 void
 ProcessorInterface::writeCacheLine_NonDebug() noexcept {
-    performCacheWrite<typename L1Cache::CacheEntry, false>(theCache.getLine());
+    performCacheWrite<typename L1Cache::CacheEntry, false>(theCache.getLine(address_));
 }
 void
 ProcessorInterface::writeCacheLine_Debug() noexcept {
-    performCacheWrite<typename L1Cache::CacheEntry, true>(theCache.getLine());
+    performCacheWrite<typename L1Cache::CacheEntry, true>(theCache.getLine(address_));
 }
 void
 ProcessorInterface::setupDispatchTable() noexcept {

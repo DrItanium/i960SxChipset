@@ -32,7 +32,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Pinout.h"
 #include "TaggedCacheAddress.h"
 #include "CacheEntry.h"
-#include "ProcessorSerializer.h"
 
 template<template<auto, auto, auto, typename, bool> typename C, uint16_t numEntries, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes>
 class SinglePoolCache {
@@ -50,9 +49,9 @@ public:
     static constexpr auto NumWordsCached = CacheEntry::NumWordsCached;
     static constexpr auto CacheEntryMask = CacheEntry::CacheEntryMask;
 public:
-    [[nodiscard]] CacheEntry& getLine() noexcept {
+    [[nodiscard]] CacheEntry& getLine(const SplitWord32& address) noexcept {
         // only align if we need to reset the chip
-        return getLine(TaggedAddress(ProcessorInterface::getAddress()));
+        return getLine(TaggedAddress{address});
     }
     [[nodiscard]] CacheEntry& getLine(const TaggedAddress& theAddress) noexcept {
         // only align if we need to reset the chip

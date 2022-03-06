@@ -77,6 +77,11 @@ union TaggedAddress {
      */
     constexpr explicit TaggedAddress(Address value = 0) noexcept : base(value) { }
     /**
+     * @brief Convert a SplitWord32 into a tagged address
+     * @param value The splitword32 to convert
+     */
+    constexpr explicit TaggedAddress(const SplitWord32& value) noexcept : TaggedAddress(value.getWholeValue()) { }
+    /**
      * @brief Construct an address from the three important components
      */
     constexpr explicit TaggedAddress(RestType key, TagType tag, LowerType offset = 0) noexcept : lowest(offset), tagIndex(tag), rest(key) { }
