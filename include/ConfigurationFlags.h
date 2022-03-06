@@ -34,4 +34,6 @@ constexpr auto ValidateTransferDuringInstall = false;
  */
 constexpr auto UseIOExpanderAddressLineInterrupts = true;
 
+constexpr auto UseSpacePins = true;
+
 #endif //SXCHIPSET_CONFIGURATIONFLAGS_H

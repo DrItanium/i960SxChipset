@@ -1244,12 +1244,22 @@ private:
     template<typename T>
     static void
     registerExternalDeviceWithLookupTable() noexcept {
-
-        lookupTableRead[T::SectionID] = performExternalDeviceRead<T, false>;
-        lookupTableWrite[T::SectionID] = performExternalDeviceWrite<T, false>;
+        static constexpr byte reducedSectionId = T::SectionID & 0b0001'1111;
+        if constexpr (UseSpacePins) {
+            ioSectionRead_[reducedSectionId] = performExternalDeviceRead<T, false>;
+            ioSectionWrite_[reducedSectionId] = performExternalDeviceWrite<T, false>;
+        } else {
+            lookupTableRead[T::SectionID] = performExternalDeviceRead<T, false>;
+            lookupTableWrite[T::SectionID] = performExternalDeviceWrite<T, false>;
+        }
         if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTableRead_Debug[T::SectionID] = performExternalDeviceRead<T, true>;
-            lookupTableWrite_Debug[T::SectionID] = performExternalDeviceWrite<T, true>;
+            if constexpr (UseSpacePins) {
+                ioSectionRead_Debug_[reducedSectionId] = performExternalDeviceRead<T, true>;
+                ioSectionWrite_Debug_[reducedSectionId] = performExternalDeviceWrite<T, true>;
+            } else {
+                lookupTableRead_Debug[T::SectionID] = performExternalDeviceRead<T, true>;
+                lookupTableWrite_Debug[T::SectionID] = performExternalDeviceWrite<T, true>;
+            }
         }
     }
     static void readCacheLine_NonDebug() noexcept;
@@ -1299,12 +1309,19 @@ private:
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput_ {0};
-    static inline BodyFunction unmappedReadFunction_ = performFallbackRead;
-    static inline BodyFunction unmappedWriteFunction_ = performFallbackWrite;
+    using SpaceDispatchTable = BodyFunction[32];
     static inline DispatchTable lookupTableRead{ nullptr };
     static inline DispatchTable lookupTableWrite{ nullptr };
     static inline DispatchTable lookupTableRead_Debug{ nullptr };
     static inline DispatchTable lookupTableWrite_Debug{ nullptr };
+    static inline SpaceDispatchTable ramSectionRead_ { nullptr };
+    static inline SpaceDispatchTable ramSectionWrite_ { nullptr };
+    static inline SpaceDispatchTable ramSectionRead_Debug_ { nullptr };
+    static inline SpaceDispatchTable ramSectionWrite_Debug_ { nullptr };
+    static inline SpaceDispatchTable ioSectionRead_ { nullptr };
+    static inline SpaceDispatchTable ioSectionWrite_ { nullptr };
+    static inline SpaceDispatchTable ioSectionRead_Debug_ { nullptr };
+    static inline SpaceDispatchTable ioSectionWrite_Debug_ { nullptr };
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved

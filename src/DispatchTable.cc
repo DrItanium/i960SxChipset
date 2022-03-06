@@ -44,20 +44,43 @@ ProcessorInterface::writeCacheLine_Debug() noexcept {
 void
 ProcessorInterface::setupDispatchTable() noexcept {
     Serial.println(F("Setting up the initial lookup table"));
-    for (int i = 0; i < 256; ++i) {
-        lookupTableRead[i] = ProcessorInterface::performFallbackRead;
-        lookupTableWrite[i] = ProcessorInterface::performFallbackWrite;
-        if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTableRead_Debug[i] = ProcessorInterface::performFallbackRead;
-            lookupTableWrite_Debug[i] = ProcessorInterface::performFallbackWrite;
+    if constexpr (UseSpacePins) {
+        for (int i = 0; i < 32; ++i) {
+            ramSectionRead_[i] = performFallbackRead;
+            ramSectionWrite_[i] = performFallbackWrite;
+            ioSectionRead_[i] = performFallbackRead;
+            ioSectionWrite_[i] = performFallbackWrite;
+            if constexpr (CompileInAddressDebuggingSupport) {
+                ramSectionRead_Debug_[i] = performFallbackRead;
+                ramSectionWrite_Debug_[i] = performFallbackWrite;
+                ioSectionRead_Debug_[i] = performFallbackRead;
+                ioSectionWrite_Debug_[i] = performFallbackWrite;
+            }
         }
-    }
-    for (int i = 0;i < 4; ++i) {
-        lookupTableRead[i] = readCacheLine<false>;
-        lookupTableWrite[i] = writeCacheLine<false>;
-        if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTableRead_Debug[i] = readCacheLine<true>;
-            lookupTableWrite_Debug[i] = writeCacheLine<true>;
+        for (int i = 0;i < 4; ++i) {
+            ramSectionRead_[i] = readCacheLine<false>;
+            ramSectionWrite_[i] = writeCacheLine<false>;
+            if constexpr (CompileInAddressDebuggingSupport) {
+                ramSectionRead_Debug_[i] = readCacheLine<true>;
+                ramSectionWrite_Debug_[i] = writeCacheLine<true>;
+            }
+        }
+    } else {
+        for (int i = 0; i < 256; ++i) {
+            lookupTableRead[i] = performFallbackRead;
+            lookupTableWrite[i] = performFallbackWrite;
+            if constexpr (CompileInAddressDebuggingSupport) {
+                lookupTableRead_Debug[i] = performFallbackRead;
+                lookupTableWrite_Debug[i] = performFallbackWrite;
+            }
+        }
+        for (int i = 0;i < 4; ++i) {
+            lookupTableRead[i] = readCacheLine<false>;
+            lookupTableWrite[i] = writeCacheLine<false>;
+            if constexpr (CompileInAddressDebuggingSupport) {
+                lookupTableRead_Debug[i] = readCacheLine<true>;
+                lookupTableWrite_Debug[i] = writeCacheLine<true>;
+            }
         }
     }
     registerExternalDeviceWithLookupTable<TheRTCInterface>();
@@ -72,7 +95,17 @@ ProcessorInterface::setupDispatchTable() noexcept {
 BodyFunction
 ProcessorInterface::getDebugReadBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
-        return lookupTableRead_Debug[index];
+        if constexpr (UseSpacePins) {
+            if (inIOSpace())  {
+                return ioSectionRead_Debug_[index & 0b0001'1111];
+            } else if (inRAMSpace()) {
+                return ramSectionRead_Debug_[index & 0b0001'1111];
+            } else {
+                return ProcessorInterface::performFallbackRead;
+            }
+        } else {
+            return lookupTableRead_Debug[index];
+        }
     } else {
         return ProcessorInterface::performFallbackRead;
     }
@@ -80,16 +113,46 @@ ProcessorInterface::getDebugReadBody(byte index) noexcept {
 BodyFunction
 ProcessorInterface::getDebugWriteBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
-        return lookupTableWrite_Debug[index];
+        if constexpr (UseSpacePins) {
+            if (inIOSpace())  {
+                return ioSectionWrite_Debug_[index & 0b0001'1111];
+            } else if (inRAMSpace()) {
+                return ramSectionWrite_Debug_[index & 0b0001'1111];
+            } else {
+                return ProcessorInterface::performFallbackWrite;
+            }
+        } else {
+            return lookupTableWrite_Debug[index];
+        }
     } else {
         return ProcessorInterface::performFallbackWrite;
     }
 }
 BodyFunction
 ProcessorInterface::getNonDebugReadBody(byte index) noexcept {
-    return lookupTableRead[index];
+    if constexpr (UseSpacePins) {
+        if (inIOSpace()) {
+            return ioSectionRead_[index & 0b0001'1111];
+        } else if (inRAMSpace()) {
+            return ramSectionRead_[index & 0b0001'1111];
+        } else {
+            return ProcessorInterface::performFallbackRead;
+        }
+    } else {
+        return lookupTableRead[index];
+    }
 }
 BodyFunction
 ProcessorInterface::getNonDebugWriteBody(byte index) noexcept {
-    return lookupTableWrite[index];
+    if constexpr (UseSpacePins) {
+        if (inIOSpace()) {
+            return ioSectionWrite_[index & 0b0001'1111];
+        } else if (inRAMSpace()) {
+            return ramSectionWrite_[index & 0b0001'1111];
+        } else {
+            return ProcessorInterface::performFallbackWrite;
+        }
+    } else {
+        return lookupTableWrite[index];
+    }
 }
