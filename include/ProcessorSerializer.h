@@ -678,6 +678,10 @@ private:
         address_.bytes[3] = highest;
     }
 private:
+    /**
+     * @brief Intelligently updates the GPIO pins attached to GPIO4 (or the fourth io expander). It will only communicate with the io expander if there is a legit change
+     * @param value The new gpio values
+     */
     static void updateGPIO4Pins(uint16_t value) noexcept {
         if (value != currentGPIO4Status_) {
             // only update the io expander when needed
@@ -686,24 +690,42 @@ private:
         }
     }
 public:
+    /**
+     * @brief Put the i960 into reset
+     */
     static void putCPUIntoReset() noexcept {
         updateGPIO4Pins(currentGPIO4Status_ & 0xFFFE);
     }
+    /**
+     * @brief Pull the i960 out of reset
+     */
     static void pullCPUOutOfReset() noexcept {
         updateGPIO4Pins(currentGPIO4Status_ | 1);
     }
+    /**
+     * @brief Trigger the ~INT0 pin on the i960
+     */
     static void triggerInt0() noexcept {
         updateGPIO4Pins(currentGPIO4Status_ & 0xFFFD);
         updateGPIO4Pins(currentGPIO4Status_ | 0b10);
     }
+    /**
+     * @brief Trigger the INT1 pin on the i960
+     */
     static void triggerInt1() noexcept {
         updateGPIO4Pins(currentGPIO4Status_ | 0b100);
         updateGPIO4Pins(currentGPIO4Status_ & 0xFFFB);
     }
+    /**
+     * @brief Trigger the INT2 pin on the i960
+     */
     static void triggerInt2() noexcept {
         updateGPIO4Pins(currentGPIO4Status_ | 0b1000);
         updateGPIO4Pins(currentGPIO4Status_ & 0xFFF7);
     }
+    /**
+     * @brief Trigger the ~INT3 pin on the i960
+     */
     static void triggerInt3() noexcept {
         updateGPIO4Pins(currentGPIO4Status_ & 0xFFEF);
         updateGPIO4Pins(currentGPIO4Status_ | 0b1'0000);
@@ -774,6 +796,10 @@ public:
      * @return The LSB of the address
      */
     [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
+    /**
+     * @brief Return bits 8-15 of the address. Internally this is known as the page index.
+     * @return The page index based off of the current address
+     */
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
 
     /**
@@ -847,15 +873,27 @@ public:
         SPI.endTransaction();
     }
 private:
+    /**
+     * @brief Describes a write into the data cache meant to accelerate burst writes from the i960. Allows the chipset to pull values
+     * from the i960 much faster.
+     */
     struct CacheWriteRequest {
         LoadStoreStyle style;
         SplitWord16 value;
         byte offset;
+        /**
+         * @brief Save the given data to the target cache line
+         * @tparam CacheLine The type of the cache line being used by the data cache
+         * @param line The cache line to write to
+         */
         template<typename CacheLine>
         inline void set(CacheLine& line) noexcept {
             line.set(offset, style, value);
         }
     };
+    /**
+     * @brief A cache of transactions to carry out from a burst write
+     */
     static inline CacheWriteRequest transactions[8];
     template<byte count, byte index, MCP23x17Registers reg>
     static bool grab8Data(byte offset) noexcept {
