@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SinglePoolCache.h"
 #include "SDCardAsRam.h"
 #include "PSRAMChip.h"
+#include "DualPSRAMPool.h"
 
 // define the backing memory storage classes via template specialization
 // at this point in time, if no specialization is performed, use SDCard as ram backend
