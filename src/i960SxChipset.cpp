@@ -67,6 +67,8 @@ template<bool useInterrupts>
     }
 }
 void installBootImage() noexcept {
+    static constexpr auto CacheSize = theCache.getCacheSize();
+    auto *storage = theCache.viewAsStorage();
     if constexpr (is_same_v<BootImageSource, TheSDInterface>) {
         // okay now we need to actually open boot.system and copy it into the ramBlock
         if (!SD.exists(const_cast<char *>("boot.sys"))) {
@@ -78,10 +80,7 @@ void installBootImage() noexcept {
         } else {
             // okay we were successful in opening the file, now copy the image into psram
             Address size = theFile.size();
-            Serial.println(F("TRANSFERRING BOOT.SYS TO RAM"));
-            static constexpr auto CacheSize = theCache.getCacheSize();
-            //static constexpr auto CacheSize = ::CacheSize;
-            auto *storage = theCache.viewAsStorage();
+            Serial.println(F("TRANSFERRING BOOT.SYS TO RAM FROM SDCARD"));
             if constexpr (ValidateTransferDuringInstall) {
                 static constexpr auto RealCacheSize = CacheSize / 2;
                 byte *storage0 = storage;
@@ -127,15 +126,21 @@ void installBootImage() noexcept {
                     Serial.print(F("."));
                 }
             }
-            Serial.println();
-            Serial.println(F("Transfer complete!"));
             // make sure we close the file before destruction
             theFile.close();
         }
-    } else if (is_same_v<BootImageSource, FlashInterface>) {
+    } else if constexpr (is_same_v<BootImageSource, FlashInterface>) {
+        Serial.println(F("TRANSFERRING BOOT.SYS TO RAM FROM FLASH"));
+        for (Address addr = 0; addr < FlashInterface::length(); addr += CacheSize) {
+            auto numRead = FlashInterface::read(addr, storage, CacheSize);
+            (void) BackingMemoryStorage_t::write(addr, storage, numRead);
+            Serial.print(F("."));
+        }
     } else {
-        signalHaltState(F("Unknown upload media defined!"));
+        signalHaltState(F("Unknown upload source defined!"));
     }
+    Serial.println();
+    Serial.println(F("Transfer complete!"));
     // clear both caches to be on the safe side
     theCache.clear();
 }
