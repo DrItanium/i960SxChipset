@@ -40,7 +40,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "23LC1024.h"
 #include "SRAMDataContainer.h"
 
-L1Cache theCache;
 
 template<bool inDebugMode, bool useInterrupts>
 inline void invocationBody() noexcept {
@@ -54,9 +53,9 @@ inline void invocationBody() noexcept {
     // and so we are actually continually mirroring the mapping for the sake of simplicity
     ProcessorInterface::newDataCycle<inDebugMode, decltype(theCache)::CacheEntry , useInterrupts>();
 }
-template<bool allowAddressDebuggingCodePath, bool useInterrupts>
+template<bool useInterrupts>
 [[gnu::always_inline]] inline void doInvocationBody() noexcept {
-    if constexpr (allowAddressDebuggingCodePath) {
+    if constexpr (CompileInAddressDebuggingSupport) {
         if (TheConsoleInterface::addressDebuggingEnabled())  {
             invocationBody<true, useInterrupts>();
         } else {
@@ -245,8 +244,8 @@ void setup() {
     // first set of 16-byte request from memory
 
     // on bootup we need to ignore the interrupt lines for now
-    doInvocationBody<CompileInAddressDebuggingSupport, false>();
-    doInvocationBody<CompileInAddressDebuggingSupport, false>();
+    doInvocationBody<false>();
+    doInvocationBody<false>();
     if (DigitalPin<i960Pinout::FAIL>::isAsserted()) {
         signalHaltState(F("CHECKSUM FAILURE!"));
     }
@@ -293,7 +292,7 @@ void loop() {
     // and doesn't seem to impact performance in burst transactions
 
     for (;;) {
-        doInvocationBody<CompileInAddressDebuggingSupport, UseIOExpanderAddressLineInterrupts>();
+        doInvocationBody<UseIOExpanderAddressLineInterrupts>();
     }
 }
 
@@ -308,3 +307,4 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
 }
 
 SdFat SD;
+L1Cache theCache;
