@@ -165,8 +165,8 @@ setupPins() noexcept {
     digitalWrite<i960Pinout::SPI_OFFSET0, HIGH>();
     digitalWrite<i960Pinout::SPI_OFFSET1, HIGH>();
     digitalWrite<i960Pinout::SPI_OFFSET2, HIGH>();
-    digitalWrite<i960Pinout::MEMBLK0_A0, HIGH>();
-    digitalWrite<i960Pinout::MEMBLK0_A1, HIGH>();
+    digitalWrite<i960Pinout::MEMBLK0_A0, LOW>();
+    digitalWrite<i960Pinout::MEMBLK0_A1, LOW>();
     digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
     digitalWrite<i960Pinout::SD_EN, HIGH>();
     digitalWrite<i960Pinout::Ready, HIGH>();
