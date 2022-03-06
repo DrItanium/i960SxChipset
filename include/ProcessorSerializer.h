@@ -1225,6 +1225,8 @@ public:
         }
     }
 private:
+    static void setupDispatchTable() noexcept;
+private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
     static inline byte dataLinesDirection_ = 0;
@@ -1239,6 +1241,17 @@ private:
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput_ {0};
+    static inline BodyFunction unmappedReadFunction_ = performFallbackRead;
+    static inline BodyFunction unmappedWriteFunction_ = performFallbackWrite;
+    using ReducedSizeDispatchTable = BodyFunction[32];
+    static ReducedSizeDispatchTable ramDispatchRead_;
+    static ReducedSizeDispatchTable ramDispatchReadDebug_;
+    static ReducedSizeDispatchTable ramDispatchWrite_;
+    static ReducedSizeDispatchTable ramDispatchWriteDebug_;
+    static ReducedSizeDispatchTable ioDispatchRead_;
+    static ReducedSizeDispatchTable ioDispatchReadDebug_;
+    static ReducedSizeDispatchTable ioDispatchWrite_;
+    static ReducedSizeDispatchTable ioDispatchWriteDebug_;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
