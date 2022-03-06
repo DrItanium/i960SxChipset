@@ -157,16 +157,6 @@ void installBootImage() noexcept {
     theCache.clear();
 }
 
-void setupChipsetType1() noexcept {
-}
-
-void setupChipsetVersionSpecificPins() noexcept {
-    if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-        setupChipsetType1();
-    } else {
-        // do nothing
-    }
-}
 // the setup routine runs once when you press reset:
 void setup() {
     // startup SPI as soon as possible in this design

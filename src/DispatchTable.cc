@@ -43,7 +43,6 @@ ProcessorInterface::writeCacheLine_Debug() noexcept {
 }
 void
 ProcessorInterface::setupDispatchTable() noexcept {
-    Serial.println(F("Setting up the initial lookup table"));
     if constexpr (UseSpacePins) {
         for (int i = 0; i < 32; ++i) {
             ramSectionRead_[i] = performFallbackRead;

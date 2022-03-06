@@ -33,7 +33,12 @@ constexpr auto ValidateTransferDuringInstall = false;
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
 constexpr auto UseIOExpanderAddressLineInterrupts = true;
-
+/**
+ * @brief When set to true, the ram and io space pins will be queried when getting the function associated with a given address block. This will
+ * allow a reduction in sram usage at the cost of some latency (128 total entries [256 with debug active]). When false, more ram will be used
+ * to store a separate function for each 16 megabyte section of the space. It will be slightly faster too. However, most of the sram used by the
+ * lookup table will go to waste.
+ */
 constexpr auto UseSpacePins = true;
 
 #endif //SXCHIPSET_CONFIGURATIONFLAGS_H
