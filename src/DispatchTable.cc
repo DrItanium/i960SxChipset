@@ -57,7 +57,7 @@ ProcessorInterface::setupDispatchTable() noexcept {
                 ioSectionWrite_Debug_[i] = performFallbackWrite;
             }
         }
-        for (int i = 0;i < 4; ++i) {
+        for (int i = 0;i < BackingMemoryStorage_t :: NumSections; ++i) {
             ramSectionRead_[i] = readCacheLine<false>;
             ramSectionWrite_[i] = writeCacheLine<false>;
             if constexpr (CompileInAddressDebuggingSupport) {
@@ -74,7 +74,7 @@ ProcessorInterface::setupDispatchTable() noexcept {
                 lookupTableWrite_Debug[i] = performFallbackWrite;
             }
         }
-        for (int i = 0;i < 4; ++i) {
+        for (int i = 0;i < BackingMemoryStorage_t::NumSections; ++i) {
             lookupTableRead[i] = readCacheLine<false>;
             lookupTableWrite[i] = writeCacheLine<false>;
             if constexpr (CompileInAddressDebuggingSupport) {

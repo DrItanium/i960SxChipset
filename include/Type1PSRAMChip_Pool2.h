@@ -46,7 +46,7 @@ public:
     static constexpr auto Select0 = i960Pinout::MEMBLK0_A0;
     static constexpr auto Select1 = i960Pinout::MEMBLK0_A1;
     static constexpr auto NumChips = 2;
-    static constexpr auto SelectMask = pinToPortBit<Select0>() | pinToPortBit<Select1>();
+    static constexpr auto NumSections = NumChips / 2;
     using Self = MemoryBlock_Pool2<EnablePin>;
 
 public:
@@ -181,13 +181,13 @@ private:
     }
     static void setFirstChip() noexcept {
         // with MEMBLK0 0b01 is PSRAM0
-        digitalWrite<i960Pinout::MEMBLK0_A0, HIGH>();
-        digitalWrite<i960Pinout::MEMBLK0_A1, LOW>();
+        digitalWrite<Select0, HIGH>();
+        digitalWrite<Select1, LOW>();
     }
     static void setSecondChip() noexcept {
         // with memblk0 0b11 is PSRAM1
-        digitalWrite<i960Pinout::MEMBLK0_A0, HIGH>();
-        digitalWrite<i960Pinout::MEMBLK0_A1, HIGH>();
+        digitalWrite<Select0, HIGH>();
+        digitalWrite<Select1, HIGH>();
 
     }
     static void setChipId(byte index) noexcept {
