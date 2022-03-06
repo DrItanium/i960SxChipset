@@ -1224,6 +1224,16 @@ public:
         }
     }
 private:
+    template<typename T>
+    void
+    registerExternalDeviceWithLookupTable() noexcept {
+        lookupTableRead[T::SectionID] = ProcessorInterface::performExternalDeviceRead<T, false>;
+        lookupTableWrite[T::SectionID] = ProcessorInterface::performExternalDeviceWrite<T, false>;
+        if constexpr (CompileInAddressDebuggingSupport) {
+            lookupTableRead_Debug[T::SectionID] = ProcessorInterface::performExternalDeviceRead<T, true>;
+            lookupTableWrite_Debug[T::SectionID] = ProcessorInterface::performExternalDeviceWrite<T, true>;
+        }
+    }
     static void setupDispatchTable() noexcept;
 private:
     static inline SplitWord32 address_{0};

@@ -28,6 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_SYSTEMDESCRIPTION_H
 #define SXCHIPSET_SYSTEMDESCRIPTION_H
+#include "ConfigurationFlags.h"
+
 #include "CacheEntry.h"
 #include "DirectMappedCacheWay.h"
 #include "TwoWayLRUCacheEntry.h"
@@ -49,13 +51,6 @@ constexpr auto Serial0BaseAddress = 0xFB00'0000;
 constexpr auto DisplayBaseAddress = 0xFC00'0000;
 constexpr auto SDBaseAddress = 0xFD00'0000;
 constexpr auto MaximumNumberOfOpenFiles = 16;
-constexpr auto CompileInAddressDebuggingSupport = false;
-constexpr auto AddressDebuggingEnabledOnStartup = false;
-constexpr auto ValidateTransferDuringInstall = false;
-/**
- * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
- */
-constexpr auto UseIOExpanderAddressLineInterrupts = true;
 
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
 using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
