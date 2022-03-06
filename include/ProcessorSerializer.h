@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include "Pinout.h"
 #include "i960SxChipset.h"
+#include "SystemDescription.h"
 
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
