@@ -35,6 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "SystemDescription.h"
 #include "ProcessorSerializer.h"
+#include "CacheDescription.h"
 #include "i960SxChipset.h"
 #include "type_traits.h"
 #include "23LC1024.h"

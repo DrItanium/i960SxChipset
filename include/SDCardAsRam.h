@@ -1,6 +1,6 @@
 /*
 i960SxChipset
-Copyright (c) 2020-2021, Joshua Scoggins
+Copyright (c) 2020-2022, Joshua Scoggins
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -57,5 +57,6 @@ public:
 private:
     static inline OpenFileHandle theRam_;
 };
+using FallbackMemory = SDCardAsRam<TheSDInterface >;
 
 #endif //SXCHIPSET_SDCARDASRAM_H

@@ -40,5 +40,14 @@ constexpr auto UseIOExpanderAddressLineInterrupts = true;
  * lookup table will go to waste.
  */
 constexpr auto UseSpacePins = true;
+/**
+ * @brief Maximum number of concurrently open files allowed, increasing this number will increase sram usage
+ */
+constexpr auto MaximumNumberOfOpenFiles = 16;
+
+constexpr auto RTCBaseAddress = 0xFA00'0000;
+constexpr auto Serial0BaseAddress = 0xFB00'0000;
+constexpr auto DisplayBaseAddress = 0xFC00'0000;
+constexpr auto SDBaseAddress = 0xFD00'0000;
 
 #endif //SXCHIPSET_CONFIGURATIONFLAGS_H

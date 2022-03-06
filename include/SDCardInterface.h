@@ -28,14 +28,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_SDCARDINTERFACE_H
 #define SXCHIPSET_SDCARDINTERFACE_H
+#include "ConfigurationFlags.h"
 #include "Pinout.h"
 #include "OpenFileHandle.h"
 #include <SdFat.h>
 extern SdFat SD;
-template<Address maxFiles, Address startAddress>
+template<Address startAddress>
 class SDCardInterface {
 public:
-    static constexpr auto MaximumNumberOfOpenFiles = maxFiles;
     static constexpr auto StartAddress = startAddress;
     static constexpr auto ControlBaseAddress = startAddress;
     static constexpr auto ControlEndAddress = ControlBaseAddress + 0x100;
@@ -337,4 +337,5 @@ private:
     static inline uint16_t filePermissions_ = 0;
     static inline bool cardMounted_ = false;
 };
+using TheSDInterface = SDCardInterface<SDBaseAddress>;
 #endif //SXCHIPSET_SDCARDINTERFACE_H

@@ -25,6 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 #include "SystemDescription.h"
+#include "CacheDescription.h"
 void
 ProcessorInterface::readCacheLine_NonDebug() noexcept {
     performCacheRead<typename L1Cache::CacheEntry, false>(theCache.getLine());

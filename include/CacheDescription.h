@@ -26,25 +26,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Created by jwscoggins on 3/5/22.
 //
 
-#ifndef SXCHIPSET_SYSTEMDESCRIPTION_H
-#define SXCHIPSET_SYSTEMDESCRIPTION_H
+#ifndef SXCHIPSET_CACHEDESCRIPTION_H
+#define SXCHIPSET_CACHEDESCRIPTION_H
 #include "ConfigurationFlags.h"
-#include "MCUPlatform.h"
-
-#include "DisplayInterface.h"
-#include "CoreChipsetFeatures.h"
-#include "PSRAMChip.h"
+#include "CacheEntry.h"
+#include "DirectMappedCacheWay.h"
+#include "TwoWayLRUCacheEntry.h"
+#include "FourWayPseudoLRUEntry.h"
+#include "EightWayPseudoLRUEntry.h"
+#include "SixteenWayPseudoLRUEntry.h"
+#include "EightWayRandPLRUEntry.h"
+#include "EightWayTreePLRUEntry.h"
+#include "SinglePoolCache.h"
 #include "SDCardAsRam.h"
-#include "TaggedCacheAddress.h"
-#include "RTCInterface.h"
+#include "PSRAMChip.h"
 
+// define the backing memory storage classes via template specialization
+// at this point in time, if no specialization is performed, use SDCard as ram backend
+template<TargetMCU mcu> struct BackingMemoryStorage final {
+    using Type = FallbackMemory;
+};
+template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
+    //using ActualType = OnboardPSRAMBlock;
+    //using Type = SRAMDataContainer<ActualType>;
+    using Type = OnboardPSRAMBlock;
+};
 
-using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
-using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport, AddressDebuggingEnabledOnStartup>;
-using TheRTCInterface = RTCInterface<RTCBaseAddress>;
-using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
-        TheSDInterface,
-        TheDisplayInterface,
-        TheRTCInterface>;
+using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
+constexpr auto NumAddressBitsForPSRAMCache = 26;
+constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
+constexpr auto CacheLineSize = 6;
+constexpr auto CacheSize = 8192;
+constexpr auto UseSpecificTypesForDifferentAddressComponents = true;
 
-#endif //SXCHIPSET_SYSTEMDESCRIPTION_H
+using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
+extern L1Cache theCache;
+#endif //SXCHIPSET_CACHEDESCRIPTION_H
