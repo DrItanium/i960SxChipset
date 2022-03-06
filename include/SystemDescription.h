@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_SYSTEMDESCRIPTION_H
 #define SXCHIPSET_SYSTEMDESCRIPTION_H
 #include "ConfigurationFlags.h"
+#include "MCUPlatform.h"
 
 #include "CacheEntry.h"
 #include "DirectMappedCacheWay.h"
