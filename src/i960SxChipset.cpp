@@ -33,68 +33,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SdFat.h>
 #include "Pinout.h"
 
-#include "CacheEntry.h"
-#include "DirectMappedCacheWay.h"
-#include "TwoWayLRUCacheEntry.h"
-#include "FourWayPseudoLRUEntry.h"
-#include "EightWayPseudoLRUEntry.h"
-#include "SixteenWayPseudoLRUEntry.h"
-#include "EightWayRandPLRUEntry.h"
-#include "EightWayTreePLRUEntry.h"
-#include "SinglePoolCache.h"
-
+#include "SystemDescription.h"
 #include "ProcessorSerializer.h"
-#include "DisplayInterface.h"
-#include "CoreChipsetFeatures.h"
-#include "PSRAMChip.h"
-#include "SDCardAsRam.h"
-#include "TaggedCacheAddress.h"
-#include "RTCInterface.h"
 #include "i960SxChipset.h"
 #include "type_traits.h"
 #include "23LC1024.h"
 #include "SRAMDataContainer.h"
 
-constexpr auto RTCBaseAddress = 0xFA00'0000;
-constexpr auto Serial0BaseAddress = 0xFB00'0000;
-constexpr auto DisplayBaseAddress = 0xFC00'0000;
-constexpr auto SDBaseAddress = 0xFD00'0000;
-constexpr auto MaximumNumberOfOpenFiles = 16;
-constexpr auto CompileInAddressDebuggingSupport = false;
-constexpr auto AddressDebuggingEnabledOnStartup = false;
-constexpr auto ValidateTransferDuringInstall = false;
-/**
- * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
- */
-constexpr auto UseIOExpanderAddressLineInterrupts = true;
-using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
-using TheSDInterface = SDCardInterface<MaximumNumberOfOpenFiles, SDBaseAddress>;
-using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport, AddressDebuggingEnabledOnStartup>;
-using TheRTCInterface = RTCInterface<RTCBaseAddress>;
-using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
-        TheSDInterface,
-        TheDisplayInterface,
-        TheRTCInterface>;
-// define the backing memory storage classes via template specialization
-// at this point in time, if no specialization is performed, use SDCard as ram backend
-using FallbackMemory = SDCardAsRam<TheSDInterface >;
-template<TargetMCU mcu> struct BackingMemoryStorage final {
-    using Type = FallbackMemory;
-};
-template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
-    //using ActualType = OnboardPSRAMBlock;
-    //using Type = SRAMDataContainer<ActualType>;
-    using Type = OnboardPSRAMBlock;
-};
-
-using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
-constexpr auto NumAddressBitsForPSRAMCache = 26;
-constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto CacheLineSize = 6;
-constexpr auto CacheSize = 8192;
-constexpr auto UseSpecificTypesForDifferentAddressComponents = true;
-
-using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 L1Cache theCache;
 
 template<bool inDebugMode, bool useInterrupts>
