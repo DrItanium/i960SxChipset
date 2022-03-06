@@ -67,7 +67,7 @@ constexpr auto SDBaseAddress = 0xFD00'0000;
 /**
  * @brief Total number of bits used for cache address resolution. Reduction in bit count on AVR can translate to improved code density. Everywhere else this really does nothing
  */
-constexpr auto NumAddressBitsForPSRAMCache = 26;
+constexpr auto NumAddressBitsForPSRAMCache = 27;
 /**
  * @brief The total number of bits used for addresses overall, usually the same as NumAddressBitsForPSRAMCache
  */
