@@ -46,6 +46,10 @@ constexpr auto UseSpacePins = true;
  */
 constexpr auto UseSpecificTypesForDifferentAddressComponents = true;
 /**
+ * @brief When false, all chipset boot information over serial console (except for the ram upload) will be suppressed
+ */
+constexpr auto DisplayBootupInformation  = true;
+/**
  * @brief Maximum number of concurrently open files allowed, increasing this number will increase sram usage
  */
 constexpr auto MaximumNumberOfOpenFiles = 16;

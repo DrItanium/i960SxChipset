@@ -135,15 +135,19 @@ public:
         if (!displayShield_.begin()) {
             signalHaltState(F("No Display Shield Found!"));
         }
-        Serial.println(F("Display seesaw started"));
-        Serial.print(F("Version: "));
-        Serial.println(displayShield_.getVersion(), HEX);
+        if constexpr (DisplayBootupInformation) {
+            Serial.println(F("Display seesaw started"));
+            Serial.print(F("Version: "));
+            Serial.println(displayShield_.getVersion(), HEX);
+        }
 
         setBacklightIntensity(TFTSHIELD_BACKLIGHT_OFF);
         displayShield_.tftReset();
         tft.initR(INITR_BLACKTAB);
         setBacklightIntensity(TFTSHIELD_BACKLIGHT_ON);
-        Serial.println(F("TFT UP AND OK!"));
+        if constexpr (DisplayBootupInformation) {
+            Serial.println(F("TFT UP AND OK!"));
+        }
         tft.fillScreen(ST7735_CYAN);
         delay(1000);
         tft.fillScreen(ST7735_BLACK);

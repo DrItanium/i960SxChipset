@@ -88,7 +88,9 @@ public:
 public:
     static void begin() noexcept {
         // this is done ahead of time
-        Serial.println(F("CONSOLE UP!"));
+        if constexpr (DisplayBootupInformation) {
+            Serial.println(F("CONSOLE UP!"));
+        }
     }
 
     static uint16_t read(uint8_t, uint8_t offset, LoadStoreStyle ) noexcept {

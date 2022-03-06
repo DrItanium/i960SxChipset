@@ -102,11 +102,17 @@ public:
     static void begin() noexcept {
         rtcUp_ = rtc_.begin();
         if (!rtcUp_) {
-            Serial.println(F("NO RTC FOUND...DISABLING"));
+            if constexpr (DisplayBootupInformation) {
+                Serial.println(F("NO RTC FOUND...DISABLING"));
+            }
         } else {
-            Serial.println(F("RTC FOUND... CHECKING"));
+            if constexpr (DisplayBootupInformation) {
+                Serial.println(F("RTC FOUND... CHECKING"));
+            }
             if (!rtc_.initialized() || rtc_.lostPower()) {
-                Serial.println(F("RTC is NOT initialized, setting time from sketch compile"));
+                if constexpr (DisplayBootupInformation) {
+                    Serial.println(F("RTC is NOT initialized, setting time from sketch compile"));
+                }
                 // not the most accurate but good enough
                 rtc_.adjust(DateTime(F(__DATE__), F(__TIME__)));
             }

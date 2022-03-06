@@ -220,11 +220,15 @@ setupChipset() noexcept {
     theCache.begin();
     // purge the cache pages
     ConfigurationSpace::begin();
-    Serial.println(F("i960Sx chipset bringup"));
+    if constexpr (DisplayBootupInformation) {
+        Serial.println(F("i960Sx chipset bringup"));
+    }
     BackingMemoryStorage_t::begin();
     installBootImage();
     delay(100);
-    Serial.println(F("i960Sx chipset brought up fully!"));
+    if constexpr (DisplayBootupInformation) {
+        Serial.println(F("i960Sx chipset brought up fully!"));
+    }
     ProcessorInterface::pullCPUOutOfReset();
 }
 // the setup routine runs once when you press reset:

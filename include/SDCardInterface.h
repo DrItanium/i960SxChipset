@@ -300,7 +300,9 @@ public:
                 Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
                 delay(1000);
             }
-            Serial.println(F("SD CARD UP!"));
+            if constexpr (DisplayBootupInformation) {
+                Serial.println(F("SD CARD UP!"));
+            }
             clusterCount_ = SplitWord32(SD.clusterCount());
             volumeSectorCount_ = SplitWord32(SD.clusterCount() / SD.sectorsPerCluster());
             bytesPerSector_ = SD.bytesPerCluster() / SD.sectorsPerCluster();
