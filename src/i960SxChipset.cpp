@@ -207,15 +207,8 @@ startupSerial() noexcept {
         delay(10);
     }
 }
-// the setup routine runs once when you press reset:
 void
-setup() {
-    // seed random on startup to be on the safe side from analog pin A0, A1, A2, and A3
-    randomSeed(analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3));
-    setupPins();
-    SPI.begin();
-    ProcessorInterface::begin();
-    startupSerial();
+setupChipset() noexcept {
     // always do this first to make sure that we put the i960 into reset regardless of target
     ProcessorInterface::putCPUIntoReset();
     // before we do anything else, configure as many pins as possible and then
@@ -233,6 +226,17 @@ setup() {
     delay(100);
     Serial.println(F("i960Sx chipset brought up fully!"));
     ProcessorInterface::pullCPUOutOfReset();
+}
+// the setup routine runs once when you press reset:
+void
+setup() {
+    // seed random on startup to be on the safe side from analog pin A0, A1, A2, and A3
+    randomSeed(analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3));
+    setupPins();
+    SPI.begin();
+    ProcessorInterface::begin();
+    startupSerial();
+    setupChipset();
     // at this point we have started execution of the i960
     // wait until we enter self test state
     while (DigitalPin<i960Pinout::FAIL>::isDeasserted()) {
