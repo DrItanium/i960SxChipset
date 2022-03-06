@@ -156,9 +156,9 @@ void installBootImage() noexcept {
     // clear both caches to be on the safe side
     theCache.clear();
 }
+void
+setupPins() noexcept {
 
-// the setup routine runs once when you press reset:
-void setup() {
     // startup SPI as soon as possible in this design
     setupPins(OUTPUT,
               i960Pinout::SPI_OFFSET0,
@@ -199,17 +199,25 @@ void setup() {
               i960Pinout::IOEXP_INT1,
               i960Pinout::IOEXP_INT2,
               i960Pinout::IOEXP_INT3);
-    SPI.begin();
-    ProcessorInterface::begin();
-
-    // always do this first to make sure that we put the i960 into reset regardless of target
-    ProcessorInterface::putCPUIntoReset();
+}
+void
+startupSerial() noexcept {
     Serial.begin(115200);
     while (!Serial) {
         delay(10);
     }
+}
+// the setup routine runs once when you press reset:
+void
+setup() {
     // seed random on startup to be on the safe side from analog pin A0, A1, A2, and A3
     randomSeed(analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3));
+    setupPins();
+    SPI.begin();
+    ProcessorInterface::begin();
+    startupSerial();
+    // always do this first to make sure that we put the i960 into reset regardless of target
+    ProcessorInterface::putCPUIntoReset();
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
