@@ -29,7 +29,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SPI.h>
 #include "Pinout.h"
 #include "i960SxChipset.h"
-#include "SystemDescription.h"
 
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
@@ -1244,14 +1243,14 @@ private:
     static inline BodyFunction unmappedReadFunction_ = performFallbackRead;
     static inline BodyFunction unmappedWriteFunction_ = performFallbackWrite;
     using ReducedSizeDispatchTable = BodyFunction[32];
-    static ReducedSizeDispatchTable ramDispatchRead_;
-    static ReducedSizeDispatchTable ramDispatchReadDebug_;
-    static ReducedSizeDispatchTable ramDispatchWrite_;
-    static ReducedSizeDispatchTable ramDispatchWriteDebug_;
-    static ReducedSizeDispatchTable ioDispatchRead_;
-    static ReducedSizeDispatchTable ioDispatchReadDebug_;
-    static ReducedSizeDispatchTable ioDispatchWrite_;
-    static ReducedSizeDispatchTable ioDispatchWriteDebug_;
+    static inline ReducedSizeDispatchTable ramDispatchRead_ { nullptr };
+    static inline ReducedSizeDispatchTable ramDispatchReadDebug_ { nullptr };
+    static inline ReducedSizeDispatchTable ramDispatchWrite_ { nullptr };
+    static inline ReducedSizeDispatchTable ramDispatchWriteDebug_ { nullptr };
+    static inline ReducedSizeDispatchTable ioDispatchRead_ { nullptr };
+    static inline ReducedSizeDispatchTable ioDispatchReadDebug_ { nullptr };
+    static inline ReducedSizeDispatchTable ioDispatchWrite_ { nullptr };
+    static inline ReducedSizeDispatchTable ioDispatchWriteDebug_ { nullptr };
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved

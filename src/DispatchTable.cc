@@ -24,3 +24,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ProcessorSerializer.h"
+#include "SystemDescription.h"
+
+void
+ProcessorInterface::setupDispatchTable() noexcept {
+
+}
