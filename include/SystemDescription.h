@@ -38,6 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 #include "RTCInterface.h"
 #include "FlashInterface.h"
+#include "type_traits.h"
 
 
 using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
@@ -48,7 +49,7 @@ using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
         TheDisplayInterface,
         TheRTCInterface>;
 /**
- * @brief Describes where we want to get the boot.sys from
+ * @brief Describes where we want to get the boot.sys from, either flash or sdcard
  */
-using BootImageSource = TheSDInterface;
+using BootImageSource = conditional_t<UploadBootImageFromFlash, FlashInterface, TheSDInterface>;
 #endif //SXCHIPSET_SYSTEMDESCRIPTION_H

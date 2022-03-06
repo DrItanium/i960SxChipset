@@ -50,6 +50,10 @@ constexpr auto UseSpecificTypesForDifferentAddressComponents = true;
  */
 constexpr auto DisplayBootupInformation  = true;
 /**
+ * @brief If true, then the onboard flash chips are selected to load boot.sys from, otherwise the sdcard is used
+ */
+constexpr auto UploadBootImageFromFlash = false;
+/**
  * @brief Maximum number of concurrently open files allowed, increasing this number will increase sram usage
  */
 constexpr auto MaximumNumberOfOpenFiles = 16;
@@ -76,4 +80,5 @@ constexpr auto CacheLineSize = 6;
  * @brief Total number of bytes that make up the cache itself (compiler will carve this up automatically based on configuration parameters provided)
  */
 constexpr auto CacheSize = 8192;
+
 #endif //SXCHIPSET_CONFIGURATIONFLAGS_H
