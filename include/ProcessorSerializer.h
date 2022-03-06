@@ -445,33 +445,79 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
+    /**
+     * @brief An expression of the interrupt pins associated with the data lines io expander, an asserted interrupt line means that there has been
+     * a change to that port (there are two 8-bit ports). This only applies when a write is being requested by the i960 (input). It is designed
+     * to reduce the number of spi transactions during runtime.
+     */
     enum class DataUpdateKind : byte {
+        /**
+         * @brief Both the upper and lower halves of the data lines have changed compared to last time.
+         */
         Full16 = 0,
+        /**
+         * @brief Only the upper eight bits are different compared to last time
+         */
         Upper8 = pinToPortBit<i960Pinout::DATA_LO8_INT>(),
+        /**
+         * @brief Only the lower eight bits are different compared to last time
+         */
         Lower8 = pinToPortBit<i960Pinout::DATA_HI8_INT>(),
+        /**
+         * @brief Neither the upper or lower eight bits are different compared to last time. This means there is no need to read from the data lines at all.
+         */
         Neither = pinToPortBit<i960Pinout::DATA_LO8_INT>() | pinToPortBit<i960Pinout::DATA_HI8_INT>(),
     };
+    /**
+     * @brief Query the interrupt lines tied to the data lines io expander
+     * @return An expression of how the data lines have changed compared to last write operation
+     */
     static inline DataUpdateKind getDataLineInputUpdateKind() noexcept {
         static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
                                      pinToPortBit<i960Pinout::DATA_HI8_INT>();
         return static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
     }
 public:
+    /**
+     * @brief Change the data lines io expander port direction from output to input (if applicable)
+     */
     inline static void setupDataLinesForWrite() noexcept {
         if (!dataLinesDirection_) {
             invertDataLinesDirection();
         }
     }
+    /**
+     * @brief Change the data lines io expander port direction from input to output (if applicable)
+     */
     inline static void setupDataLinesForRead() noexcept {
         if (dataLinesDirection_) {
             invertDataLinesDirection();
         }
     }
 private:
+    /**
+     * @brief Describes how much of the address is the same compared to the previous transaction. This is done via the io expander interrupt lines.
+     * In this case, the iocon's of each io expander are set to mirrored mode to reduce pin count. Thus only two bits are used instead of four bits.
+     * Keep in mind that the burst address pins are _not_ connected to the io expanders so the interrupts will only trigger when the address of a
+     * new transaction is different compared to the previous one. This is designed to reduce transaction latency. With external io devices, this drops
+     * the overall latency from ~14 usec down to 4.5 usec because the addresses are the same.
+     */
     enum class AddressUpdateKind : byte {
+        /**
+         * @brief Compared to last transaction, all 32-bits have changed so re-read all of them from the io expanders
+         */
         Full32 = 0,
+        /**
+         * @brief Only the lower 16-bits of the address have changed so only read that io expander
+         */
         Lower16 = pinToPortBit<i960Pinout::ADDRESS_HI_INT>(), // the upper 16 is marked as high
+        /**
+         * @brief Only the upper 16-bits of the address have changed so only read that io expander
+         */
         Upper16 = pinToPortBit<i960Pinout::ADDRESS_LO_INT>(), // the lower 16 is marked as high
+        /**
+         * @brief Neither the upper or lower halves of the address have changed. Do not query the SPI bus at all
+         */
         Neither = pinToPortBit<i960Pinout::ADDRESS_HI_INT>() | pinToPortBit<i960Pinout::ADDRESS_LO_INT>(), // both are marked high
     };
     /**
