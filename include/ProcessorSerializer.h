@@ -283,8 +283,36 @@ public:
     ProcessorInterface& operator=(const ProcessorInterface&) = delete;
     ProcessorInterface& operator=(ProcessorInterface&&) = delete;
 public:
+    /**
+     * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
+     *        The lowest 512 megabytes is known as the ram area. This function checks to see if the ram space gpio is asserted
+     * @return True if the ram space gpio is asserted.
+     */
     [[nodiscard]] static inline auto inRAMSpace() noexcept { return DigitalPin<i960Pinout::RAM_SPACE_>::isAsserted(); }
+    /**
+     * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
+     *        The highest 512 megabytes is known as the io area. This function checks to see if the io space gpio is asserted
+     * @return True if the io space gpio is asserted.
+     */
     [[nodiscard]] static inline auto inIOSpace() noexcept { return DigitalPin<i960Pinout::IO_SPACE_>::isAsserted(); }
+    /**
+     * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
+     *        If the address is not in the lowest or highest sections then it is considered unmapped
+     * @return True if the address is currently in the unmapped space location (neither ram or io spaces asserted)
+     */
+    [[nodiscard]] static inline auto inUnmappedSpace() noexcept { return !inRAMSpace() && !inIOSpace(); }
+    /**
+     * @brief Check the W/~R pin to see if we are dealing with a read transaction.
+     * Only needs to be queried once at the beginning of a new transaction
+     * @return If true, then the current transaction is a read operation. If false, then the current transaction is a write operation.
+     */
+    [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
+    /**
+     * @brief Retrieve the computed cache offset entry start. This is the word index that the current transaction will start at within a
+     * target cache line.
+     * @return The precomputed cache offset for the current transaction
+     */
+    [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
     /**
      * @brief Setup the processor interface on chipset startup.
      */
@@ -392,18 +420,6 @@ public:
         //auto contents = TargetInputPort;
         return static_cast<LoadStoreStyle>((getAssociatedInputPort<i960Pinout::BE0>()& Mask));
     }
-    /**
-     * @brief Check the W/~R pin to see if we are dealing with a read transaction.
-     * Only needs to be queried once at the beginning of a new transaction
-     * @return If true, then the current transaction is a read operation. If false, then the current transaction is a write operation.
-     */
-    [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
-    /**
-     * @brief Retrieve the computed cache offset entry start. This is the word index that the current transaction will start at within a
-     * target cache line.
-     * @return The precomputed cache offset for the current transaction
-     */
-    [[nodiscard]] static auto getCacheOffsetEntry() noexcept { return cacheOffsetEntry_; }
 private:
     /**
      * @brief A method responsible for turning data lines from input to output and vice-versa. It also inverts the tracking byte used by this
