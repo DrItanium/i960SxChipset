@@ -118,19 +118,21 @@ public:
             }
             // make sure that all timers are shutoff on startup
             rtc_.deconfigureAllTimers();
-            DateTime now = rtc_.now();
-            Serial.print(now.year(), DEC);
-            Serial.print(F("/"));
-            Serial.print(now.month(), DEC);
-            Serial.print(F("/"));
-            Serial.print(now.day(), DEC);
-            Serial.print(F(" "));
-            Serial.print(now.hour(), DEC);
-            Serial.print(F(":"));
-            Serial.print(now.minute(), DEC);
-            Serial.print(F(":"));
-            Serial.print(now.second(), DEC);
-            Serial.println();
+            if constexpr (DisplayBootupInformation) {
+                DateTime now = rtc_.now();
+                Serial.print(now.year(), DEC);
+                Serial.print(F("/"));
+                Serial.print(now.month(), DEC);
+                Serial.print(F("/"));
+                Serial.print(now.day(), DEC);
+                Serial.print(F(" "));
+                Serial.print(now.hour(), DEC);
+                Serial.print(F(":"));
+                Serial.print(now.minute(), DEC);
+                Serial.print(F(":"));
+                Serial.print(now.second(), DEC);
+                Serial.println();
+            }
 
             rtc_.start();
         }
