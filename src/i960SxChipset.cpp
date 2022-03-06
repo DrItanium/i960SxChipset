@@ -167,7 +167,6 @@ void setupChipsetVersionSpecificPins() noexcept {
         // do nothing
     }
 }
-void setupDispatchTable() noexcept;
 // the setup routine runs once when you press reset:
 void setup() {
     // startup SPI as soon as possible in this design
@@ -232,7 +231,6 @@ void setup() {
     ConfigurationSpace::begin();
     Serial.println(F("i960Sx chipset bringup"));
     BackingMemoryStorage_t::begin();
-    setupDispatchTable();
     installBootImage();
     delay(100);
     Serial.println(F("i960Sx chipset brought up fully!"));
@@ -319,85 +317,4 @@ signalHaltState(const __FlashStringHelper* haltMsg) {
     }
 }
 
-using DispatchTable = BodyFunction[256];
-extern DispatchTable lookupTableRead_Debug;
-extern DispatchTable lookupTableWrite_Debug;
-extern DispatchTable lookupTableRead;
-extern DispatchTable lookupTableWrite;
-template<typename T>
-void
-registerExternalDeviceWithLookupTable() noexcept {
-    lookupTableRead[T::SectionID] = ProcessorInterface::performExternalDeviceRead<T, false>;
-    lookupTableWrite[T::SectionID] = ProcessorInterface::performExternalDeviceWrite<T, false>;
-    if constexpr (CompileInAddressDebuggingSupport) {
-        lookupTableRead_Debug[T::SectionID] = ProcessorInterface::performExternalDeviceRead<T, true>;
-        lookupTableWrite_Debug[T::SectionID] = ProcessorInterface::performExternalDeviceWrite<T, true>;
-    }
-}
-
-template<bool debug>
-void
-readCacheLine() noexcept {
-    ProcessorInterface::performCacheRead<typename L1Cache::CacheEntry, debug>(theCache.getLine());
-}
-
-template<bool debug>
-void
-writeCacheLine() noexcept {
-    ProcessorInterface::performCacheWrite<typename L1Cache::CacheEntry, debug>(theCache.getLine());
-}
-void setupDispatchTable() noexcept {
-    Serial.println(F("Setting up the initial lookup table"));
-    for (int i = 0; i < 256; ++i) {
-        lookupTableRead[i] = ProcessorInterface::performFallbackRead;
-        lookupTableWrite[i] = ProcessorInterface::performFallbackWrite;
-        if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTableRead_Debug[i] = ProcessorInterface::performFallbackRead;
-            lookupTableWrite_Debug[i] = ProcessorInterface::performFallbackWrite;
-        }
-    }
-    for (int i = 0;i < 4; ++i) {
-        lookupTableRead[i] = readCacheLine<false>;
-        lookupTableWrite[i] = writeCacheLine<false>;
-        if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTableRead_Debug[i] = readCacheLine<true>;
-            lookupTableWrite_Debug[i] = writeCacheLine<true>;
-        }
-    }
-    registerExternalDeviceWithLookupTable<TheRTCInterface>();
-    registerExternalDeviceWithLookupTable<TheDisplayInterface>();
-    registerExternalDeviceWithLookupTable<TheSDInterface >();
-    registerExternalDeviceWithLookupTable<TheConsoleInterface>();
-    registerExternalDeviceWithLookupTable<ConfigurationSpace>();
-    // now tell the ProcessorInterface to pull the appropriate functions
-    ProcessorInterface::setupMostRecentDispatchFunctions();
-}
-BodyFunction
-getDebugReadBody(byte index) noexcept {
-    if constexpr (CompileInAddressDebuggingSupport) {
-        return lookupTableRead_Debug[index];
-    } else {
-        return ProcessorInterface::performFallbackRead;
-    }
-}
-BodyFunction
-getDebugWriteBody(byte index) noexcept {
-    if constexpr (CompileInAddressDebuggingSupport) {
-        return lookupTableWrite_Debug[index];
-    } else {
-        return ProcessorInterface::performFallbackWrite;
-    }
-}
-BodyFunction
-getNonDebugReadBody(byte index) noexcept {
-    return lookupTableRead[index];
-}
-BodyFunction getNonDebugWriteBody(byte index) noexcept {
-    return lookupTableWrite[index];
-}
-
 SdFat SD;
-DispatchTable lookupTableRead;
-DispatchTable lookupTableRead_Debug;
-DispatchTable lookupTableWrite;
-DispatchTable lookupTableWrite_Debug;

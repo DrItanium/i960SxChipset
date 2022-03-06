@@ -30,27 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SXCHIPSET_I960SXCHIPSET_H
 
 using BodyFunction = void (*)();
-BodyFunction getNonDebugReadBody(byte index) noexcept;
-BodyFunction getNonDebugWriteBody(byte index) noexcept;
-BodyFunction getDebugReadBody(byte index) noexcept;
-BodyFunction getDebugWriteBody(byte index) noexcept;
-
-template<bool inDebugMode>
-BodyFunction getReadBody(byte index) noexcept {
-    if constexpr (inDebugMode) {
-        return getDebugReadBody(index);
-    } else {
-        return getNonDebugReadBody(index);
-    }
-}
-template<bool inDebugMode>
-BodyFunction getWriteBody(byte index) noexcept {
-    if constexpr (inDebugMode) {
-        return getDebugWriteBody(index);
-    } else {
-        return getNonDebugWriteBody(index);
-    }
-}
+using DispatchTable = BodyFunction[256];
 
 [[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
 #endif //SXCHIPSET_I960SXCHIPSET_H

@@ -25,8 +25,71 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 #include "SystemDescription.h"
-
+void
+ProcessorInterface::readCacheLine_NonDebug() noexcept {
+    performCacheRead<typename L1Cache::CacheEntry, false>(theCache.getLine());
+}
+void
+ProcessorInterface::readCacheLine_Debug() noexcept {
+    performCacheRead<typename L1Cache::CacheEntry, true>(theCache.getLine());
+}
+void
+ProcessorInterface::writeCacheLine_NonDebug() noexcept {
+    performCacheWrite<typename L1Cache::CacheEntry, false>(theCache.getLine());
+}
+void
+ProcessorInterface::writeCacheLine_Debug() noexcept {
+    performCacheWrite<typename L1Cache::CacheEntry, true>(theCache.getLine());
+}
 void
 ProcessorInterface::setupDispatchTable() noexcept {
+    Serial.println(F("Setting up the initial lookup table"));
+    for (int i = 0; i < 256; ++i) {
+        lookupTableRead[i] = ProcessorInterface::performFallbackRead;
+        lookupTableWrite[i] = ProcessorInterface::performFallbackWrite;
+        if constexpr (CompileInAddressDebuggingSupport) {
+            lookupTableRead_Debug[i] = ProcessorInterface::performFallbackRead;
+            lookupTableWrite_Debug[i] = ProcessorInterface::performFallbackWrite;
+        }
+    }
+    for (int i = 0;i < 4; ++i) {
+        lookupTableRead[i] = readCacheLine<false>;
+        lookupTableWrite[i] = writeCacheLine<false>;
+        if constexpr (CompileInAddressDebuggingSupport) {
+            lookupTableRead_Debug[i] = readCacheLine<true>;
+            lookupTableWrite_Debug[i] = writeCacheLine<true>;
+        }
+    }
+    registerExternalDeviceWithLookupTable<TheRTCInterface>();
+    registerExternalDeviceWithLookupTable<TheDisplayInterface>();
+    registerExternalDeviceWithLookupTable<TheSDInterface >();
+    registerExternalDeviceWithLookupTable<TheConsoleInterface>();
+    registerExternalDeviceWithLookupTable<ConfigurationSpace>();
+    // now tell the ProcessorInterface to pull the appropriate functions
+    setupMostRecentDispatchFunctions();
+}
 
+BodyFunction
+ProcessorInterface::getDebugReadBody(byte index) noexcept {
+    if constexpr (CompileInAddressDebuggingSupport) {
+        return lookupTableRead_Debug[index];
+    } else {
+        return ProcessorInterface::performFallbackRead;
+    }
+}
+BodyFunction
+ProcessorInterface::getDebugWriteBody(byte index) noexcept {
+    if constexpr (CompileInAddressDebuggingSupport) {
+        return lookupTableWrite_Debug[index];
+    } else {
+        return ProcessorInterface::performFallbackWrite;
+    }
+}
+BodyFunction
+ProcessorInterface::getNonDebugReadBody(byte index) noexcept {
+    return lookupTableRead[index];
+}
+BodyFunction
+ProcessorInterface::getNonDebugWriteBody(byte index) noexcept {
+    return lookupTableWrite[index];
 }

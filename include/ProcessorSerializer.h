@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include <SPI.h>
 #include "Pinout.h"
+#include "ConfigurationFlags.h"
 #include "i960SxChipset.h"
 
 /**
@@ -356,6 +357,7 @@ public:
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
             // enable interrupts for accelerating write operations in the future
             SPI.endTransaction();
+            setupDispatchTable();
         }
     }
     /**
@@ -543,6 +545,28 @@ private:
         // otherwise we want to always do a full 32-bit address update
         return AddressUpdateKind::Full32;
     }
+private:
+    static BodyFunction getNonDebugReadBody(byte index) noexcept;
+    static BodyFunction getNonDebugWriteBody(byte index) noexcept;
+    static BodyFunction getDebugReadBody(byte index) noexcept;
+    static BodyFunction getDebugWriteBody(byte index) noexcept;
+    template<bool inDebugMode>
+    static BodyFunction getReadBody(byte index) noexcept {
+        if constexpr (inDebugMode) {
+            return getDebugReadBody(index);
+        } else {
+            return getNonDebugReadBody(index);
+        }
+    }
+    template<bool inDebugMode>
+    static BodyFunction getWriteBody(byte index) noexcept {
+        if constexpr (inDebugMode) {
+            return getDebugWriteBody(index);
+        } else {
+            return getNonDebugWriteBody(index);
+        }
+    }
+public:
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
      * @tparam C The cache line type used by the L1 cache
@@ -1216,6 +1240,41 @@ public:
     /**
      * @brief Complete the process of setting up the processor interface by seeding the cached function pointers with valid addresses.
      */
+private:
+    template<typename T>
+    static void
+    registerExternalDeviceWithLookupTable() noexcept {
+
+        lookupTableRead[T::SectionID] = performExternalDeviceRead<T, false>;
+        lookupTableWrite[T::SectionID] = performExternalDeviceWrite<T, false>;
+        if constexpr (CompileInAddressDebuggingSupport) {
+            lookupTableRead_Debug[T::SectionID] = performExternalDeviceRead<T, true>;
+            lookupTableWrite_Debug[T::SectionID] = performExternalDeviceWrite<T, true>;
+        }
+    }
+    static void readCacheLine_NonDebug() noexcept;
+    static void readCacheLine_Debug() noexcept;
+    static void writeCacheLine_NonDebug() noexcept;
+    static void writeCacheLine_Debug() noexcept;
+    template<bool debug>
+    static void
+    readCacheLine() noexcept {
+        if constexpr (debug) {
+            readCacheLine_Debug();
+        } else {
+            readCacheLine_NonDebug();
+        }
+    }
+
+    template<bool debug>
+    static void
+    writeCacheLine() noexcept {
+        if constexpr (debug) {
+            writeCacheLine_Debug();
+        } else {
+            writeCacheLine_NonDebug();
+        }
+    }
     static inline void setupMostRecentDispatchFunctions() noexcept {
         if (!initialDispatchFunctionsInitialized_) {
             initialDispatchFunctionsInitialized_ = true;
@@ -1223,17 +1282,7 @@ public:
             updateTargetFunctions<true>(0);
         }
     }
-private:
-    template<typename T>
-    void
-    registerExternalDeviceWithLookupTable() noexcept {
-        lookupTableRead[T::SectionID] = ProcessorInterface::performExternalDeviceRead<T, false>;
-        lookupTableWrite[T::SectionID] = ProcessorInterface::performExternalDeviceWrite<T, false>;
-        if constexpr (CompileInAddressDebuggingSupport) {
-            lookupTableRead_Debug[T::SectionID] = ProcessorInterface::performExternalDeviceRead<T, true>;
-            lookupTableWrite_Debug[T::SectionID] = ProcessorInterface::performExternalDeviceWrite<T, true>;
-        }
-    }
+
     static void setupDispatchTable() noexcept;
 private:
     static inline SplitWord32 address_{0};
@@ -1252,15 +1301,10 @@ private:
     static inline SplitWord16 latchedDataInput_ {0};
     static inline BodyFunction unmappedReadFunction_ = performFallbackRead;
     static inline BodyFunction unmappedWriteFunction_ = performFallbackWrite;
-    using ReducedSizeDispatchTable = BodyFunction[32];
-    static inline ReducedSizeDispatchTable ramDispatchRead_ { nullptr };
-    static inline ReducedSizeDispatchTable ramDispatchReadDebug_ { nullptr };
-    static inline ReducedSizeDispatchTable ramDispatchWrite_ { nullptr };
-    static inline ReducedSizeDispatchTable ramDispatchWriteDebug_ { nullptr };
-    static inline ReducedSizeDispatchTable ioDispatchRead_ { nullptr };
-    static inline ReducedSizeDispatchTable ioDispatchReadDebug_ { nullptr };
-    static inline ReducedSizeDispatchTable ioDispatchWrite_ { nullptr };
-    static inline ReducedSizeDispatchTable ioDispatchWriteDebug_ { nullptr };
+    static inline DispatchTable lookupTableRead{ nullptr };
+    static inline DispatchTable lookupTableWrite{ nullptr };
+    static inline DispatchTable lookupTableRead_Debug{ nullptr };
+    static inline DispatchTable lookupTableWrite_Debug{ nullptr };
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
