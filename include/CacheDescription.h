@@ -53,10 +53,6 @@ template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
 };
 
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
-constexpr auto NumAddressBitsForPSRAMCache = 26;
-constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
-constexpr auto CacheLineSize = 6;
-constexpr auto CacheSize = 8192;
 
 using L1Cache = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 extern L1Cache theCache;

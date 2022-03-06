@@ -55,4 +55,21 @@ constexpr auto Serial0BaseAddress = 0xFB00'0000;
 constexpr auto DisplayBaseAddress = 0xFC00'0000;
 constexpr auto SDBaseAddress = 0xFD00'0000;
 
+// Cache configuration fields
+/**
+ * @brief Total number of bits used for cache address resolution. Reduction in bit count on AVR can translate to improved code density. Everywhere else this really does nothing
+ */
+constexpr auto NumAddressBitsForPSRAMCache = 26;
+/**
+ * @brief The total number of bits used for addresses overall, usually the same as NumAddressBitsForPSRAMCache
+ */
+constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
+/**
+ * @brief Number of bits used to represent cache line size, defaults to 6 which translates to 64 bytes
+ */
+constexpr auto CacheLineSize = 6;
+/**
+ * @brief Total number of bytes that make up the cache itself (compiler will carve this up automatically based on configuration parameters provided)
+ */
+constexpr auto CacheSize = 8192;
 #endif //SXCHIPSET_CONFIGURATIONFLAGS_H

@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "Pinout.h"
+#include "i960SxChipset.h"
 
 template<Address baseAddress>
 class DisplayInterface {
