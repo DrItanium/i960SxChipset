@@ -206,6 +206,7 @@ setupChipset() noexcept {
     /// @todo pull the i960 into reset at this point
     //pinMode(i960Pinout::MISO, INPUT_PULLUP);
     theCache.begin();
+    FlashInterface::begin();
     // purge the cache pages
     ConfigurationSpace::begin();
     if constexpr (DisplayBootupInformation) {

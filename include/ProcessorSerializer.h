@@ -372,10 +372,15 @@ public:
      * @param value The value to set the GPIO register pair to
      * @return True if this is the last word of a burst transaction
      */
+    template<bool inDebugMode>
     static bool setDataBits(uint16_t value) noexcept {
         // the latch is preserved in between data line changes
         // okay we are still pointing as output values
         // check the latch and see if the output value is the same as what is latched
+        if constexpr (inDebugMode) {
+            Serial.print(F("setDataBits: 0x"));
+            Serial.println(value, HEX);
+        }
         if (latchedDataOutput.getWholeValue() != value) {
             //latchedDataOutput.wholeValue_ = value;
             bool isLastRead;
@@ -843,46 +848,46 @@ public:
             auto a5 = line.get(offset+5);
             auto a6 = line.get(offset+6);
             auto a7 = line.get(offset+7);
-            auto isLastRead = setDataBits(a0);
+            auto isLastRead = setDataBits<inDebugMode>(a0);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits(a1);
+            isLastRead = setDataBits<inDebugMode>(a1);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // we are looking at a double word, triple word, or quad word
-            isLastRead = setDataBits(a2);
+            isLastRead = setDataBits<inDebugMode>(a2);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits(a3);
+            isLastRead = setDataBits<inDebugMode>(a3);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a triple word or quad word operation
-            isLastRead = setDataBits(a4);
+            isLastRead = setDataBits<inDebugMode>(a4);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits(a5);
+            isLastRead = setDataBits<inDebugMode>(a5);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a quad word operation of some kind
             // perhaps the processor loading instruction into the data cache?
-            isLastRead = setDataBits(a6);
+            isLastRead = setDataBits<inDebugMode>(a6);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits(a7);
+            isLastRead = setDataBits<inDebugMode>(a7);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
@@ -1087,7 +1092,7 @@ public:
                 Serial.print(F("\tRead Value: 0x"));
                 Serial.println(result, HEX);
             }
-            auto isLast = setDataBits(result);
+            auto isLast = setDataBits<inDebugMode>(result);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 return;

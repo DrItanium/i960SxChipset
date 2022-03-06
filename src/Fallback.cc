@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void
 ProcessorInterface::performFallbackRead() noexcept {
     do {
-        auto isLast = setDataBits(0);
+        auto isLast = setDataBits<false>(0);
         DigitalPin<i960Pinout::Ready>::pulse();
         // need to introduce some delay
         if (isLast) {
