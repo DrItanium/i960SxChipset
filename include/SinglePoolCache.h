@@ -44,7 +44,8 @@ public:
     static_assert (NumberOfBitsForGivenSet > 0, "Illegal number of entries detected!");
     using CacheWay = C<NumberOfBitsForGivenSet, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
     static constexpr auto MaximumNumberOfEntries = numEntries;
-    static constexpr auto ActualNumberOfEntries = MaximumNumberOfEntries / CacheWay :: NumberOfWays;
+    static constexpr auto ActualNumberOfEntries = directlyUseEntryCount ? MaximumNumberOfEntries : (MaximumNumberOfEntries / CacheWay :: NumberOfWays);
+    static_assert(ActualNumberOfEntries != 0, "Number of entries to be put in the cache is too small or not a power of 2");
     using CacheEntry = typename CacheWay::CacheEntry;
     using TaggedAddress = typename CacheWay::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;

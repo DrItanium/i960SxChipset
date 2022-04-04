@@ -55,6 +55,8 @@ public:
      * @brief The number of words cached by this line (NumBytesCached / sizeof(Word))
      */
     static constexpr size_t NumWordsCached = NumBytesCached / sizeof(Word);
+
+    static_assert(NumBytesCached != 0, "the number of bytes to be cached is a non power of 2");
     /**
      * @brief A bitmask of the word types
      */
