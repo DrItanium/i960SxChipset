@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes>
 class TwelveWayRandPLRUCacheSet {
 public:
-    static constexpr auto NumberOfWays = 14;
+    static constexpr auto NumberOfWays = 12;
     //static constexpr auto WayMask = NumberOfWays - 1;
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;

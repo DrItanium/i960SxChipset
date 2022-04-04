@@ -37,6 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SixteenWayPseudoLRUEntry.h"
 #include "EightWayRandPLRUEntry.h"
 #include "EightWayTreePLRUEntry.h"
+#include "TwelveWayRandPLRUEntry.h"
 #include "FourteenWayRandPLRUEntry.h"
 #include "SinglePoolCache.h"
 #include "SDCardAsRam.h"
@@ -60,8 +61,8 @@ using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>
 
 using Cache1Config = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 // unlike normal caches, we have to tune the number of entries based on available ram
-constexpr auto NumberCache2Entries = 8;
-using Cache2Config = Cache2Instance_t<FourteenWayRandPLRUCacheSet, NumberCache2Entries, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
+constexpr auto NumberCache2Entries = 16;
+using Cache2Config = Cache2Instance_t<TwelveWayRandPLRUCacheSet, NumberCache2Entries, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 using L1Cache = Cache2Config;
 using CacheLine = L1Cache::CacheEntry;
 extern L1Cache theCache;
