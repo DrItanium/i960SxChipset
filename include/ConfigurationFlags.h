@@ -56,7 +56,7 @@ constexpr auto UploadBootImageFromFlash = false;
 /**
  * @brief Maximum number of concurrently open files allowed, increasing this number will increase sram usage
  */
-constexpr auto MaximumNumberOfOpenFiles = 16;
+constexpr auto MaximumNumberOfOpenFiles = 8;
 
 constexpr auto RTCBaseAddress = 0xFA00'0000;
 constexpr auto Serial0BaseAddress = 0xFB00'0000;

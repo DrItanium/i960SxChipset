@@ -75,11 +75,11 @@ private:
     updateFlags(byte index) noexcept {
         /// @note I know that this routine is unsafe but the added overhead of checking for validity adds some considerable expense on each lookup
         constexpr byte masks[NumberOfGroups*2] {
-                0b11111110, 0b00000001,
-                0b11111101, 0b00000010,
-                0b11111011, 0b00000100,
-                0b11110111, 0b00001000,
-                0b11101111, 0b00010000,
+                0b11110, 0b00001,
+                0b11101, 0b00010,
+                0b11011, 0b00100,
+                0b10111, 0b01000,
+                0b01111, 0b10000,
                 //0b11011111, 0b00100000,
                 //0b10111111, 0b01000000,
                 //0b01111111, 0b10000000,
@@ -118,11 +118,11 @@ private:
          * @brief Mask of the individual bit to look at inside of flag to find the least recently used
          */
         static constexpr byte maskLookup[NumberOfGroups] {
-            0b000001,
-            0b000010,
-            0b000100,
-            0b001000,
-            0b010000,
+            0b00001,
+            0b00010,
+            0b00100,
+            0b01000,
+            0b10000,
         };
         if (!initialized) {
             initialized = true;
