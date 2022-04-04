@@ -38,7 +38,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @tparam T The backing storage type or where we read from and write to on a cache miss
  */
 template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes>
-class EightWayRandPLRUCacheSet {
+class FourteenWayRandPLRUCacheSet {
 public:
     static constexpr auto NumberOfWays = 14;
     //static constexpr auto WayMask = NumberOfWays - 1;

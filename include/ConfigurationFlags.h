@@ -81,4 +81,5 @@ constexpr auto CacheLineSize = 6;
  */
 constexpr auto CacheSize = 8192;
 
+
 #endif //SXCHIPSET_CONFIGURATIONFLAGS_H

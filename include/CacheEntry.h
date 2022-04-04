@@ -41,6 +41,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 template<byte numTagBits, byte maxAddressBits, byte numLowestBits, typename T, bool useSpecificTypeSizes = true>
 class CacheEntry final {
 public:
+    static_assert(numTagBits > 0, "Number of tag bits is zero");
+    static_assert(numLowestBits != 0, "Number of of bytes per cache line is zero");
     /**
      * @brief Divides the bytes that make up this cache line to this type
      */

@@ -33,14 +33,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "TaggedCacheAddress.h"
 #include "CacheEntry.h"
 
-template<template<auto, auto, auto, typename, bool> typename C, uint16_t numEntries, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes>
+template<template<auto, auto, auto, typename, bool> typename C, uint16_t numEntries, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes, bool directlyUseEntryCount>
 class SinglePoolCache {
 private:
     using FakeCacheType = C<getNumberOfBitsForNumberOfEntries(numEntries), numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
 public:
     static constexpr auto NumCacheWays = FakeCacheType::NumberOfWays;
-    using CacheWay = C<getNumberOfBitsForNumberOfEntries(numEntries/NumCacheWays), numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
-    static constexpr auto WayMask = CacheWay::WayMask;
+    static constexpr auto NumberOfSets = numEntries / (directlyUseEntryCount ? 1 : NumCacheWays);
+    static constexpr auto NumberOfBitsForGivenSet = getNumberOfBitsForNumberOfEntries(NumberOfSets);
+    static_assert (NumberOfBitsForGivenSet > 0, "Illegal number of entries detected!");
+    using CacheWay = C<NumberOfBitsForGivenSet, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
     static constexpr auto MaximumNumberOfEntries = numEntries;
     static constexpr auto ActualNumberOfEntries = MaximumNumberOfEntries / CacheWay :: NumberOfWays;
     using CacheEntry = typename CacheWay::CacheEntry;
@@ -112,7 +114,7 @@ public:
     static constexpr auto NumOffsetBits = numOffsetBits;
     static constexpr auto NumBackingStoreBytes = backingStoreSize;
     static constexpr auto TotalEntryCount = NumBackingStoreBytes/ pow2(NumOffsetBits);
-    using UnderlyingCache_t = SinglePoolCache<C, TotalEntryCount, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
+    using UnderlyingCache_t = SinglePoolCache<C, TotalEntryCount, numAddressBits, numOffsetBits, T, useSpecificTypeSizes, false>;
     using CacheLine = typename UnderlyingCache_t::CacheEntry;
     static constexpr auto CacheEntryMask = CacheLine::CacheEntryMask;
     static constexpr auto NumWordsCached = CacheLine::NumWordsCached;
@@ -144,11 +146,10 @@ template<template<auto, auto, auto, typename, bool> typename C,
         uint16_t numberOfEntries,
         byte numAddressBits,
         byte numOffsetBits,
-        typename T,
-        bool useSpecificTypeSizes = false>
+        typename T>
 struct Cache2 {
 public:
-    using UnderlyingCache_t = SinglePoolCache<C, numberOfEntries, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
+    using UnderlyingCache_t = SinglePoolCache<C, numberOfEntries, numAddressBits, numOffsetBits, T, false, true>;
     using CacheLine = typename UnderlyingCache_t::CacheEntry;
     static constexpr auto CacheEntryMask = CacheLine::CacheEntryMask;
     static constexpr auto NumWordsCached = CacheLine::NumWordsCached;
@@ -173,10 +174,10 @@ using Cache_t = Cache<C, backingStoreSize, numAddressBits, numOffsetBits, T, use
 template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes = true>
 using CacheInstance_t = typename Cache_t<C, backingStoreSize, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>::UnderlyingCache_t;
 
-template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes = true>
-using Cache2_t = Cache2<C, backingStoreSize, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
+template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T>
+using Cache2_t = Cache2<C, backingStoreSize, numAddressBits, numOffsetBits, T>;
 
-template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes = true>
-using Cache2Instance_t = typename Cache2_t<C, backingStoreSize, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>::UnderlyingCache_t;
+template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T>
+using Cache2Instance_t = typename Cache2_t<C, backingStoreSize, numAddressBits, numOffsetBits, T>::UnderlyingCache_t;
 
 #endif //SXCHIPSET_SINGLEPOOLCACHE_H
