@@ -131,10 +131,52 @@ private:
     static inline UnderlyingCache_t theCache_;
 };
 
+/**
+ * @brief A different kind of cache where the number of entries is defined instead of the total size.
+ * @tparam C The cache set type
+ * @tparam numberOfEntries The number of sets to hold in this cache
+ * @tparam numAddressBits The total number of bits that make up a cache address
+ * @tparam numOffsetBits The number of bits for the backing store in each cache line (6 -> 64 bytes, etc)
+ * @tparam T The backing storage of this cache
+ * @tparam useSpecificTypeSizes When true use the smallest type available for each bit field (will barf out in most cases)
+ */
+template<template<auto, auto, auto, typename, bool> typename C,
+        uint16_t numberOfEntries,
+        byte numAddressBits,
+        byte numOffsetBits,
+        typename T,
+        bool useSpecificTypeSizes = false>
+struct Cache2 {
+public:
+    using UnderlyingCache_t = SinglePoolCache<C, numberOfEntries, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
+    using CacheLine = typename UnderlyingCache_t::CacheEntry;
+    static constexpr auto CacheEntryMask = CacheLine::CacheEntryMask;
+    static constexpr auto NumWordsCached = CacheLine::NumWordsCached;
+public:
+    Cache2() = delete;
+    ~Cache2() = delete;
+    Cache2(const Cache2&) = delete;
+    Cache2(Cache2&&) = delete;
+    /// @todo delete more of the default methods
+    [[nodiscard]] static CacheLine& getLine() noexcept { return theCache_.getLine(); }
+    static void begin() noexcept { theCache_.begin(); }
+    static void clear() noexcept { theCache_.clear(); }
+    [[nodiscard]] static constexpr auto getCacheSize() noexcept { return theCache_.getCacheSize(); }
+    [[nodiscard]] static auto viewAsStorage() noexcept { return theCache_.viewAsStorage(); }
+private:
+    static inline UnderlyingCache_t theCache_;
+};
+
 template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes = true>
 using Cache_t = Cache<C, backingStoreSize, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
 
 template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes = true>
 using CacheInstance_t = typename Cache_t<C, backingStoreSize, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>::UnderlyingCache_t;
+
+template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes = true>
+using Cache2_t = Cache2<C, backingStoreSize, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>;
+
+template<template<auto, auto, auto, typename, bool> typename C, uint16_t backingStoreSize, byte numAddressBits, byte numOffsetBits, typename T, bool useSpecificTypeSizes = true>
+using Cache2Instance_t = typename Cache2_t<C, backingStoreSize, numAddressBits, numOffsetBits, T, useSpecificTypeSizes>::UnderlyingCache_t;
 
 #endif //SXCHIPSET_SINGLEPOOLCACHE_H
