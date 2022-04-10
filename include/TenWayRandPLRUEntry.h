@@ -82,20 +82,19 @@ private:
     void
     updateFlags(byte index) noexcept {
         /// @note I know that this routine is unsafe but the added overhead of checking for validity adds some considerable expense on each lookup
-        constexpr byte masks[NumberOfGroups*2] {
+        // It also seems that the compiler knows this is potentially unsafe and thus seems to insert extra code as well...
+        // it is very strange...
+        static constexpr byte masks[NumberOfGroups*2] {
                 0b11110, 0b00001,
                 0b11101, 0b00010,
                 0b11011, 0b00100,
                 0b10111, 0b01000,
                 0b01111, 0b10000,
-                //0b11011111, 0b00100000,
-                //0b10111111, 0b01000000,
-                //0b01111111, 0b10000000,
         };
-        if (auto rIndex = index & 0b1111; (rIndex & 0b1) == 0) {
-            bits_ &= masks[rIndex];
+        if (byte rIndex = index & 0b1111, mask = masks[rIndex]; (rIndex & 0b1) == 0) {
+            bits_ &= mask;
         } else {
-            bits_ |= masks[rIndex];
+            bits_ |= mask;
         }
     }
     [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
