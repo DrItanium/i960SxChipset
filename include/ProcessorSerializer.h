@@ -581,9 +581,9 @@ public:
     inline static void full32BitUpdate() noexcept {
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
-        constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
-        constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
-        constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
+        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -645,8 +645,8 @@ public:
     static void lower16Update() noexcept {
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
-        constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
-        constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // read only the lower half
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
@@ -678,8 +678,8 @@ public:
      */
     template<bool inDebugMode>
     static void upper16Update() noexcept {
-        constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
-        constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
+        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // only read the upper 16-bits
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
