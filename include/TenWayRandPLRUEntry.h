@@ -90,7 +90,7 @@ private:
             bits_ |= masks[rIndex];
         }
     }
-    [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
+    [[gnu::noinline]] [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
         static bool initialized = false;
         // have a shared counter that is shared across all cache sets
         // this introduces an extra layer of randomness so that it is harder to determine which
@@ -111,8 +111,6 @@ private:
             { 5, 4 },
             { 7, 6 },
             { 9, 8 },
-            //{ 11, 10 },
-            //{ 13, 12 },
         };
         /**
          * @brief Mask of the individual bit to look at inside of flag to find the least recently used
@@ -145,7 +143,8 @@ private:
 
         // This is a standard TreePLRU design but the use of a random table improves performance by eliminating tons of branches in the
         // resultant code.
-        return secondLookupTable[theIndex][(bits_ & maskLookup[theIndex]) ? 1 : 0];
+        return theIndex + ((bits_ & maskLookup[theIndex]) ? 1 : 0);
+        //return secondLookupTable[theIndex][(bits_ & maskLookup[theIndex]) ? 1 : 0];
     }
 
 private:
