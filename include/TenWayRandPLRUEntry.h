@@ -123,7 +123,7 @@ private:
 
         // This is a standard TreePLRU design but the use of a random table improves performance by eliminating tons of branches in the
         // resultant code.
-        return theIndex + ((bits_ & maskLookup[theIndex]) ? 1 : 0);
+        return theIndex + ((bits_ & maskLookup[theIndex]) ? 0 : 1);
     }
 
 private:
