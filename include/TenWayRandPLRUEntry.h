@@ -63,6 +63,14 @@ public:
         return ways_[index];
     }
     void clear() noexcept {
+        if (!randomTableInitialized_) {
+            // initialize the random table
+            randomTableInitialized_ = true;
+            counter_ = 0;
+            for (auto& v : randomTable_) {
+                v = random(0, NumberOfGroups);
+            }
+        }
         for (auto& way : ways_) {
             way.clear();
         }
@@ -91,16 +99,6 @@ private:
         }
     }
     [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
-        static bool initialized = false;
-        // have a shared counter that is shared across all cache sets
-        // this introduces an extra layer of randomness so that it is harder to determine which
-        // cache lines are going to be swapped out in a given set at any one time.
-        static byte counter = 0;
-        /**
-         * @brief Used to randomly select which group to perform replacement on. Coupled with the most recently used of each group of two
-         * it makes up the Rand part of Rand TreePLRU. Generated at runtime the first time this method is invoked.
-         */
-        static byte randomTable[256] = { 0 };
         /**
          * @brief Mask of the individual bit to look at inside of flag to find the least recently used
          */
@@ -111,13 +109,6 @@ private:
             0b01000,
             0b10000,
         };
-        if (!initialized) {
-            initialized = true;
-            counter = 0;
-            for (auto& v : randomTable) {
-                v = random(0, NumberOfGroups);
-            }
-        }
         // Instead of encoding the choice layers for top level followed by either the first two or the second two we just
         // use the random table to select one of the four groups. This reduces the number of bits required significantly at
         // the cost of initial spin up time. This spin up time can even be done prior to starting up as well.
@@ -125,7 +116,7 @@ private:
         // go up to 16 ways with a single byte of overhead.
 
         // the random table is between [0, NumberOfGroups) in this case that would be [0, 4)
-        auto theIndex = randomTable[counter++];
+        auto theIndex = randomTable_[counter_++];
         // use the index to select which of the four bits we care about to look at.
         // If true we return 1, otherwise zero. This is used in the lookup table to select the _other_ line to swap out
         // So if we get a 1 then it means swap out the even element of the pair, otherwise it is the odd element of the pair on a zero.
@@ -139,6 +130,9 @@ private:
     // This is RandPLRU Tree so we need to organize things correctly, I'm going to try four groups of two
     CacheEntry ways_[NumberOfWays];
     byte bits_ = 0;
+    static inline bool randomTableInitialized_ = false;
+    static inline byte counter_ = 0;
+    static inline byte randomTable_[256] = { 0};
 };
 
 #endif //SXCHIPSET_TENWAYPSEUDOLRUENTRY_H
