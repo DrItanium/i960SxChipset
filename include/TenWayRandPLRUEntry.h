@@ -90,7 +90,7 @@ private:
             bits_ |= masks[rIndex];
         }
     }
-    [[gnu::noinline]] [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
+    [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
         static bool initialized = false;
         // have a shared counter that is shared across all cache sets
         // this introduces an extra layer of randomness so that it is harder to determine which
@@ -101,17 +101,6 @@ private:
          * it makes up the Rand part of Rand TreePLRU. Generated at runtime the first time this method is invoked.
          */
         static byte randomTable[256] = { 0 };
-        /**
-         * @brief Two dimensional array that is broken up into groups of two with the opposite index stored at each position. So if you
-         * do [0][1] then you get 0 back because you're saying the first group and the odd position was the most recently used line.
-         */
-        static constexpr byte secondLookupTable[NumberOfGroups][2] {
-            { 1, 0 },
-            { 3, 2 },
-            { 5, 4 },
-            { 7, 6 },
-            { 9, 8 },
-        };
         /**
          * @brief Mask of the individual bit to look at inside of flag to find the least recently used
          */
@@ -144,7 +133,6 @@ private:
         // This is a standard TreePLRU design but the use of a random table improves performance by eliminating tons of branches in the
         // resultant code.
         return theIndex + ((bits_ & maskLookup[theIndex]) ? 1 : 0);
-        //return secondLookupTable[theIndex][(bits_ & maskLookup[theIndex]) ? 1 : 0];
     }
 
 private:
