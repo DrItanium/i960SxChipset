@@ -984,8 +984,9 @@ private:
     }
     template<byte count>
     [[nodiscard]]
-    [[gnu::noinline]]
+    //[[gnu::noinline]]
     static bool getDataBits(byte offset) noexcept {
+        static_assert(count < 8, "Index for getting data bits is out of range!");
         switch (getDataLineInputUpdateKind()) {
             case DataUpdateKind::Neither: {
                 auto &request = transactions[count];
