@@ -840,54 +840,55 @@ public:
             // These full words will hold onto garbage data if we span two cache lines. That is actually okay because
             // the i960 will never request that data. It will operate on a maximum of 16-bytes at a time.
             // For consistency, I am leaving the loop in (my research may be flawed in some way)
-            auto a0 = line.get(offset+0);
-            auto a1 = line.get(offset+1);
-            auto a2 = line.get(offset+2);
-            auto a3 = line.get(offset+3);
-            auto a4 = line.get(offset+4);
-            auto a5 = line.get(offset+5);
-            auto a6 = line.get(offset+6);
-            auto a7 = line.get(offset+7);
-            auto isLastRead = setDataBits<inDebugMode>(a0);
+            auto basePtr = line.getRawData() + offset;
+            auto& a0 = basePtr[0];
+            auto& a1 = basePtr[1];
+            auto& a2 = basePtr[2];
+            auto& a3 = basePtr[3];
+            auto& a4 = basePtr[4];
+            auto& a5 = basePtr[5];
+            auto& a6 = basePtr[6];
+            auto& a7 = basePtr[7];
+            auto isLastRead = setDataBits<inDebugMode>(a0.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits<inDebugMode>(a1);
+            isLastRead = setDataBits<inDebugMode>(a1.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // we are looking at a double word, triple word, or quad word
-            isLastRead = setDataBits<inDebugMode>(a2);
+            isLastRead = setDataBits<inDebugMode>(a2.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits<inDebugMode>(a3);
+            isLastRead = setDataBits<inDebugMode>(a3.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a triple word or quad word operation
-            isLastRead = setDataBits<inDebugMode>(a4);
+            isLastRead = setDataBits<inDebugMode>(a4.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits<inDebugMode>(a5);
+            isLastRead = setDataBits<inDebugMode>(a5.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a quad word operation of some kind
             // perhaps the processor loading instruction into the data cache?
-            isLastRead = setDataBits<inDebugMode>(a6);
+            isLastRead = setDataBits<inDebugMode>(a6.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits<inDebugMode>(a7);
+            isLastRead = setDataBits<inDebugMode>(a7.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;

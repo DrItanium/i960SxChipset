@@ -193,6 +193,11 @@ public:
      * @return True if no words in the valid line have been meaningfully modified
      */
     [[nodiscard]] constexpr bool isClean() const noexcept { return dirty_ == CleanCacheLineState; }
+    /**
+     * @brief Return a pointer to the underlying data to be used when performing read operations
+     * @return The based pointer to the underlying memory contents
+     */
+    [[nodiscard]] const Word * getRawData() const noexcept { return data; }
 private:
     Word data[NumWordsCached]; // 16 bytes
     KeyType key_ = 0;
