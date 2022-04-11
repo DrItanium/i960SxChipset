@@ -133,6 +133,12 @@ public:
      */
     [[nodiscard]] constexpr auto get(OffsetType offset) const noexcept { return data[offset].getWholeValue(); }
     /**
+     * @brief Return two words smashed into a double word; NOTE THERE IS NO CHECKS TO MAKE SURE YOU DIDN'T GO OUT OF BOUNDS!!!
+     * @param offset The offset into the line for the lower word (not a byte offset)
+     * @return The two words returned in a little endian format
+     */
+    [[nodiscard]] constexpr auto get2(OffsetType offset) const noexcept { return SplitWord32{get(offset), get(offset+1)}; }
+    /**
      * @brief Update a given word in the line and check it to see if the dirty bits should be updated as well
      * @param offset The word offset into the line
      * @param style Is this a Full 16-bit update, lower8 update, or upper8 update? Chipset halt on anything else
