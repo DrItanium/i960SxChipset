@@ -984,7 +984,7 @@ private:
     }
     template<byte count>
     [[nodiscard]]
-    //[[gnu::noinline]]
+    [[gnu::noinline]] // must prevent inlining to make sure the code works correctly
     static bool getDataBits(byte offset) noexcept {
         static_assert(count < 8, "Index for getting data bits is out of range!");
         switch (getDataLineInputUpdateKind()) {
