@@ -32,9 +32,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SdFat.h>
 extern SdFat SD;
 
-template<typename T>
+template<typename T, uint32_t numMegabytes = 512>
 class SDCardAsRam {
 public:
+    static constexpr auto NumMegabytes = numMegabytes;
+    static constexpr auto NumSections = NumMegabytes / 16;
     using SDInterface = T;
     SDCardAsRam() = delete;
     ~SDCardAsRam() = delete;
