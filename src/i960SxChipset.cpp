@@ -40,6 +40,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "type_traits.h"
 #include "23LC1024.h"
 #include "SRAMDataContainer.h"
+#include <SoftwareSerial.h>
+#include <Adafruit_BluefruitLE_SPI.h>
 
 
 template<bool inDebugMode, bool useInterrupts>
