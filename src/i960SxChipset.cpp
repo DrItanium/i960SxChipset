@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SRAMDataContainer.h"
 #include <SoftwareSerial.h>
 #include <Adafruit_BluefruitLE_SPI.h>
+#include <GD2.h>
 
 
 template<bool inDebugMode, bool useInterrupts>
