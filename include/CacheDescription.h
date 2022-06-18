@@ -64,7 +64,7 @@ using Cache1Config = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAdd
 // unlike normal caches, we have to tune the number of entries based on available ram
 constexpr auto NumberCache2Entries = 16;
 using Cache2Config = Cache2Instance_t<TenWayRandPLRUCacheSet, NumberCache2Entries, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
-using L1Cache = Cache2Config;
+using L1Cache = Cache1Config;
 using CacheLine = L1Cache::CacheEntry;
 extern L1Cache theCache;
 #endif //SXCHIPSET_CACHEDESCRIPTION_H
