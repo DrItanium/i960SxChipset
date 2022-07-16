@@ -50,17 +50,18 @@ public:
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        byte targetIndex = 0xFF;
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i].matches(theAddress)) {
                 updateFlags(i);
                 return ways_[i];
-            } else if ((targetIndex >= NumberOfWays) && !ways_[i].isValid()) {
-                targetIndex = i;
+            } else if (!ways_[i].isValid()) {
+                updateFlags(i);
+                ways_[i].reset(theAddress);
+                return ways_[i];
             }
         }
 
-        auto index = (targetIndex < NumberOfWays) ? targetIndex : getLeastRecentlyUsed();
+        auto index = getLeastRecentlyUsed();
         updateFlags(index);
         ways_[index].reset(theAddress);
         return ways_[index];
