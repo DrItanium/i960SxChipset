@@ -53,39 +53,21 @@ public:
         byte bytes_[4];
     };
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        switch (PSRAMBlockAddress addr(address); addr.getIndex()) {
-            case 0:
-            case 1:
-                return Pool2::write(address, buf, capacity);
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-                return Pool1::write(address, buf, capacity);
-            default:
-                return 0;
+        if (PSRAMBlockAddress addr(address); addr.getIndex() < 2) {
+            return Pool2::write(address, buf, capacity);
+        } else if (addr.getIndex() < 10) {
+            return Pool1::write(address, buf, capacity)  ;
+        } else {
+            return 0;
         }
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        switch (PSRAMBlockAddress addr(address); addr.getIndex()) {
-            case 0:
-            case 1:
-                return Pool2::read(address, buf, capacity);
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-                return Pool1::read(address, buf, capacity);
-            default:
-                return 0;
+        if (PSRAMBlockAddress addr(address); addr.getIndex() < 2) {
+            return Pool2::read(address, buf, capacity);
+        } else if (addr.getIndex() < 10) {
+            return Pool1::read(address, buf, capacity)  ;
+        } else {
+            return 0;
         }
     }
     static void begin() noexcept {
