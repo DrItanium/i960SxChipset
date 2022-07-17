@@ -79,7 +79,6 @@ public:
             way.clear();
         }
         bits_ = 0;
-        numValidEntries_ = 0;
     }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
@@ -153,7 +152,6 @@ private:
     // This is RandPLRU Tree so we need to organize things correctly, I'm going to try four groups of two
     CacheEntry ways_[NumberOfWays];
     byte bits_ = 0;
-    byte numValidEntries_ = 0;
 };
 
 #endif //SXCHIPSET_EIGHTWAYPSEUDOLRUENTRY_H
