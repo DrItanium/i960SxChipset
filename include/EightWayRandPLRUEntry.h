@@ -81,6 +81,30 @@ public:
         bits_ = 0;
     }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
+    static constexpr auto NumberOfGroups = 4;
+    static void begin() {
+        if (!randomTableInitialized_) {
+           randomTableInitialized_ = true;
+            counter = 0;
+            for (auto& v : randomTable) {
+                v = random(0, NumberOfGroups);
+            }
+        }
+    }
+    static byte getRandomValue() noexcept {
+        return randomTable[counter++];
+    }
+private:
+    static inline bool randomTableInitialized_ = false;
+    // have a shared counter that is shared across all cache sets
+    // this introduces an extra layer of randomness so that it is harder to determine which
+    // cache lines are going to be swapped out in a given set at any one time.
+    static inline byte counter = 0;
+    /**
+     * @brief Used to randomly select which group to perform replacement on. Coupled with the most recently used of each group of two
+     * it makes up the Rand part of Rand TreePLRU. Generated at runtime the first time this method is invoked.
+     */
+    static inline byte randomTable[256] = { 0 };
 private:
     void updateFlags(byte index) noexcept {
         constexpr byte masks[8] {
@@ -93,18 +117,7 @@ private:
             bits_ |= masks[rIndex];
         }
     }
-    static constexpr auto NumberOfGroups = 4;
     [[nodiscard]] byte getLeastRecentlyUsed() const noexcept {
-        static bool initialized = false;
-        // have a shared counter that is shared across all cache sets
-        // this introduces an extra layer of randomness so that it is harder to determine which
-        // cache lines are going to be swapped out in a given set at any one time.
-        static byte counter = 0;
-        /**
-         * @brief Used to randomly select which group to perform replacement on. Coupled with the most recently used of each group of two
-         * it makes up the Rand part of Rand TreePLRU. Generated at runtime the first time this method is invoked.
-         */
-        static byte randomTable[256] = { 0 };
         /**
          * @brief Two dimensional array that is broken up into groups of two with the opposite index stored at each position. So if you
          * do [0][1] then you get 0 back because you're saying the first group and the odd position was the most recently used line.
@@ -124,13 +137,6 @@ private:
             0b0100,
             0b1000,
         };
-        if (!initialized) {
-            initialized = true;
-            counter = 0;
-            for (auto& v : randomTable) {
-                v = random(0, NumberOfGroups);
-            }
-        }
         // Instead of encoding the choice layers for top level followed by either the first two or the second two we just
         // use the random table to select one of the four groups. This reduces the number of bits required significantly at
         // the cost of initial spin up time. This spin up time can even be done prior to starting up as well.
@@ -138,7 +144,7 @@ private:
         // go up to 16 ways with a single byte of overhead.
 
         // the random table is between [0, NumberOfGroups) in this case that would be [0, 4)
-        auto theIndex = randomTable[counter++];
+        auto theIndex = getRandomValue();
         // use the index to select which of the four bits we care about to look at.
         // If true we return 1, otherwise zero. This is used in the lookup table to select the _other_ line to swap out
         // So if we get a 1 then it means swap out the even element of the pair, otherwise it is the odd element of the pair on a zero.

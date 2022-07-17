@@ -77,6 +77,8 @@ public:
     }
 
     void begin() noexcept {
+        // initialize any static structures for the given cache way
+        CacheWay::begin();
         // populate the lines from a separate block of entries known as the backing storage
 #if 0
         for (size_t i = 0; i < ActualNumberOfEntries; ++i) {
