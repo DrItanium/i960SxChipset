@@ -49,37 +49,15 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    template<bool unrollSearch = true>
     CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        if constexpr (unrollSearch) {
-#define X(ind) \
-               if (ways_[ind].matches(theAddress)) { \
-               updateFlags(ind);                     \
-                return ways_[ind] ;                  \
-                } else if (!ways_[ind].isValid()) {  \
-                    updateFlags(ind);                \
-                    ways_[ind].reset(theAddress);    \
-                return ways_[ind];                   \
-                }
-            X(0);
-            X(1);
-            X(2);
-            X(3);
-            X(4);
-            X(5);
-            X(6);
-            X(7);
-#undef X
-        }  else {
-            for (byte i = 0; i < NumberOfWays; ++i) {
-                if (ways_[i].matches(theAddress)) {
-                    updateFlags(i);
-                    return ways_[i];
-                } else if (!ways_[i].isValid()) {
-                    updateFlags(i);
-                    ways_[i].reset(theAddress);
-                    return ways_[i];
-                }
+        for (byte i = 0; i < NumberOfWays; ++i) {
+            if (ways_[i].matches(theAddress)) {
+                updateFlags(i);
+                return ways_[i];
+            } else if (!ways_[i].isValid()) {
+                updateFlags(i);
+                ways_[i].reset(theAddress);
+                return ways_[i];
             }
         }
         auto index = getLeastRecentlyUsed();
