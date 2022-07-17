@@ -121,11 +121,17 @@ public:
         }
     }
     /**
+     * @brief Regardless of line validity, check to see if the address keys match.
+     * @param addr The address to pull the keys out
+     * @return True if the keys match
+     */
+    [[nodiscard]] constexpr bool addressesMatch(TaggedAddress addr) const noexcept { return (addr.getRest() == key_); }
+    /**
      * @brief Given a valid line, compare the cache keys to see if they are equal
      * @param addr The address to compare with the key stored inside the line
      * @return True if line is valid and the keys match
      */
-    [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && (addr.getRest() == key_); }
+    [[nodiscard]] constexpr bool matches(TaggedAddress addr) const noexcept { return isValid() && addressesMatch(addr); }
     /**
      * @brief Return the word at a given offset; NOTE THERE IS NO CHECKS TO MAKE SURE YOU DIDN'T GO OUT OF BOUNDS!
      * @param offset The offset into the line in word form (it is not a byte offset)

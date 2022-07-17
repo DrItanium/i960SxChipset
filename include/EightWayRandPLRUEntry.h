@@ -55,7 +55,7 @@ public:
                 updateFlags(i);
                 ways_[i].reset(theAddress);
                 return ways_[i];
-            } else if (ways_[i].matches(theAddress)) {
+            } else if (ways_[i].addressesMatch(theAddress)) {
                 updateFlags(i);
                 return ways_[i];
             }
