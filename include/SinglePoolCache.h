@@ -60,12 +60,6 @@ public:
         // only align if we need to reset the chip
         return entries_[theAddress.getTagIndex()].getLine(theAddress);
     }
-    [[nodiscard]] auto* find(const TaggedAddress& theAddress) noexcept {
-        return entries_[theAddress.getTagIndex()].find(theAddress);
-    }
-    [[nodiscard]] CacheEntry& reset(const TaggedAddress& theAddress) noexcept {
-        return entries_[theAddress.getTagIndex()].reset(theAddress);
-    }
     void clear() {
         // then clear both the way and underlying entries
         for (auto& a : entries_) {
@@ -80,15 +74,6 @@ public:
         // initialize any static structures for the given cache way
         CacheWay::begin();
         // populate the lines from a separate block of entries known as the backing storage
-#if 0
-        for (size_t i = 0; i < ActualNumberOfEntries; ++i) {
-            auto& way = backingStorage_[i];
-            CacheWay& targetEntry = entries_[i];
-            for (size_t j = 0; j < CacheWay::NumberOfWays; ++j) {
-                targetEntry.setWay(way[j], j);
-            }
-        }
-#endif
         clear();
         // now precache everything we can
     }
@@ -99,7 +84,6 @@ public:
     }
     constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
 private:
-    //CacheEntry backingStorage_[ActualNumberOfEntries][CacheWay::NumberOfWays];
     CacheWay entries_[ActualNumberOfEntries];
 };
 
