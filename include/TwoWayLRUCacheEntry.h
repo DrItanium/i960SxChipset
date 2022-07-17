@@ -42,24 +42,21 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        if (auto result = find (theAddress); result) {
-            return *result;
-        } else {
-            return reset(theAddress);
+    void
+    precache(TaggedAddress baseAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i)   {
+            // don't even worry if it was populated or not, just make sure we populate it
+            mostRecentlyUsed_ = (i != 0);
+            ways_[i].reset(TaggedAddress{i, baseAddress.getTagIndex()});
         }
     }
-    CacheEntry* find(TaggedAddress theAddress) noexcept {
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i].matches(theAddress)) {
+            if (ways_[i].addressesMatch(theAddress)) {
                 mostRecentlyUsed_ = (i != 0);
-                return &ways_[i];
+                return ways_[i];
             }
         }
-        return nullptr;
-    }
-    CacheEntry&
-    reset(TaggedAddress theAddress) noexcept {
         auto index = (!mostRecentlyUsed_? 1 : 0);
         mostRecentlyUsed_ = (index != 0);
         ways_[index].reset(theAddress);
@@ -71,6 +68,7 @@ public:
         }
         mostRecentlyUsed_ = false;
     }
+    static void begin() noexcept { }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     CacheEntry ways_[NumberOfWays];
