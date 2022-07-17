@@ -969,10 +969,9 @@ private:
             request.offset = offset + count;
         }
         while (!(SPSR & _BV(SPIF))); // wait
+        auto lower = SPDR;
         SPDR = 0;
         {
-            // SPDR is double buffered in receive direction
-            auto lower = SPDR;
             request.value.bytes[0] = lower;
             latchedDataInput_.bytes[0] = lower;
         }
