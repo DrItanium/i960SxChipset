@@ -87,6 +87,7 @@ private:
     CacheEntry ways_[NumberOfWays];
     byte flags_ = 0;
     static constexpr uint8_t lruMaskTable[16][4] {
+        // computed by oring (1 << index) to flags, if flags then is 0xF or greater then flags is equal to 1 << index.
             {0x1, 0x2, 0x4, 0x8, },
             {0x1, 0x3, 0x5, 0x9, },
             {0x3, 0x2, 0x6, 0xa, },
