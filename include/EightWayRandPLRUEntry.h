@@ -173,7 +173,35 @@ private:
 
         // This is a standard TreePLRU design but the use of a random table improves performance by eliminating tons of branches in the
         // resultant code.
-        return (theIndex * 2) + ((bits_ & maskLookup[theIndex]) ? 1 : 0);
+        static constexpr uint8_t lruLookupTable[16][4] {
+                {0x0, 0x2, 0x4, 0x6, },
+                {0x1, 0x2, 0x4, 0x6, },
+                {0x0, 0x3, 0x4, 0x6, },
+                {0x1, 0x3, 0x4, 0x6, },
+                {0x0, 0x2, 0x5, 0x6, },
+                {0x1, 0x2, 0x5, 0x6, },
+                {0x0, 0x3, 0x5, 0x6, },
+                {0x1, 0x3, 0x5, 0x6, },
+                {0x0, 0x2, 0x4, 0x7, },
+                {0x1, 0x2, 0x4, 0x7, },
+                {0x0, 0x3, 0x4, 0x7, },
+                {0x1, 0x3, 0x4, 0x7, },
+                {0x0, 0x2, 0x5, 0x7, },
+                {0x1, 0x2, 0x5, 0x7, },
+                {0x0, 0x3, 0x5, 0x7, },
+                {0x1, 0x3, 0x5, 0x7, },
+        };
+        auto compare = lruLookupTable[bits_][theIndex];
+        auto real = (theIndex * 2) + ((bits_ & maskLookup[theIndex]) ? 1 : 0);
+        if (compare != real) {
+            Serial.print(F("FAIL: real 0x"));
+            Serial.print(real, HEX);
+            Serial.print(F(", table 0x"));
+            Serial.println(compare, HEX);
+            return real;
+        } else {
+            return compare;
+        }
         //return secondLookupTable[theIndex][(bits_ & maskLookup[theIndex]) ? 1 : 0];
     }
 
