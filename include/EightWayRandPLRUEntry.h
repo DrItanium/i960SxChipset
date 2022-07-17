@@ -151,7 +151,8 @@ private:
 
         // This is a standard TreePLRU design but the use of a random table improves performance by eliminating tons of branches in the
         // resultant code.
-        return secondLookupTable[theIndex][(bits_ & maskLookup[theIndex]) ? 1 : 0];
+        return (theIndex * 2) + ((bits_ & maskLookup[theIndex]) ? 1 : 0);
+        //return secondLookupTable[theIndex][(bits_ & maskLookup[theIndex]) ? 1 : 0];
     }
 
 private:
