@@ -42,37 +42,38 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        if (auto result = find (theAddress); result) {
-            return *result;
-        } else {
-            return reset(theAddress);
+    /**
+     * @brief Fill the cache up ahead of time to start off with given a base address, all entries are reset (invalid or not)
+     * @param baseAddress the base address to use as the cache offset
+     */
+    void
+    precache(TaggedAddress baseAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i)   {
+            // don't even worry if it was populated or not, just make sure we populate it
+            updateFlags(i);
+            ways_[i].reset(TaggedAddress{i, baseAddress.getTagIndex()});
         }
-
     }
-    CacheEntry* find(TaggedAddress theAddress) noexcept {
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         // find the inverse of the most recently used
         for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i]->matches(theAddress)) {
+            if (ways_[i].addressesMatch(theAddress)) {
                 updateFlags(i);
                 return ways_[i];
             }
         }
-        return nullptr;
-    }
-    CacheEntry&
-    reset(TaggedAddress theAddress) noexcept {
         auto index = getLeastRecentlyUsed();
         updateFlags(index);
-        ways_[index]->reset(theAddress);
-        return *ways_[index];
+        ways_[index].reset(theAddress);
+        return ways_[index];
     }
     void clear() noexcept {
         for (auto& way : ways_) {
-            way->clear();
+            way.clear();
         }
         flags_ = 0;
     }
+    static void begin() noexcept {}
 private:
     void updateFlags(byte index) noexcept {
         flags_ |= BitMaskTable_Byte[index];
