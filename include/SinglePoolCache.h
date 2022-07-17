@@ -78,7 +78,7 @@ public:
         // now precache everything we can
     }
     void precache() noexcept {
-        for (int i = 0; i < ActualNumberOfEntries; ++i) {
+        for (typename CacheEntry::OffsetType i = 0; i < ActualNumberOfEntries; ++i) {
             entries_[i].precache(TaggedAddress{0, i});
         }
     }
