@@ -61,7 +61,7 @@ template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
 
 //using Cache1Config = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
-using Cache1Config = CacheInstance_t<FourWayLRUCacheWay, CacheSize, NumAddressBits, 7, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
+using Cache1Config = CacheInstance_t<FourWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 // unlike normal caches, we have to tune the number of entries based on available ram
 constexpr auto NumberCache2Entries = 16;
 using Cache2Config = Cache2Instance_t<TenWayRandPLRUCacheSet, NumberCache2Entries, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
