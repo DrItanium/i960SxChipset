@@ -49,13 +49,22 @@ public:
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
 public:
+    /**
+     * @brief Fill the cache up ahead of time to start off with given a base address, all entries are reset (invalid or not)
+     * @param baseAddress the base address to use as the cache offset
+     */
+    void
+    precache(TaggedAddress baseAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i)   {
+            // don't even worry if it was populated or not, just make sure we populate it
+            updateFlags(i);
+            ways_[i].reset(TaggedAddress{i, baseAddress.getTagIndex()});
+        }
+    }
     CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        // assume all lines are valid via ahead of time precaching
         for (byte i = 0; i < NumberOfWays; ++i) {
-            if (!ways_[i].isValid()) {
-                updateFlags(i);
-                ways_[i].reset(theAddress);
-                return ways_[i];
-            } else if (ways_[i].addressesMatch(theAddress)) {
+            if (ways_[i].addressesMatch(theAddress)) {
                 updateFlags(i);
                 return ways_[i];
             }
@@ -70,6 +79,7 @@ public:
             way.clear();
         }
         bits_ = 0;
+        numValidEntries_ = 0;
     }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
@@ -143,6 +153,7 @@ private:
     // This is RandPLRU Tree so we need to organize things correctly, I'm going to try four groups of two
     CacheEntry ways_[NumberOfWays];
     byte bits_ = 0;
+    byte numValidEntries_ = 0;
 };
 
 #endif //SXCHIPSET_EIGHTWAYPSEUDOLRUENTRY_H

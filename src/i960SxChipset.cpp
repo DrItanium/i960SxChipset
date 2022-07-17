@@ -146,6 +146,8 @@ void installBootImage() noexcept {
     Serial.println(F("Transfer complete!"));
     // clear both caches to be on the safe side
     theCache.clear();
+    // seed the cache with data to simplify getting lines
+    theCache.precache();
 }
 void
 setupPins() noexcept {

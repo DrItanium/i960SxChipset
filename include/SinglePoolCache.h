@@ -88,7 +88,12 @@ public:
         }
 #endif
         clear();
-        // set everything up
+        // now precache everything we can
+    }
+    void precache() noexcept {
+        for (int i = 0; i < ActualNumberOfEntries; ++i) {
+            entries_[i].precache(TaggedAddress{0, i});
+        }
     }
     constexpr auto getCacheSize() const noexcept { return sizeof(entries_); }
 private:
