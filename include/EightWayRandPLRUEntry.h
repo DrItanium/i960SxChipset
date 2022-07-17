@@ -51,12 +51,12 @@ public:
 public:
     CacheEntry& getLine(TaggedAddress theAddress) noexcept {
         for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i].matches(theAddress)) {
-                updateFlags(i);
-                return ways_[i];
-            } else if (!ways_[i].isValid()) {
+            if (!ways_[i].isValid()) {
                 updateFlags(i);
                 ways_[i].reset(theAddress);
+                return ways_[i];
+            } else if (ways_[i].matches(theAddress)) {
+                updateFlags(i);
                 return ways_[i];
             }
         }
