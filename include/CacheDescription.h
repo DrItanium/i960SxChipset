@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DirectMappedCacheWay.h"
 #include "TwoWayLRUCacheEntry.h"
 #include "FourWayPseudoLRUEntry.h"
+#include "HackedFourWayPseudoLRUEntry.h"
 #include "EightWayPseudoLRUEntry.h"
 #include "SixteenWayPseudoLRUEntry.h"
 #include "EightWayRandPLRUEntry.h"
