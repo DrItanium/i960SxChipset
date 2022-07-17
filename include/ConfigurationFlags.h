@@ -75,7 +75,7 @@ constexpr auto NumAddressBits = NumAddressBitsForPSRAMCache;
 /**
  * @brief Number of bits used to represent cache line size, defaults to 6 which translates to 64 bytes
  */
-constexpr auto CacheLineSize = 6;
+constexpr auto CacheLineSize = 4;
 /**
  * @brief Total number of bytes that make up the cache itself (compiler will carve this up automatically based on configuration parameters provided)
  */
