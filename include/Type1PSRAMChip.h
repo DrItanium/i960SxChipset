@@ -187,7 +187,7 @@ private:
         return (value & 0b111) << 2;
     }
     static void setChipId(byte index) noexcept {
-        static auto& TargetSelectPort = getAssociatedOutputPort<Select0>();
+        //static volatile unsigned char& TargetSelectPort = getAssociatedOutputPort<Select0>();
         static constexpr byte theItemMask = SelectMask;
         static constexpr byte theInvertedMask = static_cast<byte>(~theItemMask);
         static constexpr byte LookupTable[8]{
@@ -201,10 +201,10 @@ private:
                 pinToPortBit<Select0>() | pinToPortBit<Select1>() | pinToPortBit<Select2>(),
         };
         // since this is specific to type 1 we should speed this up significantly
-        auto contents = TargetSelectPort;
+        auto contents = getAssociatedOutputPort<Select0>();
         contents &= theInvertedMask;
         contents |= LookupTable[index & 0b111];
-        TargetSelectPort = contents;
+        getAssociatedOutputPort<Select0>() = contents;
     }
 public:
     static void begin() noexcept {
