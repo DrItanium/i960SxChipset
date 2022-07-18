@@ -904,13 +904,12 @@ private:
     struct CacheWriteRequest {
         LoadStoreStyle style;
         SplitWord16 value;
-        byte offset;
         /**
          * @brief Save the given data to the target cache line
          * @tparam CacheLine The type of the cache line being used by the data cache
          * @param line The cache line to write to
          */
-        inline void set(CacheLine& line) const noexcept {
+        inline void set(byte offset, CacheLine& line) const noexcept {
             line.set(offset, style, value);
         }
     };
@@ -975,9 +974,8 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
     [[nodiscard]]
-    [[gnu::noinline]] // must prevent inlining to make sure the code works correctly
-    static bool getDataBits(byte offset, byte count, CacheWriteRequest& request) noexcept {
-        request.offset = count + offset;
+    static bool getDataBits(CacheWriteRequest& request) noexcept {
+        //request.offset = count + offset;
         request.style = getStyle();
         bool outcome = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         switch (getDataLineInputUpdateKind()) {
@@ -997,15 +995,15 @@ private:
         return outcome;
     }
     template<byte count>
-    static bool getDataBits(byte offset) noexcept {
+    static bool getDataBits() noexcept {
         static_assert(count < 8, "Can only transmit 8 transactions at a time");
-        return getDataBits(offset, count, transactions[count]);
+        return getDataBits(transactions[count]);
     }
     template<byte count>
-    static inline void commitTransactions(CacheLine& line) noexcept {
+    static inline void commitTransactions(CacheLine& line, byte offset) noexcept {
         static_assert(count <= 8, "Can only transmit 8 transactions at a time");
         for (byte i = 0; i < count; ++i) {
-            transactions[i].set(line);
+            transactions[i].set(offset + i, line);
         }
     }
 public:
@@ -1018,52 +1016,52 @@ public:
     static inline void performCacheWrite(CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         for (auto offset = getCacheOffsetEntry();;offset += 8) {
-            auto isLast = getDataBits<0>(offset);
+            auto isLast = getDataBits<0>();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<1>(line);
+                commitTransactions<1>(line, offset);
                 break;
             }
-            isLast = getDataBits<1>(offset);
+            isLast = getDataBits<1>();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<2>(line);
+                commitTransactions<2>(line, offset);
                 break;
             }
-            isLast = getDataBits<2>(offset);
+            isLast = getDataBits<2>();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<3>(line);
+                commitTransactions<3>(line, offset);
                 break;
             }
-            isLast = getDataBits<3>(offset);
+            isLast = getDataBits<3>();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<4>(line);
+                commitTransactions<4>(line, offset);
                 break;
             }
-            isLast = getDataBits<4>(offset);
+            isLast = getDataBits<4>();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<5>(line);
+                commitTransactions<5>(line, offset);
                 break;
             }
-            isLast = getDataBits<5>(offset);
+            isLast = getDataBits<5>();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<6>(line);
+                commitTransactions<6>(line, offset);
                 break;
             }
-            isLast = getDataBits<6>(offset);
+            isLast = getDataBits<6>();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                commitTransactions<7>(line);
+                commitTransactions<7>(line, offset);
                 break;
             }
-            isLast = getDataBits<7>(offset);
+            isLast = getDataBits<7>();
             DigitalPin<i960Pinout::Ready>::pulse();
             // perform the commit at this point
-            commitTransactions<8>(line);
+            commitTransactions<8>(line, offset);
             if (isLast) {
                 break;
             }
