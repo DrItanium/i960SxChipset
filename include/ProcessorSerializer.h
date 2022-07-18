@@ -372,18 +372,12 @@ public:
      * @param value The value to set the GPIO register pair to
      * @return True if this is the last word of a burst transaction
      */
-    template<bool inDebugMode>
     static bool setDataBits(uint16_t value) noexcept {
         // the latch is preserved in between data line changes
         // okay we are still pointing as output values
         // check the latch and see if the output value is the same as what is latched
-        if constexpr (inDebugMode) {
-            Serial.print(F("setDataBits: 0x"));
-            Serial.println(value, HEX);
-        }
         if (latchedDataOutput.getWholeValue() != value) {
             //latchedDataOutput.wholeValue_ = value;
-            bool isLastRead;
             byte computedValue = 0;
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
             SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
@@ -396,7 +390,6 @@ public:
             SPDR = static_cast<byte>(MCP23x17Registers::OLAT); // instead of GPIO (which still writes to OLAT automatically), do the OLAT to be very explicit
             {
                 // find out if this is the last transaction while we are talking to the io expander
-                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 computedValue = latchedDataOutput.bytes[0];
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
@@ -412,11 +405,8 @@ public:
             }
             while (!(SPSR & _BV(SPIF))) ; // wait
             digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            return isLastRead;
-        } else {
-            return DigitalPin<i960Pinout::BLAST_>::isAsserted();
-
         }
+        return DigitalPin<i960Pinout::BLAST_>::isAsserted();
     }
     /**
      * @brief Query the ~BE0 and ~BE1 pins provided by the i960 to denote how the chipset should treat the current word in the transaction
@@ -831,7 +821,6 @@ public:
      * @tparam inDebugMode Are we in debug mode?
      * @param line The cache line which we will be using for this transaction
      */
-    template<bool inDebugMode>
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         // read 32-bits at a time instead of 16 just to keep the throughput increased
@@ -849,46 +838,46 @@ public:
             auto& a5 = basePtr[5];
             auto& a6 = basePtr[6];
             auto& a7 = basePtr[7];
-            auto isLastRead = setDataBits<inDebugMode>(a0.getWholeValue());
+            auto isLastRead = setDataBits(a0.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits<inDebugMode>(a1.getWholeValue());
+            isLastRead = setDataBits(a1.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // we are looking at a double word, triple word, or quad word
-            isLastRead = setDataBits<inDebugMode>(a2.getWholeValue());
+            isLastRead = setDataBits(a2.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits<inDebugMode>(a3.getWholeValue());
+            isLastRead = setDataBits(a3.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a triple word or quad word operation
-            isLastRead = setDataBits<inDebugMode>(a4.getWholeValue());
+            isLastRead = setDataBits(a4.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits<inDebugMode>(a5.getWholeValue());
+            isLastRead = setDataBits(a5.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
             // okay so we are looking at a quad word operation of some kind
             // perhaps the processor loading instruction into the data cache?
-            isLastRead = setDataBits<inDebugMode>(a6.getWholeValue());
+            isLastRead = setDataBits(a6.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
             }
-            isLastRead = setDataBits<inDebugMode>(a7.getWholeValue());
+            isLastRead = setDataBits(a7.getWholeValue());
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 break;
@@ -919,31 +908,18 @@ private:
     static inline CacheWriteRequest transactions[8];
     template<byte index, MCP23x17Registers reg>
     static void grab8Data() noexcept {
-        //bool isLast = false;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        //auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-        //{
-        //    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-        //}
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(reg);
-        //{
-        //    request.style = getStyle();
-        //}
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
-        //{
-        //    request.offset = offset + count;
-        //}
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         latchedDataInput_.bytes[index] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        //request.value = latchedDataInput_;
-        //return isLast;
     }
     static void upper8DataGrab() noexcept {
         grab8Data<1, MCP23x17Registers::GPIOB>();
@@ -965,7 +941,6 @@ private:
         auto lower = SPDR;
         SPDR = 0;
         {
-         //   request.value.bytes[0] = lower;
             latchedDataInput_.bytes[0] = lower;
         }
         asm volatile ("nop");
@@ -975,7 +950,6 @@ private:
     }
     [[nodiscard]]
     static bool getDataBits(CacheWriteRequest& request) noexcept {
-        //request.offset = count + offset;
         request.style = getStyle();
         bool outcome = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         switch (getDataLineInputUpdateKind()) {
@@ -1090,7 +1064,7 @@ public:
                 Serial.print(F("\tRead Value: 0x"));
                 Serial.println(result, HEX);
             }
-            auto isLast = setDataBits<inDebugMode>(result);
+            auto isLast = setDataBits(result);
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 return;
