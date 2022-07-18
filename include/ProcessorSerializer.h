@@ -1002,8 +1002,8 @@ private:
     template<byte count>
     static inline void commitTransactions(CacheLine& line, byte offset) noexcept {
         static_assert(count <= 8, "Can only transmit 8 transactions at a time");
-        for (byte i = 0; i < count; ++i) {
-            transactions[i].set(offset + i, line);
+        for (byte i = 0, j = offset; i < count; ++i, ++j) {
+            transactions[i].set(j, line);
         }
     }
 public:
