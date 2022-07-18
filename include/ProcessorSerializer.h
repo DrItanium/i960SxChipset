@@ -919,86 +919,82 @@ private:
      */
     static inline CacheWriteRequest transactions[8];
     template<byte index, MCP23x17Registers reg>
-    static bool grab8Data(byte offset, byte count, CacheWriteRequest& request) noexcept {
-        bool isLast = false;
+    static void grab8Data() noexcept {
+        //bool isLast = false;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         //auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-        {
-            isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-        }
+        //{
+        //    isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        //}
+        asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(reg);
-        {
-            request.style = getStyle();
-        }
+        //{
+        //    request.style = getStyle();
+        //}
+        asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
-        {
-            request.offset = offset + count;
-        }
+        //{
+        //    request.offset = offset + count;
+        //}
+        asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         latchedDataInput_.bytes[index] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        request.value = latchedDataInput_;
-        return isLast;
+        //request.value = latchedDataInput_;
+        //return isLast;
     }
-    static bool upper8DataGrab(byte offset, byte count, CacheWriteRequest& request) noexcept {
-        return grab8Data<1, MCP23x17Registers::GPIOB>(offset, count, request);
+    static void upper8DataGrab() noexcept {
+        grab8Data<1, MCP23x17Registers::GPIOB>();
     }
-    static bool lower8DataGrab(byte offset, byte count, CacheWriteRequest& request) noexcept {
-        return grab8Data<0, MCP23x17Registers::GPIOA>(offset, count, request);
+    static void lower8DataGrab() noexcept {
+        grab8Data<0, MCP23x17Registers::GPIOA>();
     }
-    static bool fullDataLineGrab(byte offset, byte count, CacheWriteRequest& request) noexcept {
-        auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    static void fullDataLineGrab() noexcept {
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-        {
-            request.style = getStyle();
-        }
+        asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
-        {
-            request.offset = offset + count;
-        }
+        asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         auto lower = SPDR;
         SPDR = 0;
         {
-            request.value.bytes[0] = lower;
+         //   request.value.bytes[0] = lower;
             latchedDataInput_.bytes[0] = lower;
         }
+        asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
-        auto upper = SPDR;
-        request.value.bytes[1] = upper;
-        latchedDataInput_.bytes[1] = upper;
+        latchedDataInput_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        return isLast;
     }
-    //template<byte count>
     [[nodiscard]]
     [[gnu::noinline]] // must prevent inlining to make sure the code works correctly
     static bool getDataBits(byte offset, byte count, CacheWriteRequest& request) noexcept {
+        request.offset = count + offset;
+        request.style = getStyle();
+        bool outcome = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         switch (getDataLineInputUpdateKind()) {
-            case DataUpdateKind::Neither: {
-                request.value = latchedDataInput_;
-                request.style = getStyle();
-                request.offset = count + offset;
-                return DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            }
+            case DataUpdateKind::Neither:
+                break;
             case DataUpdateKind::Upper8:
-                //return upper8DataGrab<count>(offset);
-                return upper8DataGrab(offset, count, request);
+                upper8DataGrab();
+                break;
             case DataUpdateKind::Lower8:
-                //return lower8DataGrab<count>(offset);
-                return lower8DataGrab(offset, count, request);
+                lower8DataGrab();
+                break;
             default:
-                //return fullDataLineGrab<count>(offset);
-                return fullDataLineGrab(offset, count, request);
+                fullDataLineGrab();
+                break;
         }
+        request.value = latchedDataInput_;
+        return outcome;
     }
     template<byte count>
     static bool getDataBits(byte offset) noexcept {
