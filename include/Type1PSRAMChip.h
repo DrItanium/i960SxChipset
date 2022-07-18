@@ -201,7 +201,7 @@ private:
                 pinToPortBit<Select0>() | pinToPortBit<Select1>() | pinToPortBit<Select2>(),
         };
         // since this is specific to type 1 we should speed this up significantly
-        auto contents = getAssociatedOutputPort<Select0>();
+        byte contents = getAssociatedOutputPort<Select0>();
         contents &= theInvertedMask;
         contents |= LookupTable[index & 0b111];
         getAssociatedOutputPort<Select0>() = contents;
