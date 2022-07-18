@@ -96,10 +96,10 @@ BodyFunction
 ProcessorInterface::getDebugReadBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
         if constexpr (UseSpacePins) {
-            if (inIOSpace())  {
-                return ioSectionRead_Debug_[index & 0b0001'1111];
+            if (auto masked = index & 0b0001'1111; inIOSpace())  {
+                return ioSectionRead_Debug_[masked];
             } else if (inRAMSpace()) {
-                return ramSectionRead_Debug_[index & 0b0001'1111];
+                return ramSectionRead_Debug_[masked];
             } else {
                 return ProcessorInterface::performFallbackRead;
             }
@@ -114,10 +114,10 @@ BodyFunction
 ProcessorInterface::getDebugWriteBody(byte index) noexcept {
     if constexpr (CompileInAddressDebuggingSupport) {
         if constexpr (UseSpacePins) {
-            if (inIOSpace())  {
-                return ioSectionWrite_Debug_[index & 0b0001'1111];
+            if (auto masked = index & 0b0001'1111; inIOSpace())  {
+                return ioSectionWrite_Debug_[masked];
             } else if (inRAMSpace()) {
-                return ramSectionWrite_Debug_[index & 0b0001'1111];
+                return ramSectionWrite_Debug_[masked];
             } else {
                 return ProcessorInterface::performFallbackWrite;
             }
@@ -131,10 +131,10 @@ ProcessorInterface::getDebugWriteBody(byte index) noexcept {
 BodyFunction
 ProcessorInterface::getNonDebugReadBody(byte index) noexcept {
     if constexpr (UseSpacePins) {
-        if (inIOSpace()) {
-            return ioSectionRead_[index & 0b0001'1111];
+        if (auto masked = index & 0b0001'1111; inIOSpace()) {
+            return ioSectionRead_[masked];
         } else if (inRAMSpace()) {
-            return ramSectionRead_[index & 0b0001'1111];
+            return ramSectionRead_[masked];
         } else {
             return ProcessorInterface::performFallbackRead;
         }
@@ -145,10 +145,10 @@ ProcessorInterface::getNonDebugReadBody(byte index) noexcept {
 BodyFunction
 ProcessorInterface::getNonDebugWriteBody(byte index) noexcept {
     if constexpr (UseSpacePins) {
-        if (inIOSpace()) {
-            return ioSectionWrite_[index & 0b0001'1111];
+        if (auto masked = index & 0b0001'1111; inIOSpace()) {
+            return ioSectionWrite_[masked];
         } else if (inRAMSpace()) {
-            return ramSectionWrite_[index & 0b0001'1111];
+            return ramSectionWrite_[masked];
         } else {
             return ProcessorInterface::performFallbackWrite;
         }
