@@ -918,11 +918,11 @@ private:
      * @brief A cache of transactions to carry out from a burst write
      */
     static inline CacheWriteRequest transactions[8];
-    template<byte count, byte index, MCP23x17Registers reg>
-    static bool grab8Data(byte offset) noexcept {
+    template<byte index, MCP23x17Registers reg>
+    static bool grab8Data(byte offset, byte count, CacheWriteRequest& request) noexcept {
         bool isLast = false;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        auto& request = transactions[count];
+        //auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         {
             isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -943,19 +943,15 @@ private:
         request.value = latchedDataInput_;
         return isLast;
     }
-    template<byte count>
-    static bool upper8DataGrab(byte offset) noexcept {
-        return grab8Data<count, 1, MCP23x17Registers::GPIOB>(offset);
+    static bool upper8DataGrab(byte offset, byte count, CacheWriteRequest& request) noexcept {
+        return grab8Data<1, MCP23x17Registers::GPIOB>(offset, count, request);
     }
-    template<byte count>
-    static bool lower8DataGrab(byte offset) noexcept {
-        return grab8Data<count, 0, MCP23x17Registers::GPIOA>(offset);
+    static bool lower8DataGrab(byte offset, byte count, CacheWriteRequest& request) noexcept {
+        return grab8Data<0, MCP23x17Registers::GPIOA>(offset, count, request);
     }
-    template<byte count>
-    static bool fullDataLineGrab(byte offset) noexcept {
+    static bool fullDataLineGrab(byte offset, byte count, CacheWriteRequest& request) noexcept {
         auto isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        auto& request = transactions[count];
         SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
@@ -982,26 +978,32 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         return isLast;
     }
-    template<byte count>
+    //template<byte count>
     [[nodiscard]]
     [[gnu::noinline]] // must prevent inlining to make sure the code works correctly
-    static bool getDataBits(byte offset) noexcept {
-        static_assert(count < 8, "Index for getting data bits is out of range!");
+    static bool getDataBits(byte offset, byte count, CacheWriteRequest& request) noexcept {
         switch (getDataLineInputUpdateKind()) {
             case DataUpdateKind::Neither: {
-                auto &request = transactions[count];
                 request.value = latchedDataInput_;
                 request.style = getStyle();
                 request.offset = count + offset;
                 return DigitalPin<i960Pinout::BLAST_>::isAsserted();
             }
             case DataUpdateKind::Upper8:
-                return upper8DataGrab<count>(offset);
+                //return upper8DataGrab<count>(offset);
+                return upper8DataGrab(offset, count, request);
             case DataUpdateKind::Lower8:
-                return lower8DataGrab<count>(offset);
+                //return lower8DataGrab<count>(offset);
+                return lower8DataGrab(offset, count, request);
             default:
-                return fullDataLineGrab<count>(offset);
+                //return fullDataLineGrab<count>(offset);
+                return fullDataLineGrab(offset, count, request);
         }
+    }
+    template<byte count>
+    static bool getDataBits(byte offset) noexcept {
+        static_assert(count < 8, "Can only transmit 8 transactions at a time");
+        return getDataBits(offset, count, transactions[count]);
     }
     template<byte count>
     static inline void commitTransactions(CacheLine& line) noexcept {
