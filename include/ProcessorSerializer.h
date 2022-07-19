@@ -696,6 +696,10 @@ public:
         static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // only read the upper 16-bits
+        /// @todo inspect which space we are a part of at this exact point in time
+
+        // At this point, the space identifiers will tell us where to access data from.
+        // For instance, we may know that we are in ram space or io space.
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
         asm volatile("nop");
