@@ -596,30 +596,14 @@ public:
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
-        SpaceDispatchTable* readTable = nullptr;
-        SpaceDispatchTable* writeTable = nullptr;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
-        {
-            if (inIOSpace()) {
-                readTable = &ioSectionRead_;
-                writeTable = &ioSectionWrite_;
-            }
-        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-        {
-            if (inRAMSpace()) {
-                readTable = &ramSectionRead_;
-                writeTable = &ramSectionWrite_;
-            }
-        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
-        lastRead_ = performFallbackRead;
-        lastWrite_ = performFallbackWrite;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         auto higher = SPDR;
@@ -635,16 +619,7 @@ public:
             maskedSpaceTarget_ = highest & 0b000'11111;
             // don't do the comparison, instead just force the update every single time
             // there should be enough time in between transactions to make sure
-            if (readTable) {
-                lastRead_ = (*readTable)[maskedSpaceTarget_];
-            }
-            if (writeTable) {
-                lastWrite_ = (*writeTable)[maskedSpaceTarget_];
-            }
-            if constexpr (inDebugMode) {
-                lastReadDebug_ = getReadBody<true>();
-                lastWriteDebug_ = getWriteBody<true>();
-            }
+            updateTargetFunctions<inDebugMode>();
         }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
@@ -683,7 +658,6 @@ public:
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
-        auto lastAddress = address_.getWholeValue();
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;

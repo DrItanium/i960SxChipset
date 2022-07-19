@@ -46,8 +46,10 @@ void
 ProcessorInterface::setupDispatchTable() noexcept {
     if constexpr (UseSpacePins) {
         for (int i = 0; i < 32; ++i) {
-            ramSectionRead_[i] = performFallbackRead;
-            ramSectionWrite_[i] = performFallbackWrite;
+            if constexpr (BackingMemoryStorage_t::NumSections != 32) {
+                ramSectionRead_[i] = performFallbackRead;
+                ramSectionWrite_[i] = performFallbackWrite;
+            }
             ioSectionRead_[i] = performFallbackRead;
             ioSectionWrite_[i] = performFallbackWrite;
             if constexpr (CompileInAddressDebuggingSupport) {
@@ -57,12 +59,14 @@ ProcessorInterface::setupDispatchTable() noexcept {
                 ioSectionWrite_Debug_[i] = performFallbackWrite;
             }
         }
-        for (int i = 0;i < BackingMemoryStorage_t :: NumSections; ++i) {
-            ramSectionRead_[i] = readCacheLine<false>;
-            ramSectionWrite_[i] = writeCacheLine<false>;
-            if constexpr (CompileInAddressDebuggingSupport) {
-                ramSectionRead_Debug_[i] = readCacheLine<true>;
-                ramSectionWrite_Debug_[i] = writeCacheLine<true>;
+        if constexpr (BackingMemoryStorage_t::NumSections != 32) {
+            for (int i = 0; i < BackingMemoryStorage_t::NumSections; ++i) {
+                ramSectionRead_[i] = readCacheLine<false>;
+                ramSectionWrite_[i] = writeCacheLine<false>;
+                if constexpr (CompileInAddressDebuggingSupport) {
+                    ramSectionRead_Debug_[i] = readCacheLine<true>;
+                    ramSectionWrite_Debug_[i] = writeCacheLine<true>;
+                }
             }
         }
     } else {
