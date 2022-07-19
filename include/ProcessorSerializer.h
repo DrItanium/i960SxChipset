@@ -948,10 +948,7 @@ private:
         latchedDataInput_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
-    [[nodiscard]]
-    static bool getDataBits(CacheWriteRequest& request) noexcept {
-        request.style = getStyle();
-        bool outcome = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+    static void updateDataInputLatch() noexcept {
         switch (getDataLineInputUpdateKind()) {
             case DataUpdateKind::Neither:
                 break;
@@ -965,6 +962,12 @@ private:
                 fullDataLineGrab();
                 break;
         }
+    }
+    [[nodiscard]]
+    static bool getDataBits(CacheWriteRequest& request) noexcept {
+        request.style = getStyle();
+        bool outcome = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        updateDataInputLatch();
         request.value = latchedDataInput_;
         return outcome;
     }
@@ -1082,80 +1085,9 @@ public:
         // so you may still be reading the previous i960 cycle state!
         for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
             bool isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-            LoadStoreStyle currLSS ;
-            byte pageIndex;
-            switch (getDataLineInputUpdateKind()) {
-                case DataUpdateKind::Neither:
-                    currLSS = getStyle();
-                    pageIndex = getPageIndex();
-                    break;
-                case DataUpdateKind::Lower8: {
-                    // getDataBits will be expanded here
-                    digitalWrite<i960Pinout::GPIOSelect, LOW>();
-                    SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-                    asm volatile ("nop");
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    SPDR = static_cast<byte>(MCP23x17Registers::GPIOA) ;
-                    {
-                        currLSS = getStyle();
-                    }
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    SPDR = 0;
-                    {
-                        pageIndex = getPageIndex();
-                    }
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    latchedDataInput_.bytes[0] = SPDR;
-                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                    break;
-                }
-                case DataUpdateKind::Upper8: {
-                    // getDataBits will be expanded here
-                    digitalWrite<i960Pinout::GPIOSelect, LOW>();
-                    SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-                    asm volatile ("nop");
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    SPDR = static_cast<byte>(MCP23x17Registers::GPIOB) ;
-                    {
-                        currLSS = getStyle();
-                    }
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    SPDR = 0;
-                    {
-                        pageIndex = getPageIndex();
-                    }
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    latchedDataInput_.bytes[1] = SPDR;
-                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                    break;
-                }
-                default: {
-                    // getDataBits will be expanded here
-                    digitalWrite<i960Pinout::GPIOSelect, LOW>();
-                    SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
-                    asm volatile ("nop");
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    SPDR = static_cast<byte>(MCP23x17Registers::GPIO) ;
-                    {
-                        currLSS = getStyle();
-                    }
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    SPDR = 0;
-                    {
-                        pageIndex = getPageIndex();
-                    }
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    auto lower = SPDR;
-                    SPDR = 0;
-                    {
-                        latchedDataInput_.bytes[0] = lower;
-                    }
-                    while (!(SPSR & _BV(SPIF))) ; // wait
-                    latchedDataInput_.bytes[1] = SPDR;
-                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-                    break;
-                }
-            }
+            LoadStoreStyle currLSS = getStyle();
+            byte pageIndex = getPageIndex();
+            updateDataInputLatch();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tPage Index: 0x"));
                 Serial.println(pageIndex, HEX);
