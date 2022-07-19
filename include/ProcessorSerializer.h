@@ -785,7 +785,7 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-
+        byte rwStatus = isReadOperation() ? 1 : 0;
         switch (getUpdateKind<useInterrupts>()) {
             case AddressUpdateKind::Neither:
                 break;
@@ -805,20 +805,26 @@ public:
             Serial.println(address_.getWholeValue(), HEX);
         }
         if (isReadOperation()) {
-            setupDataLinesForRead();
+            if (rwStatus != lastRWStatus_) {
+                setupDataLinesForRead();
+            }
             if constexpr (inDebugMode) {
                 lastReadDebug_();
             } else {
                 lastRead_();
             }
         } else {
-            setupDataLinesForWrite();
+            if (rwStatus != lastRWStatus_) {
+                // the status has changed comparatively to last time
+                setupDataLinesForWrite();
+            }
             if constexpr (inDebugMode) {
                 lastWriteDebug_();
             } else {
                 lastWrite_();
             }
         }
+        lastRWStatus_ = rwStatus;
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
@@ -1218,6 +1224,7 @@ private:
     static inline SpaceDispatchTable ioSectionWrite_ { nullptr };
     static inline SpaceDispatchTable ioSectionRead_Debug_ { nullptr };
     static inline SpaceDispatchTable ioSectionWrite_Debug_ { nullptr };
+    static inline byte lastRWStatus_ = 0xFF;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
