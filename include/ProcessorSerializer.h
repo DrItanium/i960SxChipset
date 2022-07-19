@@ -598,18 +598,22 @@ public:
         {
             // don't do the comparison, instead just force the update every single time
             // there should be enough time in between transactions to make sure
-            if constexpr (inDebugMode) {
-                lastReadDebug_ = getReadBody<true>(highest);
+            if (isReadOperation()) {
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = getReadBody<true>(highest);
+                }
+                lastRead_ = getReadBody<false>(highest);
             }
-            lastRead_ = getReadBody<false>(highest);
         }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         {
-            if constexpr (inDebugMode) {
-                lastWriteDebug_ = getWriteBody<true>(highest);
+            if (!isReadOperation()) {
+                if constexpr (inDebugMode) {
+                    lastWriteDebug_ = getWriteBody<true>(highest);
+                }
+                lastWrite_ = getWriteBody<false>(highest);
             }
-            lastWrite_ = getWriteBody<false>(highest);
         }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
@@ -690,7 +694,18 @@ public:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (address_.bytes[3] != highest) {
-            updateTargetFunctions<inDebugMode>(highest);
+            //updateTargetFunctions<inDebugMode>(highest);
+            if (isReadOperation()) {
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = getReadBody<true>(highest);
+                }
+                lastRead_ = getReadBody<false>(highest);
+            } else {
+                if constexpr (inDebugMode) {
+                    lastWriteDebug_ = getWriteBody<true>(highest);
+                }
+                lastWrite_ = getWriteBody<false>(highest);
+            }
         }
         address_.bytes[3] = highest;
     }
