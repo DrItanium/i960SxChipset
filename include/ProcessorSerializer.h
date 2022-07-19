@@ -598,9 +598,27 @@ public:
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
+        {
+            lastRead_ = performFallbackRead;
+            lastWrite_ = performFallbackWrite;
+            if constexpr (inDebugMode) {
+                lastReadDebug_ = performFallbackRead;
+                lastWriteDebug_ = performFallbackWrite;
+            }
+        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
+        {
+            if (inRAMSpace()) {
+                lastRead_ = readCacheLine<false>;
+                lastWrite_ = writeCacheLine<false>;
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = readCacheLine<false>;
+                    lastWriteDebug_ = writeCacheLine<false>;
+                }
+            }
+        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
@@ -616,10 +634,16 @@ public:
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
         {
-            maskedSpaceTarget_ = highest & 0b000'11111;
-            // don't do the comparison, instead just force the update every single time
-            // there should be enough time in between transactions to make sure
-            updateTargetFunctions<inDebugMode>();
+            if (inIOSpace()) {
+                maskedSpaceTarget_ = highest & 0b000'11111;
+                lastRead_ = ioSectionRead_[maskedSpaceTarget_];
+                lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = ioSectionRead_Debug_[maskedSpaceTarget_];
+                    lastWriteDebug_ = ioSectionWrite_Debug_[maskedSpaceTarget_];
+                }
+            }
+            address_.bytes[3] = highest;
         }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
@@ -627,9 +651,6 @@ public:
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
-        {
-            address_.bytes[3] = highest;
-        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
