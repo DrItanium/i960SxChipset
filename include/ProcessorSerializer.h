@@ -716,7 +716,19 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (address_.bytes[3] != highest) {
             maskedSpaceTarget_ = highest & 0b000'11111;
-            updateTargetFunctions<inDebugMode>();
+            //updateTargetFunctions<inDebugMode>();
+            //updateTargetFunctions<inDebugMode>(highest);
+            if (isReadOperation()) {
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = getReadBody<true>();
+                }
+                lastRead_ = getReadBody<false>();
+            } else {
+                if constexpr (inDebugMode) {
+                    lastWriteDebug_ = getWriteBody<true>();
+                }
+                lastWrite_ = getWriteBody<false>();
+            }
             address_.bytes[3] = highest;
         }
     }
