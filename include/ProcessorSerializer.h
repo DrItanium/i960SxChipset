@@ -701,10 +701,24 @@ public:
         // At this point, the space identifiers will tell us where to access data from.
         // For instance, we may know that we are in ram space or io space.
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SpaceDispatchTable* readTable = nullptr;
+        SpaceDispatchTable* writeTable = nullptr;
         SPDR = Upper16Opcode;
+        {
+            if (inIOSpace()) {
+                readTable = &ioSectionRead_;
+                writeTable = &ioSectionWrite_;
+            }
+        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
+        {
+            if (inRAMSpace()) {
+                readTable = &ramSectionRead_;
+                writeTable = &ramSectionWrite_;
+            }
+        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
@@ -720,18 +734,15 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (address_.bytes[3] != highest) {
             maskedSpaceTarget_ = highest & 0b000'11111;
-            //updateTargetFunctions<inDebugMode>();
-            //updateTargetFunctions<inDebugMode>(highest);
-            if (isReadOperation()) {
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = getReadBody<true>();
-                }
-                lastRead_ = getReadBody<false>();
+            if (readTable) {
+                lastRead_ = *readTable[maskedSpaceTarget_];
             } else {
-                if constexpr (inDebugMode) {
-                    lastWriteDebug_ = getWriteBody<true>();
-                }
-                lastWrite_ = getWriteBody<false>();
+                lastRead_ = performFallbackRead;
+            }
+            if (writeTable) {
+                lastWrite_ = *writeTable[maskedSpaceTarget_];
+            } else {
+                lastWrite_ = performFallbackWrite;
             }
             address_.bytes[3] = highest;
         }
