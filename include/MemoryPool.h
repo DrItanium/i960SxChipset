@@ -37,6 +37,7 @@ class MemoryPool {
 public:
     using PSRAMPool = DualPoolPSRAM;
     using SDPool = FallbackMemory<>;
+    static constexpr auto NumSections = 512 / 16;
 public:
     MemoryPool() = delete;
     ~MemoryPool() = delete;
