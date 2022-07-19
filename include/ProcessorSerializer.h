@@ -684,9 +684,6 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
         auto lastAddress = address_.getWholeValue();
-        Serial.println(F("{"));
-        Serial.print(F("\tlastAddress: 0x"));
-        Serial.println(lastAddress, HEX);
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
@@ -705,12 +702,7 @@ public:
         }
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
-        Serial.print(F("\tnewAddress: 0x"));
-        Serial.println(address_.getWholeValue(), HEX);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        Serial.print(F("\tdifference: "));
-        Serial.println(address_.getWholeValue() - lastAddress);
-        Serial.println(F("}"));
     }
     /**
      * @brief Update the upper 16-bits of the current transaction's address. Update the function to invoke to satisfy this request
