@@ -683,6 +683,10 @@ public:
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
+        auto lastAddress = address_.getWholeValue();
+        Serial.println(F("{"));
+        Serial.print(F("\tlastAddress: 0x"));
+        Serial.println(lastAddress, HEX);
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
@@ -701,7 +705,12 @@ public:
         }
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
+        Serial.print(F("\tnewAddress: 0x"));
+        Serial.println(address_.getWholeValue(), HEX);
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        Serial.print(F("\tdifference: "));
+        Serial.println(address_.getWholeValue() - lastAddress);
+        Serial.println(F("}"));
     }
     /**
      * @brief Update the upper 16-bits of the current transaction's address. Update the function to invoke to satisfy this request
@@ -717,24 +726,10 @@ public:
         // At this point, the space identifiers will tell us where to access data from.
         // For instance, we may know that we are in ram space or io space.
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SpaceDispatchTable* readTable = nullptr;
-        SpaceDispatchTable* writeTable = nullptr;
         SPDR = Upper16Opcode;
-        {
-            if (inIOSpace()) {
-                readTable = &ioSectionRead_;
-                writeTable = &ioSectionWrite_;
-            }
-        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-        {
-            if (inRAMSpace()) {
-                readTable = &ramSectionRead_;
-                writeTable = &ramSectionWrite_;
-            }
-        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
@@ -750,16 +745,7 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (address_.bytes[3] != highest) {
             maskedSpaceTarget_ = highest & 0b000'11111;
-            if (readTable) {
-                lastRead_ = *readTable[maskedSpaceTarget_];
-            } else {
-                lastRead_ = performFallbackRead;
-            }
-            if (writeTable) {
-                lastWrite_ = *writeTable[maskedSpaceTarget_];
-            } else {
-                lastWrite_ = performFallbackWrite;
-            }
+            updateTargetFunctions<inDebugMode>();
             address_.bytes[3] = highest;
         }
     }
