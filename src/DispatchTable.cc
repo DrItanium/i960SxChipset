@@ -53,8 +53,10 @@ ProcessorInterface::setupDispatchTable() noexcept {
             ioSectionRead_[i] = performFallbackRead;
             ioSectionWrite_[i] = performFallbackWrite;
             if constexpr (CompileInAddressDebuggingSupport) {
-                ramSectionRead_Debug_[i] = performFallbackRead;
-                ramSectionWrite_Debug_[i] = performFallbackWrite;
+                if constexpr (BackingMemoryStorage_t::NumSections != 32) {
+                    ramSectionRead_Debug_[i] = performFallbackRead;
+                    ramSectionWrite_Debug_[i] = performFallbackWrite;
+                }
                 ioSectionRead_Debug_[i] = performFallbackRead;
                 ioSectionWrite_Debug_[i] = performFallbackWrite;
             }
