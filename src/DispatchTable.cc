@@ -128,6 +128,43 @@ ProcessorInterface::getDebugWriteBody(byte index) noexcept {
         return ProcessorInterface::performFallbackWrite;
     }
 }
+
+BodyFunction
+ProcessorInterface::getNonDebugReadBody() noexcept {
+    if constexpr (UseSpacePins) {
+        if (inIOSpace()) {
+            return ioSectionRead_[maskedSpaceTarget_];
+        } else if (inRAMSpace()) {
+            return ramSectionRead_[maskedSpaceTarget_];
+        } else {
+            return ProcessorInterface::performFallbackRead;
+        }
+    } else {
+        return lookupTableRead[address_.bytes[3]];
+    }
+}
+BodyFunction
+ProcessorInterface::getNonDebugWriteBody() noexcept {
+    if constexpr (UseSpacePins) {
+        if (inIOSpace()) {
+            return ioSectionWrite_[maskedSpaceTarget_];
+        } else if (inRAMSpace()) {
+            return ramSectionWrite_[maskedSpaceTarget_];
+        } else {
+            return ProcessorInterface::performFallbackWrite;
+        }
+    } else {
+        return lookupTableWrite[address_.bytes[3]];
+    }
+}
+BodyFunction
+ProcessorInterface::getDebugReadBody() noexcept {
+    return getDebugReadBody(address_.bytes[3]);
+}
+BodyFunction
+ProcessorInterface::getDebugWriteBody() noexcept {
+    return getDebugWriteBody(address_.bytes[3]);
+}
 BodyFunction
 ProcessorInterface::getNonDebugReadBody(byte index) noexcept {
     if constexpr (UseSpacePins) {

@@ -544,6 +544,10 @@ private:
 private:
     static BodyFunction getNonDebugReadBody(byte index) noexcept;
     static BodyFunction getNonDebugWriteBody(byte index) noexcept;
+    static BodyFunction getNonDebugReadBody() noexcept;
+    static BodyFunction getNonDebugWriteBody() noexcept;
+    static BodyFunction getDebugReadBody() noexcept;
+    static BodyFunction getDebugWriteBody() noexcept;
     static BodyFunction getDebugReadBody(byte index) noexcept;
     static BodyFunction getDebugWriteBody(byte index) noexcept;
     template<bool inDebugMode>
@@ -555,11 +559,27 @@ private:
         }
     }
     template<bool inDebugMode>
+    static BodyFunction getReadBody() noexcept {
+        if constexpr (inDebugMode) {
+            return getDebugReadBody();
+        } else {
+            return getNonDebugReadBody();
+        }
+    }
+    template<bool inDebugMode>
     static BodyFunction getWriteBody(byte index) noexcept {
         if constexpr (inDebugMode) {
             return getDebugWriteBody(index);
         } else {
             return getNonDebugWriteBody(index);
+        }
+    }
+    template<bool inDebugMode>
+    static BodyFunction getWriteBody() noexcept {
+        if constexpr (inDebugMode) {
+            return getDebugWriteBody();
+        } else {
+            return getNonDebugWriteBody();
         }
     }
 public:
@@ -596,13 +616,14 @@ public:
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
         {
+            maskedSpaceTarget_ = highest & 0b000'11111;
             // don't do the comparison, instead just force the update every single time
             // there should be enough time in between transactions to make sure
             if (isReadOperation()) {
                 if constexpr (inDebugMode) {
-                    lastReadDebug_ = getReadBody<true>(highest);
+                    lastReadDebug_ = getReadBody<true>();
                 }
-                lastRead_ = getReadBody<false>(highest);
+                lastRead_ = getReadBody<false>();
             }
         }
         while (!(SPSR & _BV(SPIF))); // wait
@@ -610,9 +631,9 @@ public:
         {
             if (!isReadOperation()) {
                 if constexpr (inDebugMode) {
-                    lastWriteDebug_ = getWriteBody<true>(highest);
+                    lastWriteDebug_ = getWriteBody<true>();
                 }
-                lastWrite_ = getWriteBody<false>(highest);
+                lastWrite_ = getWriteBody<false>();
             }
         }
         while (!(SPSR & _BV(SPIF))); // wait
@@ -694,20 +715,10 @@ public:
         auto highest = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (address_.bytes[3] != highest) {
-            //updateTargetFunctions<inDebugMode>(highest);
-            if (isReadOperation()) {
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = getReadBody<true>(highest);
-                }
-                lastRead_ = getReadBody<false>(highest);
-            } else {
-                if constexpr (inDebugMode) {
-                    lastWriteDebug_ = getWriteBody<true>(highest);
-                }
-                lastWrite_ = getWriteBody<false>(highest);
-            }
+            maskedSpaceTarget_ = highest & 0b000'11111;
+            updateTargetFunctions<inDebugMode>();
+            address_.bytes[3] = highest;
         }
-        address_.bytes[3] = highest;
     }
 private:
     /**
@@ -777,6 +788,20 @@ private:
         lastRead_ = getReadBody<false>(index);
         lastWrite_ = getWriteBody<false>(index) ;
     }
+
+    /**
+     * @brief save the read and write function pointers for a given index
+     * @tparam inDebugMode If true then also update the debug versions of the function pointers in addition to the non debug ones
+     */
+    template<bool inDebugMode>
+    inline static void updateTargetFunctions() noexcept {
+        if constexpr (inDebugMode) {
+            lastReadDebug_ = getReadBody<true>();
+            lastWriteDebug_ = getWriteBody<true>() ;
+        }
+        lastRead_ = getReadBody<false>();
+        lastWrite_ = getWriteBody<false>() ;
+    }
 public:
     /**
      * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
@@ -785,7 +810,6 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-        byte rwStatus = isReadOperation() ? 1 : 0;
         switch (getUpdateKind<useInterrupts>()) {
             case AddressUpdateKind::Neither:
                 break;
@@ -805,26 +829,21 @@ public:
             Serial.println(address_.getWholeValue(), HEX);
         }
         if (isReadOperation()) {
-            if (rwStatus != lastRWStatus_) {
-                setupDataLinesForRead();
-            }
+            setupDataLinesForRead();
             if constexpr (inDebugMode) {
                 lastReadDebug_();
             } else {
                 lastRead_();
             }
         } else {
-            if (rwStatus != lastRWStatus_) {
-                // the status has changed comparatively to last time
-                setupDataLinesForWrite();
-            }
+            // the status has changed comparatively to last time
+            setupDataLinesForWrite();
             if constexpr (inDebugMode) {
                 lastWriteDebug_();
             } else {
                 lastWrite_();
             }
         }
-        lastRWStatus_ = rwStatus;
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
@@ -1224,7 +1243,7 @@ private:
     static inline SpaceDispatchTable ioSectionWrite_ { nullptr };
     static inline SpaceDispatchTable ioSectionRead_Debug_ { nullptr };
     static inline SpaceDispatchTable ioSectionWrite_Debug_ { nullptr };
-    static inline byte lastRWStatus_ = 0xFF;
+    static inline byte maskedSpaceTarget_ = 0;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
