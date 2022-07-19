@@ -618,6 +618,8 @@ public:
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
+        lastRead_ = performFallbackRead;
+        lastWrite_ = performFallbackWrite;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         auto higher = SPDR;
@@ -634,31 +636,26 @@ public:
             // don't do the comparison, instead just force the update every single time
             // there should be enough time in between transactions to make sure
             if (readTable) {
-                lastRead_ = *readTable[maskedSpaceTarget_];
-            } else {
-                lastRead_ = performFallbackRead;
+                lastRead_ = (*readTable)[maskedSpaceTarget_];
+            }
+            if (writeTable) {
+                lastWrite_ = (*writeTable)[maskedSpaceTarget_];
             }
             if constexpr (inDebugMode) {
                 lastReadDebug_ = getReadBody<true>();
+                lastWriteDebug_ = getWriteBody<true>();
             }
         }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-        {
-                if constexpr (inDebugMode) {
-                    lastWriteDebug_ = getWriteBody<true>();
-                }
-                if (writeTable) {
-                    lastWrite_ = *writeTable[maskedSpaceTarget_];
-                } else {
-                    lastWrite_ = performFallbackWrite;
-                }
-        }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         {
             address_.bytes[3] = highest;
         }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
@@ -668,6 +665,7 @@ public:
             cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
             address_.bytes[0] = lowest;
         }
+        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
