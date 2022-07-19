@@ -193,7 +193,11 @@ ProcessorInterface::getNonDebugReadBody(byte index) noexcept {
         if (auto masked = index & 0b0001'1111; inIOSpace()) {
             return ioSectionRead_[masked];
         } else if (inRAMSpace()) {
-            return ramSectionRead_[masked];
+            if constexpr (BackingMemoryStorage_t::NumSections == 32) {
+                return readCacheLine<false>;
+            } else {
+                return ramSectionRead_[masked];
+            }
         } else {
             return ProcessorInterface::performFallbackRead;
         }
@@ -207,7 +211,11 @@ ProcessorInterface::getNonDebugWriteBody(byte index) noexcept {
         if (auto masked = index & 0b0001'1111; inIOSpace()) {
             return ioSectionWrite_[masked];
         } else if (inRAMSpace()) {
-            return ramSectionWrite_[masked];
+            if constexpr (BackingMemoryStorage_t::NumSections == 32) {
+                return writeCacheLine<false>;
+            } else {
+                return ramSectionWrite_[masked];
+            }
         } else {
             return ProcessorInterface::performFallbackWrite;
         }

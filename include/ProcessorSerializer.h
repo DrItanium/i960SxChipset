@@ -610,12 +610,14 @@ public:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         {
-            if (inRAMSpace()) {
-                lastRead_ = readCacheLine<false>;
-                lastWrite_ = writeCacheLine<false>;
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = readCacheLine<false>;
-                    lastWriteDebug_ = writeCacheLine<false>;
+            if constexpr (UseSpacePins) {
+                if (inRAMSpace()) {
+                    lastRead_ = readCacheLine<false>;
+                    lastWrite_ = writeCacheLine<false>;
+                    if constexpr (inDebugMode) {
+                        lastReadDebug_ = readCacheLine<false>;
+                        lastWriteDebug_ = writeCacheLine<false>;
+                    }
                 }
             }
         }
@@ -634,16 +636,25 @@ public:
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
         {
-            if (inIOSpace()) {
-                maskedSpaceTarget_ = highest & 0b000'11111;
-                lastRead_ = ioSectionRead_[maskedSpaceTarget_];
-                lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
+            address_.bytes[3] = highest;
+            if constexpr (UseSpacePins) {
+                if (inIOSpace()) {
+                    maskedSpaceTarget_ = highest & 0b000'11111;
+                    lastRead_ = ioSectionRead_[maskedSpaceTarget_];
+                    lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
+                    if constexpr (inDebugMode) {
+                        lastReadDebug_ = ioSectionRead_Debug_[maskedSpaceTarget_];
+                        lastWriteDebug_ = ioSectionWrite_Debug_[maskedSpaceTarget_];
+                    }
+                }
+            } else {
+                lastRead_ = getReadBody<false>();
+                lastWrite_ = getWriteBody<false>();
                 if constexpr (inDebugMode) {
-                    lastReadDebug_ = ioSectionRead_Debug_[maskedSpaceTarget_];
-                    lastWriteDebug_ = ioSectionWrite_Debug_[maskedSpaceTarget_];
+                    lastReadDebug_ = getReadBody<true>();
+                    lastWriteDebug_ = getWriteBody<true>();
                 }
             }
-            address_.bytes[3] = highest;
         }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
