@@ -59,6 +59,7 @@ public:
 private:
     static inline OpenFileHandle theRam_;
 };
-using FallbackMemory = SDCardAsRam<TheSDInterface >;
+template<uint32_t numMegabytes = 512>
+using FallbackMemory = SDCardAsRam<TheSDInterface, numMegabytes>;
 
 #endif //SXCHIPSET_SDCARDASRAM_H

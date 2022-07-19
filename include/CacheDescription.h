@@ -44,18 +44,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SDCardAsRam.h"
 #include "PSRAMChip.h"
 #include "DualPSRAMPool.h"
+#include "MemoryPool.h"
 
 // define the backing memory storage classes via template specialization
 // at this point in time, if no specialization is performed, use SDCard as ram backend
 template<TargetMCU mcu> struct BackingMemoryStorage final {
-    using Type = FallbackMemory;
+    using Type = FallbackMemory<>;
 };
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
     //using ActualType = OnboardPSRAMBlock;
     //using Type = SRAMDataContainer<ActualType>;
     //using Type = OnboardPSRAMBlock;
     //using Type = OnboardPSRAMBlock_Pool2;
-    using Type = DualPoolMemoryBlock;
+    //using Type = DualPoolMemoryBlock;
+    using Type = CombinedMemoryPool;
 };
 
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
