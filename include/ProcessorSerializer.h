@@ -617,7 +617,6 @@ public:
         SPDR = Lower16Opcode;
         {
             maskedSpaceTarget_ = highest & 0b000'11111;
-            auto oldHighest = address_.bytes[3];
             address_.bytes[3] = highest;
             updateTargetFunctions<inDebugMode>();
         }
