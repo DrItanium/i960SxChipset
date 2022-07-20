@@ -619,9 +619,7 @@ public:
             maskedSpaceTarget_ = highest & 0b000'11111;
             auto oldHighest = address_.bytes[3];
             address_.bytes[3] = highest;
-            if (highest != oldHighest) {
-                updateTargetFunctions<inDebugMode>();
-            }
+            updateTargetFunctions<inDebugMode>();
         }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
