@@ -598,29 +598,9 @@ public:
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
-        {
-            lastRead_ = performFallbackRead;
-            lastWrite_ = performFallbackWrite;
-            if constexpr (inDebugMode) {
-                lastReadDebug_ = performFallbackRead;
-                lastWriteDebug_ = performFallbackWrite;
-            }
-        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-        {
-            if constexpr (UseSpacePins) {
-                if (inRAMSpace()) {
-                    lastRead_ = readCacheLine<false>;
-                    lastWrite_ = writeCacheLine<false>;
-                    if constexpr (inDebugMode) {
-                        lastReadDebug_ = readCacheLine<false>;
-                        lastWriteDebug_ = writeCacheLine<false>;
-                    }
-                }
-            }
-        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
@@ -636,24 +616,11 @@ public:
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
         {
+            maskedSpaceTarget_ = highest & 0b000'11111;
+            auto oldHighest = address_.bytes[3];
             address_.bytes[3] = highest;
-            if constexpr (UseSpacePins) {
-                if (inIOSpace()) {
-                    maskedSpaceTarget_ = highest & 0b000'11111;
-                    lastRead_ = ioSectionRead_[maskedSpaceTarget_];
-                    lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
-                    if constexpr (inDebugMode) {
-                        lastReadDebug_ = ioSectionRead_Debug_[maskedSpaceTarget_];
-                        lastWriteDebug_ = ioSectionWrite_Debug_[maskedSpaceTarget_];
-                    }
-                }
-            } else {
-                lastRead_ = getReadBody<false>();
-                lastWrite_ = getWriteBody<false>();
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = getReadBody<true>();
-                    lastWriteDebug_ = getWriteBody<true>();
-                }
+            if (highest != oldHighest) {
+                updateTargetFunctions<inDebugMode>();
             }
         }
         asm volatile("nop");
