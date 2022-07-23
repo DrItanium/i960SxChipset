@@ -812,18 +812,21 @@ private:
         lastRead_ = getReadBody<false>();
         lastWrite_ = getWriteBody<false>() ;
     }
-    template<bool inDebugMode, bool isRead, bool invertDataLines>
+    template<bool inDebugMode, bool isRead, bool currentlyWrite>
     static void doDispatchOperation() noexcept {
-        if constexpr (invertDataLines) {
-            invertDataLinesDirection();
-        }
         if constexpr (isRead) {
+            if constexpr (currentlyWrite) {
+                invertDataLinesDirection();
+            }
             if constexpr (inDebugMode) {
                 lastReadDebug_();
             } else {
                 lastRead_();
             }
         } else {
+            if constexpr (!currentlyWrite) {
+                invertDataLinesDirection();
+            }
             if constexpr (inDebugMode) {
                 lastWriteDebug_();
             } else {
@@ -888,24 +891,28 @@ private:
     static constexpr bool isReadOperation() noexcept {
         return (index & 0b0100) == 0;
     }
+    template<byte index>
+    static constexpr bool currentlyWrite() noexcept {
+        return (index & 0b1000) == 0;
+    }
     template<bool inDebugMode>
     static constexpr BodyFunction DispatchTable_NewDataCycle[16] {
-            full32UpdateDispatch<inDebugMode, isReadOperation<0>(), shouldInvertDataLines<0>()>, // 0b0000
-            upper16UpdateDispatch<inDebugMode, isReadOperation<1>(), shouldInvertDataLines<1>()>, // 0b0001
-            lower16UpdateDispatch<inDebugMode, isReadOperation<2>(), shouldInvertDataLines<2>()>, // 0b0010
-            neitherUpdateDispatch<inDebugMode, isReadOperation<3>(), shouldInvertDataLines<3>()>, // 0b0011
-            full32UpdateDispatch<inDebugMode, isReadOperation<4>(), shouldInvertDataLines<4>()>, // 0b0000
-            upper16UpdateDispatch<inDebugMode, isReadOperation<5>(), shouldInvertDataLines<5>()>, // 0b0001
-            lower16UpdateDispatch<inDebugMode, isReadOperation<6>(), shouldInvertDataLines<6>()>, // 0b0010
-            neitherUpdateDispatch<inDebugMode, isReadOperation<7>(), shouldInvertDataLines<7>()>, // 0b0011
-            full32UpdateDispatch<inDebugMode, isReadOperation<8>(), shouldInvertDataLines<8>()>, // 0b0000
-            upper16UpdateDispatch<inDebugMode, isReadOperation<9>(), shouldInvertDataLines<9>()>, // 0b0001
-            lower16UpdateDispatch<inDebugMode, isReadOperation<10>(), shouldInvertDataLines<10>()>, // 0b0010
-            neitherUpdateDispatch<inDebugMode, isReadOperation<11>(), shouldInvertDataLines<11>()>, // 0b0011
-            full32UpdateDispatch<inDebugMode, isReadOperation<12>(), shouldInvertDataLines<12>()>, // 0b0000
-            upper16UpdateDispatch<inDebugMode, isReadOperation<13>(), shouldInvertDataLines<13>()>, // 0b0001
-            lower16UpdateDispatch<inDebugMode, isReadOperation<14>(), shouldInvertDataLines<14>()>, // 0b0010
-            neitherUpdateDispatch<inDebugMode, isReadOperation<15>(), shouldInvertDataLines<15>()>, // 0b0011
+            full32UpdateDispatch<inDebugMode, isReadOperation<0>(), currentlyWrite<0>()>, // 0b0000
+            upper16UpdateDispatch<inDebugMode, isReadOperation<1>(), currentlyWrite<1>()>, // 0b0001
+            lower16UpdateDispatch<inDebugMode, isReadOperation<2>(), currentlyWrite<2>()>, // 0b0010
+            neitherUpdateDispatch<inDebugMode, isReadOperation<3>(), currentlyWrite<3>()>, // 0b0011
+            full32UpdateDispatch<inDebugMode, isReadOperation<4>(), currentlyWrite<4>()>, // 0b0000
+            upper16UpdateDispatch<inDebugMode, isReadOperation<5>(), currentlyWrite<5>()>, // 0b0001
+            lower16UpdateDispatch<inDebugMode, isReadOperation<6>(), currentlyWrite<6>()>, // 0b0010
+            neitherUpdateDispatch<inDebugMode, isReadOperation<7>(), currentlyWrite<7>()>, // 0b0011
+            full32UpdateDispatch<inDebugMode, isReadOperation<8>(), currentlyWrite<8>()>, // 0b0000
+            upper16UpdateDispatch<inDebugMode, isReadOperation<9>(), currentlyWrite<9>()>, // 0b0001
+            lower16UpdateDispatch<inDebugMode, isReadOperation<10>(), currentlyWrite<10>()>, // 0b0010
+            neitherUpdateDispatch<inDebugMode, isReadOperation<11>(), currentlyWrite<11>()>, // 0b0011
+            full32UpdateDispatch<inDebugMode, isReadOperation<12>(), currentlyWrite<12>()>, // 0b0000
+            upper16UpdateDispatch<inDebugMode, isReadOperation<13>(), currentlyWrite<13>()>, // 0b0001
+            lower16UpdateDispatch<inDebugMode, isReadOperation<14>(), currentlyWrite<14>()>, // 0b0010
+            neitherUpdateDispatch<inDebugMode, isReadOperation<15>(), currentlyWrite<15>()>, // 0b0011
     };
 public:
     /**
@@ -918,7 +925,7 @@ public:
         DecodeDispatch bits;
         bits.updateKinds = getUpdateKind<useInterrupts>();
         bits.readOperation = isReadOperation();
-        bits.currentlyWrite = dataLinesDirection_;
+        bits.currentlyWrite = dataLinesDirection_ ? 1 : 0;
         DispatchTable_NewDataCycle<inDebugMode>[bits.raw]();
     }
     /**
