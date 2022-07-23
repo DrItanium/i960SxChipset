@@ -846,14 +846,20 @@ private:
                 Serial.println(address_.getWholeValue(), HEX);
             }
             if constexpr (index.isReadOperation()) {
-                setupDataLinesForRead();
+                if constexpr (index.isCurrentlyWrite()) {
+                    invertDataLinesDirection();
+                }
+                //setupDataLinesForRead();
                 if constexpr (inDebugMode) {
                     lastReadDebug_();
                 } else {
                     lastRead_();
                 }
             } else {
-                setupDataLinesForWrite();
+                //setupDataLinesForWrite();
+                if constexpr (!index.isCurrentlyWrite()) {
+                    invertDataLinesDirection();
+                }
                 if constexpr (inDebugMode) {
                     lastWriteDebug_();
                 } else {
