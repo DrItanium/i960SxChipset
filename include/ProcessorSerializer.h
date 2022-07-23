@@ -746,18 +746,20 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
         {
-            lastRead_ = performFallbackRead;
-            lastWrite_ = performFallbackWrite;
-            if constexpr (inDebugMode) {
-                lastReadDebug_ = performFallbackRead;
-                lastWriteDebug_ = performFallbackWrite;
+            if constexpr (index.inUnmappedSpace()) {
+                lastRead_ = performFallbackRead;
+                lastWrite_ = performFallbackWrite;
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = performFallbackRead;
+                    lastWriteDebug_ = performFallbackWrite;
+                }
             }
         }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         {
-            if (inRAMSpace()) {
+            if constexpr (index.inRAMSpace()) {
                 lastRead_ = readCacheLine<false>;
                 lastWrite_ = writeCacheLine<false>;
                 if constexpr (inDebugMode) {
@@ -781,7 +783,7 @@ private:
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
         {
-            if (inIOSpace()) {
+            if constexpr (index.inIOSpace()) {
                 maskedSpaceTarget_ = highest & 0b000'11111;
                 lastRead_ = ioSectionRead_[maskedSpaceTarget_];
                 lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
@@ -901,25 +903,17 @@ private:
         }
         if constexpr (index.isReadOperation()) {
             setupDataLinesForRead();
-            if constexpr (index.inRAMSpace())  {
-                readCacheLine<inDebugMode>();
+            if constexpr (inDebugMode)  {
+                lastReadDebug_();
             } else {
-                if constexpr (inDebugMode)  {
-                    lastReadDebug_();
-                } else {
-                    lastRead_();
-                }
+                lastRead_();
             }
         } else {
             setupDataLinesForWrite();
-            if constexpr (index.inRAMSpace()) {
-                writeCacheLine<inDebugMode>();
+            if constexpr (inDebugMode) {
+                lastWriteDebug_();
             } else {
-                if constexpr (inDebugMode) {
-                    lastWriteDebug_();
-                } else {
-                    lastWrite_();
-                }
+                lastWrite_();
             }
         }
     }
