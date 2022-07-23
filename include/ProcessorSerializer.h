@@ -508,16 +508,19 @@ private:
         /**
          * @brief Only the lower 16-bits of the address have changed so only read that io expander
          */
-        Lower16 = pinToPortBit<i960Pinout::ADDRESS_HI_INT>(), // the upper 16 is marked as high
+        Lower16 = pinToPortBit<i960Pinout::ADDRESS_HI_INT>() >> 6, // the upper 16 is marked as high
         /**
          * @brief Only the upper 16-bits of the address have changed so only read that io expander
          */
-        Upper16 = pinToPortBit<i960Pinout::ADDRESS_LO_INT>(), // the lower 16 is marked as high
+        Upper16 = pinToPortBit<i960Pinout::ADDRESS_LO_INT>() >> 6, // the lower 16 is marked as high
         /**
          * @brief Neither the upper or lower halves of the address have changed. Do not query the SPI bus at all
          */
-        Neither = pinToPortBit<i960Pinout::ADDRESS_HI_INT>() | pinToPortBit<i960Pinout::ADDRESS_LO_INT>(), // both are marked high
+        Neither = (pinToPortBit<i960Pinout::ADDRESS_HI_INT>() | pinToPortBit<i960Pinout::ADDRESS_LO_INT>()) >> 6, // both are marked high
     };
+    static_assert(static_cast<byte>(AddressUpdateKind::Lower16) == 0b10);
+    static_assert(static_cast<byte>(AddressUpdateKind::Upper16) == 0b01);
+    static_assert(static_cast<byte>(AddressUpdateKind::Neither) == 0b11);
     /**
      * @brief Query the MCP23S17 interrupt pins to figure out which ports on the address lines had actually changed since the last transaction
      * @tparam useInterrupts When true, query the interrupt lines to generate a difference mask. When false, 0 is returned which means all have changed
@@ -526,20 +529,13 @@ private:
      * means the whole address must be updated.
      */
     template<bool useInterrupts>
-    static AddressUpdateKind getUpdateKind() noexcept {
+    static byte getUpdateKind() noexcept {
         if constexpr (useInterrupts) {
             if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-                // enable address mirroring on address lines to free up two pins, we bind those to IOEXP_INT2 and IOEXP_INT3
-
-                static constexpr auto Mask = pinToPortBit<i960Pinout::ADDRESS_HI_INT>() |
-                                             pinToPortBit<i960Pinout::ADDRESS_LO_INT>();
-                // even though three of the four pins are actually in use, I want to eventually diagnose the problem itself
-                // so this code is ready for that day
-                return static_cast<AddressUpdateKind>(getAssociatedInputPort<i960Pinout::ADDRESS_LO_INT>() & Mask);
+                return (getAssociatedInputPort<i960Pinout::ADDRESS_LO_INT>() >> 6) & 0b11;
             }
         }
-        // otherwise we want to always do a full 32-bit address update
-        return AddressUpdateKind::Full32;
+        return 0;
     }
 private:
     static BodyFunction getNonDebugReadBody(byte index) noexcept;
@@ -818,33 +814,9 @@ private:
         lastRead_ = getReadBody<false>();
         lastWrite_ = getWriteBody<false>() ;
     }
-public:
-    /**
-     * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
-     * @tparam inDebugMode When true, use debug versions of the read/write function pointers to fulfill the request. This is passed to direct children as well.
-     * @tparam useInterrupts If true, then query the directly connected interrupt pins to get a proper update mask
-     */
-    template<bool inDebugMode, bool useInterrupts = true>
-    static void newDataCycle() noexcept {
-        switch (getUpdateKind<useInterrupts>()) {
-            case AddressUpdateKind::Neither:
-                break;
-            case AddressUpdateKind::Lower16:
-                lower16Update();
-                break;
-            case AddressUpdateKind::Upper16:
-                upper16Update<inDebugMode>();
-                break;
-            default:
-                full32BitUpdate<inDebugMode>();
-                break;
-        }
-        /// @todo use the new ram_space and io space pins to accelerate decoding
-        if constexpr (inDebugMode) {
-            Serial.print(F("Target Address: 0x"));
-            Serial.println(address_.getWholeValue(), HEX);
-        }
-        if (isReadOperation()) {
+    template<bool inDebugMode, bool isRead>
+    static void doDispatchOperation() noexcept {
+        if constexpr (isRead) {
             setupDataLinesForRead();
             if constexpr (inDebugMode) {
                 lastReadDebug_();
@@ -859,6 +831,59 @@ public:
             } else {
                 lastWrite_();
             }
+        }
+    }
+    template<bool inDebugMode>
+    static void displayTargetAddress() noexcept {
+        /// @todo use the new ram_space and io space pins to accelerate decoding
+        if constexpr (inDebugMode) {
+            Serial.print(F("Target Address: 0x"));
+            Serial.println(address_.getWholeValue(), HEX);
+        }
+    }
+    template<bool inDebugMode, bool isReadOp>
+    static void neitherUpdateDispatch() noexcept {
+        /// @todo use the new ram_space and io space pins to accelerate decoding
+        displayTargetAddress<inDebugMode>();
+        doDispatchOperation<inDebugMode, isReadOp>();
+    }
+    template<bool inDebugMode, bool isReadOp>
+    static void lower16UpdateDispatch() noexcept {
+        lower16Update();
+        displayTargetAddress<inDebugMode>();
+        doDispatchOperation<inDebugMode, isReadOp>() ;
+    }
+    template<bool inDebugMode, bool isReadOp>
+    static void upper16UpdateDispatch() noexcept {
+        upper16Update<inDebugMode>();
+        displayTargetAddress<inDebugMode>();
+        doDispatchOperation<inDebugMode, isReadOp>() ;
+    }
+    template<bool inDebugMode, bool isReadOp>
+    static void full32UpdateDispatch() noexcept {
+        full32BitUpdate<inDebugMode>();
+        displayTargetAddress<inDebugMode>();
+        doDispatchOperation<inDebugMode, isReadOp>() ;
+    }
+    template<bool inDebugMode, bool isReadOp>
+    static inline BodyFunction DispatchTable_NewDataCycle[4] {
+            full32UpdateDispatch<inDebugMode, isReadOp>, // 0b00
+            upper16UpdateDispatch<inDebugMode, isReadOp>, // 0b001
+            lower16UpdateDispatch<inDebugMode, isReadOp>, // 0b010
+            neitherUpdateDispatch<inDebugMode, isReadOp>, // 0b011
+    };
+public:
+    /**
+     * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
+     * @tparam inDebugMode When true, use debug versions of the read/write function pointers to fulfill the request. This is passed to direct children as well.
+     * @tparam useInterrupts If true, then query the directly connected interrupt pins to get a proper update mask
+     */
+    template<bool inDebugMode, bool useInterrupts = true>
+    static void newDataCycle() noexcept {
+        if (isReadOperation()) {
+            DispatchTable_NewDataCycle<inDebugMode, true>[getUpdateKind<useInterrupts>()]();
+        } else {
+            DispatchTable_NewDataCycle<inDebugMode, false>[getUpdateKind<useInterrupts>()]();
         }
     }
     /**
