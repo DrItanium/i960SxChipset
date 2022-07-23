@@ -864,11 +864,11 @@ private:
         doDispatchOperation<inDebugMode, isReadOp>() ;
     }
     template<bool inDebugMode, bool isReadOp>
-    static inline BodyFunction DispatchTable_NewDataCycle[4] {
+    static constexpr BodyFunction DispatchTable_NewDataCycle[4] {
             full32UpdateDispatch<inDebugMode, isReadOp>, // 0b00
-            upper16UpdateDispatch<inDebugMode, isReadOp>, // 0b001
-            lower16UpdateDispatch<inDebugMode, isReadOp>, // 0b010
-            neitherUpdateDispatch<inDebugMode, isReadOp>, // 0b011
+            upper16UpdateDispatch<inDebugMode, isReadOp>, // 0b01
+            lower16UpdateDispatch<inDebugMode, isReadOp>, // 0b10
+            neitherUpdateDispatch<inDebugMode, isReadOp>, // 0b11
     };
 public:
     /**
