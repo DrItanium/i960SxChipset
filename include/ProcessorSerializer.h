@@ -812,18 +812,18 @@ private:
         lastRead_ = getReadBody<false>();
         lastWrite_ = getWriteBody<false>() ;
     }
-    template<bool inDebugMode, bool isRead>
+    template<bool inDebugMode, bool isRead, bool invertDataLines>
     static void doDispatchOperation() noexcept {
+        if constexpr (invertDataLines) {
+            invertDataLinesDirection();
+        }
         if constexpr (isRead) {
-            setupDataLinesForRead();
             if constexpr (inDebugMode) {
                 lastReadDebug_();
             } else {
                 lastRead_();
             }
         } else {
-            // the status has changed comparatively to last time
-            setupDataLinesForWrite();
             if constexpr (inDebugMode) {
                 lastWriteDebug_();
             } else {
@@ -839,36 +839,73 @@ private:
             Serial.println(address_.getWholeValue(), HEX);
         }
     }
-    template<bool inDebugMode, bool isReadOp>
+    template<bool inDebugMode, bool isReadOp, bool invertDataLines>
     static void neitherUpdateDispatch() noexcept {
         /// @todo use the new ram_space and io space pins to accelerate decoding
         displayTargetAddress<inDebugMode>();
-        doDispatchOperation<inDebugMode, isReadOp>();
+        doDispatchOperation<inDebugMode, isReadOp, invertDataLines>();
     }
-    template<bool inDebugMode, bool isReadOp>
+    template<bool inDebugMode, bool isReadOp, bool invertDataLines>
     static void lower16UpdateDispatch() noexcept {
         lower16Update();
         displayTargetAddress<inDebugMode>();
-        doDispatchOperation<inDebugMode, isReadOp>() ;
+        doDispatchOperation<inDebugMode, isReadOp, invertDataLines>() ;
     }
-    template<bool inDebugMode, bool isReadOp>
+    template<bool inDebugMode, bool isReadOp, bool invertDataLines>
     static void upper16UpdateDispatch() noexcept {
         upper16Update<inDebugMode>();
         displayTargetAddress<inDebugMode>();
-        doDispatchOperation<inDebugMode, isReadOp>() ;
+        doDispatchOperation<inDebugMode, isReadOp, invertDataLines>() ;
     }
-    template<bool inDebugMode, bool isReadOp>
+    template<bool inDebugMode, bool isReadOp, bool invertDataLines>
     static void full32UpdateDispatch() noexcept {
         full32BitUpdate<inDebugMode>();
         displayTargetAddress<inDebugMode>();
-        doDispatchOperation<inDebugMode, isReadOp>() ;
+        doDispatchOperation<inDebugMode, isReadOp, invertDataLines>() ;
     }
-    template<bool inDebugMode, bool isReadOp>
-    static constexpr BodyFunction DispatchTable_NewDataCycle[4] {
-            full32UpdateDispatch<inDebugMode, isReadOp>, // 0b00
-            upper16UpdateDispatch<inDebugMode, isReadOp>, // 0b01
-            lower16UpdateDispatch<inDebugMode, isReadOp>, // 0b10
-            neitherUpdateDispatch<inDebugMode, isReadOp>, // 0b11
+    union DecodeDispatch {
+        explicit constexpr DecodeDispatch(uint8_t value = 0) : raw(value) { }
+        uint8_t raw;
+        struct {
+            uint8_t updateKinds : 2;
+            uint8_t readOperation : 1;
+            uint8_t currentlyWrite : 1;
+            uint8_t rest : 4;
+        };
+    } __attribute__((packed));
+    template<byte index>
+    static consteval bool shouldInvertDataLines() {
+        switch(index & 0b1100) {
+            case 0b0000:
+            case 0b1100:
+                return false;
+            case 0b0100:
+            case 0b1000:
+                return true;
+        }
+    }
+    template<byte index>
+    static consteval bool isReadOperation() noexcept {
+        return (index & 0b0100) == 0;
+    }
+    template<bool inDebugMode>
+    static constexpr BodyFunction DispatchTable_NewDataCycle[16] {
+            full32UpdateDispatch<inDebugMode, isReadOperation<0>(), shouldInvertDataLines<0>()>, // 0b0000
+            upper16UpdateDispatch<inDebugMode, isReadOperation<1>(), shouldInvertDataLines<1>()>, // 0b0001
+            lower16UpdateDispatch<inDebugMode, isReadOperation<2>(), shouldInvertDataLines<2>()>, // 0b0010
+            neitherUpdateDispatch<inDebugMode, isReadOperation<3>(), shouldInvertDataLines<3>()>, // 0b0011
+            full32UpdateDispatch<inDebugMode, isReadOperation<4>(), shouldInvertDataLines<4>()>, // 0b0000
+            upper16UpdateDispatch<inDebugMode, isReadOperation<5>(), shouldInvertDataLines<5>()>, // 0b0001
+            lower16UpdateDispatch<inDebugMode, isReadOperation<6>(), shouldInvertDataLines<6>()>, // 0b0010
+            neitherUpdateDispatch<inDebugMode, isReadOperation<7>(), shouldInvertDataLines<7>()>, // 0b0011
+            full32UpdateDispatch<inDebugMode, isReadOperation<8>(), shouldInvertDataLines<8>()>, // 0b0000
+            upper16UpdateDispatch<inDebugMode, isReadOperation<9>(), shouldInvertDataLines<9>()>, // 0b0001
+            lower16UpdateDispatch<inDebugMode, isReadOperation<10>(), shouldInvertDataLines<10>()>, // 0b0010
+            neitherUpdateDispatch<inDebugMode, isReadOperation<11>(), shouldInvertDataLines<11>()>, // 0b0011
+            full32UpdateDispatch<inDebugMode, isReadOperation<12>(), shouldInvertDataLines<12>()>, // 0b0000
+            upper16UpdateDispatch<inDebugMode, isReadOperation<13>(), shouldInvertDataLines<13>()>, // 0b0001
+            lower16UpdateDispatch<inDebugMode, isReadOperation<14>(), shouldInvertDataLines<14>()>, // 0b0010
+            neitherUpdateDispatch<inDebugMode, isReadOperation<15>(), shouldInvertDataLines<15>()>, // 0b0011
     };
 public:
     /**
@@ -878,11 +915,11 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-        if (auto kind = getUpdateKind<useInterrupts>(); isReadOperation()) {
-            DispatchTable_NewDataCycle<inDebugMode, true>[kind]();
-        } else {
-            DispatchTable_NewDataCycle<inDebugMode, false>[kind]();
-        }
+        DecodeDispatch bits;
+        bits.updateKinds = getUpdateKind<useInterrupts>();
+        bits.readOperation = isReadOperation();
+        bits.currentlyWrite = dataLinesDirection_;
+        DispatchTable_NewDataCycle<inDebugMode>[bits.raw]();
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
