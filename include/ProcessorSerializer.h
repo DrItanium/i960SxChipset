@@ -829,7 +829,6 @@ private:
                 if constexpr (index.isCurrentlyWrite()) {
                     invertDataLinesDirection();
                 }
-                //setupDataLinesForRead();
                 if constexpr (index.inRAMSpace()) {
                     readCacheLine<inDebugMode>();
                 } else if constexpr (index.inUnmappedSpace()) {
@@ -842,7 +841,6 @@ private:
                     }
                 }
             } else {
-                //setupDataLinesForWrite();
                 if constexpr (!index.isCurrentlyWrite()) {
                     invertDataLinesDirection();
                 }
