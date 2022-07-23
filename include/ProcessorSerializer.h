@@ -746,20 +746,18 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
         {
-            if constexpr (index.inUnmappedSpace()) {
-                lastRead_ = performFallbackRead;
-                lastWrite_ = performFallbackWrite;
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = performFallbackRead;
-                    lastWriteDebug_ = performFallbackWrite;
-                }
+            lastRead_ = performFallbackRead;
+            lastWrite_ = performFallbackWrite;
+            if constexpr (inDebugMode) {
+                lastReadDebug_ = performFallbackRead;
+                lastWriteDebug_ = performFallbackWrite;
             }
         }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         {
-            if constexpr (index.inRAMSpace()) {
+            if (inRAMSpace()) {
                 lastRead_ = readCacheLine<false>;
                 lastWrite_ = writeCacheLine<false>;
                 if constexpr (inDebugMode) {
@@ -783,7 +781,7 @@ private:
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
         {
-            if constexpr (index.inIOSpace()) {
+            if (inIOSpace()) {
                 maskedSpaceTarget_ = highest & 0b000'11111;
                 lastRead_ = ioSectionRead_[maskedSpaceTarget_];
                 lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
