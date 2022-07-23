@@ -738,6 +738,7 @@ private:
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
+#if 0
         {
             if constexpr (index.inRAMSpace()) {
                 lastRead_ = readCacheLine<false>;
@@ -748,6 +749,7 @@ private:
                 }
             }
         }
+#endif
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
