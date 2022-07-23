@@ -709,26 +709,6 @@ private:
             thingy.rest = 0;
             return thingy.value;
         }
-        static constexpr uint8_t makeWholeValue(uint8_t a, bool b, bool c, bool d, bool e, uint8_t r) noexcept {
-            union {
-                uint8_t value;
-                struct {
-                    uint8_t updateKinds: 2;
-                    uint8_t readOperation: 1;
-                    uint8_t currentlyWrite: 1;
-                    uint8_t inRAMSpace : 1;
-                    uint8_t inIOSpace : 1;
-                    uint8_t rest: 2;
-                };
-            } thingy;
-            thingy.updateKinds = a;
-            thingy.readOperation = b;
-            thingy.currentlyWrite = c;
-            thingy.inRAMSpace = d;
-            thingy.inIOSpace = e;
-            thingy.rest = r;
-            return thingy.value;
-        }
     };
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
