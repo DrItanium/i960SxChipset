@@ -812,60 +812,6 @@ private:
         lastRead_ = getReadBody<false>();
         lastWrite_ = getWriteBody<false>() ;
     }
-    template<bool inDebugMode, bool isRead, bool currentlyWrite>
-    static void doDispatchOperation() noexcept {
-        if constexpr (isRead) {
-            if constexpr (currentlyWrite) {
-                invertDataLinesDirection();
-            }
-            if constexpr (inDebugMode) {
-                lastReadDebug_();
-            } else {
-                lastRead_();
-            }
-        } else {
-            if constexpr (!currentlyWrite) {
-                invertDataLinesDirection();
-            }
-            if constexpr (inDebugMode) {
-                lastWriteDebug_();
-            } else {
-                lastWrite_();
-            }
-        }
-    }
-    template<bool inDebugMode>
-    static void displayTargetAddress() noexcept {
-        /// @todo use the new ram_space and io space pins to accelerate decoding
-        if constexpr (inDebugMode) {
-            Serial.print(F("Target Address: 0x"));
-            Serial.println(address_.getWholeValue(), HEX);
-        }
-    }
-    template<bool inDebugMode, bool isReadOp, bool invertDataLines>
-    static void neitherUpdateDispatch() noexcept {
-        /// @todo use the new ram_space and io space pins to accelerate decoding
-        displayTargetAddress<inDebugMode>();
-        doDispatchOperation<inDebugMode, isReadOp, invertDataLines>();
-    }
-    template<bool inDebugMode, bool isReadOp, bool invertDataLines>
-    static void lower16UpdateDispatch() noexcept {
-        lower16Update();
-        displayTargetAddress<inDebugMode>();
-        doDispatchOperation<inDebugMode, isReadOp, invertDataLines>() ;
-    }
-    template<bool inDebugMode, bool isReadOp, bool invertDataLines>
-    static void upper16UpdateDispatch() noexcept {
-        upper16Update<inDebugMode>();
-        displayTargetAddress<inDebugMode>();
-        doDispatchOperation<inDebugMode, isReadOp, invertDataLines>() ;
-    }
-    template<bool inDebugMode, bool isReadOp, bool invertDataLines>
-    static void full32UpdateDispatch() noexcept {
-        full32BitUpdate<inDebugMode>();
-        displayTargetAddress<inDebugMode>();
-        doDispatchOperation<inDebugMode, isReadOp, invertDataLines>() ;
-    }
     union DecodeDispatch {
         explicit constexpr DecodeDispatch(uint8_t value = 0) : raw(value) { }
         uint8_t raw;
@@ -875,44 +821,63 @@ private:
             uint8_t currentlyWrite : 1;
             uint8_t rest : 4;
         };
+        constexpr uint8_t getUpdateKinds() const noexcept { return raw & 0b0011; }
+        constexpr bool isReadOperation() const noexcept { return (raw & 0b0100) == 0; }
+        constexpr bool isCurrentlyWrite() const noexcept { return (raw & 0b1000) != 0; }
     } __attribute__((packed));
-    template<byte index>
-    static constexpr bool shouldInvertDataLines() {
-        switch(index & 0b1100) {
-            case 0b0000:
-            case 0b1100:
-                return false;
-            case 0b0100:
-            case 0b1000:
-                return true;
+    template<bool inDebugMode, DecodeDispatch index>
+    static void doDispatch() noexcept {
+        static constexpr byte DispatchTarget = index.getUpdateKinds();
+        if constexpr (DispatchTarget == 0) {
+            full32BitUpdate<inDebugMode>();
+        } else if constexpr (DispatchTarget == 0b01) {
+            upper16Update<inDebugMode>();
+        } else if constexpr (DispatchTarget == 0b10) {
+            lower16Update();
+        } else {
+            // do nothing
         }
-    }
-    template<byte index>
-    static constexpr bool isReadOperation() noexcept {
-        return (index & 0b0100) == 0;
-    }
-    template<byte index>
-    static constexpr bool currentlyWrite() noexcept {
-        return (index & 0b1000) == 0;
+        /// @todo use the new ram_space and io space pins to accelerate decoding
+        if constexpr (inDebugMode) {
+            Serial.print(F("Target Address: 0x"));
+            Serial.println(address_.getWholeValue(), HEX);
+        }
+        if constexpr (index.isReadOperation()) {
+            setupDataLinesForRead();
+            if constexpr (inDebugMode)  {
+               lastReadDebug_();
+            } else {
+               lastRead_();
+            }
+        } else {
+            setupDataLinesForWrite();
+            if constexpr (inDebugMode)  {
+                lastWriteDebug_();
+            } else {
+                lastWrite_();
+            }
+        }
     }
     template<bool inDebugMode>
     static constexpr BodyFunction DispatchTable_NewDataCycle[16] {
-            full32UpdateDispatch<inDebugMode, isReadOperation<0>(), currentlyWrite<0>()>, // 0b0000
-            upper16UpdateDispatch<inDebugMode, isReadOperation<1>(), currentlyWrite<1>()>, // 0b0001
-            lower16UpdateDispatch<inDebugMode, isReadOperation<2>(), currentlyWrite<2>()>, // 0b0010
-            neitherUpdateDispatch<inDebugMode, isReadOperation<3>(), currentlyWrite<3>()>, // 0b0011
-            full32UpdateDispatch<inDebugMode, isReadOperation<4>(), currentlyWrite<4>()>, // 0b0000
-            upper16UpdateDispatch<inDebugMode, isReadOperation<5>(), currentlyWrite<5>()>, // 0b0001
-            lower16UpdateDispatch<inDebugMode, isReadOperation<6>(), currentlyWrite<6>()>, // 0b0010
-            neitherUpdateDispatch<inDebugMode, isReadOperation<7>(), currentlyWrite<7>()>, // 0b0011
-            full32UpdateDispatch<inDebugMode, isReadOperation<8>(), currentlyWrite<8>()>, // 0b0000
-            upper16UpdateDispatch<inDebugMode, isReadOperation<9>(), currentlyWrite<9>()>, // 0b0001
-            lower16UpdateDispatch<inDebugMode, isReadOperation<10>(), currentlyWrite<10>()>, // 0b0010
-            neitherUpdateDispatch<inDebugMode, isReadOperation<11>(), currentlyWrite<11>()>, // 0b0011
-            full32UpdateDispatch<inDebugMode, isReadOperation<12>(), currentlyWrite<12>()>, // 0b0000
-            upper16UpdateDispatch<inDebugMode, isReadOperation<13>(), currentlyWrite<13>()>, // 0b0001
-            lower16UpdateDispatch<inDebugMode, isReadOperation<14>(), currentlyWrite<14>()>, // 0b0010
-            neitherUpdateDispatch<inDebugMode, isReadOperation<15>(), currentlyWrite<15>()>, // 0b0011
+#define X(ind) doDispatch<inDebugMode, DecodeDispatch{ind} >
+                    X(0),
+                            X(1),
+                            X(2),
+                            X(3),
+                            X(4),
+                            X(5),
+                            X(6),
+                            X(7),
+                            X(8),
+                            X(9),
+                            X(10),
+                            X(11),
+                            X(12),
+                            X(13),
+                            X(14),
+                            X(15),
+#undef X
     };
 public:
     /**
@@ -925,7 +890,8 @@ public:
         DecodeDispatch bits;
         bits.updateKinds = getUpdateKind<useInterrupts>();
         bits.readOperation = isReadOperation();
-        bits.currentlyWrite = dataLinesDirection_ ? 1 : 0;
+        bits.currentlyWrite = 0;
+        //bits.currentlyWrite = dataLinesDirection_ ? 1 : 0;
         DispatchTable_NewDataCycle<inDebugMode>[bits.raw]();
     }
     /**
