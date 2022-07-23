@@ -830,31 +830,35 @@ private:
     }
     template<bool inDebugMode, DecodeDispatch index>
     static void doDispatch() noexcept {
-        if constexpr (index.getUpdateKinds() == 0b00 || index.getUpdateKinds() == 0b01) {
-            full32BitUpdate<inDebugMode, index>();
-        } else if constexpr (index.getUpdateKinds()== 0b10) {
-            lower16Update();
+        if constexpr (index.inIllegalSpace()) {
+            signalHaltState(F("ILLEGAL SPACE DEFINED!"));
         } else {
-            // do nothing
-        }
-        /// @todo use the new ram_space and io space pins to accelerate decoding
-        if constexpr (inDebugMode) {
-            Serial.print(F("Target Address: 0x"));
-            Serial.println(address_.getWholeValue(), HEX);
-        }
-        if constexpr (index.isReadOperation()) {
-            setupDataLinesForRead();
-            if constexpr (inDebugMode)  {
-                lastReadDebug_();
+            if constexpr (index.getUpdateKinds() == 0b00 || index.getUpdateKinds() == 0b01) {
+                full32BitUpdate<inDebugMode, index>();
+            } else if constexpr (index.getUpdateKinds() == 0b10) {
+                lower16Update();
             } else {
-                lastRead_();
+                // do nothing
             }
-        } else {
-            setupDataLinesForWrite();
+            /// @todo use the new ram_space and io space pins to accelerate decoding
             if constexpr (inDebugMode) {
-                lastWriteDebug_();
+                Serial.print(F("Target Address: 0x"));
+                Serial.println(address_.getWholeValue(), HEX);
+            }
+            if constexpr (index.isReadOperation()) {
+                setupDataLinesForRead();
+                if constexpr (inDebugMode) {
+                    lastReadDebug_();
+                } else {
+                    lastRead_();
+                }
             } else {
-                lastWrite_();
+                setupDataLinesForWrite();
+                if constexpr (inDebugMode) {
+                    lastWriteDebug_();
+                } else {
+                    lastWrite_();
+                }
             }
         }
     }
