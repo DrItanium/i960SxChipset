@@ -874,7 +874,7 @@ private:
         };
     } __attribute__((packed));
     template<byte index>
-    static consteval bool shouldInvertDataLines() {
+    static constexpr bool shouldInvertDataLines() {
         switch(index & 0b1100) {
             case 0b0000:
             case 0b1100:
@@ -885,7 +885,7 @@ private:
         }
     }
     template<byte index>
-    static consteval bool isReadOperation() noexcept {
+    static constexpr bool isReadOperation() noexcept {
         return (index & 0b0100) == 0;
     }
     template<bool inDebugMode>
