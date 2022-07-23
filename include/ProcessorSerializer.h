@@ -822,17 +822,16 @@ private:
             uint8_t rest : 4;
         };
         constexpr uint8_t getUpdateKinds() const noexcept { return raw & 0b0011; }
-        constexpr bool isReadOperation() const noexcept { return (raw & 0b0100) == 0; }
+        constexpr bool isReadOperation() const noexcept { return (raw & 0b0100) != 0; }
         constexpr bool isCurrentlyWrite() const noexcept { return (raw & 0b1000) != 0; }
     } __attribute__((packed));
     template<bool inDebugMode, DecodeDispatch index>
     static void doDispatch() noexcept {
-        static constexpr byte DispatchTarget = index.getUpdateKinds();
-        if constexpr (DispatchTarget == 0) {
+        if constexpr (index.getUpdateKinds() == 0b00) {
             full32BitUpdate<inDebugMode>();
-        } else if constexpr (DispatchTarget == 0b01) {
+        } else if constexpr (index.getUpdateKinds() == 0b01) {
             upper16Update<inDebugMode>();
-        } else if constexpr (DispatchTarget == 0b10) {
+        } else if constexpr (index.getUpdateKinds()== 0b10) {
             lower16Update();
         } else {
             // do nothing
@@ -890,8 +889,7 @@ public:
         DecodeDispatch bits;
         bits.updateKinds = getUpdateKind<useInterrupts>();
         bits.readOperation = isReadOperation();
-        bits.currentlyWrite = 0;
-        //bits.currentlyWrite = dataLinesDirection_ ? 1 : 0;
+        bits.currentlyWrite = dataLinesDirection_ != 0;
         DispatchTable_NewDataCycle<inDebugMode>[bits.raw]();
     }
     /**
