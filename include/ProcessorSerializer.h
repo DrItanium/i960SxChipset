@@ -815,6 +815,14 @@ private:
     struct DecodeDispatch {
         constexpr DecodeDispatch(byte updateKind, bool isReadOp, bool dataIsWriting, bool isRAMSpace, bool isIOSpace, byte r = 0) : updateKinds(updateKind), readOperation(isReadOp), currentlyWrite(dataIsWriting), isRAMSpace_(isRAMSpace), isIOSpace_(isIOSpace), rest(r) { }
         explicit constexpr DecodeDispatch(uint8_t value) : DecodeDispatch(value & 0b0000'0011, value & 0b0000'0100, value & 0b0000'1000, value & 0b0001'0000, value & 0b0010'0000, value >> 6) { }
+        constexpr DecodeDispatch(byte porta, byte portd, bool dataIsWriting) : DecodeDispatch(porta >> 6,
+                                                                                              (portd & 0b0001'0000) == 0,
+                                                                                              dataIsWriting,
+                                                                                              (portd & 0b0010'0000) == 0,
+                                                                                              (portd & 0b0100'0000) == 0,
+                                                                                              0) {}
+
+
         uint8_t updateKinds;
         bool readOperation;
         bool currentlyWrite;
@@ -924,7 +932,10 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-        DecodeDispatch bits {getUpdateKind<useInterrupts>(), isReadOperation(), dataLinesDirection_ != 0, inRAMSpace(), inIOSpace()};
+        //bool inIO = inIOSpace();
+
+        //DecodeDispatch bits {getUpdateKind<useInterrupts>(), isReadOperation(), dataLinesDirection_ != 0, false, inIOSpace(), 0};
+        DecodeDispatch bits {PINA, PIND, dataLinesDirection_ != 0};
         DispatchTable_NewDataCycle<inDebugMode>[bits.getWholeValue()]();
     }
     /**
