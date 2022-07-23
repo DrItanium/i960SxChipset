@@ -932,9 +932,7 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-
-        //DecodeDispatch bits2 {getUpdateKind<useInterrupts>(), isReadOperation(), dataLinesDirection_ != 0, inRAMSpace(), inIOSpace(), 0};
-        DecodeDispatch bits {useInterrupts ? PINA : 0, PIND, dataLinesDirection_ != 0};
+        DecodeDispatch bits {getUpdateKind<useInterrupts>(), isReadOperation(), dataLinesDirection_ != 0, inRAMSpace(), inIOSpace(), 0};
         DispatchTable_NewDataCycle<inDebugMode>[bits.getWholeValue()]();
     }
     /**
