@@ -813,7 +813,7 @@ private:
         lastWrite_ = getWriteBody<false>() ;
     }
     struct DecodeDispatch {
-        constexpr DecodeDispatch(byte updateKind, bool isReadOp, bool dataIsWriting, bool isRAMSpace, bool isIOSpace, byte r = 0) : updateKinds(updateKind), readOperation(isReadOp), currentlyWrite(dataIsWriting), isRAMSpace_(isRAMSpace), isIOSpace_(isIOSpace), rest(r) { }
+        constexpr DecodeDispatch(byte updateKind, bool isReadOp, bool dataIsWriting, bool isRAMSpace, bool isIOSpace = false, byte r = 0) : updateKinds(updateKind), readOperation(isReadOp), currentlyWrite(dataIsWriting), isRAMSpace_(isRAMSpace), isIOSpace_(isIOSpace), rest(r) { }
         explicit constexpr DecodeDispatch(uint8_t value) : DecodeDispatch(value & 0b0000'0011, value & 0b0000'0100, value & 0b0000'1000, value & 0b0001'0000, value & 0b0010'0000, value >> 6) { }
         constexpr DecodeDispatch(byte porta, byte portd, bool dataIsWriting) : DecodeDispatch((porta >> 6) & 0b11,
                                                                                               (portd & 0b0001'0000) == 0,
@@ -832,9 +832,9 @@ private:
         [[nodiscard]] constexpr uint8_t getUpdateKinds() const noexcept { return updateKinds; }
         [[nodiscard]] constexpr bool isReadOperation() const noexcept { return readOperation; }
         [[nodiscard]] constexpr bool isCurrentlyWrite() const noexcept { return currentlyWrite; }
-        [[nodiscard]] constexpr bool isRAMSpace() const noexcept { return isRAMSpace_; }
-        [[nodiscard]] constexpr bool isIOSpace() const noexcept { return isIOSpace_; }
-        [[nodiscard]] constexpr uint8_t getWholeValue() const noexcept {
+        [[nodiscard]] constexpr bool inRAMSpace() const noexcept { return isRAMSpace_; }
+        [[nodiscard]] constexpr bool inIOSpace() const noexcept { return isIOSpace_; }
+        static constexpr uint8_t makeWholeValue(uint8_t a, bool b, bool c, bool d, bool e, uint8_t r) noexcept {
             union {
                 uint8_t value;
                 struct {
@@ -846,15 +846,15 @@ private:
                     uint8_t rest: 2;
                 };
             } thingy;
-            thingy.updateKinds = updateKinds;
-            thingy.readOperation = readOperation;
-            thingy.currentlyWrite = currentlyWrite;
-            thingy.inRAMSpace = isRAMSpace_;
-            thingy.inIOSpace = isIOSpace_;
-            thingy.rest = rest;
+            thingy.updateKinds = a;
+            thingy.readOperation = b;
+            thingy.currentlyWrite = c;
+            thingy.inRAMSpace = d;
+            thingy.inIOSpace = e;
+            thingy.rest = r;
             return thingy.value;
         }
-    } __attribute__((packed));
+    };
     template<bool inDebugMode, DecodeDispatch index>
     static void doDispatch() noexcept {
         if constexpr (index.getUpdateKinds() == 0b00) {
@@ -932,8 +932,13 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-        DecodeDispatch bits {getUpdateKind<useInterrupts>(), isReadOperation(), dataLinesDirection_ != 0, inRAMSpace(), inIOSpace(), 0};
-        DispatchTable_NewDataCycle<inDebugMode>[bits.getWholeValue()]();
+        DispatchTable_NewDataCycle<inDebugMode>[
+                DecodeDispatch::makeWholeValue(getUpdateKind<useInterrupts>(),
+                                               isReadOperation(),
+                                               dataLinesDirection_ != 0,
+                                               inRAMSpace(),
+                                               inIOSpace(),
+                                               0)]();
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
