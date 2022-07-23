@@ -815,7 +815,8 @@ private:
     struct DecodeDispatch {
         constexpr DecodeDispatch(byte updateKind, bool isReadOp, bool dataIsWriting, bool isRAMSpace, bool isIOSpace = false, byte r = 0) : updateKinds(updateKind), readOperation(isReadOp), currentlyWrite(dataIsWriting), isRAMSpace_(isRAMSpace), isIOSpace_(isIOSpace), rest(r) { }
         explicit constexpr DecodeDispatch(uint8_t value) : DecodeDispatch(value & 0b0000'0011, value & 0b0000'0100, value & 0b0000'1000, value & 0b0001'0000, value & 0b0010'0000, value >> 6) { }
-        constexpr DecodeDispatch(byte porta, byte portd, bool dataIsWriting) : DecodeDispatch((porta >> 6) & 0b11,
+        constexpr DecodeDispatch(byte porta, byte portd, bool dataIsWriting) : DecodeDispatch(
+                (porta >> 6) & 0b11,
                                                                                               (portd & 0b0001'0000) == 0,
                                                                                               dataIsWriting,
                                                                                               (portd & 0b0010'0000) == 0,
@@ -834,6 +835,31 @@ private:
         [[nodiscard]] constexpr bool isCurrentlyWrite() const noexcept { return currentlyWrite; }
         [[nodiscard]] constexpr bool inRAMSpace() const noexcept { return isRAMSpace_; }
         [[nodiscard]] constexpr bool inIOSpace() const noexcept { return isIOSpace_; }
+        template<bool useInterrupts>
+        static uint8_t makeDynamicValue() noexcept {
+            union {
+                uint8_t value;
+                struct {
+                    uint8_t updateKinds: 2;
+                    uint8_t readOperation: 1;
+                    uint8_t currentlyWrite: 1;
+                    uint8_t inRAMSpace : 1;
+                    uint8_t inIOSpace : 1;
+                    uint8_t rest: 2;
+                };
+            } thingy;
+            if constexpr (useInterrupts) {
+                thingy.updateKinds = (PINA >> 6) & 0b11;
+            } else {
+                thingy.updateKinds = 0;
+            }
+            thingy.readOperation = (PIND & 0b0001'0000) == 0;
+            thingy.currentlyWrite = dataLinesDirection_ != 0;
+            thingy.inRAMSpace = (PIND & 0b0010'0000) == 0;
+            thingy.inIOSpace = (PIND & 0b0100'0000) == 0;
+            thingy.rest = 0;
+            return thingy.value;
+        }
         static constexpr uint8_t makeWholeValue(uint8_t a, bool b, bool c, bool d, bool e, uint8_t r) noexcept {
             union {
                 uint8_t value;
@@ -932,13 +958,7 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-        DispatchTable_NewDataCycle<inDebugMode>[
-                DecodeDispatch::makeWholeValue(getUpdateKind<useInterrupts>(),
-                                               isReadOperation(),
-                                               dataLinesDirection_ != 0,
-                                               inRAMSpace(),
-                                               inIOSpace(),
-                                               0)]();
+        DispatchTable_NewDataCycle<inDebugMode>[DecodeDispatch::makeDynamicValue<useInterrupts>()]();
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
