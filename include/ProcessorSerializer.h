@@ -880,24 +880,16 @@ private:
         }
     }
     template<bool inDebugMode>
-    static constexpr BodyFunction DispatchTable_NewDataCycle[16] {
+    static constexpr BodyFunction DispatchTable_NewDataCycle[64] {
 #define X(ind) doDispatch<inDebugMode, DecodeDispatch{ind} >
-                    X(0),
-                            X(1),
-                            X(2),
-                            X(3),
-                            X(4),
-                            X(5),
-                            X(6),
-                            X(7),
-                            X(8),
-                            X(9),
-                            X(10),
-                            X(11),
-                            X(12),
-                            X(13),
-                            X(14),
-                            X(15),
+            X(0), X(1), X(2), X(3), X(4), X(5), X(6), X(7),
+            X(8), X(9), X(10), X(11), X(12), X(13), X(14), X(15),
+            X(16), X(17), X(18), X(19), X(20), X(21), X(22), X(23),
+            X(24), X(25), X(26), X(27), X(28), X(29), X(30), X(31),
+            X(32 + 0), X(32 + 1), X(32 + 2), X(32 + 3), X(32 + 4), X(32 + 5), X(32 + 6), X(32 + 7),
+            X(32 + 8), X(32 + 9), X(32 + 10), X(32 + 11), X(32 + 12), X(32 + 13), X(32 + 14), X(32 + 15),
+            X(32 + 16), X(32 + 17), X(32 + 18), X(32 + 19), X(32 + 20), X(32 + 21), X(32 + 22), X(32 + 23),
+            X(32 + 24), X(32 + 25), X(32 + 26), X(32 + 27), X(32 + 28), X(32 + 29), X(32 + 30), X(32 + 31),
 #undef X
     };
 public:
