@@ -850,20 +850,28 @@ private:
                     invertDataLinesDirection();
                 }
                 //setupDataLinesForRead();
-                if constexpr (inDebugMode) {
-                    lastReadDebug_();
+                if constexpr (index.inRAMSpace()) {
+                    readCacheLine<inDebugMode>();
                 } else {
-                    lastRead_();
+                    if constexpr (inDebugMode) {
+                        lastReadDebug_();
+                    } else {
+                        lastRead_();
+                    }
                 }
             } else {
                 //setupDataLinesForWrite();
                 if constexpr (!index.isCurrentlyWrite()) {
                     invertDataLinesDirection();
                 }
-                if constexpr (inDebugMode) {
-                    lastWriteDebug_();
+                if constexpr (index.inRAMSpace()) {
+                    writeCacheLine<inDebugMode>();
                 } else {
-                    lastWrite_();
+                    if constexpr (inDebugMode) {
+                        lastWriteDebug_();
+                    } else {
+                        lastWrite_();
+                    }
                 }
             }
         }
