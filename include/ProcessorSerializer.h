@@ -1289,10 +1289,6 @@ private:
     static inline DispatchTable lookupTableWrite{ nullptr };
     static inline DispatchTable lookupTableRead_Debug{ nullptr };
     static inline DispatchTable lookupTableWrite_Debug{ nullptr };
-    static inline SpaceDispatchTable ramSectionRead_ { nullptr };
-    static inline SpaceDispatchTable ramSectionWrite_ { nullptr };
-    static inline SpaceDispatchTable ramSectionRead_Debug_ { nullptr };
-    static inline SpaceDispatchTable ramSectionWrite_Debug_ { nullptr };
     static inline SpaceDispatchTable ioSectionRead_ { nullptr };
     static inline SpaceDispatchTable ioSectionWrite_ { nullptr };
     static inline SpaceDispatchTable ioSectionRead_Debug_ { nullptr };

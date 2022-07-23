@@ -45,30 +45,13 @@ ProcessorInterface::writeCacheLine_Debug() noexcept {
 void
 ProcessorInterface::setupDispatchTable() noexcept {
     if constexpr (UseSpacePins) {
+        static_assert(BackingMemoryStorage_t::NumSections == 32, "Must have a 512 megabyte ram view");
         for (int i = 0; i < 32; ++i) {
-            if constexpr (BackingMemoryStorage_t::NumSections != 32) {
-                ramSectionRead_[i] = performFallbackRead;
-                ramSectionWrite_[i] = performFallbackWrite;
-            }
             ioSectionRead_[i] = performFallbackRead;
             ioSectionWrite_[i] = performFallbackWrite;
             if constexpr (CompileInAddressDebuggingSupport) {
-                if constexpr (BackingMemoryStorage_t::NumSections != 32) {
-                    ramSectionRead_Debug_[i] = performFallbackRead;
-                    ramSectionWrite_Debug_[i] = performFallbackWrite;
-                }
                 ioSectionRead_Debug_[i] = performFallbackRead;
                 ioSectionWrite_Debug_[i] = performFallbackWrite;
-            }
-        }
-        if constexpr (BackingMemoryStorage_t::NumSections != 32) {
-            for (int i = 0; i < BackingMemoryStorage_t::NumSections; ++i) {
-                ramSectionRead_[i] = readCacheLine<false>;
-                ramSectionWrite_[i] = writeCacheLine<false>;
-                if constexpr (CompileInAddressDebuggingSupport) {
-                    ramSectionRead_Debug_[i] = readCacheLine<true>;
-                    ramSectionWrite_Debug_[i] = writeCacheLine<true>;
-                }
             }
         }
     } else {
@@ -105,11 +88,7 @@ ProcessorInterface::getDebugReadBody(byte index) noexcept {
             if (auto masked = index & 0b0001'1111; inIOSpace())  {
                 return ioSectionRead_Debug_[masked];
             } else if (inRAMSpace()) {
-                if constexpr (BackingMemoryStorage_t::NumSections == 32) {
-                    return readCacheLine<true> ;
-                } else {
-                    return ramSectionRead_Debug_[masked];
-                }
+                return readCacheLine<true> ;
             } else {
                 return ProcessorInterface::performFallbackRead;
             }
@@ -127,11 +106,7 @@ ProcessorInterface::getDebugWriteBody(byte index) noexcept {
             if (auto masked = index & 0b0001'1111; inIOSpace())  {
                 return ioSectionWrite_Debug_[masked];
             } else if (inRAMSpace()) {
-                if constexpr (BackingMemoryStorage_t::NumSections == 32) {
-                    return writeCacheLine<true>;
-                } else {
-                    return ramSectionWrite_Debug_[masked];
-                }
+                return writeCacheLine<true>;
             } else {
                 return ProcessorInterface::performFallbackWrite;
             }
@@ -149,11 +124,7 @@ ProcessorInterface::getNonDebugReadBody() noexcept {
         if (inIOSpace()) {
             return ioSectionRead_[maskedSpaceTarget_];
         } else if (inRAMSpace()) {
-            if constexpr (BackingMemoryStorage_t::NumSections == 32) {
-                return readCacheLine<false>;
-            } else {
-                return ramSectionRead_[maskedSpaceTarget_];
-            }
+            return readCacheLine<false>;
         } else {
             return ProcessorInterface::performFallbackRead;
         }
@@ -167,11 +138,7 @@ ProcessorInterface::getNonDebugWriteBody() noexcept {
         if (inIOSpace()) {
             return ioSectionWrite_[maskedSpaceTarget_];
         } else if (inRAMSpace()) {
-            if constexpr (BackingMemoryStorage_t::NumSections == 32) {
-                return writeCacheLine<false>;
-            } else {
-                return ramSectionWrite_[maskedSpaceTarget_];
-            }
+            return writeCacheLine<false>;
         } else {
             return ProcessorInterface::performFallbackWrite;
         }
@@ -193,7 +160,7 @@ ProcessorInterface::getNonDebugReadBody(byte index) noexcept {
         if (auto masked = index & 0b0001'1111; inIOSpace()) {
             return ioSectionRead_[masked];
         } else if (inRAMSpace()) {
-            return ramSectionRead_[masked];
+            return readCacheLine<false>;
         } else {
             return ProcessorInterface::performFallbackRead;
         }
@@ -207,7 +174,7 @@ ProcessorInterface::getNonDebugWriteBody(byte index) noexcept {
         if (auto masked = index & 0b0001'1111; inIOSpace()) {
             return ioSectionWrite_[masked];
         } else if (inRAMSpace()) {
-            return ramSectionWrite_[masked];
+            return writeCacheLine<true>;
         } else {
             return ProcessorInterface::performFallbackWrite;
         }
