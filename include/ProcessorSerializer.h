@@ -692,20 +692,20 @@ private:
                     uint8_t updateKinds: 2;
                     uint8_t readOperation: 1;
                     uint8_t currentlyWrite: 1;
-                    uint8_t spaceId : 2;
+                    uint8_t inRAMSpace : 1;
+                    uint8_t inIOSpace : 1;
                     uint8_t rest: 2;
                 };
             } thingy;
-            thingy.value = 0;
             if constexpr (useInterrupts) {
                 thingy.updateKinds = (PINA >> 6) & 0b11;
             } else {
                 thingy.updateKinds = 0;
             }
-            auto maskedOut = (PIND & 0b0111'0000 >> 4);
-            thingy.readOperation = (maskedOut & 0b1) == 0;
+            thingy.readOperation = (PIND & 0b0001'0000) == 0;
             thingy.currentlyWrite = dataLinesDirection_ != 0;
-            thingy.spaceId = maskedOut >> 1;
+            thingy.inRAMSpace = (PIND & 0b0010'0000) == 0;
+            thingy.inIOSpace = (PIND & 0b0100'0000) == 0;
             thingy.rest = 0;
             return thingy.value;
         }
