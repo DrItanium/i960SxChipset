@@ -577,159 +577,6 @@ private:
         }
     }
 public:
-    /**
-     * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
-     * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
-     */
-    template<bool inDebugMode>
-    inline static void full32BitUpdate() noexcept {
-        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
-        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
-        static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
-        static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
-        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-        // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
-        // where we can insert operations to take place that would otherwise be waiting
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Upper16Opcode;
-        {
-            lastRead_ = performFallbackRead;
-            lastWrite_ = performFallbackWrite;
-            if constexpr (inDebugMode) {
-                lastReadDebug_ = performFallbackRead;
-                lastWriteDebug_ = performFallbackWrite;
-            }
-        }
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        {
-            if (inRAMSpace()) {
-                lastRead_ = readCacheLine<false>;
-                lastWrite_ = writeCacheLine<false>;
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = readCacheLine<false>;
-                    lastWriteDebug_ = writeCacheLine<false>;
-                }
-            }
-        }
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto higher = SPDR;
-        SPDR = 0;
-        {
-            address_.bytes[2] = higher;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
-        DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
-        SPDR = Lower16Opcode;
-        {
-            if (inIOSpace()) {
-                maskedSpaceTarget_ = highest & 0b000'11111;
-                lastRead_ = ioSectionRead_[maskedSpaceTarget_];
-                lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = ioSectionRead_Debug_[maskedSpaceTarget_];
-                    lastWriteDebug_ = ioSectionWrite_Debug_[maskedSpaceTarget_];
-                }
-            }
-            address_.bytes[3] = highest;
-        }
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lowest = SPDR;
-        SPDR = 0;
-        {
-            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
-            // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
-            address_.bytes[0] = lowest;
-        }
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-    }
-    /**
-     * @brief Only update the lower 16 bits of the current transaction's base address
-     */
-    static void lower16Update() noexcept {
-        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
-        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
-        static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
-        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-        // read only the lower half
-        // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
-        // where we can insert operations to take place that would otherwise be waiting
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Lower16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lowest = SPDR;
-        SPDR = 0;
-        {
-            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
-            // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
-            address_.bytes[0] = lowest;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-    }
-    /**
-     * @brief Update the upper 16-bits of the current transaction's address. Update the function to invoke to satisfy this request
-     * @tparam inDebugMode If true then enable debugging output and pass that to any child methods which accept the parameter as well
-     */
-    template<bool inDebugMode>
-    static void upper16Update() noexcept {
-        static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
-        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-        // only read the upper 16-bits
-        /// @todo inspect which space we are a part of at this exact point in time
-
-        // At this point, the space identifiers will tell us where to access data from.
-        // For instance, we may know that we are in ram space or io space.
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Upper16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto higher = SPDR;
-        SPDR = 0;
-        {
-            address_.bytes[2] = higher;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        if (address_.bytes[3] != highest) {
-            maskedSpaceTarget_ = highest & 0b000'11111;
-            updateTargetFunctions<inDebugMode>();
-            address_.bytes[3] = highest;
-        }
-    }
 private:
     /**
      * @brief Intelligently updates the GPIO pins attached to GPIO4 (or the fourth io expander). It will only communicate with the io expander if there is a legit change
@@ -835,6 +682,8 @@ private:
         [[nodiscard]] constexpr bool isCurrentlyWrite() const noexcept { return currentlyWrite; }
         [[nodiscard]] constexpr bool inRAMSpace() const noexcept { return isRAMSpace_; }
         [[nodiscard]] constexpr bool inIOSpace() const noexcept { return isIOSpace_; }
+        [[nodiscard]] constexpr bool inUnmappedSpace() const noexcept { return !inRAMSpace() && !inIOSpace(); }
+        [[nodiscard]] constexpr bool inIllegalSpace() const noexcept { return inRAMSpace() && inIOSpace(); }
         template<bool useInterrupts>
         static uint8_t makeDynamicValue() noexcept {
             union {
@@ -881,10 +730,165 @@ private:
             return thingy.value;
         }
     };
+    /**
+     * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
+     * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
+     */
+    template<bool inDebugMode, DecodeDispatch index>
+    inline static void full32BitUpdate() noexcept {
+        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
+        static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
+        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
+        // where we can insert operations to take place that would otherwise be waiting
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = Upper16Opcode;
+        {
+            if constexpr (index.inUnmappedSpace()) {
+                lastRead_ = performFallbackRead;
+                lastWrite_ = performFallbackWrite;
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = performFallbackRead;
+                    lastWriteDebug_ = performFallbackWrite;
+                }
+            }
+        }
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = GPIOOpcode;
+        {
+            if constexpr (index.inRAMSpace()) {
+                lastRead_ = readCacheLine<false>;
+                lastWrite_ = writeCacheLine<false>;
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = readCacheLine<false>;
+                    lastWriteDebug_ = writeCacheLine<false>;
+                }
+            }
+        }
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto higher = SPDR;
+        SPDR = 0;
+        {
+            address_.bytes[2] = higher;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto highest = SPDR;
+        DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
+        SPDR = Lower16Opcode;
+        {
+            if constexpr (index.inIOSpace()) {
+                maskedSpaceTarget_ = highest & 0b000'11111;
+                lastRead_ = ioSectionRead_[maskedSpaceTarget_];
+                lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
+                if constexpr (inDebugMode) {
+                    lastReadDebug_ = ioSectionRead_Debug_[maskedSpaceTarget_];
+                    lastWriteDebug_ = ioSectionWrite_Debug_[maskedSpaceTarget_];
+                }
+            }
+            address_.bytes[3] = highest;
+        }
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = GPIOOpcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto lowest = SPDR;
+        SPDR = 0;
+        {
+            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
+            // put scope ticks to force the matter
+            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
+            address_.bytes[0] = lowest;
+        }
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        address_.bytes[1] = SPDR;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+    }
+    /**
+     * @brief Only update the lower 16 bits of the current transaction's base address
+     */
+    static void lower16Update() noexcept {
+        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
+        static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        // read only the lower half
+        // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
+        // where we can insert operations to take place that would otherwise be waiting
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = Lower16Opcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = GPIOOpcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto lowest = SPDR;
+        SPDR = 0;
+        {
+            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
+            // put scope ticks to force the matter
+            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
+            address_.bytes[0] = lowest;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        address_.bytes[1] = SPDR;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+    }
+    /**
+     * @brief Update the upper 16-bits of the current transaction's address. Update the function to invoke to satisfy this request
+     * @tparam inDebugMode If true then enable debugging output and pass that to any child methods which accept the parameter as well
+     */
+    template<bool inDebugMode>
+    static void upper16Update() noexcept {
+        static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
+        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        // only read the upper 16-bits
+        /// @todo inspect which space we are a part of at this exact point in time
+
+        // At this point, the space identifiers will tell us where to access data from.
+        // For instance, we may know that we are in ram space or io space.
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = Upper16Opcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = GPIOOpcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto higher = SPDR;
+        SPDR = 0;
+        {
+            address_.bytes[2] = higher;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto highest = SPDR;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if (address_.bytes[3] != highest) {
+            maskedSpaceTarget_ = highest & 0b000'11111;
+            updateTargetFunctions<inDebugMode>();
+            address_.bytes[3] = highest;
+        }
+    }
     template<bool inDebugMode, DecodeDispatch index>
     static void doDispatch() noexcept {
         if constexpr (index.getUpdateKinds() == 0b00) {
-            full32BitUpdate<inDebugMode>();
+            full32BitUpdate<inDebugMode, index>();
         } else if constexpr (index.getUpdateKinds() == 0b01) {
             upper16Update<inDebugMode>();
         } else if constexpr (index.getUpdateKinds()== 0b10) {
