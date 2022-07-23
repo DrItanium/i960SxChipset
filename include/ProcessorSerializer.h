@@ -725,31 +725,9 @@ private:
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Upper16Opcode;
-        {
-            if constexpr (index.inUnmappedSpace()) {
-                lastRead_ = performFallbackRead;
-                lastWrite_ = performFallbackWrite;
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = performFallbackRead;
-                    lastWriteDebug_ = performFallbackWrite;
-                }
-            }
-        }
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
-#if 0
-        {
-            if constexpr (index.inRAMSpace()) {
-                lastRead_ = readCacheLine<false>;
-                lastWrite_ = writeCacheLine<false>;
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = readCacheLine<false>;
-                    lastWriteDebug_ = writeCacheLine<false>;
-                }
-            }
-        }
-#endif
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
@@ -854,6 +832,8 @@ private:
                 //setupDataLinesForRead();
                 if constexpr (index.inRAMSpace()) {
                     readCacheLine<inDebugMode>();
+                } else if constexpr (index.inUnmappedSpace()) {
+                    performFallbackRead();
                 } else {
                     if constexpr (inDebugMode) {
                         lastReadDebug_();
@@ -868,6 +848,8 @@ private:
                 }
                 if constexpr (index.inRAMSpace()) {
                     writeCacheLine<inDebugMode>();
+                } else if constexpr (index.inUnmappedSpace()) {
+                    performFallbackWrite();
                 } else {
                     if constexpr (inDebugMode) {
                         lastWriteDebug_();
