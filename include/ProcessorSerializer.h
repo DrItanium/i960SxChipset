@@ -828,43 +828,6 @@ private:
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
-    /**
-     * @brief Update the upper 16-bits of the current transaction's address. Update the function to invoke to satisfy this request
-     * @tparam inDebugMode If true then enable debugging output and pass that to any child methods which accept the parameter as well
-     */
-    template<bool inDebugMode>
-    static void upper16Update() noexcept {
-        static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
-        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-        // only read the upper 16-bits
-        /// @todo inspect which space we are a part of at this exact point in time
-
-        // At this point, the space identifiers will tell us where to access data from.
-        // For instance, we may know that we are in ram space or io space.
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Upper16Opcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto higher = SPDR;
-        SPDR = 0;
-        {
-            address_.bytes[2] = higher;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        if (address_.bytes[3] != highest) {
-            maskedSpaceTarget_ = highest & 0b000'11111;
-            updateTargetFunctions<inDebugMode>();
-            address_.bytes[3] = highest;
-        }
-    }
     template<bool inDebugMode, DecodeDispatch index>
     static void doDispatch() noexcept {
         if constexpr (index.getUpdateKinds() == 0b00 || index.getUpdateKinds() == 0b01) {
