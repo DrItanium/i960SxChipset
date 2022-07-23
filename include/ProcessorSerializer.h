@@ -470,10 +470,8 @@ private:
      * @brief Query the interrupt lines tied to the data lines io expander
      * @return An expression of how the data lines have changed compared to last write operation
      */
-    static inline DataUpdateKind getDataLineInputUpdateKind() noexcept {
-        static constexpr byte Mask = pinToPortBit<i960Pinout::DATA_LO8_INT>() |
-                                     pinToPortBit<i960Pinout::DATA_HI8_INT>();
-        return static_cast<DataUpdateKind>(getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() & Mask);
+    static inline byte getDataLineInputUpdateKind() noexcept {
+        return (getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() >> 4) & 0b11;
     }
 public:
     /**
@@ -880,10 +878,10 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-        if (isReadOperation()) {
-            DispatchTable_NewDataCycle<inDebugMode, true>[getUpdateKind<useInterrupts>()]();
+        if (auto kind = getUpdateKind<useInterrupts>(); isReadOperation()) {
+            DispatchTable_NewDataCycle<inDebugMode, true>[kind]();
         } else {
-            DispatchTable_NewDataCycle<inDebugMode, false>[getUpdateKind<useInterrupts>()]();
+            DispatchTable_NewDataCycle<inDebugMode, false>[kind]();
         }
     }
     /**
@@ -1029,20 +1027,14 @@ private:
         latchedDataInput_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
+    static inline BodyFunction DataLineUpdateFunctions[4] {
+            fullDataLineGrab, // 0b00
+            upper8DataGrab, // 0b01
+            lower8DataGrab, // 0b10
+            []() noexcept { },
+    };
     static void updateDataInputLatch() noexcept {
-        switch (getDataLineInputUpdateKind()) {
-            case DataUpdateKind::Neither:
-                break;
-            case DataUpdateKind::Upper8:
-                upper8DataGrab();
-                break;
-            case DataUpdateKind::Lower8:
-                lower8DataGrab();
-                break;
-            default:
-                fullDataLineGrab();
-                break;
-        }
+        DataLineUpdateFunctions[getDataLineInputUpdateKind()]();
     }
     [[nodiscard]]
     static bool getDataBits(CacheWriteRequest& request) noexcept {
