@@ -887,10 +887,8 @@ private:
     }
     template<bool inDebugMode, DecodeDispatch index>
     static void doDispatch() noexcept {
-        if constexpr (index.getUpdateKinds() == 0b00) {
+        if constexpr (index.getUpdateKinds() == 0b00 || index.getUpdateKinds() == 0b01) {
             full32BitUpdate<inDebugMode, index>();
-        } else if constexpr (index.getUpdateKinds() == 0b01) {
-            upper16Update<inDebugMode>();
         } else if constexpr (index.getUpdateKinds()== 0b10) {
             lower16Update();
         } else {
