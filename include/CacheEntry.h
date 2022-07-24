@@ -93,6 +93,7 @@ public:
                            NumBytesCached);
         }
         dirty_ = false;
+        valid_ = true;
         // since we have called reset, now align the new address internally
         key_ = newTag.getRest();
         // this is a _very_ expensive operation
