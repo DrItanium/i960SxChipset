@@ -36,20 +36,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "PSRAMChip.h"
 #include "SDCardAsRam.h"
 #include "TaggedCacheAddress.h"
-#include "RTCInterface.h"
 #include "FlashInterface.h"
 #include "type_traits.h"
 
-
-using TheDisplayInterface = DisplayInterface<DisplayBaseAddress>;
-using TheConsoleInterface = Serial0Interface<Serial0BaseAddress, CompileInAddressDebuggingSupport, AddressDebuggingEnabledOnStartup>;
-using TheRTCInterface = RTCInterface<RTCBaseAddress>;
-using ConfigurationSpace = CoreChipsetFeatures<TheConsoleInterface,
-        TheSDInterface,
-        TheDisplayInterface,
-        TheRTCInterface>;
 /**
  * @brief Describes where we want to get the boot.sys from, either flash or sdcard
  */
-using BootImageSource = conditional_t<UploadBootImageFromFlash, FlashInterface, TheSDInterface>;
+using BootImageSource = conditional_t<UploadBootImageFromFlash, FlashInterface, ConfigurationSpace>;
 #endif //SXCHIPSET_SYSTEMDESCRIPTION_H

@@ -28,7 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_SDCARDASRAM_H
 #define SXCHIPSET_SDCARDASRAM_H
-#include "SDCardInterface.h"
+#include "CoreChipsetFeatures.h"
+#include "OpenFileHandle.h"
 #include <SdFat.h>
 extern SdFat SD;
 
@@ -60,6 +61,6 @@ private:
     static inline OpenFileHandle theRam_;
 };
 template<uint32_t numMegabytes = 512>
-using FallbackMemory = SDCardAsRam<TheSDInterface, numMegabytes>;
+using FallbackMemory = SDCardAsRam<ConfigurationSpace, numMegabytes>;
 
 #endif //SXCHIPSET_SDCARDASRAM_H

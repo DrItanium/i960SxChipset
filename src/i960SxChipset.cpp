@@ -59,20 +59,12 @@ inline void invocationBody() noexcept {
 }
 template<bool useInterrupts>
 [[gnu::always_inline]] inline void doInvocationBody() noexcept {
-    if constexpr (CompileInAddressDebuggingSupport) {
-        if (TheConsoleInterface::addressDebuggingEnabled())  {
-            invocationBody<true, useInterrupts>();
-        } else {
-            invocationBody<false, useInterrupts>();
-        }
-    } else {
-        invocationBody<false, useInterrupts>();
-    }
+    invocationBody<CompileInAddressDebuggingSupport, useInterrupts>();
 }
 void installBootImage() noexcept {
     static constexpr auto CacheSize = theCache.getCacheSize();
     auto *storage = theCache.viewAsStorage();
-    if constexpr (is_same_v<BootImageSource, TheSDInterface>) {
+    if constexpr (is_same_v<BootImageSource, ConfigurationSpace>) {
         // okay now we need to actually open boot.system and copy it into the ramBlock
         if (!SD.exists(const_cast<char *>("boot.sys"))) {
             // delete the file and start a new

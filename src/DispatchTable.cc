@@ -37,10 +37,10 @@ ProcessorInterface::setupDispatchTable() noexcept {
             ioSectionWrite_Debug_[i] = performFallbackWrite;
         }
     }
-    registerExternalDeviceWithLookupTable<TheRTCInterface>();
-    registerExternalDeviceWithLookupTable<TheDisplayInterface>();
-    registerExternalDeviceWithLookupTable<TheSDInterface >();
-    registerExternalDeviceWithLookupTable<TheConsoleInterface>();
+    //registerExternalDeviceWithLookupTable<TheRTCInterface>();
+    //registerExternalDeviceWithLookupTable<TheDisplayInterface>();
+    //registerExternalDeviceWithLookupTable<TheSDInterface >();
+    //registerExternalDeviceWithLookupTable<TheConsoleInterface>();
     registerExternalDeviceWithLookupTable<ConfigurationSpace>();
     // now tell the ProcessorInterface to pull the appropriate functions
 }
