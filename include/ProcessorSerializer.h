@@ -536,48 +536,6 @@ private:
         return 0;
     }
 private:
-    static BodyFunction getNonDebugReadBody(byte index) noexcept;
-    static BodyFunction getNonDebugWriteBody(byte index) noexcept;
-    static BodyFunction getNonDebugReadBody() noexcept;
-    static BodyFunction getNonDebugWriteBody() noexcept;
-    static BodyFunction getDebugReadBody() noexcept;
-    static BodyFunction getDebugWriteBody() noexcept;
-    static BodyFunction getDebugReadBody(byte index) noexcept;
-    static BodyFunction getDebugWriteBody(byte index) noexcept;
-    template<bool inDebugMode>
-    static BodyFunction getReadBody(byte index) noexcept {
-        if constexpr (inDebugMode) {
-            return getDebugReadBody(index);
-        } else {
-            return getNonDebugReadBody(index);
-        }
-    }
-    template<bool inDebugMode>
-    static BodyFunction getReadBody() noexcept {
-        if constexpr (inDebugMode) {
-            return getDebugReadBody();
-        } else {
-            return getNonDebugReadBody();
-        }
-    }
-    template<bool inDebugMode>
-    static BodyFunction getWriteBody(byte index) noexcept {
-        if constexpr (inDebugMode) {
-            return getDebugWriteBody(index);
-        } else {
-            return getNonDebugWriteBody(index);
-        }
-    }
-    template<bool inDebugMode>
-    static BodyFunction getWriteBody() noexcept {
-        if constexpr (inDebugMode) {
-            return getDebugWriteBody();
-        } else {
-            return getNonDebugWriteBody();
-        }
-    }
-public:
-private:
     /**
      * @brief Intelligently updates the GPIO pins attached to GPIO4 (or the fourth io expander). It will only communicate with the io expander if there is a legit change
      * @param value The new gpio values
@@ -632,33 +590,7 @@ public:
     }
     /// @todo implement HOLD and LOCK functionality
 private:
-    /**
-     * @brief save the read and write function pointers for a given index
-     * @tparam inDebugMode If true then also update the debug versions of the function pointers in addition to the non debug ones
-     */
-    template<bool inDebugMode>
-    inline static void updateTargetFunctions(byte index) noexcept {
-        if constexpr (inDebugMode) {
-            lastReadDebug_ = getReadBody<true>(index);
-            lastWriteDebug_ = getWriteBody<true>(index) ;
-        }
-        lastRead_ = getReadBody<false>(index);
-        lastWrite_ = getWriteBody<false>(index) ;
-    }
 
-    /**
-     * @brief save the read and write function pointers for a given index
-     * @tparam inDebugMode If true then also update the debug versions of the function pointers in addition to the non debug ones
-     */
-    template<bool inDebugMode>
-    inline static void updateTargetFunctions() noexcept {
-        if constexpr (inDebugMode) {
-            lastReadDebug_ = getReadBody<true>();
-            lastWriteDebug_ = getWriteBody<true>() ;
-        }
-        lastRead_ = getReadBody<false>();
-        lastWrite_ = getWriteBody<false>() ;
-    }
     struct DecodeDispatch {
         constexpr DecodeDispatch(byte updateKind,
                                  bool isReadOp,
@@ -869,7 +801,7 @@ private:
                     invertDataLinesDirection();
                 }
                 if constexpr (index.inRAMSpace()) {
-                    readCacheLine<inDebugMode>();
+                    performCacheRead<inDebugMode, index>();
                 } else if constexpr (index.inUnmappedSpace()) {
                     performFallbackRead();
                 } else {
@@ -884,7 +816,7 @@ private:
                     invertDataLinesDirection();
                 }
                 if constexpr (index.inRAMSpace()) {
-                    writeCacheLine<inDebugMode>();
+                    performCacheWrite<inDebugMode, index>();
                 } else if constexpr (index.inUnmappedSpace()) {
                     performFallbackWrite();
                 } else {
@@ -934,68 +866,78 @@ public:
      * @tparam inDebugMode Are we in debug mode?
      * @param line The cache line which we will be using for this transaction
      */
+    template<bool inDebugMode, DecodeDispatch index>
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        // read 32-bits at a time instead of 16 just to keep the throughput increased
-        for (auto offset = getCacheOffsetEntry(); ;offset += 8) {
-            // this is more unsafe than waiting later on in the process as we are guessing that we need this data
-            // These full words will hold onto garbage data if we span two cache lines. That is actually okay because
-            // the i960 will never request that data. It will operate on a maximum of 16-bytes at a time.
-            // For consistency, I am leaving the loop in (my research may be flawed in some way)
-            auto basePtr = line.getRawData() + offset;
-            auto& a0 = basePtr[0];
-            auto& a1 = basePtr[1];
-            auto& a2 = basePtr[2];
-            auto& a3 = basePtr[3];
-            auto& a4 = basePtr[4];
-            auto& a5 = basePtr[5];
-            auto& a6 = basePtr[6];
-            auto& a7 = basePtr[7];
-            auto isLastRead = setDataBits(a0.getWholeValue());
+        if constexpr (index.isSingleWordTransaction()) {
+            (void)setDataBits(line.get(getCacheOffsetEntry()));
             DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                break;
-            }
-            isLastRead = setDataBits(a1.getWholeValue());
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                break;
-            }
-            // we are looking at a double word, triple word, or quad word
-            isLastRead = setDataBits(a2.getWholeValue());
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                break;
-            }
-            isLastRead = setDataBits(a3.getWholeValue());
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                break;
-            }
-            // okay so we are looking at a triple word or quad word operation
-            isLastRead = setDataBits(a4.getWholeValue());
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                break;
-            }
-            isLastRead = setDataBits(a5.getWholeValue());
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                break;
-            }
-            // okay so we are looking at a quad word operation of some kind
-            // perhaps the processor loading instruction into the data cache?
-            isLastRead = setDataBits(a6.getWholeValue());
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                break;
-            }
-            isLastRead = setDataBits(a7.getWholeValue());
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLastRead) {
-                break;
+        } else {
+            // read 32-bits at a time instead of 16 just to keep the throughput increased
+            for (auto offset = getCacheOffsetEntry();; offset += 8) {
+                // this is more unsafe than waiting later on in the process as we are guessing that we need this data
+                // These full words will hold onto garbage data if we span two cache lines. That is actually okay because
+                // the i960 will never request that data. It will operate on a maximum of 16-bytes at a time.
+                // For consistency, I am leaving the loop in (my research may be flawed in some way)
+                auto basePtr = line.getRawData() + offset;
+                auto &a0 = basePtr[0];
+                auto &a1 = basePtr[1];
+                auto &a2 = basePtr[2];
+                auto &a3 = basePtr[3];
+                auto &a4 = basePtr[4];
+                auto &a5 = basePtr[5];
+                auto &a6 = basePtr[6];
+                auto &a7 = basePtr[7];
+                auto isLastRead = setDataBits(a0.getWholeValue());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    break;
+                }
+                isLastRead = setDataBits(a1.getWholeValue());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    break;
+                }
+                // we are looking at a double word, triple word, or quad word
+                isLastRead = setDataBits(a2.getWholeValue());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    break;
+                }
+                isLastRead = setDataBits(a3.getWholeValue());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    break;
+                }
+                // okay so we are looking at a triple word or quad word operation
+                isLastRead = setDataBits(a4.getWholeValue());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    break;
+                }
+                isLastRead = setDataBits(a5.getWholeValue());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    break;
+                }
+                // okay so we are looking at a quad word operation of some kind
+                // perhaps the processor loading instruction into the data cache?
+                isLastRead = setDataBits(a6.getWholeValue());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    break;
+                }
+                isLastRead = setDataBits(a7.getWholeValue());
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLastRead) {
+                    break;
+                }
             }
         }
+        SPI.endTransaction();
+    }
+    static inline void performCacheRead_Single(const CacheLine& line) noexcept {
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         SPI.endTransaction();
     }
 private:
@@ -1096,58 +1038,65 @@ public:
      * @tparam inDebugMode are we in debug mode?
      * @param line The cache line to write to.
      */
-    template<bool inDebugMode>
+    template<bool inDebugMode, DecodeDispatch index>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        for (auto offset = getCacheOffsetEntry();;offset += 8) {
-            auto isLast = getDataBits<0>();
+        if constexpr (index.isSingleWordTransaction()) {
+            auto offset = getCacheOffsetEntry();
+            (void)getDataBits<0>();
             DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                commitTransactions<1>(line, offset);
-                break;
-            }
-            isLast = getDataBits<1>();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                commitTransactions<2>(line, offset);
-                break;
-            }
-            isLast = getDataBits<2>();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                commitTransactions<3>(line, offset);
-                break;
-            }
-            isLast = getDataBits<3>();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                commitTransactions<4>(line, offset);
-                break;
-            }
-            isLast = getDataBits<4>();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                commitTransactions<5>(line, offset);
-                break;
-            }
-            isLast = getDataBits<5>();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                commitTransactions<6>(line, offset);
-                break;
-            }
-            isLast = getDataBits<6>();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                commitTransactions<7>(line, offset);
-                break;
-            }
-            isLast = getDataBits<7>();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            // perform the commit at this point
-            commitTransactions<8>(line, offset);
-            if (isLast) {
-                break;
+            commitTransactions<1>(line, offset);
+        } else {
+            for (auto offset = getCacheOffsetEntry();; offset += 8) {
+                auto isLast = getDataBits<0>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    commitTransactions<1>(line, offset);
+                    break;
+                }
+                isLast = getDataBits<1>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    commitTransactions<2>(line, offset);
+                    break;
+                }
+                isLast = getDataBits<2>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    commitTransactions<3>(line, offset);
+                    break;
+                }
+                isLast = getDataBits<3>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    commitTransactions<4>(line, offset);
+                    break;
+                }
+                isLast = getDataBits<4>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    commitTransactions<5>(line, offset);
+                    break;
+                }
+                isLast = getDataBits<5>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    commitTransactions<6>(line, offset);
+                    break;
+                }
+                isLast = getDataBits<6>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    commitTransactions<7>(line, offset);
+                    break;
+                }
+                isLast = getDataBits<7>();
+                DigitalPin<i960Pinout::Ready>::pulse();
+                // perform the commit at this point
+                commitTransactions<8>(line, offset);
+                if (isLast) {
+                    break;
+                }
             }
         }
         SPI.endTransaction();
@@ -1233,52 +1182,21 @@ private:
     static void
     registerExternalDeviceWithLookupTable() noexcept {
         static constexpr byte reducedSectionId = T::SectionID & 0b0001'1111;
-        if constexpr (UseSpacePins) {
-            ioSectionRead_[reducedSectionId] = performExternalDeviceRead<T, false>;
-            ioSectionWrite_[reducedSectionId] = performExternalDeviceWrite<T, false>;
-        } else {
-            lookupTableRead[T::SectionID] = performExternalDeviceRead<T, false>;
-            lookupTableWrite[T::SectionID] = performExternalDeviceWrite<T, false>;
-        }
+        ioSectionRead_[reducedSectionId] = performExternalDeviceRead<T, false>;
+        ioSectionWrite_[reducedSectionId] = performExternalDeviceWrite<T, false>;
         if constexpr (CompileInAddressDebuggingSupport) {
-            if constexpr (UseSpacePins) {
-                ioSectionRead_Debug_[reducedSectionId] = performExternalDeviceRead<T, true>;
-                ioSectionWrite_Debug_[reducedSectionId] = performExternalDeviceWrite<T, true>;
-            } else {
-                lookupTableRead_Debug[T::SectionID] = performExternalDeviceRead<T, true>;
-                lookupTableWrite_Debug[T::SectionID] = performExternalDeviceWrite<T, true>;
-            }
+            ioSectionRead_Debug_[reducedSectionId] = performExternalDeviceRead<T, true>;
+            ioSectionWrite_Debug_[reducedSectionId] = performExternalDeviceWrite<T, true>;
         }
     }
-    static void readCacheLine_NonDebug() noexcept;
-    static void readCacheLine_Debug() noexcept;
-    static void writeCacheLine_NonDebug() noexcept;
-    static void writeCacheLine_Debug() noexcept;
-    template<bool debug>
-    static void
-    readCacheLine() noexcept {
-        if constexpr (debug) {
-            readCacheLine_Debug();
-        } else {
-            readCacheLine_NonDebug();
-        }
+    template<bool debug, DecodeDispatch index>
+    static void performCacheRead() noexcept {
+        performCacheRead<debug, index>(theCache.getLine(address_));
     }
 
-    template<bool debug>
-    static void
-    writeCacheLine() noexcept {
-        if constexpr (debug) {
-            writeCacheLine_Debug();
-        } else {
-            writeCacheLine_NonDebug();
-        }
-    }
-    static inline void setupMostRecentDispatchFunctions() noexcept {
-        if (!initialDispatchFunctionsInitialized_) {
-            initialDispatchFunctionsInitialized_ = true;
-            // update all of the target functions at the same time on initial startup
-            updateTargetFunctions<true>(0);
-        }
+    template<bool debug, DecodeDispatch index>
+    static void performCacheWrite() noexcept {
+        performCacheWrite<debug, index>(theCache.getLine(address_));
     }
 
     static void setupDispatchTable() noexcept;
@@ -1288,20 +1206,15 @@ private:
     static inline byte dataLinesDirection_ = 0;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
-    static inline bool initialDispatchFunctionsInitialized_ = false;
-    static inline BodyFunction lastRead_ = nullptr;
-    static inline BodyFunction lastReadDebug_ = nullptr;
-    static inline BodyFunction lastWrite_ = nullptr;
-    static inline BodyFunction lastWriteDebug_ = nullptr;
+    static inline BodyFunction lastRead_ = performFallbackRead;
+    static inline BodyFunction lastReadDebug_ = performFallbackRead;
+    static inline BodyFunction lastWrite_ = performFallbackWrite;
+    static inline BodyFunction lastWriteDebug_ = performFallbackWrite;
     static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput_ {0};
     using SpaceDispatchTable = BodyFunction[32];
-    static inline DispatchTable lookupTableRead{ nullptr };
-    static inline DispatchTable lookupTableWrite{ nullptr };
-    static inline DispatchTable lookupTableRead_Debug{ nullptr };
-    static inline DispatchTable lookupTableWrite_Debug{ nullptr };
     static inline SpaceDispatchTable ioSectionRead_ { nullptr };
     static inline SpaceDispatchTable ioSectionWrite_ { nullptr };
     static inline SpaceDispatchTable ioSectionRead_Debug_ { nullptr };
