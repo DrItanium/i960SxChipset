@@ -1123,8 +1123,9 @@ public:
         // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
         // next 16-bit word
         // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
+        auto pageIndex = getPageIndex();
         for (byte pageOffset = getPageOffset(); ;pageOffset += 2) {
-            auto result = T::read(getPageIndex(),
+            auto result = T::read(pageIndex,
                                   pageOffset,
                                   getStyle());
             if constexpr (inDebugMode) {
@@ -1151,10 +1152,10 @@ public:
     static inline void performExternalDeviceWrite() noexcept {
         // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
         // so you may still be reading the previous i960 cycle state!
+        byte pageIndex = getPageIndex();
         for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
             bool isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
             LoadStoreStyle currLSS = getStyle();
-            byte pageIndex = getPageIndex();
             updateDataInputLatch();
             if constexpr (inDebugMode) {
                 Serial.print(F("\tPage Index: 0x"));
