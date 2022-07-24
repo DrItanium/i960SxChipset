@@ -30,7 +30,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SXCHIPSET_RTCINTERFACE_H
 #include <Arduino.h>
 #include <Wire.h>
+#if 0
 #include <RTClib.h>
+#endif
 
 #include "Pinout.h"
 
@@ -96,10 +98,8 @@ public:
 public:
     RTCInterface() = delete;
     ~RTCInterface() = delete;
-    static constexpr bool respondsTo(byte targetPage) noexcept {
-        return targetPage >= StartPage && targetPage < EndPage;
-    }
     static void begin() noexcept {
+#if 0
         rtcUp_ = rtc_.begin();
         if (!rtcUp_) {
             if constexpr (DisplayBootupInformation) {
@@ -125,8 +125,10 @@ public:
 
             rtc_.start();
         }
+#endif
     }
     static uint16_t read(uint8_t, uint8_t offset, LoadStoreStyle) noexcept {
+#if 0
         switch (static_cast<Registers>(offset)) {
             case Registers::Seconds: return static_cast<uint16_t>(now_.second());
             case Registers::Hours: return static_cast<uint16_t>(now_.hour());
@@ -148,8 +150,12 @@ public:
             default:
                 return 0;
         }
+#else
+return 0;
+#endif
     }
     static void write(uint8_t, uint8_t offset, LoadStoreStyle, SplitWord16) noexcept {
+#if 0
         switch (static_cast<Registers>(offset)) {
             case Registers::NowRequest: {
                 if (rtcUp_) {
@@ -162,7 +168,9 @@ public:
             default:
                 break;
         }
+#endif
     }
+#if 0
     static constexpr auto available() noexcept { return rtcUp_; }
 private:
     static inline RTC_PCF8523 rtc_;
@@ -170,6 +178,7 @@ private:
     static inline uint32_t unixtime_{0};
     static inline uint32_t secondstime_{0};
     static inline DateTime now_;
+#endif
 };
 
 #endif //SXCHIPSET_RTCINTERFACE_H

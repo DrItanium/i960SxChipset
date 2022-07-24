@@ -30,17 +30,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SXCHIPSET_DISPLAYINTERFACE_H
 #include <Arduino.h>
 #include <Wire.h>
-#ifdef CHIPSET_TYPE1
+#if 0
 #include <Adafruit_GFX.h>
 #include <Adafruit_seesaw.h>
 #include <Adafruit_ST7735.h>
 #include <Adafruit_TFTShield18.h>
-#elif defined(CHIPSET_TYPE2)
-// currently disabled due to non use
-//#include <Adafruit_ILI9341.h>
-//#include <Adafruit_FT6206.h>
 #endif
-
 #include "Pinout.h"
 #include "i960SxChipset.h"
 
@@ -127,6 +122,7 @@ public:
     DisplayInterface() = delete;
     ~DisplayInterface() = delete;
     static void begin() noexcept {
+#if 0
         pinMode(i960Pinout::SD_EN, OUTPUT);
         digitalWrite<i960Pinout::SD_EN, HIGH>();
         pinMode(i960Pinout::TFT_CS, OUTPUT);
@@ -151,14 +147,18 @@ public:
         tft.fillScreen(ST7735_CYAN);
         delay(1000);
         tft.fillScreen(ST7735_BLACK);
+#endif
     }
 private:
     static void setBacklightIntensity(uint16_t value) noexcept {
+#if 0
             backlightIntensity_ = value;
             displayShield_.setBacklight(backlightIntensity_);
+#endif
     }
 public:
     static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept {
+#if 0
             switch (targetPage) {
                 case SeesawPage:
                     return handleSeesawReads(offset, lss);
@@ -167,8 +167,12 @@ public:
                 default:
                     return 0;
             }
+#else
+return 0;
+#endif
     }
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
+#if 0
             switch (targetPage) {
                 case SeesawPage:
                     handleSeesawWrite(offset, lss, value);
@@ -179,6 +183,7 @@ public:
                 default:
                     break;
             }
+#endif
     }
 private:
     enum class InvokeOpcodes : uint8_t {
@@ -205,7 +210,7 @@ private:
         FillCircle = 0x17,
     };
     static void invoke(SplitWord16 opcode) noexcept {
-#ifdef CHIPSET_TYPE1
+#if 0
             switch (static_cast<InvokeOpcodes>(opcode.getWholeValue())) {
                 case InvokeOpcodes::FillScreen:
                     tft.fillScreen(fields_[0]);
@@ -252,7 +257,7 @@ private:
 #endif
     }
     static uint16_t handleDisplayRead(uint8_t offset, LoadStoreStyle) noexcept {
-#ifdef CHIPSET_TYPE1
+#if 0
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
                 case DisplayInterfaceRegisters::InstructionField00:
                 case DisplayInterfaceRegisters::InstructionField01:
@@ -271,7 +276,7 @@ private:
 #endif
     }
     static void handleDisplayWrite(uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept {
-#ifdef CHIPSET_TYPE1
+#if 0
             switch (static_cast<DisplayInterfaceRegisters>(offset)) {
                 case DisplayInterfaceRegisters::InstructionField00:
                 case DisplayInterfaceRegisters::InstructionField01:
@@ -292,7 +297,7 @@ private:
 #endif
     }
     static void handleSeesawWrite(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
-#ifdef CHIPSET_TYPE1
+#if 0
         switch (static_cast<SeesawRegisters>(offset)) {
             case SeesawRegisters::Backlight:
                 setBacklightIntensity(value.getWholeValue());
@@ -303,7 +308,7 @@ private:
 #endif
     }
     static uint16_t handleSeesawReads(uint8_t offset, LoadStoreStyle) noexcept {
-#ifdef CHIPSET_TYPE1
+#if 0
         switch (static_cast<SeesawRegisters>(offset)) {
             case SeesawRegisters::Backlight:
                 return backlightIntensity_;
@@ -315,11 +320,13 @@ return 0;
 #endif
     }
 private:
+#if 0
     static inline Adafruit_TFTShield18 displayShield_;
     static inline Adafruit_ST7735 tft{static_cast<int>(i960Pinout::TFT_CS),
                                       static_cast<int>(i960Pinout::TFT_DC),
                                       -1};
     static inline uint16_t backlightIntensity_ = 0;
     static inline uint16_t fields_[8] { 0 };
+#endif
 };
 #endif //SXCHIPSET_DISPLAYINTERFACE_H
