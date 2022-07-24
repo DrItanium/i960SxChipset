@@ -660,15 +660,42 @@ private:
         lastWrite_ = getWriteBody<false>() ;
     }
     struct DecodeDispatch {
-        constexpr DecodeDispatch(byte updateKind, bool isReadOp, bool dataIsWriting, bool isRAMSpace, bool isIOSpace = false, byte r = 0) : updateKinds(updateKind), readOperation(isReadOp), currentlyWrite(dataIsWriting), isRAMSpace_(isRAMSpace), isIOSpace_(isIOSpace), rest(r) { }
-        explicit constexpr DecodeDispatch(uint8_t value) : DecodeDispatch(value & 0b0000'0011, value & 0b0000'0100, value & 0b0000'1000, value & 0b0001'0000, value & 0b0010'0000, value >> 6) { }
+        constexpr DecodeDispatch(byte updateKind,
+                                 bool isReadOp,
+                                 bool dataIsWriting,
+                                 bool isRAMSpace,
+                                 bool isIOSpace,
+                                 bool be0,
+                                 bool be1,
+                                 bool singleWordTransaction,
+                                 byte r = 0) : updateKinds(updateKind),
+                                 readOperation(isReadOp),
+                                 currentlyWrite(dataIsWriting),
+                                 isRAMSpace_(isRAMSpace),
+                                 isIOSpace_(isIOSpace),
+                                 byteEnable0_(be0),
+                                 byteEnable1_(be1),
+                                 singleWordTransaction_(singleWordTransaction),
+                                 rest(r) { }
+        explicit constexpr DecodeDispatch(uint16_t value) : DecodeDispatch((value & 0b0000'0000'0000'0011),
+                                                                           (value & 0b0000'0000'0000'0100),
+                                                                           (value & 0b0000'0000'0000'1000),
+                                                                           (value & 0b0000'0000'0001'0000),
+                                                                           (value & 0b0000'0000'0010'0000),
+                                                                           (value & 0b0000'0000'0100'0000) == 0,
+                                                                           (value & 0b0000'0000'1000'0000) == 0,
+                                                                           (value & 0b0000'0001'0000'0000) == 0,
+                                                                           value >> 9) { }
         constexpr DecodeDispatch(byte porta, byte portd, bool dataIsWriting) : DecodeDispatch(
                 (porta >> 6) & 0b11,
-                                                                                              (portd & 0b0001'0000) == 0,
-                                                                                              dataIsWriting,
-                                                                                              (portd & 0b0010'0000) == 0,
-                                                                                              (portd & 0b0100'0000) == 0,
-                                                                                              0) {}
+                (portd & 0b0001'0000) == 0,
+                dataIsWriting,
+                (portd & 0b0010'0000) == 0,
+                (portd & 0b0100'0000) == 0,
+                (porta & 0b0000'0001) == 0,
+                (porta & 0b0000'0010) == 0,
+                (portd & 0b0000'0100) == 0,
+                0) {}
 
 
         uint8_t updateKinds;
@@ -676,6 +703,9 @@ private:
         bool currentlyWrite;
         bool isRAMSpace_;
         bool isIOSpace_;
+        bool byteEnable0_;
+        bool byteEnable1_;
+        bool singleWordTransaction_;
         uint8_t rest;
         [[nodiscard]] constexpr uint8_t getUpdateKinds() const noexcept { return updateKinds; }
         [[nodiscard]] constexpr bool isReadOperation() const noexcept { return readOperation; }
@@ -684,17 +714,23 @@ private:
         [[nodiscard]] constexpr bool inIOSpace() const noexcept { return isIOSpace_; }
         [[nodiscard]] constexpr bool inUnmappedSpace() const noexcept { return !inRAMSpace() && !inIOSpace(); }
         [[nodiscard]] constexpr bool inIllegalSpace() const noexcept { return inRAMSpace() && inIOSpace(); }
+        [[nodiscard]] constexpr bool isByteEnable0() const noexcept { return byteEnable0_; }
+        [[nodiscard]] constexpr bool isByteEnable1() const noexcept { return byteEnable1_; }
+        [[nodiscard]] constexpr bool isSingleWordTransaction() const noexcept { return singleWordTransaction_; }
         template<bool useInterrupts>
         static uint8_t makeDynamicValue() noexcept {
             union {
-                uint8_t value;
+                uint16_t value;
                 struct {
-                    uint8_t updateKinds: 2;
-                    uint8_t readOperation: 1;
-                    uint8_t currentlyWrite: 1;
-                    uint8_t inRAMSpace : 1;
-                    uint8_t inIOSpace : 1;
-                    uint8_t rest: 2;
+                    uint16_t updateKinds: 2;
+                    uint16_t readOperation: 1;
+                    uint16_t currentlyWrite: 1;
+                    uint16_t inRAMSpace : 1;
+                    uint16_t inIOSpace : 1;
+                    uint16_t be0 : 1;
+                    uint16_t be1 : 1;
+                    uint16_t blast : 1;
+                    uint16_t rest : 7;
                 };
             } thingy;
             if constexpr (useInterrupts) {
@@ -706,6 +742,9 @@ private:
             thingy.currentlyWrite = dataLinesDirection_ != 0;
             thingy.inRAMSpace = (PIND & 0b0010'0000) == 0;
             thingy.inIOSpace = (PIND & 0b0100'0000) == 0;
+            thingy.be0 = (PINA & 0b01) == 0;
+            thingy.be1 = (PINA & 0b10) == 0;
+            thingy.blast = (PIND & 0b100) == 0;
             thingy.rest = 0;
             return thingy.value;
         }
@@ -859,40 +898,14 @@ private:
         }
     }
     template<bool inDebugMode>
-    static constexpr BodyFunction DispatchTable_NewDataCycle[256] {
+    static constexpr BodyFunction DispatchTable_NewDataCycle[512] {
 #define X(ind) doDispatch<inDebugMode, DecodeDispatch{ind} >
-            X(0), X(1), X(2), X(3), X(4), X(5), X(6), X(7),
-            X(8), X(9), X(10), X(11), X(12), X(13), X(14), X(15),
-            X(16), X(17), X(18), X(19), X(20), X(21), X(22), X(23),
-            X(24), X(25), X(26), X(27), X(28), X(29), X(30), X(31),
-            X(32 + 0), X(32 + 1), X(32 + 2), X(32 + 3), X(32 + 4), X(32 + 5), X(32 + 6), X(32 + 7),
-            X(32 + 8), X(32 + 9), X(32 + 10), X(32 + 11), X(32 + 12), X(32 + 13), X(32 + 14), X(32 + 15),
-            X(32 + 16), X(32 + 17), X(32 + 18), X(32 + 19), X(32 + 20), X(32 + 21), X(32 + 22), X(32 + 23),
-            X(32 + 24), X(32 + 25), X(32 + 26), X(32 + 27), X(32 + 28), X(32 + 29), X(32 + 30), X(32 + 31),
-            X(64 + 0), X(64 + 1), X(64 + 2), X(64 + 3), X(64 + 4), X(64 + 5), X(64 + 6), X(64 + 7),
-            X(64 + 8), X(64 + 9), X(64 + 10), X(64 + 11), X(64 + 12), X(64 + 13), X(64 + 14), X(64 + 15),
-            X(64 + 16), X(64 + 17), X(64 + 18), X(64 + 19), X(64 + 20), X(64 + 21), X(64 + 22), X(64 + 23),
-            X(64 + 24), X(64 + 25), X(64 + 26), X(64 + 27), X(64 + 28), X(64 + 29), X(64 + 30), X(64 + 31),
-            X(96 + 0), X(96 + 1), X(96 + 2), X(96 + 3), X(96 + 4), X(96 + 5), X(96 + 6), X(96 + 7),
-            X(96 + 8), X(96 + 9), X(96 + 10), X(96 + 11), X(96 + 12), X(96 + 13), X(96 + 14), X(96 + 15),
-            X(96 + 16), X(96 + 17), X(96 + 18), X(96 + 19), X(96 + 20), X(96 + 21), X(96 + 22), X(96 + 23),
-            X(96 + 24), X(96 + 25), X(96 + 26), X(96 + 27), X(96 + 28), X(96 + 29), X(96 + 30), X(96 + 31),
-            X(128 + 0), X(128 + 1), X(128 + 2), X(128 + 3), X(128 + 4), X(128 + 5), X(128 + 6), X(128 + 7),
-            X(128 + 8), X(128 + 9), X(128 + 10), X(128 + 11), X(128 + 12), X(128 + 13), X(128 + 14), X(128 + 15),
-            X(128 + 16), X(128 + 17), X(128 + 18), X(128 + 19), X(128 + 20), X(128 + 21), X(128 + 22), X(128 + 23),
-            X(128 + 24), X(128 + 25), X(128 + 26), X(128 + 27), X(128 + 28), X(128 + 29), X(128 + 30), X(128 + 31),
-            X(160 + 0), X(160 + 1), X(160 + 2), X(160 + 3), X(160 + 4), X(160 + 5), X(160 + 6), X(160 + 7),
-            X(160 + 8), X(160 + 9), X(160 + 10), X(160 + 11), X(160 + 12), X(160 + 13), X(160 + 14), X(160 + 15),
-            X(160 + 16), X(160 + 17), X(160 + 18), X(160 + 19), X(160 + 20), X(160 + 21), X(160 + 22), X(160 + 23),
-            X(160 + 24), X(160 + 25), X(160 + 26), X(160 + 27), X(160 + 28), X(160 + 29), X(160 + 30), X(160 + 31),
-            X(192 + 0), X(192 + 1), X(192 + 2), X(192 + 3), X(192 + 4), X(192 + 5), X(192 + 6), X(192 + 7),
-            X(192 + 8), X(192 + 9), X(192 + 10), X(192 + 11), X(192 + 12), X(192 + 13), X(192 + 14), X(192 + 15),
-            X(192 + 16), X(192 + 17), X(192 + 18), X(192 + 19), X(192 + 20), X(192 + 21), X(192 + 22), X(192 + 23),
-            X(192 + 24), X(192 + 25), X(192 + 26), X(192 + 27), X(192 + 28), X(192 + 29), X(192 + 30), X(192 + 31),
-            X(224 + 0), X(224 + 1), X(224 + 2), X(224 + 3), X(224 + 4), X(224 + 5), X(224 + 6), X(224 + 7),
-            X(224 + 8), X(224 + 9), X(224 + 10), X(224 + 11), X(224 + 12), X(224 + 13), X(224 + 14), X(224 + 15),
-            X(224 + 16), X(224 + 17), X(224 + 18), X(224 + 19), X(224 + 20), X(224 + 21), X(224 + 22), X(224 + 23),
-            X(224 + 24), X(224 + 25), X(224 + 26), X(224 + 27), X(224 + 28), X(224 + 29), X(224 + 30), X(224 + 31),
+#define Y(ind) X((8*(ind)) + 0), X((8*(ind))+1), X((8*(ind))+2), X((8*(ind))+3), X((8*(ind))+4), X((8*(ind))+5), X((8*(ind))+6), X((8*(ind))+7)
+#define Z(ind) Y((8*(ind)) + 0), Y((8*(ind))+1), Y((8*(ind))+2), Y((8*(ind))+3), Y((8*(ind))+4), Y((8*(ind))+5), Y((8*(ind))+6), Y((8*(ind))+7)
+        Z(0), Z(1), Z(2), Z(3), Z(4), Z(5), Z(6), Z(7),
+                //Z(8), Z(9), Z(10), Z(11), Z(12), Z(13), Z(14), Z(15)
+#undef Z
+#undef Y
 #undef X
     };
 public:
