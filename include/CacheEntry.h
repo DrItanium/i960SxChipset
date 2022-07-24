@@ -79,15 +79,6 @@ public:
      * @brief The type of the key component of the line address (the most significant bits of the address)
      */
     using KeyType = typename TaggedAddress::RestType;
-    /**
-     * @brief The code that the line uses to signify it does not hold onto valid data
-     */
-    static constexpr OffsetType  InvalidCacheLineState = 0xFF;
-    /**
-     * @brief The code that the line uses to signify that it holds onto valid data which has not been modified compared to backing memory source
-     */
-    static constexpr OffsetType CleanCacheLineState = 0xFE;
-    static constexpr OffsetType DirtyCacheLineState = 0xFD;
 public:
     /**
      * @brief Clear the contents of the line out (committing the contents to backing store if dirty) and then populate the line with new data from the backing store.
@@ -101,7 +92,7 @@ public:
                            reinterpret_cast<byte*>(data),
                            NumBytesCached);
         }
-        dirty_ = CleanCacheLineState;
+        dirty_ = false;
         // since we have called reset, now align the new address internally
         key_ = newTag.getRest();
         // this is a _very_ expensive operation
