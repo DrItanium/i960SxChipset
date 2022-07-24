@@ -682,9 +682,9 @@ private:
                                                                            (value & 0b0000'0000'0000'1000),
                                                                            (value & 0b0000'0000'0001'0000),
                                                                            (value & 0b0000'0000'0010'0000),
-                                                                           (value & 0b0000'0000'0100'0000) == 0,
-                                                                           (value & 0b0000'0000'1000'0000) == 0,
-                                                                           (value & 0b0000'0001'0000'0000) == 0,
+                                                                           (value & 0b0000'0000'0100'0000),
+                                                                           (value & 0b0000'0000'1000'0000),
+                                                                           (value & 0b0000'0001'0000'0000),
                                                                            value >> 9) { }
         constexpr DecodeDispatch(byte porta, byte portd, bool dataIsWriting) : DecodeDispatch(
                 (porta >> 6) & 0b11,
