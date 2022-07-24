@@ -359,7 +359,6 @@ public:
             write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
             // enable interrupts for accelerating write operations in the future
             SPI.endTransaction();
-            setupDispatchTable();
         }
     }
     /**
@@ -1175,17 +1174,6 @@ public:
      * @brief Complete the process of setting up the processor interface by seeding the cached function pointers with valid addresses.
      */
 private:
-    template<typename T>
-    static void
-    registerExternalDeviceWithLookupTable() noexcept {
-        static constexpr byte reducedSectionId = T::SectionID & 0b0001'1111;
-        ioSectionRead_[reducedSectionId] = performExternalDeviceRead<T, false>;
-        ioSectionWrite_[reducedSectionId] = performExternalDeviceWrite<T, false>;
-        if constexpr (CompileInAddressDebuggingSupport) {
-            ioSectionRead_Debug_[reducedSectionId] = performExternalDeviceRead<T, true>;
-            ioSectionWrite_Debug_[reducedSectionId] = performExternalDeviceWrite<T, true>;
-        }
-    }
     template<bool debug, DecodeDispatch index>
     static void performCacheRead() noexcept {
         performCacheRead<debug, index>(theCache.getLine(address_));
@@ -1196,27 +1184,16 @@ private:
         performCacheWrite<debug, index>(theCache.getLine(address_));
     }
 
-    static void setupDispatchTable() noexcept;
 private:
     static inline SplitWord32 address_{0};
     static inline SplitWord16 latchedDataOutput {0};
     static inline byte dataLinesDirection_ = 0;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
-    static inline BodyFunction lastRead_ = performFallbackRead;
-    static inline BodyFunction lastReadDebug_ = performFallbackRead;
-    static inline BodyFunction lastWrite_ = performFallbackWrite;
-    static inline BodyFunction lastWriteDebug_ = performFallbackWrite;
     static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput_ {0};
-    using SpaceDispatchTable = BodyFunction[32];
-    static inline SpaceDispatchTable ioSectionRead_ { nullptr };
-    static inline SpaceDispatchTable ioSectionWrite_ { nullptr };
-    static inline SpaceDispatchTable ioSectionRead_Debug_ { nullptr };
-    static inline SpaceDispatchTable ioSectionWrite_Debug_ { nullptr };
-    static inline byte maskedSpaceTarget_ = 0;
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved

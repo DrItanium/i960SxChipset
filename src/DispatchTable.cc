@@ -25,21 +25,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 #include "CacheDescription.h"
-void
-ProcessorInterface::setupDispatchTable() noexcept {
-    for (int i = 0; i < 32; ++i) {
-        ioSectionRead_[i] = performFallbackRead;
-        ioSectionWrite_[i] = performFallbackWrite;
-        if constexpr (CompileInAddressDebuggingSupport) {
-            ioSectionRead_Debug_[i] = performFallbackRead;
-            ioSectionWrite_Debug_[i] = performFallbackWrite;
-        }
-    }
-    //registerExternalDeviceWithLookupTable<TheRTCInterface>();
-    //registerExternalDeviceWithLookupTable<TheDisplayInterface>();
-    //registerExternalDeviceWithLookupTable<TheSDInterface >();
-    //registerExternalDeviceWithLookupTable<TheConsoleInterface>();
-    registerExternalDeviceWithLookupTable<ConfigurationSpace>();
-    // now tell the ProcessorInterface to pull the appropriate functions
-}
 
