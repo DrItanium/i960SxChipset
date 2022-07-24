@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OpenFileHandle.h"
 #include <SdFat.h>
 extern SdFat SD;
-
+class ConfigurationSpace;
 template<typename T, uint32_t numMegabytes = 512>
 class SDCardAsRam {
 public:

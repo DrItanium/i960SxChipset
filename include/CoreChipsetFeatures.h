@@ -276,9 +276,7 @@ private:
     static void writeSerial(uint8_t offset, LoadStoreStyle, SplitWord16 value) noexcept {
         switch (static_cast<SerialRegisters>(offset)) {
             case SerialRegisters::TriggerInterrupt:
-                if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-                    ProcessorInterface::triggerInt0();
-                }
+                //ProcessorInterface::triggerInt0();
                 break;
             case SerialRegisters::ConsoleFlush:
                 Serial.flush();

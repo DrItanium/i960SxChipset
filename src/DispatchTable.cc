@@ -24,11 +24,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "ProcessorSerializer.h"
-#include "SystemDescription.h"
 #include "CacheDescription.h"
 void
 ProcessorInterface::setupDispatchTable() noexcept {
-    static_assert(BackingMemoryStorage_t::NumSections == 32, "Must have a 512 megabyte ram view");
     for (int i = 0; i < 32; ++i) {
         ioSectionRead_[i] = performFallbackRead;
         ioSectionWrite_[i] = performFallbackWrite;

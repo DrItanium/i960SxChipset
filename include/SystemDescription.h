@@ -31,10 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ConfigurationFlags.h"
 #include "MCUPlatform.h"
 
-#include "DisplayInterface.h"
 #include "CoreChipsetFeatures.h"
 #include "PSRAMChip.h"
-#include "SDCardAsRam.h"
 #include "TaggedCacheAddress.h"
 #include "FlashInterface.h"
 #include "type_traits.h"
