@@ -1043,9 +1043,21 @@ public:
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         if constexpr (index.isSingleWordTransaction()) {
             auto offset = getCacheOffsetEntry();
-            (void)getDataBits<0>();
+            updateDataInputLatch();
             DigitalPin<i960Pinout::Ready>::pulse();
-            commitTransactions<1>(line, offset);
+            if constexpr (index.isByteEnable0()) {
+               if constexpr (index.isByteEnable1()) {
+                   line.set<LoadStoreStyle::Full16>(offset, latchedDataInput_);
+               } else {
+                   line.set<LoadStoreStyle::Lower8>(offset, latchedDataInput_);
+               }
+            } else {
+                if constexpr (index.isByteEnable1()) {
+                    line.set<LoadStoreStyle::Upper8>(offset, latchedDataInput_);
+                } else {
+                    line.set<LoadStoreStyle::None>(offset, latchedDataInput_);
+                }
+            }
         } else {
             for (auto offset = getCacheOffsetEntry();; offset += 8) {
                 auto isLast = getDataBits<0>();

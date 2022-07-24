@@ -162,6 +162,21 @@ public:
         // we can get here if it is a lower or upper 8 bit write so oldValue != value.getWholeValue()
         dirty_ = true;
     }
+    template<LoadStoreStyle style>
+    inline void set(OffsetType offset, Word value) noexcept {
+        /// @todo add support for Words which are larger than bus width
+        // while unsafe, assume it is correct because we only get this from the ProcessorSerializer, perhaps directly grab it?
+        if constexpr (auto& target = data[offset]; style == LoadStoreStyle::Full16) {
+            target = value;
+        } else if constexpr (style == LoadStoreStyle::Upper8) {
+            target.bytes[0] = value.bytes[0];
+        } else if constexpr (style == LoadStoreStyle::Lower8) {
+            target.bytes[1] = value.bytes[1];
+        } else {
+            signalHaltState(F("BAD LOAD STORE STYLE FOR SETTING A CACHE LINE"));
+        }
+        dirty_ = true;
+    }
     /**
      * @brief Check to see if the given line is valid
      * @return True if the line is not invalid
