@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ConfigurationFlags.h"
 #include "CacheDescription.h"
 #include "i960SxChipset.h"
+#include "CoreChipsetFeatures.h"
 
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
@@ -714,15 +715,6 @@ private:
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
         {
-            if constexpr (index.inIOSpace()) {
-                maskedSpaceTarget_ = highest & 0b000'11111;
-                lastRead_ = ioSectionRead_[maskedSpaceTarget_];
-                lastWrite_ = ioSectionWrite_[maskedSpaceTarget_];
-                if constexpr (inDebugMode) {
-                    lastReadDebug_ = ioSectionRead_Debug_[maskedSpaceTarget_];
-                    lastWriteDebug_ = ioSectionWrite_Debug_[maskedSpaceTarget_];
-                }
-            }
             address_.bytes[3] = highest;
         }
         asm volatile("nop");
@@ -802,29 +794,21 @@ private:
                 }
                 if constexpr (index.inRAMSpace()) {
                     performCacheRead<inDebugMode, index>();
-                } else if constexpr (index.inUnmappedSpace()) {
-                    performFallbackRead();
+                } else if constexpr (index.inIOSpace()) {
+                    performExternalDeviceRead<ConfigurationSpace, inDebugMode>();
                 } else {
-                    if constexpr (inDebugMode) {
-                        lastReadDebug_();
-                    } else {
-                        lastRead_();
-                    }
-                }
+                performFallbackRead();
+            }
             } else {
                 if constexpr (!index.isCurrentlyWrite()) {
                     invertDataLinesDirection();
                 }
                 if constexpr (index.inRAMSpace()) {
                     performCacheWrite<inDebugMode, index>();
-                } else if constexpr (index.inUnmappedSpace()) {
-                    performFallbackWrite();
+                } else if constexpr (index.inIOSpace()) {
+                    performExternalDeviceWrite<ConfigurationSpace, inDebugMode>();
                 } else {
-                    if constexpr (inDebugMode) {
-                        lastWriteDebug_();
-                    } else {
-                        lastWrite_();
-                    }
+                    performFallbackWrite();
                 }
             }
         }
