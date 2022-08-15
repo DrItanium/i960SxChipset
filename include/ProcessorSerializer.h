@@ -878,10 +878,10 @@ public:
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     // end the SPI transaction
-                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
                     break;
                 }
             }
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         }
         SPI.endTransaction();
     }
@@ -1126,7 +1126,6 @@ public:
                 currTransaction.value = latchedDataInput_;
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLast) {
-                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
                     // okay then perform the commit since we are done
                     for (byte i = 0, j = getCacheOffsetEntry(); i < count; ++i, ++j) {
                         transactions[i].set(j, line);
@@ -1134,6 +1133,7 @@ public:
                     break;
                 }
             }
+            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
 #endif
         }
         SPI.endTransaction();
