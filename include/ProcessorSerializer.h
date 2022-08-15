@@ -921,21 +921,19 @@ public:
                 asm volatile ("nop");
                 while (!(SPSR & _BV(SPIF))) ; // wait
                 // while we would normally write to OLAT, in this case we want to access gpio from what I can tell
-                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                SPDR = static_cast<byte>(MCP23x17Registers::OLAT);
                 asm volatile ("nop");
                 bool isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 while (!(SPSR & _BV(SPIF))) ; // wait
-                {
-                    // now we can repeat these operations
-                    // okay now we want to send out the two bytes
-                    SPDR = a0.getLowerHalf();
-                    asm volatile ("nop");
-                    while (!(SPSR & _BV(SPIF))); // wait
-                    SPDR = a0.getUpperHalf();
-                    asm volatile ("nop");
-                    latchedDataOutput.wholeValue_ = a0.getWholeValue();
-                    while (!(SPSR & _BV(SPIF))); // wait
-                }
+                // now we can repeat these operations
+                // okay now we want to send out the two bytes
+                SPDR = a0.getLowerHalf();
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = a0.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a0.getWholeValue();
+                while (!(SPSR & _BV(SPIF))); // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
@@ -983,6 +981,7 @@ public:
                 if (isLastRead) {
                     break;
                 }
+                asm volatile ("nop");
                 SPDR = a4.getLowerHalf();
                 asm volatile ("nop");
                 isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -996,6 +995,7 @@ public:
                 if (isLastRead) {
                     break;
                 }
+                asm volatile ("nop");
                 SPDR = a5.getLowerHalf();
                 asm volatile ("nop");
                 isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -1008,6 +1008,7 @@ public:
                 if (isLastRead) {
                     break;
                 }
+                asm volatile ("nop");
                 // okay so we are looking at a quad word operation of some kind
                 // perhaps the processor loading instruction into the data cache?
                 SPDR = a6.getLowerHalf();
@@ -1022,6 +1023,7 @@ public:
                 if (isLastRead) {
                     break;
                 }
+                asm volatile ("nop");
                 SPDR = a7.getLowerHalf();
                 asm volatile ("nop");
                 isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
