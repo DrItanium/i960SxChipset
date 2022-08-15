@@ -1044,10 +1044,6 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
-    static inline void performCacheRead_Single(const CacheLine& line) noexcept {
-        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        SPI.endTransaction();
-    }
 private:
     /**
      * @brief Describes a write into the data cache meant to accelerate burst writes from the i960. Allows the chipset to pull values
