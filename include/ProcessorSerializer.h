@@ -866,15 +866,19 @@ public:
             asm volatile ("nop");
             while (!(SPSR & _BV(SPIF))) ; // wait
             for (auto offset = line.getRawData() + getCacheOffsetEntry(); ; ++offset) {
-                auto& a0 = *offset;
-                SPDR = a0.getLowerHalf();
-                asm volatile ("nop");
-                bool isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = a0.getUpperHalf();
-                asm volatile ("nop");
-                latchedDataOutput.wholeValue_ = a0.getWholeValue();
-                while (!(SPSR & _BV(SPIF))); // wait
+                bool isLastRead = false;
+                if (auto& a0 = *offset; a0.getWholeValue() != latchedDataOutput.getWholeValue()) {
+                    SPDR = a0.getLowerHalf();
+                    asm volatile ("nop");
+                    isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    while (!(SPSR & _BV(SPIF))); // wait
+                    SPDR = a0.getUpperHalf();
+                    asm volatile ("nop");
+                    latchedDataOutput.wholeValue_ = a0.getWholeValue();
+                    while (!(SPSR & _BV(SPIF))); // wait
+                } else {
+                    isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     // end the SPI transaction
