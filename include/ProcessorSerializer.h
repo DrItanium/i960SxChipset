@@ -877,10 +877,11 @@ public:
                 while (!(SPSR & _BV(SPIF))); // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
+                    // end the SPI transaction
+                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
                     break;
                 }
             }
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         }
         SPI.endTransaction();
     }
@@ -1003,6 +1004,7 @@ public:
                 }
             }
         } else {
+#if 0
             for (auto offset = getCacheOffsetEntry();; offset += 8) {
                 auto isLast = getDataBits<0>();
                 DigitalPin<i960Pinout::Ready>::pulse();
@@ -1054,6 +1056,85 @@ public:
                     break;
                 }
             }
+#else
+#if 0
+            static void fullDataLineGrab() noexcept {
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = 0;
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
+                auto lower = SPDR;
+                SPDR = 0;
+                {
+                    latchedDataInput_.bytes[0] = lower;
+                }
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))); // wait
+                latchedDataInput_.bytes[1] = SPDR;
+                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            }
+            static inline BodyFunction DataLineUpdateFunctions[4] {
+                    fullDataLineGrab, // 0b00
+                    upper8DataGrab, // 0b01
+                    lower8DataGrab, // 0b10
+                    []() noexcept { },
+            };
+            static void updateDataInputLatch() noexcept {
+                DataLineUpdateFunctions[getDataLineInputUpdateKind()]();
+            }
+            [[nodiscard]]
+            static bool getDataBits(CacheWriteRequest& request) noexcept {
+                request.style = getStyle();
+                bool outcome = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                updateDataInputLatch();
+                request.value = latchedDataInput_;
+                return outcome;
+            }
+            template<byte count>
+            static bool getDataBits() noexcept {
+                static_assert(count < 8, "Can only transmit 8 transactions at a time");
+                return getDataBits(transactions[count]);
+            }
+#endif
+            byte count = 0;
+            digitalWrite<i960Pinout::GPIOSelect, LOW>();
+            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+            asm volatile ("nop");
+            while (!(SPSR & _BV(SPIF))); // wait
+            for (;;) {
+                auto& currTransaction = transactions[count++];
+                SPDR = 0;
+                asm volatile ("nop");
+                currTransaction.style = getStyle();
+                bool isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))); // wait
+                auto lower = SPDR;
+                SPDR = 0;
+                asm volatile ("nop");
+                latchedDataInput_.bytes[0] = lower;
+                while (!(SPSR & _BV(SPIF))); // wait
+                latchedDataInput_.bytes[1] = SPDR;
+                currTransaction.value = latchedDataInput_;
+                DigitalPin<i960Pinout::Ready>::pulse();
+                if (isLast) {
+                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                    // okay then perform the commit since we are done
+                    for (byte i = 0, j = getCacheOffsetEntry(); i < count; ++i, ++j) {
+                        transactions[i].set(j, line);
+                    }
+                    break;
+                }
+            }
+#endif
         }
         SPI.endTransaction();
     }
