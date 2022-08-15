@@ -1317,7 +1317,7 @@ private:
     static inline bool initialized_ = false;
     static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
-    static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
+    static constexpr uint8_t initialIOCONValue_ = 0b0010'1000;
     static inline SplitWord16 latchedDataInput_ {0};
 };
 // 8 IOExpanders to a single enable line for SPI purposes
