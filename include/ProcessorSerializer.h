@@ -920,24 +920,27 @@ public:
                 SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
                 asm volatile ("nop");
                 while (!(SPSR & _BV(SPIF))) ; // wait
-                SPDR = static_cast<byte>(MCP23x17Registers::OLAT); // instead of GPIO (which still writes to OLAT automatically), do the OLAT to be very explicit
-                asm volatile ("nop");
-                while (!(SPSR & _BV(SPIF))) ; // wait
-
-                // now we can repeat these operations
-                // okay now we want to send out the two bytes
-                SPDR = a0.getLowerHalf();
+                // while we would normally write to OLAT, in this case we want to access gpio from what I can tell
+                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
                 asm volatile ("nop");
                 bool isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
                 while (!(SPSR & _BV(SPIF))) ; // wait
-                SPDR = a0.getUpperHalf();
-                asm volatile ("nop");
-                latchedDataOutput.wholeValue_ = a0.getWholeValue();
-                while (!(SPSR & _BV(SPIF))) ; // wait
+                {
+                    // now we can repeat these operations
+                    // okay now we want to send out the two bytes
+                    SPDR = a0.getLowerHalf();
+                    asm volatile ("nop");
+                    while (!(SPSR & _BV(SPIF))); // wait
+                    SPDR = a0.getUpperHalf();
+                    asm volatile ("nop");
+                    latchedDataOutput.wholeValue_ = a0.getWholeValue();
+                    while (!(SPSR & _BV(SPIF))); // wait
+                }
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
                 }
+                asm volatile ("nop");
                 //isLastRead = setDataBits(a1.getWholeValue());
                 // okay now we want to send out the two bytes
                 SPDR = a1.getLowerHalf();
@@ -952,6 +955,7 @@ public:
                 if (isLastRead) {
                     break;
                 }
+                asm volatile ("nop");
                 // we are looking at a double word, triple word, or quad word
                 //isLastRead = setDataBits(a2.getWholeValue());
                 SPDR = a2.getLowerHalf();
@@ -966,6 +970,7 @@ public:
                 if (isLastRead) {
                     break;
                 }
+                asm volatile ("nop");
                 SPDR = a3.getLowerHalf();
                 asm volatile ("nop");
                 isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
@@ -1310,7 +1315,7 @@ private:
     static inline bool initialized_ = false;
     static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
-    static constexpr uint8_t initialIOCONValue_ = 0b0001'1000;
+    static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
     static inline SplitWord16 latchedDataInput_ {0};
 };
 // 8 IOExpanders to a single enable line for SPI purposes
