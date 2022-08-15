@@ -334,6 +334,7 @@ public:
             // mirror the interrupts on the lower 16-bits to free up two pins at the cost of update accuracy
             // we want two separate pins free for the data lines io expander
             // we want mirroring on the data lines interrupts
+            // disable banking and activate byte mode (this should enable the special byte increment wrap around mode)
             write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             write8<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
             write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
@@ -871,52 +872,169 @@ public:
                 auto &a5 = basePtr[5];
                 auto &a6 = basePtr[6];
                 auto &a7 = basePtr[7];
-                auto isLastRead = setDataBits(a0.getWholeValue());
+#if 0
+                /**
+                 * @brief Update the contents of the GPIO register pair on the data lines io expander (the i960 wants to read from memory). Also check to
+                 * see if this is the last word transmitted in the given transaction.
+                 * @param value The value to set the GPIO register pair to
+                 * @return True if this is the last word of a burst transaction
+                 */
+                static bool setDataBits(uint16_t value) noexcept {
+                    // the latch is preserved in between data line changes
+                    // okay we are still pointing as output values
+                    // check the latch and see if the output value is the same as what is latched
+                    if (latchedDataOutput.getWholeValue() != value) {
+                        //latchedDataOutput.wholeValue_ = value;
+                        byte computedValue = 0;
+                        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                        SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+                        {
+                            // this operation is very important to interleave because it can be very expensive to
+                            // but if we are also communicating over SPI, then the cost of this operation is nullified considerably
+                            latchedDataOutput.wholeValue_ = value;
+                        }
+                        while (!(SPSR & _BV(SPIF))) ; // wait
+                        SPDR = static_cast<byte>(MCP23x17Registers::OLAT); // instead of GPIO (which still writes to OLAT automatically), do the OLAT to be very explicit
+                        {
+                            // find out if this is the last transaction while we are talking to the io expander
+                            computedValue = latchedDataOutput.bytes[0];
+                        }
+                        while (!(SPSR & _BV(SPIF))) ; // wait
+                        SPDR = computedValue;
+                        {
+                            computedValue = latchedDataOutput.bytes[1];
+                        }
+                        while (!(SPSR & _BV(SPIF))) ; // wait
+                        SPDR = computedValue;
+                        {
+                            asm volatile("nop");
+                            /// @todo insert tiny independent operations here if desired, delete nop if code added here
+                        }
+                        while (!(SPSR & _BV(SPIF))) ; // wait
+                        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+                    }
+                    return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                }
+#endif
+                digitalWrite<i960Pinout::GPIOSelect, LOW>();
+                SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = static_cast<byte>(MCP23x17Registers::OLAT); // instead of GPIO (which still writes to OLAT automatically), do the OLAT to be very explicit
+                asm volatile ("nop");
+                while (!(SPSR & _BV(SPIF))) ; // wait
+
+                // now we can repeat these operations
+                // okay now we want to send out the two bytes
+                SPDR = a0.getLowerHalf();
+                asm volatile ("nop");
+                bool isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = a0.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a0.getWholeValue();
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
                 }
-                isLastRead = setDataBits(a1.getWholeValue());
+                //isLastRead = setDataBits(a1.getWholeValue());
+                // okay now we want to send out the two bytes
+                SPDR = a1.getLowerHalf();
+                asm volatile ("nop");
+                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = a1.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a1.getWholeValue();
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
                 }
                 // we are looking at a double word, triple word, or quad word
-                isLastRead = setDataBits(a2.getWholeValue());
+                //isLastRead = setDataBits(a2.getWholeValue());
+                SPDR = a2.getLowerHalf();
+                asm volatile ("nop");
+                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = a2.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a2.getWholeValue();
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
                 }
-                isLastRead = setDataBits(a3.getWholeValue());
+                SPDR = a3.getLowerHalf();
+                asm volatile ("nop");
+                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = a3.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a3.getWholeValue();
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
                 }
+                SPDR = a4.getLowerHalf();
+                asm volatile ("nop");
+                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = a4.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a4.getWholeValue();
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 // okay so we are looking at a triple word or quad word operation
-                isLastRead = setDataBits(a4.getWholeValue());
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
                 }
-                isLastRead = setDataBits(a5.getWholeValue());
+                SPDR = a5.getLowerHalf();
+                asm volatile ("nop");
+                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = a5.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a5.getWholeValue();
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
                 }
                 // okay so we are looking at a quad word operation of some kind
                 // perhaps the processor loading instruction into the data cache?
-                isLastRead = setDataBits(a6.getWholeValue());
+                SPDR = a6.getLowerHalf();
+                asm volatile ("nop");
+                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = a6.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a6.getWholeValue();
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
                 }
-                isLastRead = setDataBits(a7.getWholeValue());
+                SPDR = a7.getLowerHalf();
+                asm volatile ("nop");
+                isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                while (!(SPSR & _BV(SPIF))) ; // wait
+                SPDR = a7.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a7.getWholeValue();
+                while (!(SPSR & _BV(SPIF))) ; // wait
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
                     break;
+                } else {
+                    // if we get here then we're going around again, we should never get here but just do it for completeness
+                    digitalWrite<i960Pinout::GPIOSelect, HIGH>();
                 }
             }
         }
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
     static inline void performCacheRead_Single(const CacheLine& line) noexcept {
@@ -1192,7 +1310,7 @@ private:
     static inline bool initialized_ = false;
     static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
-    static constexpr uint8_t initialIOCONValue_ = 0b0000'1000;
+    static constexpr uint8_t initialIOCONValue_ = 0b0001'1000;
     static inline SplitWord16 latchedDataInput_ {0};
 };
 // 8 IOExpanders to a single enable line for SPI purposes
