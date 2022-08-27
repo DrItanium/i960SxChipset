@@ -645,9 +645,15 @@ public:
 enum class LoadStoreStyle : uint8_t {
     // based off of BE0,BE1 pins
     Full16 = 0,
+#ifdef CHIPSET_TYPE1
     Upper8 = pinToPortBit<i960Pinout::BE0>(),
     Lower8 = pinToPortBit<i960Pinout::BE1>(),
     None = pinToPortBit<i960Pinout::BE0>() | pinToPortBit<i960Pinout::BE1>(),
+#else
+    Upper8 = 0b01,
+    Lower8 = 0b10,
+    None = 0b11,
+#endif
 };
 
 #endif //ARDUINO_PINOUT_H

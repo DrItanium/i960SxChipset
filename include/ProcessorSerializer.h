@@ -291,13 +291,27 @@ public:
      *        The lowest 512 megabytes is known as the ram area. This function checks to see if the ram space gpio is asserted
      * @return True if the ram space gpio is asserted.
      */
-    [[nodiscard]] static inline auto inRAMSpace() noexcept { return DigitalPin<i960Pinout::RAM_SPACE_>::isAsserted(); }
+    [[nodiscard]] static inline auto inRAMSpace() noexcept {
+#ifdef CHIPSET_TYPE_MEGA
+        /// @todo implement address lookup operations
+        return false;
+#else
+        return DigitalPin<i960Pinout::RAM_SPACE_>::isAsserted();
+#endif
+    }
     /**
      * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
      *        The highest 512 megabytes is known as the io area. This function checks to see if the io space gpio is asserted
      * @return True if the io space gpio is asserted.
      */
-    [[nodiscard]] static inline auto inIOSpace() noexcept { return DigitalPin<i960Pinout::IO_SPACE_>::isAsserted(); }
+    [[nodiscard]] static inline auto inIOSpace() noexcept {
+#ifdef CHIPSET_TYPE_MEGA
+        /// @todo implement
+        return false;
+#else
+        return DigitalPin<i960Pinout::IO_SPACE_>::isAsserted();
+#endif
+    }
     /**
      * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
      *        If the address is not in the lowest or highest sections then it is considered unmapped
@@ -309,7 +323,14 @@ public:
      * Only needs to be queried once at the beginning of a new transaction
      * @return If true, then the current transaction is a read operation. If false, then the current transaction is a write operation.
      */
-    [[nodiscard]] static bool isReadOperation() noexcept { return DigitalPin<i960Pinout::W_R_>::isAsserted(); }
+    [[nodiscard]] static bool isReadOperation() noexcept {
+#ifdef CHIPSET_TYPE_MEGA
+        /// @todo implement
+        return false;
+#else
+        return DigitalPin<i960Pinout::W_R_>::isAsserted();
+#endif
+    }
     /**
      * @brief Retrieve the computed cache offset entry start. This is the word index that the current transaction will start at within a
      * target cache line.
@@ -454,6 +475,7 @@ private:
          * @brief Both the upper and lower halves of the data lines have changed compared to last time.
          */
         Full16 = 0,
+#ifdef CHIPSET_TYPE1
         /**
          * @brief Only the upper eight bits are different compared to last time
          */
@@ -466,6 +488,20 @@ private:
          * @brief Neither the upper or lower eight bits are different compared to last time. This means there is no need to read from the data lines at all.
          */
         Neither = pinToPortBit<i960Pinout::DATA_LO8_INT>() | pinToPortBit<i960Pinout::DATA_HI8_INT>(),
+#else
+        /**
+         * @brief Only the upper eight bits are different compared to last time
+         */
+        Upper8 = 0b01,
+        /**
+         * @brief Only the lower eight bits are different compared to last time
+         */
+        Lower8 = 0b10,
+        /**
+         * @brief Neither the upper or lower eight bits are different compared to last time. This means there is no need to read from the data lines at all.
+         */
+        Neither = 0b11,
+#endif
     };
     /**
      * @brief Query the interrupt lines tied to the data lines io expander
@@ -504,6 +540,7 @@ private:
          * @brief Compared to last transaction, all 32-bits have changed so re-read all of them from the io expanders
          */
         Full32 = 0,
+#ifdef CHIPSET_TYPE1
         /**
          * @brief Only the lower 16-bits of the address have changed so only read that io expander
          */
@@ -516,6 +553,11 @@ private:
          * @brief Neither the upper or lower halves of the address have changed. Do not query the SPI bus at all
          */
         Neither = (pinToPortBit<i960Pinout::ADDRESS_HI_INT>() | pinToPortBit<i960Pinout::ADDRESS_LO_INT>()) >> 6, // both are marked high
+#else
+    Upper16 = 0b01,
+    Lower16 = 0b10,
+    Neither = 0b11,
+#endif
     };
     static_assert(static_cast<byte>(AddressUpdateKind::Lower16) == 0b10);
     static_assert(static_cast<byte>(AddressUpdateKind::Upper16) == 0b01);
