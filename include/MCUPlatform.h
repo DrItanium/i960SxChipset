@@ -194,7 +194,7 @@ public:
 #ifdef CHIPSET_TYPE1
         return TargetMCU::ATmega1284p_Type1;
 #elif defined(CHIPSET_TYPE_MEGA)
-        return TargetMCU::Mega2560;
+        return TargetMCU::ATmega2560_TypeMega;
 #else
         return TargetMCU::Unknown;
 #endif

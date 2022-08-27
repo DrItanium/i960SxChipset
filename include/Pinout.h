@@ -287,11 +287,12 @@ template<i960Pinout pin>
 #ifdef CHIPSET_TYPE_MEGA
         Y(E): return PORTE;
         Y(F): return PORTF;
-        Y(G): return PORTG;
+        //Y(G): return PORTG;
         Y(H): return PORTH;
         Y(J): return PORTJ;
         Y(K): return PORTK;
         Y(L): return PORTL;
+        X(G, 0): X(G, 1): X(G, 2): X(G, 3): X(G, 4): X(G, 5): return PORTG;
 #endif
 #undef Y
 #undef X
@@ -328,11 +329,11 @@ template<i960Pinout pin>
 #ifdef CHIPSET_TYPE_MEGA
         Y(E): return DDRE;
         Y(F): return DDRF;
-        Y(G): return DDRG;
         Y(H): return DDRH;
         Y(J): return DDRJ;
         Y(K): return DDRK;
         Y(L): return DDRL;
+        X(G, 0): X(G, 1): X(G, 2): X(G, 3): X(G, 4): X(G, 5): return DDRG;
 #endif
 #undef Y
 #undef X
@@ -369,7 +370,7 @@ template<i960Pinout pin>
 #ifdef CHIPSET_TYPE_MEGA
         Y(E): return PINE;
         Y(F): return PINF;
-        Y(G): return PING;
+        X(G, 0): X(G, 1): X(G, 2): X(G, 3): X(G, 4): X(G, 5): return PING;
         Y(H): return PINH;
         Y(J): return PINJ;
         Y(K): return PINK;
@@ -408,7 +409,12 @@ template<i960Pinout pin>
 #ifdef CHIPSET_TYPE_MEGA
         Y(E);
         Y(F);
-        Y(G);
+        X(G, 0);
+        X(G, 1);
+        X(G, 2);
+        X(G, 3);
+        X(G, 4);
+        X(G, 5);
         Y(H);
         Y(J);
         Y(K);
@@ -577,12 +583,20 @@ struct DigitalPin {
 
 DefSPICSPin(i960Pinout::GPIOSelect);
 DefSPICSPin(i960Pinout::SD_EN);
+DefInputPin(i960Pinout::DEN_, LOW, HIGH);
+DefOutputPin(i960Pinout::Ready, LOW, HIGH);
+DefInputPin(i960Pinout::IOEXP_INT0, LOW, HIGH);
+DefInputPin(i960Pinout::IOEXP_INT1, LOW, HIGH);
+DefInputPin(i960Pinout::IOEXP_INT2, LOW, HIGH);
+DefInputPin(i960Pinout::IOEXP_INT3, LOW, HIGH);
+#ifdef CHIPSET_TYPE1
 DefSPICSPin(i960Pinout::PSRAM_EN);
 DefSPICSPin(i960Pinout::MEMBLK0_);
 DefSPICSPin(i960Pinout::TFT_CS);
+#endif
 
 
-DefOutputPin(i960Pinout::Ready, LOW, HIGH);
+#ifdef CHIPSET_TYPE1
 DefOutputPin(i960Pinout::SPI_OFFSET0, LOW, HIGH);
 DefOutputPin(i960Pinout::SPI_OFFSET1, LOW, HIGH);
 DefOutputPin(i960Pinout::SPI_OFFSET2, LOW, HIGH);
@@ -591,17 +605,13 @@ DefOutputPin(i960Pinout::MEMBLK0_A1, LOW, HIGH);
 DefOutputPin(i960Pinout::TFT_DC, LOW, HIGH);
 
 DefInputPin(i960Pinout::FAIL, HIGH, LOW);
-DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
 DefInputPin(i960Pinout::W_R_, LOW, HIGH);
 DefInputPin(i960Pinout::RAM_SPACE_, LOW, HIGH);
 DefInputPin(i960Pinout::IO_SPACE_, LOW, HIGH);
 DefInputPin(i960Pinout::BE0, LOW, HIGH);
 DefInputPin(i960Pinout::BE1, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT0, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT1, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT2, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT3, LOW, HIGH);
+#endif
 #undef DefSPICSPin
 #undef DefInputPin
 #undef DefOutputPin

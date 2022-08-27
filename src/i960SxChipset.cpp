@@ -41,7 +41,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "23LC1024.h"
 #include "SRAMDataContainer.h"
 #include <SoftwareSerial.h>
+#ifdef CHIPSET_TYPE1
 #include <Adafruit_BluefruitLE_SPI.h>
+#endif
 #include <GD2.h>
 
 
