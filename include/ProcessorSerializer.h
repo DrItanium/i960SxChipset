@@ -581,11 +581,13 @@ private:
      */
     template<bool useInterrupts>
     static byte getUpdateKind() noexcept {
+#ifdef CHIPSET_TYPE1
         if constexpr (useInterrupts) {
             if constexpr (TargetBoard::onAtmega1284p_Type1()) {
                 return (getAssociatedInputPort<i960Pinout::ADDRESS_LO_INT>() >> 6) & 0b11;
             }
         }
+#endif
         return 0;
     }
 private:

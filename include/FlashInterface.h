@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_FLASHINTERFACE_H
 #define SXCHIPSET_FLASHINTERFACE_H
+#ifdef CHIPSET_TYPE1
 #include "Pinout.h"
 /**
  * @brief Interface to the two flash chips in memblk0 on the type 1.01 flash and psram card
@@ -188,5 +189,6 @@ public:
     }
 private:
 };
+#endif
 
 #endif //SXCHIPSET_FLASHINTERFACE_H

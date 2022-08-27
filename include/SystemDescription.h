@@ -40,5 +40,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
  * @brief Describes where we want to get the boot.sys from, either flash or sdcard
  */
+#ifdef CHIPSET_TYPE1
 using BootImageSource = conditional_t<UploadBootImageFromFlash, FlashInterface, ConfigurationSpace>;
+#else
+using BootImageSource = ConfigurationSpace;
+#endif
 #endif //SXCHIPSET_SYSTEMDESCRIPTION_H

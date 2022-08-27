@@ -126,14 +126,18 @@ void installBootImage() noexcept {
             // make sure we close the file before destruction
             theFile.close();
         }
-    } else if constexpr (is_same_v<BootImageSource, FlashInterface>) {
+    }
+#ifdef CHIPSET_TYPE1
+    else if constexpr (is_same_v<BootImageSource, FlashInterface>) {
         Serial.println(F("TRANSFERRING BOOT.SYS TO RAM FROM FLASH"));
         for (Address addr = 0; addr < FlashInterface::length(); addr += CacheSize) {
             auto numRead = FlashInterface::read(addr, storage, CacheSize);
             (void) BackingMemoryStorage_t::write(addr, storage, numRead);
             Serial.print(F("."));
         }
-    } else {
+    }
+#endif
+    else {
         signalHaltState(F("Unknown upload source defined!"));
     }
     Serial.println();
@@ -147,6 +151,7 @@ void
 setupPins() noexcept {
 
     // startup SPI as soon as possible in this design
+
     setupPins(OUTPUT,
               i960Pinout::SPI_OFFSET0,
               i960Pinout::SPI_OFFSET1,
