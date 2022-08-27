@@ -428,17 +428,22 @@ public:
             while (!(SPSR & _BV(SPIF))) ; // wait
             digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         }
-        return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        return isBurstLast();
     }
     /**
      * @brief Query the ~BE0 and ~BE1 pins provided by the i960 to denote how the chipset should treat the current word in the transaction
      * @return The LoadStoreStyle derived from the ~BE0 and ~BE1 pins.
      */
     [[nodiscard]] static auto getStyle() noexcept {
+#ifdef CHIPSET_TYPE_MEGA
+        /// @todo properly implement
+        return LoadStoreStyle::Full16;
+#else
         static constexpr auto Mask = pinToPortBit<i960Pinout::BE0>() | pinToPortBit<i960Pinout::BE1>();
         /// @todo figure out how to auto compute the shift amount
         //auto contents = TargetInputPort;
         return static_cast<LoadStoreStyle>((getAssociatedInputPort<i960Pinout::BE0>()& Mask));
+#endif
     }
 private:
     /**
@@ -508,7 +513,12 @@ private:
      * @return An expression of how the data lines have changed compared to last write operation
      */
     static inline byte getDataLineInputUpdateKind() noexcept {
+#ifdef CHIPSET_TYPE1
         return (getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() >> 4) & 0b11;
+#else
+        // update everything every single time
+        return 0;
+#endif
     }
 public:
     /**
@@ -886,7 +896,14 @@ public:
      * @return The page index based off of the current address
      */
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
-
+    [[nodiscard]] static bool isBurstLast() noexcept {
+#ifdef CHIPSET_TYPE_MEGA
+        /// @todo implement
+        return false;
+#else
+        return DigitalPin<i960Pinout::BLAST_>::isAsserted();
+#endif
+    }
     /**
      * @brief loads a cache line based on base transaction address and then bursts up to 16 bytes to the i960
      * @tparam inDebugMode Are we in debug mode?
@@ -912,14 +929,14 @@ public:
                 if (auto& a0 = *offset; a0.getWholeValue() != latchedDataOutput.getWholeValue()) {
                     SPDR = a0.getLowerHalf();
                     asm volatile ("nop");
-                    isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    isLastRead = isBurstLast();
                     while (!(SPSR & _BV(SPIF))); // wait
                     SPDR = a0.getUpperHalf();
                     asm volatile ("nop");
                     latchedDataOutput.wholeValue_ = a0.getWholeValue();
                     while (!(SPSR & _BV(SPIF))); // wait
                 } else {
-                    isLastRead = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                    isLastRead = isBurstLast();
                 }
                 DigitalPin<i960Pinout::Ready>::pulse();
                 if (isLastRead) {
@@ -1006,7 +1023,7 @@ private:
     [[nodiscard]]
     static bool getDataBits(CacheWriteRequest& request) noexcept {
         request.style = getStyle();
-        bool outcome = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+        bool outcome = isBurstLast();
         updateDataInputLatch();
         request.value = latchedDataInput_;
         return outcome;
@@ -1161,7 +1178,7 @@ public:
                 SPDR = 0;
                 asm volatile ("nop");
                 currTransaction.style = getStyle();
-                bool isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+                bool isLast = isBurstLast();
                 while (!(SPSR & _BV(SPIF))); // wait
                 auto lower = SPDR;
                 SPDR = 0;
@@ -1225,7 +1242,7 @@ public:
         // so you may still be reading the previous i960 cycle state!
         byte pageIndex = getPageIndex();
         for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
-            bool isLast = DigitalPin<i960Pinout::BLAST_>::isAsserted();
+            auto isLast = isBurstLast();
             LoadStoreStyle currLSS = getStyle();
             updateDataInputLatch();
             if constexpr (inDebugMode) {
