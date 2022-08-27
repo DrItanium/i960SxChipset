@@ -34,6 +34,8 @@ using Address = uint32_t;
 enum class i960Pinout : int {
 #ifdef CHIPSET_TYPE1
 #include "Type1Pinout.def"
+#elif defined(CHIPSET_TYPE_MEGA)
+#include "TypeMegaPinout.def"
 #else
 #error "Target Chipset Hardware has no pinout defined"
 #endif
@@ -64,6 +66,15 @@ enum class PortId
     PortB,
     PortC,
     PortD,
+#ifdef CHIPSET_TYPE_MEGA
+    PortE,
+    PortF,
+    PortG,
+    PortH,
+    PortJ,
+    PortK,
+    PortL,
+#endif
     // more ports go here
 };
 template<i960Pinout pin>
@@ -106,6 +117,26 @@ template<i960Pinout pin>
         case i960Pinout::PORT_D6:
         case i960Pinout::PORT_D7:
             return PortId::PortD;
+#ifdef CHIPSET_TYPE_MEGA
+#define X(letter, index) case i960Pinout:: PORT_ ## letter ## index
+#define Y(letter) X(letter, 0): X(letter, 1): X(letter, 2): X(letter, 3): X(letter, 4): X(letter, 5): X(letter, 6): X(letter, 7)
+            Y(E): return PortId::PortE;
+            Y(F): return PortId::PortF;
+            Y(H): return PortId::PortH;
+            Y(J): return PortId::PortJ;
+            Y(K): return PortId::PortK;
+            Y(L): return PortId::PortL;
+#undef Y
+#undef X
+        case i960Pinout::PORT_G0:
+        case i960Pinout::PORT_G1:
+        case i960Pinout::PORT_G2:
+        case i960Pinout::PORT_G3:
+        case i960Pinout::PORT_G4:
+        case i960Pinout::PORT_G5:
+            return PortId::PortG;
+#endif
+
         default:
             return PortId::None;
     }
@@ -119,41 +150,111 @@ template<i960Pinout pin>
         case i960Pinout::PORT_B0:
         case i960Pinout::PORT_C0:
         case i960Pinout::PORT_D0:
+#ifdef CHIPSET_TYPE_MEGA
+        case i960Pinout::PORT_E0:
+        case i960Pinout::PORT_F0:
+        case i960Pinout::PORT_G0:
+        case i960Pinout::PORT_H0:
+        case i960Pinout::PORT_J0:
+        case i960Pinout::PORT_K0:
+        case i960Pinout::PORT_L0:
+#endif
             return 0b0000'0001;
         case i960Pinout::PORT_A1:
         case i960Pinout::PORT_B1:
         case i960Pinout::PORT_C1:
         case i960Pinout::PORT_D1:
+#ifdef CHIPSET_TYPE_MEGA
+        case i960Pinout::PORT_E1:
+        case i960Pinout::PORT_F1:
+        case i960Pinout::PORT_G1:
+        case i960Pinout::PORT_H1:
+        case i960Pinout::PORT_J1:
+        case i960Pinout::PORT_K1:
+        case i960Pinout::PORT_L1:
+#endif
             return 0b0000'0010;
         case i960Pinout::PORT_A2:
         case i960Pinout::PORT_B2:
         case i960Pinout::PORT_C2:
         case i960Pinout::PORT_D2:
+#ifdef CHIPSET_TYPE_MEGA
+        case i960Pinout::PORT_E2:
+        case i960Pinout::PORT_F2:
+        case i960Pinout::PORT_G2:
+        case i960Pinout::PORT_H2:
+        case i960Pinout::PORT_J2:
+        case i960Pinout::PORT_K2:
+        case i960Pinout::PORT_L2:
+#endif
             return 0b0000'0100;
         case i960Pinout::PORT_A3:
         case i960Pinout::PORT_B3:
         case i960Pinout::PORT_C3:
         case i960Pinout::PORT_D3:
+#ifdef CHIPSET_TYPE_MEGA
+        case i960Pinout::PORT_E3:
+        case i960Pinout::PORT_F3:
+        case i960Pinout::PORT_G3:
+        case i960Pinout::PORT_H3:
+        case i960Pinout::PORT_J3:
+        case i960Pinout::PORT_K3:
+        case i960Pinout::PORT_L3:
+#endif
             return 0b0000'1000;
         case i960Pinout::PORT_A4:
         case i960Pinout::PORT_B4:
         case i960Pinout::PORT_C4:
         case i960Pinout::PORT_D4:
+#ifdef CHIPSET_TYPE_MEGA
+        case i960Pinout::PORT_E4:
+        case i960Pinout::PORT_F4:
+        case i960Pinout::PORT_G4:
+        case i960Pinout::PORT_H4:
+        case i960Pinout::PORT_J4:
+        case i960Pinout::PORT_K4:
+        case i960Pinout::PORT_L4:
+#endif
             return 0b0001'0000;
         case i960Pinout::PORT_A5:
         case i960Pinout::PORT_B5:
         case i960Pinout::PORT_C5:
         case i960Pinout::PORT_D5:
+#ifdef CHIPSET_TYPE_MEGA
+        case i960Pinout::PORT_E5:
+        case i960Pinout::PORT_F5:
+        case i960Pinout::PORT_G5:
+        case i960Pinout::PORT_H5:
+        case i960Pinout::PORT_J5:
+        case i960Pinout::PORT_K5:
+        case i960Pinout::PORT_L5:
+#endif
             return 0b0010'0000;
         case i960Pinout::PORT_A6:
         case i960Pinout::PORT_B6:
         case i960Pinout::PORT_C6:
         case i960Pinout::PORT_D6:
+#ifdef CHIPSET_TYPE_MEGA
+        case i960Pinout::PORT_E6:
+        case i960Pinout::PORT_F6:
+        case i960Pinout::PORT_H6:
+        case i960Pinout::PORT_J6:
+        case i960Pinout::PORT_K6:
+        case i960Pinout::PORT_L6:
+#endif
             return 0b0100'0000;
         case i960Pinout::PORT_A7:
         case i960Pinout::PORT_B7:
         case i960Pinout::PORT_C7:
         case i960Pinout::PORT_D7:
+#ifdef CHIPSET_TYPE_MEGA
+        case i960Pinout::PORT_E7:
+        case i960Pinout::PORT_F7:
+        case i960Pinout::PORT_H7:
+        case i960Pinout::PORT_J7:
+        case i960Pinout::PORT_K7:
+        case i960Pinout::PORT_L7:
+#endif
             return 0b1000'0000;
         default:
             return 0b1111'1111;
@@ -183,6 +284,15 @@ template<i960Pinout pin>
         Y(C): return PORTC;
         Y(D): return PORTD;
         Y(B): return PORTB;
+#ifdef CHIPSET_TYPE_MEGA
+        Y(E): return PORTE;
+        Y(F): return PORTF;
+        Y(G): return PORTG;
+        Y(H): return PORTH;
+        Y(J): return PORTJ;
+        Y(K): return PORTK;
+        Y(L): return PORTL;
+#endif
 #undef Y
 #undef X
 
@@ -215,6 +325,15 @@ template<i960Pinout pin>
         Y(C): return DDRC;
         Y(D): return DDRD;
         Y(B): return DDRB;
+#ifdef CHIPSET_TYPE_MEGA
+        Y(E): return DDRE;
+        Y(F): return DDRF;
+        Y(G): return DDRG;
+        Y(H): return DDRH;
+        Y(J): return DDRJ;
+        Y(K): return DDRK;
+        Y(L): return DDRL;
+#endif
 #undef Y
 #undef X
 
@@ -247,6 +366,15 @@ template<i960Pinout pin>
         Y(C): return PINC;
         Y(D): return PIND;
         Y(B): return PINB;
+#ifdef CHIPSET_TYPE_MEGA
+        Y(E): return PINE;
+        Y(F): return PINF;
+        Y(G): return PING;
+        Y(H): return PINH;
+        Y(J): return PINJ;
+        Y(K): return PINK;
+        Y(L): return PINL;
+#endif
 #undef Y
 #undef X
         default:
@@ -277,6 +405,15 @@ template<i960Pinout pin>
         Y(C);
         Y(D);
         Y(B);
+#ifdef CHIPSET_TYPE_MEGA
+        Y(E);
+        Y(F);
+        Y(G);
+        Y(H);
+        Y(J);
+        Y(K);
+        Y(L);
+#endif
 #undef Y
 #undef X
         default:
