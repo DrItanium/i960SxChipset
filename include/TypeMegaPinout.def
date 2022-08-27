@@ -1,0 +1,11 @@
+#include "Mega2560PinoutFull.def"
+
+INT960_0_ = PORT_B4,
+INT960_3_ = PORT_B5,
+Ready = PORT_E6,
+DEN_ = PORT_E5,
+INT960_2 = PORT_E4,
+INT960_1 = PORT_E3,
+SD_EN = PORT_E2,
+SD2_EN = PORT_G5,
+CLOCK_OUT = PORT_E7,
