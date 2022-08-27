@@ -357,4 +357,6 @@ union SplitWord32 {
     SplitWord16 words_[sizeof(uint32_t) / sizeof(SplitWord16)];
     float floatingPointRepresentation_;
 };
+template<typename T>
+inline volatile T & memory(const uint16_t address) noexcept { return *reinterpret_cast<T *>(address); }
 #endif //I960SXCHIPSET_MCUPLATFORM_H
