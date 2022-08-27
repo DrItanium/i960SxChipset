@@ -109,6 +109,7 @@ enum class TargetMCU {
      * @brief Type 1.01 redesign
      */
     ATmega1284p_Type1,
+    ATmega2560_TypeMega,
     Unknown,
 };
 /**
@@ -166,6 +167,15 @@ constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
         10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
 };
 
+template<>
+constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega2560_TypeMega> = {
+        8_KB,
+        10_MHz,
+        5_MHz, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
+        10_MHz, // the addin card allows 10MHz 3.3v operation on flash
+        10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
+};
+
 /**
  * @brief Common interface to query aspects specific to a chipset target. Uses the BoardDescription object to populate fields.
  */
@@ -181,12 +191,10 @@ public:
      * @return The microcontroller board being used.
      */
     [[nodiscard]] static constexpr TargetMCU getMCUTarget() noexcept {
-#ifdef ARDUINO_AVR_ATmega1284
 #ifdef CHIPSET_TYPE1
         return TargetMCU::ATmega1284p_Type1;
-#else
-        return TargetMCU::Unknown;
-#endif
+#elif defined(CHIPSET_TYPE_MEGA)
+        return TargetMCU::Mega2560;
 #else
         return TargetMCU::Unknown;
 #endif
@@ -217,6 +225,8 @@ public:
      * @return True if the microcontroller is an atmega1284p
      */
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return targetMCUIsOneOfThese<TargetMCU::ATmega1284p_Type1>(); }
+    [[nodiscard]] static constexpr auto onAtmega2560_TypeMega() noexcept { return targetMCUIs<TargetMCU::ATmega2560_TypeMega>(); }
+    [[nodiscard]] static constexpr auto onAtmega2560() noexcept { return targetMCUIsOneOfThese<TargetMCU::ATmega2560_TypeMega>(); }
     /**
      * @brief Are we on an undeclared microcontroller target?
      * @return True if we were unable to determine the microcontroller target
@@ -249,7 +259,7 @@ public:
 };
 
 static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been defined, please define to continue");
-static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16kb of sram is not allowed!");
+//static_assert(TargetBoard::getSRAMAmountInBytes() >= 16_KB, "ERROR: Less than 16kb of sram is not allowed!");
 
 /**
  * @brief A view of a 16-bit number which can be broken up into different components transparently
