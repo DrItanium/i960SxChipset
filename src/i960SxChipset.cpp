@@ -172,11 +172,11 @@ setupPins() noexcept {
     digitalWrite<i960Pinout::MEMBLK0_A0, LOW>();
     digitalWrite<i960Pinout::MEMBLK0_A1, LOW>();
     digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
+    digitalWrite<i960Pinout::MEMBLK0_, HIGH>();
+    digitalWrite<i960Pinout::TFT_CS, HIGH>();
     digitalWrite<i960Pinout::SD_EN, HIGH>();
     digitalWrite<i960Pinout::Ready, HIGH>();
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-    digitalWrite<i960Pinout::MEMBLK0_, HIGH>();
-    digitalWrite<i960Pinout::TFT_CS, HIGH>();
     // setup the pins that could be attached to an io expander separately
     setupPins(INPUT,
               i960Pinout::RAM_SPACE_,
@@ -185,8 +185,8 @@ setupPins() noexcept {
               i960Pinout::BE1,
               i960Pinout::BLAST_,
               i960Pinout::W_R_,
-              i960Pinout::DEN_,
               i960Pinout::FAIL,
+              i960Pinout::DEN_,
               i960Pinout::IOEXP_INT0,
               i960Pinout::IOEXP_INT1,
               i960Pinout::IOEXP_INT2,
@@ -210,7 +210,9 @@ setupChipset() noexcept {
     /// @todo pull the i960 into reset at this point
     //pinMode(i960Pinout::MISO, INPUT_PULLUP);
     theCache.begin();
+#ifdef CHIPSET_TYPE1
     FlashInterface::begin();
+#endif
     // purge the cache pages
     ConfigurationSpace::begin();
     if constexpr (DisplayBootupInformation) {
