@@ -166,6 +166,7 @@ setupPins() noexcept {
               i960Pinout::Ready,
               i960Pinout::GPIOSelect);
     // all of these pins need to be pulled high
+#ifdef CHIPSET_TYPE1
     digitalWrite<i960Pinout::SPI_OFFSET0, HIGH>();
     digitalWrite<i960Pinout::SPI_OFFSET1, HIGH>();
     digitalWrite<i960Pinout::SPI_OFFSET2, HIGH>();
@@ -174,6 +175,7 @@ setupPins() noexcept {
     digitalWrite<i960Pinout::PSRAM_EN, HIGH>();
     digitalWrite<i960Pinout::MEMBLK0_, HIGH>();
     digitalWrite<i960Pinout::TFT_CS, HIGH>();
+#endif
     digitalWrite<i960Pinout::SD_EN, HIGH>();
     digitalWrite<i960Pinout::Ready, HIGH>();
     digitalWrite<i960Pinout::GPIOSelect, HIGH>();

@@ -326,7 +326,7 @@ public:
     [[nodiscard]] static bool isReadOperation() noexcept {
 #ifdef CHIPSET_TYPE_MEGA
         /// @todo implement
-        return false;
+        return isReadOperation_;
 #else
         return DigitalPin<i960Pinout::W_R_>::isAsserted();
 #endif
@@ -437,7 +437,7 @@ public:
     [[nodiscard]] static auto getStyle() noexcept {
 #ifdef CHIPSET_TYPE_MEGA
         /// @todo properly implement
-        return LoadStoreStyle::Full16;
+        return static_cast<LoadStoreStyle>(getCTL0().bits.byteEnable);
 #else
         static constexpr auto Mask = pinToPortBit<i960Pinout::BE0>() | pinToPortBit<i960Pinout::BE1>();
         /// @todo figure out how to auto compute the shift amount
@@ -742,6 +742,7 @@ private:
      */
     template<bool inDebugMode, DecodeDispatch index>
     inline static void full32BitUpdate() noexcept {
+#ifdef CHIPSET_TYPE1
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
         static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
@@ -791,6 +792,13 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+#else
+
+        AddressRegister contents(getAddressRegister().full);
+        address_.wholeValue_ = (contents.full & 0xFFFF'FFFE);
+        isReadOperation_ = contents.wr_;
+#endif
+
     }
     /**
      * @brief Only update the lower 16 bits of the current transaction's base address
@@ -899,12 +907,7 @@ public:
      */
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
     [[nodiscard]] static bool isBurstLast() noexcept {
-#ifdef CHIPSET_TYPE_MEGA
-        /// @todo implement
-        return false;
-#else
         return DigitalPin<i960Pinout::BLAST_>::isAsserted();
-#endif
     }
     /**
      * @brief loads a cache line based on base transaction address and then bursts up to 16 bytes to the i960
@@ -1301,6 +1304,26 @@ private:
     static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     static constexpr uint8_t initialIOCONValue_ = 0b0010'1000;
     static inline SplitWord16 latchedDataInput_ {0};
+    static inline bool isReadOperation_ = false;
+};
+template<>
+struct DigitalPin< i960Pinout::W_R_> {
+    DigitalPin() = delete;
+    ~DigitalPin() = delete;
+    DigitalPin(const DigitalPin&) = delete;
+    DigitalPin(DigitalPin&&) = delete;
+    DigitalPin& operator=(const DigitalPin&) = delete;
+    DigitalPin& operator=(DigitalPin&&) = delete;
+    static constexpr auto isInputPin() noexcept { return true; }
+    static constexpr auto isOutputPin() noexcept { return false; }
+    static constexpr auto getPin() noexcept { return i960Pinout::BLAST_; }
+    static constexpr auto getDirection() noexcept { return INPUT; }
+    static constexpr auto getAssertionState() noexcept { return LOW; }
+    static constexpr auto getDeassertionState() noexcept { return HIGH; }
+    [[gnu::always_inline]] inline static auto read() noexcept { return getCTL0().bits.blast; }
+    [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
+    [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
+    static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::BLAST_>; }
 };
 // 8 IOExpanders to a single enable line for SPI purposes
 // 4 of them are reserved
