@@ -206,26 +206,32 @@ public:
     static void begin() noexcept {
         if (!initialized_) {
             initialized_ = true;
-            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-            // immediately pull the i960 into reset as soon as possible
-            // now all devices tied to this ~CS pin have separate addresses
-            // make each of these inputs
-            writeDirection<Lower16Lines, false>(0xFFFF);
-            writeDirection<Upper16Lines, false>(0xFFFF);
-            // enable pin change interrupts on address lines
-            write16<Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-            write16<Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
-            write16<Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-            write16<Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
-            // setup the direction pins in the
-            writeDirection<DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
-            // configure INTCON to be compare against previous value
-            write16<DataLines, MCP23x17Registers::INTCON, false>(0) ;
-            write16<DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-            // write the default value out to the latch to start with
-            write16<DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
-            // enable interrupts for accelerating write operations in the future
-            SPI.endTransaction();
+            if constexpr (TargetBoard::onAtmega1284p_Type1()) {
+                SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+                // immediately pull the i960 into reset as soon as possible
+                // now all devices tied to this ~CS pin have separate addresses
+                // make each of these inputs
+                writeDirection<Lower16Lines, false>(0xFFFF);
+                writeDirection<Upper16Lines, false>(0xFFFF);
+                // enable pin change interrupts on address lines
+                write16<Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
+                write16<Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000);
+                write16<Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
+                write16<Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000);
+                // setup the direction pins in the
+                writeDirection<DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
+                // configure INTCON to be compare against previous value
+                write16<DataLines, MCP23x17Registers::INTCON, false>(0);
+                write16<DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
+                // write the default value out to the latch to start with
+                write16<DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
+                // enable interrupts for accelerating write operations in the future
+                SPI.endTransaction();
+            } else if (TargetBoard::onAtmega2560_TypeMega()) {
+                // setup the data lines
+                getAssociatedDirectionPort<i960Pinout::Data0>() = 0xFF;
+                getAssociatedDirectionPort<i960Pinout::Data8>() = 0xFF;
+            }
         }
     }
     /**
