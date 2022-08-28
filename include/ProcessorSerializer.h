@@ -207,8 +207,6 @@ public:
         if (!initialized_) {
             initialized_ = true;
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-            pinMode(i960Pinout::GPIOSelect, OUTPUT);
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
             // immediately pull the i960 into reset as soon as possible
             // now all devices tied to this ~CS pin have separate addresses
             // make each of these inputs
