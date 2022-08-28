@@ -265,6 +265,14 @@ template<i960Pinout pin>
             return 0xFF;
     }
 }
+static_assert(getPinMask<i960Pinout::PORT_A0>() == 0b0000'0001);
+static_assert(getPinMask<i960Pinout::PORT_A1>() == 0b0000'0010);
+static_assert(getPinMask<i960Pinout::PORT_A2>() == 0b0000'0100);
+static_assert(getPinMask<i960Pinout::PORT_A3>() == 0b0000'1000);
+static_assert(getPinMask<i960Pinout::PORT_A4>() == 0b0001'0000);
+static_assert(getPinMask<i960Pinout::PORT_A5>() == 0b0010'0000);
+static_assert(getPinMask<i960Pinout::PORT_A6>() == 0b0100'0000);
+static_assert(getPinMask<i960Pinout::PORT_A7>() == 0b1000'0000);
 
 /**
  * @brief RAII class which turns off interrupts during construction and restores them on destruction
