@@ -295,6 +295,130 @@ namespace MCP23S17 {
     inline SplitWord16 readDirection() noexcept {
         return read16<addr, Registers::IODIR, Pin>();
     }
+
+    template<HardwareDeviceAddress addr, typename Pin>
+    inline void pinMode(byte index, decltype(INPUT) direction) {
+        auto directionBits = readDirection<addr, Pin>();
+        uint16_t pullupBits = 0;
+        switch (direction) {
+            case OUTPUT:
+                directionBits |= (1 << index);
+                break;
+            case INPUT_PULLUP:
+                pullupBits = read16<addr, Registers::GPPU, Pin>();
+                // we need to activate the pullup
+                directionBits &= ~(1 << index);
+                pullupBits |= (1 << index);
+                write16<addr, Registers::GPPU, Pin>(pullupBits);
+                break;
+            case INPUT:
+                pullupBits = read16<addr, Registers::GPPU, Pin>();
+                pullupBits &= ~(1 << index);
+                directionBits &= ~(1 << index);
+                write16<addr, Registers::GPPU, Pin>(pullupBits);
+                break;
+            default:
+                return;
+        }
+        writeDirection<addr, Pin>(directionBits);
+    }
+    template<HardwareDeviceAddress addr, uint8_t index, typename Pin>
+    inline void pinMode(decltype(INPUT) direction) {
+        auto directionBits = readDirection<addr, Pin>();
+        uint16_t pullupBits = 0;
+        switch (direction) {
+            case OUTPUT:
+                directionBits |= (1 << index);
+                break;
+            case INPUT_PULLUP:
+                pullupBits = read16<addr, Registers::GPPU, Pin>();
+                // we need to activate the pullup
+                directionBits &= ~(1 << index);
+                pullupBits |= (1 << index);
+                write16<addr, Registers::GPPU, Pin>(pullupBits);
+                break;
+            case INPUT:
+                pullupBits = read16<addr, Registers::GPPU, Pin>();
+                pullupBits &= ~(1 << index);
+                directionBits &= ~(1 << index);
+                write16<addr, Registers::GPPU, Pin>(pullupBits);
+                break;
+            default:
+                return;
+        }
+        writeDirection<addr, Pin>(directionBits);
+    }
+    template<HardwareDeviceAddress addr, uint16_t mask, typename Pin>
+    inline decltype(HIGH) digitalRead() noexcept {
+        return (readGPIO16<addr, Pin>()  & mask) != 0 ? HIGH : LOW;
+    }
+    template<HardwareDeviceAddress addr, uint16_t mask, typename Pin>
+    inline void digitalWrite(decltype(HIGH) value) noexcept {
+        if (auto result = readGPIO16<addr, Pin>(); value == LOW) {
+            result.wholeValue_ &= ~mask;
+            writeGPIO16<addr, Pin>(result.wholeValue_);
+        } else {
+            result.wholeValue_ |= mask;
+            writeGPIO16<addr, Pin>(result.wholeValue_);
+        }
+    }
+    template<HardwareDeviceAddress addr, uint16_t mask, typename Pin, decltype(HIGH) value>
+    inline void digitalWrite() noexcept {
+        if constexpr (auto result = readGPIO16<addr, Pin>(); value == LOW) {
+            result.wholeValue_ &= ~mask;
+            writeGPIO16<addr, Pin>(result.wholeValue_);
+        } else {
+            result.wholeValue_ |= mask;
+            writeGPIO16<addr, Pin>(result.wholeValue_);
+        }
+    }
+    template<HardwareDeviceAddress addr, uint16_t mask, typename Pin>
+    inline decltype(INPUT) getMode() noexcept {
+        auto direction = readDirection<addr, Pin>();
+        if (direction.wholeValue_ & mask == 0) {
+            return OUTPUT;
+        } else {
+            auto pullups = read16<addr, Registers::GPPU, Pin>();
+            if (pullups.wholeValue_ & mask == 0) {
+                return INPUT;
+            } else {
+                return INPUT_PULLUP;
+            }
+        }
+    }
+    template<HardwareDeviceAddress addr, uint8_t offset, decltype(INPUT) defaultDirection, typename CS>
+    struct BackingPin {
+        static constexpr auto ActualOffset = offset & 0b1111;
+        static constexpr uint16_t ActualMask = (1 << ActualOffset);
+        BackingPin() = delete;
+        ~BackingPin() = delete;
+        BackingPin(const BackingPin&)  = delete;
+        BackingPin& operator=(const BackingPin&)  = delete;
+        BackingPin(BackingPin&&)  = delete;
+        BackingPin& operator=(BackingPin&&)  = delete;
+        static decltype(HIGH) read() noexcept { return digitalRead<addr, ActualMask, CS>(); }
+        static void write(decltype(HIGH) value) noexcept { digitalWrite<addr, ActualMask, CS>(value); }
+        template<decltype(HIGH) value>
+        static void write() noexcept  { digitalWrite<addr, ActualMask, CS, value>(); }
+        static void configure(decltype(INPUT) mode = defaultDirection) {
+            pinMode<addr, ActualOffset, CS>(mode);
+        }
+        static constexpr bool isInputPin() noexcept {
+            auto dir = mode();
+            return dir == INPUT || dir == INPUT_PULLUP;
+        }
+        static constexpr bool isOutputPin() noexcept { return mode() == OUTPUT; }
+        static constexpr decltype(INPUT) mode() noexcept { return getMode<addr, ActualMask, CS>(); }
+        template<decltype(HIGH) to = LOW>
+        [[gnu::always_inline]] static void pulse() {
+            write<to>();
+            if constexpr (to == LOW) {
+                write<HIGH>();
+            } else {
+                write<LOW>();
+            }
+        }
+    };
 } // end namespace MCP23S17
 
 #endif //SXCHIPSET_MCP23S17_H

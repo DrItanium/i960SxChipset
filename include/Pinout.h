@@ -547,34 +547,6 @@ struct BackingDigitalPin {
 private:
     static inline decltype(INPUT) direction_ = defaultDirection;
 };
-#if 0
-template<i960Pinout pin, decltype(INPUT) defaultDirection, byte index>
-struct BackingIOExpanderPin {
-    BackingIOExpanderPin() = delete;
-    ~BackingIOExpanderPin() = delete;
-    BackingIOExpanderPin(const BackingIOExpanderPin&)  = delete;
-    BackingIOExpanderPin& operator=(const BackingIOExpanderPin&)  = delete;
-    BackingIOExpanderPin(BackingIOExpanderPin&&)  = delete;
-    BackingIOExpanderPin& operator=(BackingIOExpanderPin&&)  = delete;
-    static decltype(HIGH) read() noexcept { return digitalRead<pin>(); }
-    static void write(decltype(HIGH) value) noexcept { digitalWrite<pin>(value); }
-    template<decltype(HIGH) value>
-    static void write() noexcept  { digitalWrite<pin, value>(); }
-    static void configure(decltype(INPUT) mode = defaultDirection) {
-        direction_ = mode;
-        pinMode(pin, direction_);
-    }
-    static constexpr bool isInputPin() noexcept { return direction_ == INPUT || direction_ == INPUT_PULLUP; }
-    static constexpr bool isOutputPin() noexcept { return direction_ == OUTPUT; }
-    static constexpr decltype(INPUT) mode() noexcept { return direction_; }
-    static constexpr auto getPin() noexcept { return pin; }
-    static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }
-    template<decltype(HIGH) to = LOW>
-    [[gnu::always_inline]] static void pulse() {
-        ::pulse<pin, to>();
-    }
-};
-#endif
 template<typename T>
 struct DigitalPin2 {
     using BackingThing = typename T::BackingImplementation;
