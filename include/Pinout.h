@@ -547,6 +547,7 @@ struct BackingDigitalPin {
 private:
     static inline decltype(INPUT) direction_ = defaultDirection;
 };
+#if 0
 template<i960Pinout pin, decltype(INPUT) defaultDirection, byte index>
 struct BackingIOExpanderPin {
     BackingIOExpanderPin() = delete;
@@ -573,6 +574,7 @@ struct BackingIOExpanderPin {
         ::pulse<pin, to>();
     }
 };
+#endif
 template<typename T>
 struct DigitalPin2 {
     using BackingThing = typename T::BackingImplementation;

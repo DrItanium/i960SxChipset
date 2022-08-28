@@ -271,29 +271,29 @@ public:
             // we want two separate pins free for the data lines io expander
             // we want mirroring on the data lines interrupts
             // disable banking and activate byte mode (this should enable the special byte increment wrap around mode)
-            write8<ProcessorInterface::IOExpanderAddress::DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
-            write8<ProcessorInterface::IOExpanderAddress::Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
-            write8<ProcessorInterface::IOExpanderAddress::Lower16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
-            write8<ProcessorInterface::IOExpanderAddress::MemoryCommitExtras, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+            write8<DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+            write8<Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
+            write8<Lower16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
+            write8<MemoryCommitExtras, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             // immediately pull the i960 into reset as soon as possible
-            writeDirection<IOExpanderAddress::MemoryCommitExtras, false>(currentGPIO4Direction_);
-            writeGPIO16<IOExpanderAddress::MemoryCommitExtras, false>(currentGPIO4Status_);
+            writeDirection<MemoryCommitExtras, false>(currentGPIO4Direction_);
+            writeGPIO16<MemoryCommitExtras, false>(currentGPIO4Status_);
             // now all devices tied to this ~CS pin have separate addresses
             // make each of these inputs
-            writeDirection<IOExpanderAddress::Lower16Lines, false>(0xFFFF);
-            writeDirection<IOExpanderAddress::Upper16Lines, false>(0xFFFF);
+            writeDirection<Lower16Lines, false>(0xFFFF);
+            writeDirection<Upper16Lines, false>(0xFFFF);
             // enable pin change interrupts on address lines
-            write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-            write16<IOExpanderAddress::Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
-            write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
-            write16<IOExpanderAddress::Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+            write16<Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+            write16<Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
+            write16<Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+            write16<Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000) ;
             // setup the direction pins in the
-            writeDirection<IOExpanderAddress::DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
+            writeDirection<DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
             // configure INTCON to be compare against previous value
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::INTCON, false>(0) ;
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
+            write16<DataLines, MCP23x17Registers::INTCON, false>(0) ;
+            write16<DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF) ;
             // write the default value out to the latch to start with
-            write16<IOExpanderAddress::DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
+            write16<DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
             // enable interrupts for accelerating write operations in the future
             SPI.endTransaction();
         }
@@ -317,7 +317,7 @@ public:
             //latchedDataOutput.wholeValue_ = value;
             byte computedValue = 0;
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+            SPDR = generateWriteOpcode(DataLines);
             {
                 // this operation is very important to interleave because it can be very expensive to
                 // but if we are also communicating over SPI, then the cost of this operation is nullified considerably
@@ -368,7 +368,7 @@ private:
     inline static void invertDataLinesDirection() noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+        SPDR = generateWriteOpcode(DataLines);
         {
             dataLinesDirection_ = ~dataLinesDirection_;
         }
@@ -514,7 +514,7 @@ private:
         if (value != currentGPIO4Status_) {
             // only update the io expander when needed
             currentGPIO4Status_ = value;
-            writeGPIO16<IOExpanderAddress::MemoryCommitExtras>(currentGPIO4Status_);
+            writeGPIO16<MemoryCommitExtras>(currentGPIO4Status_);
         }
     }
 public:
@@ -660,8 +660,8 @@ private:
 #ifdef CHIPSET_TYPE1
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
-        static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
-        static constexpr auto Upper16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Upper16Lines);
+        static constexpr auto Lower16Opcode = generateReadOpcode(Lower16Lines);
+        static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
@@ -721,7 +721,7 @@ private:
     static void lower16Update() noexcept {
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
-        static constexpr auto Lower16Opcode = generateReadOpcode(ProcessorInterface::IOExpanderAddress::Lower16Lines);
+        static constexpr auto Lower16Opcode = generateReadOpcode(Lower16Lines);
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
         // read only the lower half
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
@@ -837,7 +837,7 @@ public:
             DigitalPin<i960Pinout::Ready>::pulse();
         } else {
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateWriteOpcode(IOExpanderAddress::DataLines);
+            SPDR = generateWriteOpcode(DataLines);
             asm volatile ("nop");
             while (!(SPSR & _BV(SPIF))) ; // wait
             // while we would normally write to OLAT, in this case we want to access gpio from what I can tell
@@ -892,7 +892,7 @@ private:
     template<byte index, MCP23x17Registers reg>
     static void grab8Data() noexcept {
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+        SPDR = generateReadOpcode(DataLines);
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(reg);
@@ -912,7 +912,7 @@ private:
     }
     static void fullDataLineGrab() noexcept {
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+        SPDR = generateReadOpcode(DataLines);
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -1043,7 +1043,7 @@ public:
 #if 0
             static void fullDataLineGrab() noexcept {
                 digitalWrite<i960Pinout::GPIOSelect, LOW>();
-                SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+                SPDR = generateReadOpcode(DataLines);
                 asm volatile ("nop");
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -1087,7 +1087,7 @@ public:
 #endif
             byte count = 0;
             digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateReadOpcode(IOExpanderAddress::DataLines);
+            SPDR = generateReadOpcode(DataLines);
             asm volatile ("nop");
             while (!(SPSR & _BV(SPIF))); // wait
             SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
