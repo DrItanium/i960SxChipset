@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "MCUPlatform.h"
 #include "MCP23S17.h"
+#include "EBI.h"
 
 using Address = uint32_t;
 /**
