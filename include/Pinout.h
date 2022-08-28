@@ -627,10 +627,6 @@ DefSPICSPin(i960Pinout::GPIOSelect);
 DefSPICSPin(i960Pinout::SD_EN);
 DefInputPin(i960Pinout::DEN_, LOW, HIGH);
 DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT0, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT1, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT2, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT3, LOW, HIGH);
 
 #define DefIOExpanderPin(pin, assert, deassert, direction, device, index) \
 template<> \
@@ -652,15 +648,15 @@ struct DigitalPinDescription < i960Pinout:: pin> {\
 }
 
 DefIOExpanderPin(RESET960, LOW, HIGH, OUTPUT, 3, 0);
-DefIOExpanderPin(INT960_0_, LOW, HIGH, OUTPUT, 3, 1);
-DefIOExpanderPin(INT960_1, HIGH, LOW, OUTPUT, 3, 2);
-DefIOExpanderPin(INT960_2, HIGH, LOW, OUTPUT, 3, 3);
-DefIOExpanderPin(INT960_3_, LOW, HIGH, OUTPUT, 3, 4);
 DefIOExpanderPin(HOLD, HIGH, LOW, OUTPUT, 3, 5);
 DefIOExpanderPin(HLDA, HIGH, LOW, INPUT, 3, 6);
 DefIOExpanderPin(LOCK_, LOW, HIGH, INPUT, 3, 7);
 
 #ifdef CHIPSET_TYPE_MEGA
+DefInputPin(i960Pinout::INT960_0_, LOW, HIGH);
+DefInputPin(i960Pinout::INT960_1, HIGH, LOW);
+DefInputPin(i960Pinout::INT960_2, HIGH, LOW);
+DefInputPin(i960Pinout::INT960_3_, LOW, HIGH);
 union CTL0Register {
     static constexpr size_t Address = 0xA104;
     byte reg;
@@ -704,141 +700,31 @@ inline volatile T& getRegister() noexcept {
 }
 inline volatile CTL0Register& getCTL0() noexcept { return getRegister<CTL0Register>(); }
 inline volatile AddressRegister& getAddressRegister() noexcept { return getRegister<AddressRegister>(); }
-template<>
-struct DigitalPin< i960Pinout::FAIL > {
-        DigitalPin() = delete;
-        ~DigitalPin() = delete;
-        DigitalPin(const DigitalPin&) = delete;
-        DigitalPin(DigitalPin&&) = delete;
-        DigitalPin& operator=(const DigitalPin&) = delete;
-        DigitalPin& operator=(DigitalPin&&) = delete;
-        static constexpr auto isInputPin() noexcept { return true; }
-        static constexpr auto isOutputPin() noexcept { return false; }
-        static constexpr auto getPin() noexcept { return i960Pinout::FAIL; }
-        static constexpr auto getDirection() noexcept { return INPUT; }
-        static constexpr auto getAssertionState() noexcept { return HIGH; }
-        static constexpr auto getDeassertionState() noexcept { return LOW; }
-        [[gnu::always_inline]] inline static auto read() noexcept { return getCTL0().bits.fail; }
-        [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
-        [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
-        static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::FAIL>; }
-};
+#define DefEBIPin(pin, address, offset, assert, deassert, direction) \
+template<> \
+struct DigitalPinDescription< pin > { \
+        DigitalPinDescription() = delete; \
+        ~DigitalPinDescription() = delete; \
+        DigitalPinDescription(const DigitalPinDescription&) = delete; \
+        DigitalPinDescription(DigitalPinDescription&&) = delete; \
+        DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
+        DigitalPinDescription& operator=(DigitalPinDescription&&) = delete; \
+    static constexpr auto Assert = assert; \
+    static constexpr auto Deassert = deassert;\
+    static constexpr auto Direction = direction;\
+    static constexpr auto Pin =  pin;                                \
+    static constexpr auto Index = EBI::Register8BitIndex::Bit ## offset ;        \
+    static constexpr size_t Address = address; \
+    using BackingImplementation = EBI::BackingDigitalPin<Pin, Address, Index>;\
+}
 
-template<>
-struct DigitalPin< i960Pinout::BLAST_> {
-    DigitalPin() = delete;
-    ~DigitalPin() = delete;
-    DigitalPin(const DigitalPin&) = delete;
-    DigitalPin(DigitalPin&&) = delete;
-    DigitalPin& operator=(const DigitalPin&) = delete;
-    DigitalPin& operator=(DigitalPin&&) = delete;
-    static constexpr auto isInputPin() noexcept { return true; }
-    static constexpr auto isOutputPin() noexcept { return false; }
-    static constexpr auto getPin() noexcept { return i960Pinout::BLAST_; }
-    static constexpr auto getDirection() noexcept { return INPUT; }
-    static constexpr auto getAssertionState() noexcept { return LOW; }
-    static constexpr auto getDeassertionState() noexcept { return HIGH; }
-    [[gnu::always_inline]] inline static auto read() noexcept { return getCTL0().bits.blast; }
-    [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
-    [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
-    static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::BLAST_>; }
-};
-
-template<>
-struct DigitalPin< i960Pinout::BE0> {
-    DigitalPin() = delete;
-    ~DigitalPin() = delete;
-    DigitalPin(const DigitalPin&) = delete;
-    DigitalPin(DigitalPin&&) = delete;
-    DigitalPin& operator=(const DigitalPin&) = delete;
-    DigitalPin& operator=(DigitalPin&&) = delete;
-    static constexpr auto isInputPin() noexcept { return true; }
-    static constexpr auto isOutputPin() noexcept { return false; }
-    static constexpr auto getPin() noexcept { return i960Pinout::BE0; }
-    static constexpr auto getDirection() noexcept { return INPUT; }
-    static constexpr auto getAssertionState() noexcept { return LOW; }
-    static constexpr auto getDeassertionState() noexcept { return HIGH; }
-    [[gnu::always_inline]] inline static auto read() noexcept { return getCTL0().bits.byteEnable & 0b01; }
-    [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
-    [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
-    static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::BE0>; }
-};
-template<>
-struct DigitalPin< i960Pinout::BE1> {
-    DigitalPin() = delete;
-    ~DigitalPin() = delete;
-    DigitalPin(const DigitalPin&) = delete;
-    DigitalPin(DigitalPin&&) = delete;
-    DigitalPin& operator=(const DigitalPin&) = delete;
-    DigitalPin& operator=(DigitalPin&&) = delete;
-    static constexpr auto isInputPin() noexcept { return true; }
-    static constexpr auto isOutputPin() noexcept { return false; }
-    static constexpr auto getPin() noexcept { return i960Pinout::BE1; }
-    static constexpr auto getDirection() noexcept { return INPUT; }
-    static constexpr auto getAssertionState() noexcept { return LOW; }
-    static constexpr auto getDeassertionState() noexcept { return HIGH; }
-    [[gnu::always_inline]] inline static auto read() noexcept { return getCTL0().bits.byteEnable & 0b10; }
-    [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
-    [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
-    static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::BE1>; }
-};
-template<>
-struct DigitalPin< i960Pinout::RAM_SPACE_> {
-    DigitalPin() = delete;
-    ~DigitalPin() = delete;
-    DigitalPin(const DigitalPin&) = delete;
-    DigitalPin(DigitalPin&&) = delete;
-    DigitalPin& operator=(const DigitalPin&) = delete;
-    DigitalPin& operator=(DigitalPin&&) = delete;
-    static constexpr auto isInputPin() noexcept { return true; }
-    static constexpr auto isOutputPin() noexcept { return false; }
-    static constexpr auto getPin() noexcept { return i960Pinout::RAM_SPACE_; }
-    static constexpr auto getDirection() noexcept { return INPUT; }
-    static constexpr auto getAssertionState() noexcept { return LOW; }
-    static constexpr auto getDeassertionState() noexcept { return HIGH; }
-    [[gnu::always_inline]] inline static auto read() noexcept { return getAddressRegister().space.space == 0 ? getAssertionState() : getDeassertionState(); }
-    [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
-    [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
-    static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::RAM_SPACE_>; }
-};
-template<>
-struct DigitalPin< i960Pinout::IO_SPACE_> {
-    DigitalPin() = delete;
-    ~DigitalPin() = delete;
-    DigitalPin(const DigitalPin&) = delete;
-    DigitalPin(DigitalPin&&) = delete;
-    DigitalPin& operator=(const DigitalPin&) = delete;
-    DigitalPin& operator=(DigitalPin&&) = delete;
-    static constexpr auto isInputPin() noexcept { return true; }
-    static constexpr auto isOutputPin() noexcept { return false; }
-    static constexpr auto getPin() noexcept { return i960Pinout::IO_SPACE_; }
-    static constexpr auto getDirection() noexcept { return INPUT; }
-    static constexpr auto getAssertionState() noexcept { return LOW; }
-    static constexpr auto getDeassertionState() noexcept { return HIGH; }
-    [[gnu::always_inline]] inline static auto read() noexcept { return getAddressRegister().space.space == 0b111 ? getAssertionState() : getDeassertionState(); }
-    [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
-    [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
-    static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::IO_SPACE_>; }
-};
-template<>
-struct DigitalPin< i960Pinout::W_R_> {
-    DigitalPin() = delete;
-    ~DigitalPin() = delete;
-    DigitalPin(const DigitalPin&) = delete;
-    DigitalPin(DigitalPin&&) = delete;
-    DigitalPin& operator=(const DigitalPin&) = delete;
-    DigitalPin& operator=(DigitalPin&&) = delete;
-    static constexpr auto isInputPin() noexcept { return true; }
-    static constexpr auto isOutputPin() noexcept { return false; }
-    static constexpr auto getPin() noexcept { return i960Pinout::BLAST_; }
-    static constexpr auto getDirection() noexcept { return INPUT; }
-    static constexpr auto getAssertionState() noexcept { return LOW; }
-    static constexpr auto getDeassertionState() noexcept { return HIGH; }
-    [[gnu::always_inline]] inline static auto read() noexcept { return getAddressRegister().wr_; }
-    [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
-    [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
-    static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::BLAST_>; }
-};
+DefEBIPin(i960Pinout::BE0, CTL0Register::Address, 0, LOW, HIGH, INPUT);
+DefEBIPin(i960Pinout::BE1, CTL0Register::Address, 1, LOW, HIGH, INPUT);
+DefEBIPin(i960Pinout::BLAST_, CTL0Register::Address, 2, LOW, HIGH, INPUT);
+DefEBIPin(i960Pinout::FAIL, CTL0Register::Address, 3, HIGH, LOW, INPUT);
+DefEBIPin(i960Pinout::RAM_SPACE_, CTL1Register::Address, 0, LOW, HIGH, INPUT);
+DefEBIPin(i960Pinout::IO_SPACE_, CTL1Register::Address, 1, LOW, HIGH, INPUT);
+DefEBIPin(i960Pinout::W_R_, AddressRegister::Address, 0, LOW, HIGH, INPUT);
 #else
 DefInputPin(i960Pinout::RAM_SPACE_, LOW, HIGH);
 DefInputPin(i960Pinout::IO_SPACE_, LOW, HIGH);
@@ -858,6 +744,14 @@ DefOutputPin(i960Pinout::SPI_OFFSET2, LOW, HIGH);
 DefOutputPin(i960Pinout::MEMBLK0_A0, LOW, HIGH);
 DefOutputPin(i960Pinout::MEMBLK0_A1, LOW, HIGH);
 DefOutputPin(i960Pinout::TFT_DC, LOW, HIGH);
+DefInputPin(i960Pinout::IOEXP_INT0, LOW, HIGH);
+DefInputPin(i960Pinout::IOEXP_INT1, LOW, HIGH);
+DefInputPin(i960Pinout::IOEXP_INT2, LOW, HIGH);
+DefInputPin(i960Pinout::IOEXP_INT3, LOW, HIGH);
+DefIOExpanderPin(INT960_0_, LOW, HIGH, OUTPUT, 3, 1);
+DefIOExpanderPin(INT960_1, HIGH, LOW, OUTPUT, 3, 2);
+DefIOExpanderPin(INT960_2, HIGH, LOW, OUTPUT, 3, 3);
+DefIOExpanderPin(INT960_3_, LOW, HIGH, OUTPUT, 3, 4);
 #endif
 #undef DefSPICSPin
 #undef DefInputPin
