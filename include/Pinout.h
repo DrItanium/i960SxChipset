@@ -622,13 +622,17 @@ union AddressRegister {
         uint32_t wr_ : 1;
         uint32_t address : 31;
     };
+    struct {
+        uint32_t offset : (32 - 3);
+        uint32_t space : 3;
+    } space;
 };
+static_assert(sizeof (AddressRegister) == sizeof(uint32_t));
 template<typename T>
 inline volatile T& getRegister() noexcept {
     return memory<T>(T::Address);
 }
 inline volatile CTL0Register& getCTL0() noexcept { return getRegister<CTL0Register>(); }
-inline volatile CTL1Register& getCTL1() noexcept { return getRegister<CTL1Register>(); }
 inline volatile AddressRegister& getAddressRegister() noexcept { return getRegister<AddressRegister>(); }
 template<>
 struct DigitalPin< i960Pinout::FAIL > {
@@ -722,7 +726,7 @@ struct DigitalPin< i960Pinout::RAM_SPACE_> {
     static constexpr auto getDirection() noexcept { return INPUT; }
     static constexpr auto getAssertionState() noexcept { return LOW; }
     static constexpr auto getDeassertionState() noexcept { return HIGH; }
-    [[gnu::always_inline]] inline static auto read() noexcept { return getCTL1().bits.inRamSpace; }
+    [[gnu::always_inline]] inline static auto read() noexcept { return getAddressRegister().space.space == 0 ? getAssertionState() : getDeassertionState(); }
     [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
     [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
     static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::RAM_SPACE_>; }
@@ -741,7 +745,7 @@ struct DigitalPin< i960Pinout::IO_SPACE_> {
     static constexpr auto getDirection() noexcept { return INPUT; }
     static constexpr auto getAssertionState() noexcept { return LOW; }
     static constexpr auto getDeassertionState() noexcept { return HIGH; }
-    [[gnu::always_inline]] inline static auto read() noexcept { return getCTL1().bits.inIOSpace; }
+    [[gnu::always_inline]] inline static auto read() noexcept { return getAddressRegister().space.space == 0b111 ? getAssertionState() : getDeassertionState(); }
     [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
     [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
     static constexpr auto valid() noexcept { return isValidPin960_v<i960Pinout::IO_SPACE_>; }
