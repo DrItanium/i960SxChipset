@@ -35,13 +35,32 @@ using Address = uint32_t;
  * @brief Sx Load/Store styles that the processor will request
  */
 enum class i960Pinout : int {
+#ifdef __AVR_ATmega1284P__
+#include "1284pPinout.def"
+#elif defined(__AVR_ATmega2560__)
+#include "Mega2560PinoutFull.def"
+#else
+#error "Target Chipset Hardware has no pinout defined"
+#endif
+#define X(name, pin, direction, assert, deassert, addr, haddr, offset) name = pin,
+#define GPIO(name, pin, direction, assert, deassert) X(name, pin, direction, assert, deassert, 0, 0, 0)
+#define EBI(name, pin, direction, assert, deassert, address, offset) X(name, pin, direction, assert, deassert, address, 0, offset)
+#define IOEXP(name, pin, direction, assert, deassert, index, offset) X(name, pin, direction, assert, deassert, 0, index, offset)
+#define SINK(name, pin, direction, assert, deassert) X(name, pin, direction, assert, deassert, 0, 0, 0)
+#define ALIAS(name, pin) X(name, pin, INPUT, LOW, HIGH, 0, 0, 0)
 #ifdef CHIPSET_TYPE1
 #include "Type1Pinout.def"
 #elif defined(CHIPSET_TYPE_MEGA)
 #include "TypeMegaPinout.def"
 #else
-#error "Target Chipset Hardware has no pinout defined"
+#error "No table defined!"
 #endif
+#undef GPIO
+#undef EBI
+#undef IOEXP
+#undef SINK
+#undef ALIAS
+#undef X
 };
 
 [[gnu::always_inline]]
