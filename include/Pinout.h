@@ -36,7 +36,7 @@ using Address = uint32_t;
  */
 enum class i960Pinout : int {
 #define Entry(name) name,
-#define PIN(name, port)  Entry(name)
+#define PIN(name, port, offset)  Entry(name)
 #define PORT(name, size)
 #ifdef __AVR_ATmega1284P__
 #include "1284pPinout.def"
@@ -91,7 +91,7 @@ enum class PortId
 {
     None,
 #define Entry(name)
-#define PIN(name, port)
+#define PIN(name, port, offset)
 #define PORT(name, size) Port ## name ,
 #ifdef __AVR_ATmega1284P__
 #include "1284pPinout.def"
@@ -109,7 +109,7 @@ template<i960Pinout pin>
 [[nodiscard]] constexpr PortId portFromPin() noexcept {
     switch (pin) {
 #define Entry(name)
-#define PIN(name, port) case i960Pinout:: name : return PortId :: Port ## port ;
+#define PIN(name, port, offset) case i960Pinout:: name : return PortId :: Port ## port ;
 #define PORT(name, size)
 #ifdef __AVR_ATmega1284P__
 #include "1284pPinout.def"
@@ -130,120 +130,31 @@ template<i960Pinout pin>
 [[nodiscard]] constexpr byte pinToPortBit() noexcept {
     static_assert(isValidPin960_v<pin>);
     switch (pin) {
-        case i960Pinout::PORT_A0:
-        case i960Pinout::PORT_B0:
-        case i960Pinout::PORT_C0:
-        case i960Pinout::PORT_D0:
-#ifdef CHIPSET_TYPE_MEGA
-        case i960Pinout::PORT_E0:
-        case i960Pinout::PORT_F0:
-        case i960Pinout::PORT_G0:
-        case i960Pinout::PORT_H0:
-        case i960Pinout::PORT_J0:
-        case i960Pinout::PORT_K0:
-        case i960Pinout::PORT_L0:
+#define Entry(name)
+#define PIN(name, port, offset) case i960Pinout:: name : return static_cast<uint8_t>(1 << offset) ;
+#define PORT(name, size)
+#ifdef __AVR_ATmega1284P__
+#include "1284pPinout.def"
+#elif defined(__AVR_ATmega2560__)
+        #include "Mega2560PinoutFull.def"
+#else
+#error "No port map defined!"
 #endif
-            return 0b0000'0001;
-        case i960Pinout::PORT_A1:
-        case i960Pinout::PORT_B1:
-        case i960Pinout::PORT_C1:
-        case i960Pinout::PORT_D1:
-#ifdef CHIPSET_TYPE_MEGA
-        case i960Pinout::PORT_E1:
-        case i960Pinout::PORT_F1:
-        case i960Pinout::PORT_G1:
-        case i960Pinout::PORT_H1:
-        case i960Pinout::PORT_J1:
-        case i960Pinout::PORT_K1:
-        case i960Pinout::PORT_L1:
-#endif
-            return 0b0000'0010;
-        case i960Pinout::PORT_A2:
-        case i960Pinout::PORT_B2:
-        case i960Pinout::PORT_C2:
-        case i960Pinout::PORT_D2:
-#ifdef CHIPSET_TYPE_MEGA
-        case i960Pinout::PORT_E2:
-        case i960Pinout::PORT_F2:
-        case i960Pinout::PORT_G2:
-        case i960Pinout::PORT_H2:
-        case i960Pinout::PORT_J2:
-        case i960Pinout::PORT_K2:
-        case i960Pinout::PORT_L2:
-#endif
-            return 0b0000'0100;
-        case i960Pinout::PORT_A3:
-        case i960Pinout::PORT_B3:
-        case i960Pinout::PORT_C3:
-        case i960Pinout::PORT_D3:
-#ifdef CHIPSET_TYPE_MEGA
-        case i960Pinout::PORT_E3:
-        case i960Pinout::PORT_F3:
-        case i960Pinout::PORT_G3:
-        case i960Pinout::PORT_H3:
-        case i960Pinout::PORT_J3:
-        case i960Pinout::PORT_K3:
-        case i960Pinout::PORT_L3:
-#endif
-            return 0b0000'1000;
-        case i960Pinout::PORT_A4:
-        case i960Pinout::PORT_B4:
-        case i960Pinout::PORT_C4:
-        case i960Pinout::PORT_D4:
-#ifdef CHIPSET_TYPE_MEGA
-        case i960Pinout::PORT_E4:
-        case i960Pinout::PORT_F4:
-        case i960Pinout::PORT_G4:
-        case i960Pinout::PORT_H4:
-        case i960Pinout::PORT_J4:
-        case i960Pinout::PORT_K4:
-        case i960Pinout::PORT_L4:
-#endif
-            return 0b0001'0000;
-        case i960Pinout::PORT_A5:
-        case i960Pinout::PORT_B5:
-        case i960Pinout::PORT_C5:
-        case i960Pinout::PORT_D5:
-#ifdef CHIPSET_TYPE_MEGA
-        case i960Pinout::PORT_E5:
-        case i960Pinout::PORT_F5:
-        case i960Pinout::PORT_G5:
-        case i960Pinout::PORT_H5:
-        case i960Pinout::PORT_J5:
-        case i960Pinout::PORT_K5:
-        case i960Pinout::PORT_L5:
-#endif
-            return 0b0010'0000;
-        case i960Pinout::PORT_A6:
-        case i960Pinout::PORT_B6:
-        case i960Pinout::PORT_C6:
-        case i960Pinout::PORT_D6:
-#ifdef CHIPSET_TYPE_MEGA
-        case i960Pinout::PORT_E6:
-        case i960Pinout::PORT_F6:
-        case i960Pinout::PORT_H6:
-        case i960Pinout::PORT_J6:
-        case i960Pinout::PORT_K6:
-        case i960Pinout::PORT_L6:
-#endif
-            return 0b0100'0000;
-        case i960Pinout::PORT_A7:
-        case i960Pinout::PORT_B7:
-        case i960Pinout::PORT_C7:
-        case i960Pinout::PORT_D7:
-#ifdef CHIPSET_TYPE_MEGA
-        case i960Pinout::PORT_E7:
-        case i960Pinout::PORT_F7:
-        case i960Pinout::PORT_H7:
-        case i960Pinout::PORT_J7:
-        case i960Pinout::PORT_K7:
-        case i960Pinout::PORT_L7:
-#endif
-            return 0b1000'0000;
+#undef PIN
+#undef PORT
+#undef Entry
         default:
             return 0b1111'1111;
     }
 }
+static_assert(pinToPortBit<i960Pinout::PORT_A0>() == 0b0000'0001);
+static_assert(pinToPortBit<i960Pinout::PORT_A1>() == 0b0000'0010);
+static_assert(pinToPortBit<i960Pinout::PORT_A2>() == 0b0000'0100);
+static_assert(pinToPortBit<i960Pinout::PORT_A3>() == 0b0000'1000);
+static_assert(pinToPortBit<i960Pinout::PORT_A4>() == 0b0001'0000);
+static_assert(pinToPortBit<i960Pinout::PORT_A5>() == 0b0010'0000);
+static_assert(pinToPortBit<i960Pinout::PORT_A6>() == 0b0100'0000);
+static_assert(pinToPortBit<i960Pinout::PORT_A7>() == 0b1000'0000);
 /**
  * @brief Get the output port associated with a given pin. A compile-time error will be generated if the pin is not valid
  * @tparam pin The pin whose output port will be retrieved
