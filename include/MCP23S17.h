@@ -320,28 +320,26 @@ namespace MCP23S17 {
     template<HardwareDeviceAddress addr, uint16_t mask, typename Pin>
     inline void pinMode(decltype(INPUT) direction) {
         auto directionBits = readDirection<addr, Pin>().wholeValue_;
-        uint16_t pullupBits = 0;
+        uint16_t pullupBits = read16<addr, Registers::GPPU, Pin>().wholeValue_;
         switch (direction) {
             case OUTPUT:
-                directionBits |= mask;
+                directionBits &= ~mask;
+                pullupBits &= ~mask;
                 break;
             case INPUT_PULLUP:
-                pullupBits = read16<addr, Registers::GPPU, Pin>().wholeValue_;
                 // we need to activate the pullup
-                directionBits &= ~mask;
+                directionBits |= mask;
                 pullupBits |= mask;
-                write16<addr, Registers::GPPU, Pin>(pullupBits);
                 break;
             case INPUT:
-                pullupBits = read16<addr, Registers::GPPU, Pin>().wholeValue_;
                 pullupBits &= ~mask;
-                directionBits &= ~mask;
-                write16<addr, Registers::GPPU, Pin>(pullupBits);
+                directionBits |= mask;
                 break;
             default:
                 return;
         }
         writeDirection<addr, Pin>(directionBits);
+        write16<addr, Registers::GPPU, Pin>(pullupBits);
     }
     template<HardwareDeviceAddress addr, uint16_t mask, typename Pin>
     inline decltype(HIGH) digitalRead() noexcept {
@@ -370,11 +368,11 @@ namespace MCP23S17 {
     template<HardwareDeviceAddress addr, uint16_t mask, typename Pin>
     inline decltype(INPUT) getMode() noexcept {
         auto direction = readDirection<addr, Pin>();
-        if (direction.wholeValue_ & mask == 0) {
+        if ((direction.wholeValue_ & mask) == 0) {
             return OUTPUT;
         } else {
             auto pullups = read16<addr, Registers::GPPU, Pin>();
-            if (pullups.wholeValue_ & mask == 0) {
+            if ((pullups.wholeValue_ & mask) == 0) {
                 return INPUT;
             } else {
                 return INPUT_PULLUP;

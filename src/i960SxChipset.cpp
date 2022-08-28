@@ -205,10 +205,15 @@ setupPins() noexcept {
     // we want mirroring on the data lines interrupts
     // disable banking and activate byte mode (this should enable the special byte increment wrap around mode)
     static constexpr uint8_t initialIOCONValue_ = 0b0010'1000;
+    //static constexpr uint16_t currentGPIO4Status_ = 0b00000000'10010010;
+    //static constexpr uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
     ProcessorInterface::write8<ProcessorInterface::DataLines, ProcessorInterface::MCP23x17Registers::IOCON, false>(initialIOCONValue_);
     ProcessorInterface::write8<ProcessorInterface::Upper16Lines, ProcessorInterface::MCP23x17Registers::IOCON, false>(0b0100'1000);
     ProcessorInterface::write8<ProcessorInterface::Lower16Lines, ProcessorInterface::MCP23x17Registers::IOCON, false>(0b0100'1000);
     ProcessorInterface::write8<ProcessorInterface::MemoryCommitExtras, ProcessorInterface::MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+
+    //ProcessorInterface::writeDirection<ProcessorInterface::MemoryCommitExtras, false>(currentGPIO4Direction_);
+    //ProcessorInterface::writeGPIO16<ProcessorInterface::MemoryCommitExtras, false>(currentGPIO4Status_);
     // immediately pull the i960 into reset as soon as possible
     DigitalPin<i960Pinout::RESET960>::setup();
     DigitalPin<i960Pinout::INT960_0_>::setup();
@@ -217,15 +222,13 @@ setupPins() noexcept {
     DigitalPin<i960Pinout::INT960_3_>::setup();
     DigitalPin<i960Pinout::HOLD>::setup();
     DigitalPin<i960Pinout::HLDA>::setup();
-    DigitalPin<i960Pinout::LOCK_>::setup(OUTPUT);
+    DigitalPin<i960Pinout::LOCK_>::setup();
     DigitalPin<i960Pinout::LOCK_>::deassertPin();
     DigitalPin<i960Pinout::INT960_0_>::deassertPin();
     DigitalPin<i960Pinout::INT960_1>::deassertPin();
     DigitalPin<i960Pinout::INT960_2>::deassertPin();
     DigitalPin<i960Pinout::INT960_3_>::deassertPin();
     DigitalPin<i960Pinout::HOLD>::deassertPin();
-    MCP23S17::writeDirection<ProcessorInterface::Lower16Lines, DigitalPin<i960Pinout::GPIOSelect>>(0xFFFF);
-    MCP23S17::writeDirection<ProcessorInterface::Upper16Lines, DigitalPin<i960Pinout::GPIOSelect>>(0xFFFF);
     SPI.endTransaction();
 }
 void
@@ -267,8 +270,8 @@ void
 setup() {
     // seed random on startup to be on the safe side from analog pin A0, A1, A2, and A3
     randomSeed(analogRead(A0) + analogRead(A1) + analogRead(A2) + analogRead(A3));
-    setupPins();
     SPI.begin();
+    setupPins();
     ProcessorInterface::begin();
     startupSerial();
     setupChipset();
