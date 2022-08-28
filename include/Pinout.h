@@ -517,69 +517,105 @@ inline auto digitalRead() noexcept {
     return (getAssociatedInputPort<pin>() & getPinMask<pin>()) ? HIGH : LOW;
 }
 
-template<i960Pinout pin>
-struct DigitalPin {
-    DigitalPin() = delete;
-    ~DigitalPin() = delete;
-    DigitalPin(const DigitalPin&) = delete;
-    DigitalPin(DigitalPin&&) = delete;
-    DigitalPin& operator=(const DigitalPin&) = delete;
-    DigitalPin& operator=(DigitalPin&&) = delete;
-    static constexpr bool isInputPin() noexcept { return false; }
-    static constexpr bool isOutputPin() noexcept { return false; }
-    static constexpr bool getDirection() noexcept { return false; }
+template<i960Pinout pin, decltype(INPUT) defaultDirection>
+struct BackingDigitalPin {
+    BackingDigitalPin() = delete;
+    ~BackingDigitalPin() = delete;
+    BackingDigitalPin(const BackingDigitalPin&) = delete;
+    BackingDigitalPin(BackingDigitalPin&&) = delete;
+    BackingDigitalPin& operator=(const BackingDigitalPin&) = delete;
+    BackingDigitalPin& operator=(BackingDigitalPin&&) = delete;
+    static decltype(HIGH) read() noexcept { return digitalRead<pin>(); }
+    static void write(decltype(HIGH) value) noexcept { digitalWrite<pin>(value); }
+    template<decltype(HIGH) value>
+    static void write() noexcept  { digitalWrite<pin, value>(); }
+    static void configure(decltype(INPUT) mode = defaultDirection) {
+        direction_ = mode;
+        pinMode(pin, direction_);
+    }
+    static constexpr bool isInputPin() noexcept { return direction_ == INPUT || direction_ == INPUT_PULLUP; }
+    static constexpr bool isOutputPin() noexcept { return direction_ == OUTPUT; }
+    static constexpr decltype(INPUT) mode() noexcept { return direction_; }
     static constexpr auto getPin() noexcept { return pin; }
     static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }
+    template<decltype(HIGH) to = LOW>
+    [[gnu::always_inline]] static void pulse() {
+        ::pulse<pin, to>();
+    }
+private:
+    static inline decltype(INPUT) direction_ = defaultDirection;
 };
-
-#define DefOutputPin(pin, asserted, deasserted) \
-    template<> \
-    struct DigitalPin< pin > { \
-    static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-        DigitalPin() = delete; \
-        ~DigitalPin() = delete; \
-        DigitalPin(const DigitalPin&) = delete; \
-        DigitalPin(DigitalPin&&) = delete; \
-        DigitalPin& operator=(const DigitalPin&) = delete; \
-        DigitalPin& operator=(DigitalPin&&) = delete; \
-        static constexpr auto isInputPin() noexcept { return false; } \
-        static constexpr auto isOutputPin() noexcept { return true; } \
-        static constexpr auto getPin() noexcept { return pin; } \
-        static constexpr auto getDirection() noexcept { return OUTPUT; } \
-        static constexpr auto getAssertionState() noexcept { return asserted; } \
-        static constexpr auto getDeassertionState() noexcept { return deasserted; }      \
-        [[gnu::always_inline]] inline static void assertPin() noexcept { digitalWrite<pin,getAssertionState()>(); } \
-        [[gnu::always_inline]] inline static void deassertPin() noexcept { digitalWrite<pin,getDeassertionState()>(); } \
-        [[gnu::always_inline]] inline static void write(decltype(LOW) value) noexcept { digitalWrite<pin>(value); } \
-        static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }          \
-        template<decltype(LOW) switchTo = LOW>  \
-        [[gnu::always_inline]]                  \
-        inline static void pulse() noexcept {   \
-            ::pulse<pin, switchTo>();           \
-        }                                       \
+template<i960Pinout pin, decltype(HIGH) asserted, decltype(HIGH) deasserted, decltype(OUTPUT) expectedDirection>
+struct DigitalPin2 {
+    using BackingThing = BackingDigitalPin<pin, expectedDirection>;
+    DigitalPin2() = delete;
+    ~DigitalPin2() = delete;
+    DigitalPin2(const DigitalPin2&) = delete;
+    DigitalPin2(DigitalPin2&&) = delete;
+    DigitalPin2& operator=(const DigitalPin2&) = delete;
+    DigitalPin2& operator=(DigitalPin2&&) = delete;
+    static void setup(decltype(OUTPUT) direction = expectedDirection) noexcept { BackingThing::configure(direction); }
+    static constexpr auto isInputPin() noexcept { return BackingThing::isInputPin(); }
+    static constexpr auto isOutputPin() noexcept { return BackingThing::isOutputPin(); }
+    static constexpr auto getPin() noexcept { return BackingThing ::getPin(); }
+    static constexpr auto getDirection() noexcept { return BackingThing::mode(); }
+    static constexpr auto getAssertionState() noexcept { return asserted; }
+    static constexpr auto getDeassertionState() noexcept { return deasserted; }
+    static constexpr auto getExpectedDirection() noexcept { return expectedDirection; }
+    static constexpr auto valid() noexcept { return BackingThing::valid(); }
+    [[gnu::always_inline]] inline static void assertPin() noexcept { BackingThing::template write<getAssertionState()>(); }
+    [[gnu::always_inline]] inline static void deassertPin() noexcept { BackingThing::template write<getDeassertionState()>(); }
+    [[gnu::always_inline]] inline static void write(decltype(LOW) value) noexcept { BackingThing::write(value); }
+    template<decltype(LOW) switchTo = LOW>
+    [[gnu::always_inline]] inline static void pulse() noexcept {
+        BackingThing::template pulse<switchTo>();
     }
+    [[gnu::always_inline]] inline static auto read() noexcept { return BackingThing ::read(); }
+    [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); }
+    [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); }
+};
+template<i960Pinout pinout>
+struct DigitalPinDescription {
+    DigitalPinDescription() = delete;
+    ~DigitalPinDescription() = delete;
+    DigitalPinDescription(const DigitalPinDescription&) = delete;
+    DigitalPinDescription(DigitalPinDescription&&) = delete;
+    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete;
+    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;
+};
+template<i960Pinout pin>
+using DigitalPin = DigitalPin2<pin, DigitalPinDescription<pin>::Assert, DigitalPinDescription<pin>::Deassert, DigitalPinDescription<pin>::Direction>;
 #define DefInputPin(pin, asserted, deasserted) \
-    template<> \
-    struct DigitalPin< pin > { \
-        static_assert(asserted != deasserted, "Asserted and deasserted must not be equal!"); \
-        DigitalPin() = delete; \
-        ~DigitalPin() = delete; \
-        DigitalPin(const DigitalPin&) = delete; \
-        DigitalPin(DigitalPin&&) = delete; \
-        DigitalPin& operator=(const DigitalPin&) = delete; \
-        DigitalPin& operator=(DigitalPin&&) = delete; \
-        static constexpr auto isInputPin() noexcept { return true; } \
-        static constexpr auto isOutputPin() noexcept { return false; } \
-        static constexpr auto getPin() noexcept { return pin; } \
-        static constexpr auto getDirection() noexcept { return INPUT; } \
-        static constexpr auto getAssertionState() noexcept { return asserted; } \
-        static constexpr auto getDeassertionState() noexcept { return deasserted; } \
-        [[gnu::always_inline]] inline static auto read() noexcept { return digitalRead<pin>(); } \
-        [[gnu::always_inline]] inline static bool isAsserted() noexcept { return read() == getAssertionState(); } \
-        [[gnu::always_inline]] inline static bool isDeasserted() noexcept { return read() == getDeassertionState(); } \
-        static constexpr auto valid() noexcept { return isValidPin960_v<pin>; } \
+template<> struct DigitalPinDescription <pin> {   \
+    DigitalPinDescription() = delete;           \
+    ~DigitalPinDescription() = delete;          \
+    DigitalPinDescription(const DigitalPinDescription&) = delete; \
+    DigitalPinDescription(DigitalPinDescription&&) = delete;      \
+    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
+    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;      \
+    static constexpr auto Assert = asserted;    \
+    static constexpr auto Deassert = deasserted;\
+    static constexpr auto Direction = INPUT;   \
     }
+#define DefOutputPin(pin, asserted, deasserted) \
+    template<> struct DigitalPinDescription <pin> {   \
+    DigitalPinDescription() = delete;           \
+    ~DigitalPinDescription() = delete;          \
+    DigitalPinDescription(const DigitalPinDescription&) = delete; \
+    DigitalPinDescription(DigitalPinDescription&&) = delete;      \
+    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
+    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;      \
+    static constexpr auto Assert = asserted;    \
+    static constexpr auto Deassert = deasserted;\
+    static constexpr auto Direction = OUTPUT;   \
+    }
+
+
+
+
 #define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
+
+
 
 DefSPICSPin(i960Pinout::GPIOSelect);
 DefSPICSPin(i960Pinout::SD_EN);
