@@ -38,13 +38,7 @@ enum class i960Pinout : int {
 #define Entry(name) name,
 #define PIN(name, port, offset)  Entry(name)
 #define PORT(name, size)
-#ifdef __AVR_ATmega1284P__
-#include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-#include "Mega2560PinoutFull.def"
-#else
-#error "Target Chipset Hardware has no pinout defined"
-#endif
+#include "TargetMicrocontroller.def"
 #undef PORT
 #undef PIN
 #undef Entry
@@ -54,13 +48,7 @@ enum class i960Pinout : int {
 #define IOEXP(name, pin, direction, assert, deassert, index, offset) X(name, pin, direction, assert, deassert, 0, index, offset)
 #define SINK(name, pin, direction, assert, deassert) X(name, pin, direction, assert, deassert, 0, 0, 0)
 #define ALIAS(name, pin) X(name, pin, INPUT, LOW, HIGH, 0, 0, 0)
-#ifdef CHIPSET_TYPE1
-#include "Type1Pinout.def"
-#elif defined(CHIPSET_TYPE_MEGA)
-#include "TypeMegaPinout.def"
-#else
-#error "No table defined!"
-#endif
+#include "MappedPinouts.def"
 #undef GPIO
 #undef EBI
 #undef IOEXP
@@ -93,13 +81,7 @@ enum class PortId
 #define Entry(name)
 #define PIN(name, port, offset)
 #define PORT(name, size) Port ## name ,
-#ifdef __AVR_ATmega1284P__
-#include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-#include "Mega2560PinoutFull.def"
-#else
-#error "No port map defined!"
-#endif
+#include "TargetMicrocontroller.def"
 #undef PIN
 #undef PORT
 #undef Entry
@@ -111,13 +93,7 @@ template<i960Pinout pin>
 #define Entry(name)
 #define PIN(name, port, offset) case i960Pinout:: name : return PortId :: Port ## port ;
 #define PORT(name, size)
-#ifdef __AVR_ATmega1284P__
-#include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-                #include "Mega2560PinoutFull.def"
-#else
-#error "No port map defined!"
-#endif
+#include "TargetMicrocontroller.def"
 #undef PIN
 #undef PORT
 #undef Entry
@@ -133,13 +109,7 @@ template<i960Pinout pin>
 #define Entry(name)
 #define PIN(name, port, offset) case i960Pinout:: name : return static_cast<uint8_t>(1 << offset) ;
 #define PORT(name, size)
-#ifdef __AVR_ATmega1284P__
-#include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-        #include "Mega2560PinoutFull.def"
-#else
-#error "No port map defined!"
-#endif
+#include "TargetMicrocontroller.def"
 #undef PIN
 #undef PORT
 #undef Entry
@@ -168,13 +138,7 @@ template<i960Pinout pin>
 #define Entry(name)
 #define PIN(name, port, offset) case i960Pinout:: name : return PORT ## port ;
 #define PORT(name, size)
-#ifdef __AVR_ATmega1284P__
-#include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-        #include "Mega2560PinoutFull.def"
-#else
-#error "No port map defined!"
-#endif
+#include "TargetMicrocontroller.def"
 #undef PIN
 #undef PORT
 #undef Entry
@@ -196,13 +160,7 @@ template<i960Pinout pin>
 #define Entry(name)
 #define PIN(name, port, offset) case i960Pinout:: name : return DDR ## port ;
 #define PORT(name, size)
-#ifdef __AVR_ATmega1284P__
-#include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-        #include "Mega2560PinoutFull.def"
-#else
-#error "No port map defined!"
-#endif
+#include "TargetMicrocontroller.def"
 #undef PIN
 #undef PORT
 #undef Entry
@@ -224,13 +182,7 @@ template<i960Pinout pin>
 #define Entry(name)
 #define PIN(name, port, offset) case i960Pinout:: name : return PIN ## port ;
 #define PORT(name, size)
-#ifdef __AVR_ATmega1284P__
-#include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-        #include "Mega2560PinoutFull.def"
-#else
-#error "No port map defined!"
-#endif
+#include "TargetMicrocontroller.def"
 #undef PIN
 #undef PORT
 #undef Entry
@@ -251,13 +203,7 @@ template<i960Pinout pin>
 #define Entry(name)
 #define PIN(name, port, offset) case i960Pinout:: name : return _BV ( P ## port ## offset ) ;
 #define PORT(name, size)
-#ifdef __AVR_ATmega1284P__
-#include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-        #include "Mega2560PinoutFull.def"
-#else
-#error "No port map defined!"
-#endif
+#include "TargetMicrocontroller.def"
 #undef PIN
 #undef PORT
 #undef Entry
@@ -431,6 +377,69 @@ struct DigitalPinDescription {
     DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;
     static constexpr auto Pin = pinout;
 };
+#define ALIAS(name, pin_index)
+#define SINK(name, pin_index, direction, assert, deassert)
+#define EBI(name, pin_index, direction, assert, deassert, address, offset) \
+template<> \
+struct DigitalPinDescription< pin > { \
+        DigitalPinDescription() = delete; \
+        ~DigitalPinDescription() = delete; \
+        DigitalPinDescription(const DigitalPinDescription&) = delete; \
+        DigitalPinDescription(DigitalPinDescription&&) = delete; \
+        DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
+        DigitalPinDescription& operator=(DigitalPinDescription&&) = delete; \
+    static constexpr auto Assert = assert; \
+    static constexpr auto Deassert = deassert;\
+    static constexpr auto Direction = direction;\
+    static constexpr auto Pin =  pin;                                \
+    static constexpr auto Index = EBI::Register8BitIndex::Bit ## offset ;        \
+    static constexpr size_t Address = address; \
+    using BackingImplementation = EBI::BackingDigitalPin<Pin, Address, Index>;\
+};
+
+#define GPIO(name, pin_index, direction, assert, deassert) \
+template<> struct DigitalPinDescription < i960Pinout:: pin > {          \
+    DigitalPinDescription() = delete;           \
+    ~DigitalPinDescription() = delete;          \
+    DigitalPinDescription(const DigitalPinDescription&) = delete; \
+    DigitalPinDescription(DigitalPinDescription&&) = delete;      \
+    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
+    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;      \
+    static constexpr auto Assert = assert;                 \
+    static constexpr auto Deassert = deassert;             \
+    static constexpr auto Direction = direction;           \
+    static constexpr auto Pin = i960Pinout:: pin ;         \
+    using BackingImplementation = BackingDigitalPin<Pin, Direction>; \
+};
+
+#define IOEXP(name, pin_index, direction, assert, deassert, index, offset) \
+template<> \
+struct DigitalPinDescription < i960Pinout:: pin> {\
+    DigitalPinDescription() = delete; \
+    ~DigitalPinDescription() = delete; \
+    DigitalPinDescription(const DigitalPinDescription&) = delete;\
+    DigitalPinDescription(DigitalPinDescription&&) = delete;\
+    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
+    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete; \
+    static constexpr auto Assert = assert; \
+    static constexpr auto Deassert = deassert;\
+    static constexpr auto Direction = direction;\
+    static constexpr auto Pin =  i960Pinout:: pin;                                      \
+    static constexpr auto DeviceID  = MCP23S17::HardwareDeviceAddress::Device ## index; \
+    static constexpr auto Offset = MCP23S17::PinIndex::Pin ## offset; \
+    using CSPin = DigitalPin<i960Pinout::GPIOSelect>;                     \
+    using BackingImplementation = MCP23S17::BackingPin<Pin, DeviceID, Offset, Direction, CSPin>;\
+};
+
+
+#undef GPIO
+#undef SINK
+#undef ALIAS
+#undef EBI
+#undef IOEXP
+
+
+
 template<i960Pinout pin>
 using DigitalPin = DigitalPin2<DigitalPinDescription<pin>>;
 #define DefInputPin(pin, asserted, deasserted) \

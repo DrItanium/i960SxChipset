@@ -1,18 +1,42 @@
+/*
+i960SxChipset
+Copyright (c) 2020-2022, Joshua Scoggins
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 // Name, PinIndex, Direction, Asserted, Deasserted, Address,
 //#define X(name, pin_index, direction, assert, deassert, EBIAddress, Index, Offset)
 //#define GPIO(name, pin_index, direction, assert, deassert) X(name, pinindex, direction, assert, deassert, 0, 0, 0)
 //#define EBI(name, pin_index, direction, assert, deassert, address, offset) X(name, pinindex, direction, assert, deassert, address, 0, offset)
 //#define IOEXP(name, pin_index, direction, assert, deassert, index, offset) X(name, pinindex, direction, assert, deassert, 0, index, offset)
 GPIO(FAIL, PORT_B0, INPUT, HIGH, LOW)
-GPIO(CLOCK_OUT, PORT_B1, OUTPUT, HIGH, LOW)
+SINK(CLOCK_OUT, PORT_B1, OUTPUT, HIGH, LOW)
 GPIO(Ready, PORT_B2, OUTPUT, LOW, HIGH)
 GPIO(PSRAM_EN, PORT_B3, OUTPUT, LOW, HIGH)
 GPIO(GPIOSelect, PORT_B4, OUTPUT, LOW, HIGH)
-GPIO(MOSI, PORT_B5, OUTPUT, LOW, HIGH)
-GPIO(MISO, PORT_B6, INPUT, LOW, HIGH)
-GPIO(SCK, PORT_B7, OUTPUT, LOW, HIGH)
-GPIO(RX0, PORT_D0, INPUT, LOW, HIGH)
-GPIO(TX0, PORT_D1, OUTPUT, LOW, HIGH)
+SINK(MOSI, PORT_B5, OUTPUT, LOW, HIGH)
+SINK(MISO, PORT_B6, INPUT, LOW, HIGH)
+SINK(SCK, PORT_B7, OUTPUT, LOW, HIGH)
+SINK(RX0, PORT_D0, INPUT, LOW, HIGH)
+SINK(TX0, PORT_D1, OUTPUT, LOW, HIGH)
 GPIO(BLAST_, PORT_D2, INPUT, LOW, HIGH)
 GPIO(DEN_, PORT_D3, INPUT, LOW, HIGH)
 GPIO(W_R_, PORT_D4, INPUT, LOW, HIGH)
