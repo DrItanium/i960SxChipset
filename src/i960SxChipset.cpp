@@ -193,6 +193,39 @@ setupPins() noexcept {
               i960Pinout::IOEXP_INT1,
               i960Pinout::IOEXP_INT2,
               i960Pinout::IOEXP_INT3);
+    SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+    // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
+    // disabled. We can send out a single IOCON.HAEN enable message and all
+    // should receive it.
+    // so do a begin operation on all chips (0b000)
+    // set IOCON.HAEN on all chips
+    // mirror the interrupts for the upper 16-bits, for some reason, the upper most 8-bits are never marked as changed
+    // mirror the interrupts on the lower 16-bits to free up two pins at the cost of update accuracy
+    // we want two separate pins free for the data lines io expander
+    // we want mirroring on the data lines interrupts
+    // disable banking and activate byte mode (this should enable the special byte increment wrap around mode)
+    static constexpr uint8_t initialIOCONValue_ = 0b0010'1000;
+    ProcessorInterface::write8<ProcessorInterface::DataLines, ProcessorInterface::MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+    ProcessorInterface::write8<ProcessorInterface::Upper16Lines, ProcessorInterface::MCP23x17Registers::IOCON, false>(0b0100'1000);
+    ProcessorInterface::write8<ProcessorInterface::Lower16Lines, ProcessorInterface::MCP23x17Registers::IOCON, false>(0b0100'1000);
+    ProcessorInterface::write8<ProcessorInterface::MemoryCommitExtras, ProcessorInterface::MCP23x17Registers::IOCON, false>(initialIOCONValue_);
+    // immediately pull the i960 into reset as soon as possible
+    DigitalPin<i960Pinout::RESET960>::setup();
+    DigitalPin<i960Pinout::INT960_0_>::setup();
+    DigitalPin<i960Pinout::INT960_1>::setup();
+    DigitalPin<i960Pinout::INT960_2>::setup();
+    DigitalPin<i960Pinout::INT960_3_>::setup();
+    DigitalPin<i960Pinout::HOLD>::setup();
+    DigitalPin<i960Pinout::HLDA>::setup();
+    DigitalPin<i960Pinout::LOCK_>::setup();
+    DigitalPin<i960Pinout::INT960_0_>::deassertPin();
+    DigitalPin<i960Pinout::INT960_1>::deassertPin();
+    DigitalPin<i960Pinout::INT960_2>::deassertPin();
+    DigitalPin<i960Pinout::INT960_3_>::deassertPin();
+    DigitalPin<i960Pinout::HOLD>::deassertPin();
+    MCP23S17::writeDirection<ProcessorInterface::Lower16Lines, DigitalPin<i960Pinout::GPIOSelect>>(0xFFFF);
+    MCP23S17::writeDirection<ProcessorInterface::Upper16Lines, DigitalPin<i960Pinout::GPIOSelect>>(0xFFFF);
+    SPI.endTransaction();
 }
 void
 startupSerial() noexcept {
@@ -204,7 +237,7 @@ startupSerial() noexcept {
 void
 setupChipset() noexcept {
     // always do this first to make sure that we put the i960 into reset regardless of target
-    ProcessorInterface::putCPUIntoReset();
+    DigitalPin<i960Pinout::RESET960>::assertPin();
     // before we do anything else, configure as many pins as possible and then
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
@@ -226,7 +259,7 @@ setupChipset() noexcept {
     if constexpr (DisplayBootupInformation) {
         Serial.println(F("i960Sx chipset brought up fully!"));
     }
-    ProcessorInterface::pullCPUOutOfReset();
+    DigitalPin<i960Pinout::RESET960>::deassertPin();
 }
 // the setup routine runs once when you press reset:
 void

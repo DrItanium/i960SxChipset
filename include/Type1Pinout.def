@@ -31,6 +31,7 @@
     IOEXP_INT1 = PORT_A5,
     IOEXP_INT2 = PORT_A6,
     IOEXP_INT3 = PORT_A7,
+
     Data0 = IOEXP_PA0,
     Data1 = IOEXP_PA1,
     Data2 = IOEXP_PA2,

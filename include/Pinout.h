@@ -631,6 +631,34 @@ DefInputPin(i960Pinout::IOEXP_INT1, LOW, HIGH);
 DefInputPin(i960Pinout::IOEXP_INT2, LOW, HIGH);
 DefInputPin(i960Pinout::IOEXP_INT3, LOW, HIGH);
 
+#define DefIOExpanderPin(pin, assert, deassert, direction, device, index) \
+template<> \
+struct DigitalPinDescription < i960Pinout:: pin> {\
+    DigitalPinDescription() = delete; \
+    ~DigitalPinDescription() = delete; \
+    DigitalPinDescription(const DigitalPinDescription&) = delete;\
+    DigitalPinDescription(DigitalPinDescription&&) = delete;\
+    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
+    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete; \
+    static constexpr auto Assert = assert; \
+    static constexpr auto Deassert = deassert;\
+    static constexpr auto Direction = direction;\
+    static constexpr auto Pin =  i960Pinout:: pin;                                      \
+    static constexpr auto DeviceID  = MCP23S17::HardwareDeviceAddress::Device ## device ; \
+    static constexpr auto Offset = MCP23S17::PinIndex::Pin ## index; \
+    using CSPin = DigitalPin<i960Pinout::GPIOSelect>;                     \
+    using BackingImplementation = MCP23S17::BackingPin<Pin, DeviceID, Offset, Direction, CSPin>;\
+}
+
+DefIOExpanderPin(RESET960, LOW, HIGH, OUTPUT, 3, 0);
+DefIOExpanderPin(INT960_0_, LOW, HIGH, OUTPUT, 3, 1);
+DefIOExpanderPin(INT960_1, HIGH, LOW, OUTPUT, 3, 2);
+DefIOExpanderPin(INT960_2, HIGH, LOW, OUTPUT, 3, 3);
+DefIOExpanderPin(INT960_3_, LOW, HIGH, OUTPUT, 3, 4);
+DefIOExpanderPin(HOLD, HIGH, LOW, OUTPUT, 3, 5);
+DefIOExpanderPin(HLDA, HIGH, LOW, INPUT, 3, 6);
+DefIOExpanderPin(LOCK_, LOW, HIGH, INPUT, 3, 7);
+
 #ifdef CHIPSET_TYPE_MEGA
 union CTL0Register {
     static constexpr size_t Address = 0xA104;
@@ -846,6 +874,7 @@ template<typename ... Pins>
 inline void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
     (pinMode(pins, direction), ...);
 }
+
 
 /**
  * @brief RAII-class which asserts a pin (direction defined by the DigitalPin class for a given pin) on construction.

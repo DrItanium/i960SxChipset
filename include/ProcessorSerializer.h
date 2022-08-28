@@ -37,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
  */
-class ProcessorInterface final {
+struct ProcessorInterface final {
     using MCP23x17Registers = MCP23S17::Registers;
     using IOExpanderAddress = MCP23S17::HardwareDeviceAddress;
     static constexpr auto DataLines = IOExpanderAddress ::Device0;
@@ -209,23 +209,7 @@ public:
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
             pinMode(i960Pinout::GPIOSelect, OUTPUT);
             digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            // at bootup, the IOExpanders all respond to 0b000 because IOCON.HAEN is
-            // disabled. We can send out a single IOCON.HAEN enable message and all
-            // should receive it.
-            // so do a begin operation on all chips (0b000)
-            // set IOCON.HAEN on all chips
-            // mirror the interrupts for the upper 16-bits, for some reason, the upper most 8-bits are never marked as changed
-            // mirror the interrupts on the lower 16-bits to free up two pins at the cost of update accuracy
-            // we want two separate pins free for the data lines io expander
-            // we want mirroring on the data lines interrupts
-            // disable banking and activate byte mode (this should enable the special byte increment wrap around mode)
-            write8<DataLines, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
-            write8<Upper16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
-            write8<Lower16Lines, MCP23x17Registers::IOCON, false>(0b0100'1000);
-            write8<MemoryCommitExtras, MCP23x17Registers::IOCON, false>(initialIOCONValue_);
             // immediately pull the i960 into reset as soon as possible
-            writeDirection<MemoryCommitExtras, false>(currentGPIO4Direction_);
-            writeGPIO16<MemoryCommitExtras, false>(currentGPIO4Status_);
             // now all devices tied to this ~CS pin have separate addresses
             // make each of these inputs
             writeDirection<Lower16Lines, false>(0xFFFF);
@@ -453,58 +437,39 @@ private:
 #endif
         return 0;
     }
-private:
-    /**
-     * @brief Intelligently updates the GPIO pins attached to GPIO4 (or the fourth io expander). It will only communicate with the io expander if there is a legit change
-     * @param value The new gpio values
-     */
-    static void updateGPIO4Pins(uint16_t value) noexcept {
-        if (value != currentGPIO4Status_) {
-            // only update the io expander when needed
-            currentGPIO4Status_ = value;
-            writeGPIO16<MemoryCommitExtras>(currentGPIO4Status_);
-        }
-    }
 public:
-    /**
-     * @brief Put the i960 into reset
-     */
-    static void putCPUIntoReset() noexcept {
-        updateGPIO4Pins(currentGPIO4Status_ & 0xFFFE);
-    }
-    /**
-     * @brief Pull the i960 out of reset
-     */
-    static void pullCPUOutOfReset() noexcept {
-        updateGPIO4Pins(currentGPIO4Status_ | 1);
-    }
     /**
      * @brief Trigger the ~INT0 pin on the i960
      */
     static void triggerInt0() noexcept {
-        updateGPIO4Pins(currentGPIO4Status_ & 0xFFFD);
-        updateGPIO4Pins(currentGPIO4Status_ | 0b10);
+        DigitalPin<i960Pinout::INT960_0_>::pulse();
     }
     /**
      * @brief Trigger the INT1 pin on the i960
      */
     static void triggerInt1() noexcept {
-        updateGPIO4Pins(currentGPIO4Status_ | 0b100);
-        updateGPIO4Pins(currentGPIO4Status_ & 0xFFFB);
+        DigitalPin<i960Pinout::INT960_1>::pulse();
     }
     /**
      * @brief Trigger the INT2 pin on the i960
      */
     static void triggerInt2() noexcept {
-        updateGPIO4Pins(currentGPIO4Status_ | 0b1000);
-        updateGPIO4Pins(currentGPIO4Status_ & 0xFFF7);
+        DigitalPin<i960Pinout::INT960_2>::pulse();
     }
     /**
      * @brief Trigger the ~INT3 pin on the i960
      */
     static void triggerInt3() noexcept {
-        updateGPIO4Pins(currentGPIO4Status_ & 0xFFEF);
-        updateGPIO4Pins(currentGPIO4Status_ | 0b1'0000);
+        DigitalPin<i960Pinout::INT960_3_>::pulse();
+    }
+    static void holdBus() noexcept {
+        DigitalPin<i960Pinout::HOLD>::assertPin();
+    }
+    static void unholdBus() noexcept {
+        DigitalPin<i960Pinout::HOLD>::deassertPin();
+    }
+    static bool busHeld() noexcept {
+        return DigitalPin<i960Pinout::HLDA>::isAsserted();
     }
     /// @todo implement HOLD and LOCK functionality
 private:
@@ -1163,9 +1128,6 @@ private:
     static inline byte dataLinesDirection_ = 0;
     static inline byte cacheOffsetEntry_ = 0;
     static inline bool initialized_ = false;
-    static inline uint16_t currentGPIO4Status_ = 0b00000000'10010010;
-    static inline uint16_t currentGPIO4Direction_ = 0b00000000'00100000;
-    static constexpr uint8_t initialIOCONValue_ = 0b0010'1000;
     static inline SplitWord16 latchedDataInput_ {0};
     static inline bool isReadOperation_ = false;
 };
