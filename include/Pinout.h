@@ -27,6 +27,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ARDUINO_PINOUT_H
 #include <Arduino.h>
 #include "MCUPlatform.h"
+#include "MCP23S17.h"
+
 using Address = uint32_t;
 /**
  * @brief Sx Load/Store styles that the processor will request
@@ -553,10 +555,27 @@ struct BackingIOExpanderPin {
     BackingIOExpanderPin& operator=(const BackingIOExpanderPin&)  = delete;
     BackingIOExpanderPin(BackingIOExpanderPin&&)  = delete;
     BackingIOExpanderPin& operator=(BackingIOExpanderPin&&)  = delete;
+    static decltype(HIGH) read() noexcept { return digitalRead<pin>(); }
+    static void write(decltype(HIGH) value) noexcept { digitalWrite<pin>(value); }
+    template<decltype(HIGH) value>
+    static void write() noexcept  { digitalWrite<pin, value>(); }
+    static void configure(decltype(INPUT) mode = defaultDirection) {
+        direction_ = mode;
+        pinMode(pin, direction_);
+    }
+    static constexpr bool isInputPin() noexcept { return direction_ == INPUT || direction_ == INPUT_PULLUP; }
+    static constexpr bool isOutputPin() noexcept { return direction_ == OUTPUT; }
+    static constexpr decltype(INPUT) mode() noexcept { return direction_; }
+    static constexpr auto getPin() noexcept { return pin; }
+    static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }
+    template<decltype(HIGH) to = LOW>
+    [[gnu::always_inline]] static void pulse() {
+        ::pulse<pin, to>();
+    }
 };
 template<typename T>
 struct DigitalPin2 {
-    using BackingThing = T::BackingImplementation;
+    using BackingThing = typename T::BackingImplementation;
     DigitalPin2() = delete;
     ~DigitalPin2() = delete;
     DigitalPin2(const DigitalPin2&) = delete;

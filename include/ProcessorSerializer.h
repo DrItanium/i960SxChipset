@@ -32,49 +32,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "CacheDescription.h"
 #include "i960SxChipset.h"
 #include "CoreChipsetFeatures.h"
+#include "MCP23S17.h"
 
 /**
  * @brief Static class which is responsible for managing the interacting between the chipset and the i960 itself
  */
 class ProcessorInterface final {
-    /**
-     * @brief The set of registers exposed by the MCP23S17 in the default bank mode
-     */
-    enum class MCP23x17Registers : byte {
-        IODIRA = 0,
-        IODIRB,
-        IPOLA,
-        IPOLB,
-        GPINTENA,
-        GPINTENB,
-        DEFVALA,
-        DEFVALB,
-        INTCONA,
-        INTCONB,
-        _IOCONA,
-        _IOCONB,
-        GPPUA,
-        GPPUB,
-        INTFA,
-        INTFB,
-        INTCAPA,
-        INTCAPB,
-        GPIOA,
-        GPIOB,
-        OLATA,
-        OLATB,
-        OLAT = OLATA,
-        GPIO = GPIOA,
-        IOCON = _IOCONA,
-        IODIR = IODIRA,
-        INTCAP = INTCAPA,
-        INTF = INTFA,
-        GPPU = GPPUA,
-        INTCON = INTCONA,
-        DEFVAL = DEFVALA,
-        GPINTEN = GPINTENA,
-        IPOL = IPOLA,
-    };
+    using MCP23x17Registers = MCP23S17::Registers;
     /**
      * @brief The MCP23S17 devices connected to the single select pin. The MCP23S17 uses biased addressing to allow up to 8 io expanders to
      * use the same enable line. When hardware addressing is enabled, the address described via biasing is encoded into the spi data stream
@@ -94,10 +58,10 @@ class ProcessorInterface final {
         OtherDevice3 = 0b1110,
     };
     static consteval byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
-        return 0b0100'0001 | static_cast<uint8_t>(address);
+        return MCP23S17::generateReadOpcode(static_cast<uint8_t>(address), false);
     }
     static consteval byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
-        return 0b0100'0000 | static_cast<uint8_t>(address);
+        return MCP23S17::generateWriteOpcode(static_cast<uint8_t>(address), false);
     }
     /**
      * @brief Read a 16-bit value from a given io expander register
