@@ -39,28 +39,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 class ProcessorInterface final {
     using MCP23x17Registers = MCP23S17::Registers;
-    /**
-     * @brief The MCP23S17 devices connected to the single select pin. The MCP23S17 uses biased addressing to allow up to 8 io expanders to
-     * use the same enable line. When hardware addressing is enabled, the address described via biasing is encoded into the spi data stream
-     * in the first byte transmitted. This enum class is meant to make construction the read/write opcodes trivial
-     */
-    enum class IOExpanderAddress : byte {
-        DataLines = 0b0000,
-        Lower16Lines = 0b0010,
-        Upper16Lines = 0b0100,
-        /**
-         * @brief Any extra pins of the i960 that need to be managed external but are generally unimportant are connected to this io expander
-         */
-        MemoryCommitExtras = 0b0110,
-        OtherDevice0 = 0b1000,
-        OtherDevice1 = 0b1010,
-        OtherDevice2 = 0b1100,
-        OtherDevice3 = 0b1110,
-    };
-    static consteval byte generateReadOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
+    using IOExpanderAddress = MCP23S17::HardwareDeviceAddress;
+    static constexpr auto DataLines = IOExpanderAddress ::Device0;
+    static constexpr auto Lower16Lines = IOExpanderAddress ::Device1;
+    static constexpr auto Upper16Lines = IOExpanderAddress ::Device2;
+    static constexpr auto MemoryCommitExtras = IOExpanderAddress ::Device3;
+
+    static consteval byte generateReadOpcode(IOExpanderAddress address) noexcept {
         return MCP23S17::generateReadOpcode(static_cast<uint8_t>(address), false);
     }
-    static consteval byte generateWriteOpcode(ProcessorInterface::IOExpanderAddress address) noexcept {
+    static consteval byte generateWriteOpcode(IOExpanderAddress address) noexcept {
         return MCP23S17::generateWriteOpcode(static_cast<uint8_t>(address), false);
     }
     /**
@@ -75,34 +63,7 @@ class ProcessorInterface final {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        SplitWord16 output(0);
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(addr);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-
-        SPDR = static_cast<byte>(opcode) ;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        auto lower = SPDR;
-        SPDR = 0;
-        asm volatile("nop");
-        {
-            output.bytes[0] = lower;
-        }
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        output.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        auto output = MCP23S17::read16<addr, opcode, DigitalPin<i960Pinout::GPIOSelect>>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
@@ -211,16 +172,6 @@ class ProcessorInterface final {
         if constexpr (standalone) {
             SPI.endTransaction();
         }
-    }
-    /**
-     * @brief Read all 16 GPIOs of an io expander
-     * @tparam addr The io expander to read from
-     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
-     * @return The contents of the GPIO register pair
-     */
-    template<IOExpanderAddress addr, bool standalone = true>
-    static inline SplitWord16 readGPIO16() noexcept {
-        return read16<addr, MCP23x17Registers::GPIO, standalone>();
     }
     /**
      * @brief Set all 16 GPIOs of an io expander
