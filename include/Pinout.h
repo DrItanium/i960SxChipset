@@ -377,11 +377,13 @@ struct DigitalPinDescription {
     DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;
     static constexpr auto Pin = pinout;
 };
+template<i960Pinout pin>
+using DigitalPin = DigitalPin2<DigitalPinDescription<pin>>;
 #define ALIAS(name, pin_index)
 #define SINK(name, pin_index, direction, assert, deassert)
 #define EBI(name, pin_index, direction, assert, deassert, address, offset) \
 template<> \
-struct DigitalPinDescription< pin > { \
+struct DigitalPinDescription< i960Pinout:: name > { \
         DigitalPinDescription() = delete; \
         ~DigitalPinDescription() = delete; \
         DigitalPinDescription(const DigitalPinDescription&) = delete; \
@@ -391,14 +393,14 @@ struct DigitalPinDescription< pin > { \
     static constexpr auto Assert = assert; \
     static constexpr auto Deassert = deassert;\
     static constexpr auto Direction = direction;\
-    static constexpr auto Pin =  pin;                                \
+    static constexpr auto Pin =  i960Pinout:: name ; \
     static constexpr auto Index = EBI::Register8BitIndex::Bit ## offset ;        \
     static constexpr size_t Address = address; \
     using BackingImplementation = EBI::BackingDigitalPin<Pin, Address, Index>;\
 };
 
 #define GPIO(name, pin_index, direction, assert, deassert) \
-template<> struct DigitalPinDescription < i960Pinout:: pin > {          \
+template<> struct DigitalPinDescription < i960Pinout:: name > {          \
     DigitalPinDescription() = delete;           \
     ~DigitalPinDescription() = delete;          \
     DigitalPinDescription(const DigitalPinDescription&) = delete; \
@@ -408,13 +410,13 @@ template<> struct DigitalPinDescription < i960Pinout:: pin > {          \
     static constexpr auto Assert = assert;                 \
     static constexpr auto Deassert = deassert;             \
     static constexpr auto Direction = direction;           \
-    static constexpr auto Pin = i960Pinout:: pin ;         \
+    static constexpr auto Pin = i960Pinout:: name ;         \
     using BackingImplementation = BackingDigitalPin<Pin, Direction>; \
 };
 
 #define IOEXP(name, pin_index, direction, assert, deassert, index, offset) \
 template<> \
-struct DigitalPinDescription < i960Pinout:: pin> {\
+struct DigitalPinDescription < i960Pinout:: name > {\
     DigitalPinDescription() = delete; \
     ~DigitalPinDescription() = delete; \
     DigitalPinDescription(const DigitalPinDescription&) = delete;\
@@ -424,14 +426,14 @@ struct DigitalPinDescription < i960Pinout:: pin> {\
     static constexpr auto Assert = assert; \
     static constexpr auto Deassert = deassert;\
     static constexpr auto Direction = direction;\
-    static constexpr auto Pin =  i960Pinout:: pin;                                      \
+    static constexpr auto Pin =  i960Pinout:: name ;                                      \
     static constexpr auto DeviceID  = MCP23S17::HardwareDeviceAddress::Device ## index; \
     static constexpr auto Offset = MCP23S17::PinIndex::Pin ## offset; \
     using CSPin = DigitalPin<i960Pinout::GPIOSelect>;                     \
     using BackingImplementation = MCP23S17::BackingPin<Pin, DeviceID, Offset, Direction, CSPin>;\
 };
 
-
+#include "MappedPinouts.def"
 #undef GPIO
 #undef SINK
 #undef ALIAS
@@ -439,9 +441,7 @@ struct DigitalPinDescription < i960Pinout:: pin> {\
 #undef IOEXP
 
 
-
-template<i960Pinout pin>
-using DigitalPin = DigitalPin2<DigitalPinDescription<pin>>;
+#if 0
 #define DefInputPin(pin, asserted, deasserted) \
 template<> struct DigitalPinDescription <pin> {   \
     DigitalPinDescription() = delete;           \
@@ -609,7 +609,7 @@ DefIOExpanderPin(INT960_3_, LOW, HIGH, OUTPUT, 3, 4);
 #undef DefSPICSPin
 #undef DefInputPin
 #undef DefOutputPin
-
+#endif
 /**
  * @brief Template parameter pack version of pinMode which sets a block of pins to a given direction.
  * This is designed to cut down on typing as much as possible
