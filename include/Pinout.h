@@ -35,6 +35,9 @@ using Address = uint32_t;
  * @brief Sx Load/Store styles that the processor will request
  */
 enum class i960Pinout : int {
+#define Entry(name) name,
+#define PIN(name, port)  Entry(name)
+#define PORT(name, size)
 #ifdef __AVR_ATmega1284P__
 #include "1284pPinout.def"
 #elif defined(__AVR_ATmega2560__)
@@ -42,6 +45,9 @@ enum class i960Pinout : int {
 #else
 #error "Target Chipset Hardware has no pinout defined"
 #endif
+#undef PORT
+#undef PIN
+#undef Entry
 #define X(name, pin, direction, assert, deassert, addr, haddr, offset) name = pin,
 #define GPIO(name, pin, direction, assert, deassert) X(name, pin, direction, assert, deassert, 0, 0, 0)
 #define EBI(name, pin, direction, assert, deassert, address, offset) X(name, pin, direction, assert, deassert, address, 0, offset)
@@ -84,81 +90,37 @@ constexpr auto isValidPin960_v = static_cast<int>(pin) < static_cast<int>(i960Pi
 enum class PortId
 {
     None,
-    PortA,
-    PortB,
-    PortC,
-    PortD,
-#ifdef CHIPSET_TYPE_MEGA
-    PortE,
-    PortF,
-    PortG,
-    PortH,
-    PortJ,
-    PortK,
-    PortL,
+#define Entry(name)
+#define PIN(name, port)
+#define PORT(name, size) Port ## name ,
+#ifdef __AVR_ATmega1284P__
+#include "1284pPinout.def"
+#elif defined(__AVR_ATmega2560__)
+#include "Mega2560PinoutFull.def"
+#else
+#error "No port map defined!"
 #endif
-    // more ports go here
+#undef PIN
+#undef PORT
+#undef Entry
 };
 template<i960Pinout pin>
 [[gnu::always_inline]]
 [[nodiscard]] constexpr PortId portFromPin() noexcept {
     switch (pin) {
-        case i960Pinout::PORT_A0:
-        case i960Pinout::PORT_A1:
-        case i960Pinout::PORT_A2:
-        case i960Pinout::PORT_A3:
-        case i960Pinout::PORT_A4:
-        case i960Pinout::PORT_A5:
-        case i960Pinout::PORT_A6:
-        case i960Pinout::PORT_A7:
-            return PortId::PortA;
-        case i960Pinout::PORT_B0:
-        case i960Pinout::PORT_B1:
-        case i960Pinout::PORT_B2:
-        case i960Pinout::PORT_B3:
-        case i960Pinout::PORT_B4:
-        case i960Pinout::PORT_B5:
-        case i960Pinout::PORT_B6:
-        case i960Pinout::PORT_B7:
-            return PortId::PortB;
-        case i960Pinout::PORT_C0:
-        case i960Pinout::PORT_C1:
-        case i960Pinout::PORT_C2:
-        case i960Pinout::PORT_C3:
-        case i960Pinout::PORT_C4:
-        case i960Pinout::PORT_C5:
-        case i960Pinout::PORT_C6:
-        case i960Pinout::PORT_C7:
-            return PortId::PortC;
-        case i960Pinout::PORT_D0:
-        case i960Pinout::PORT_D1:
-        case i960Pinout::PORT_D2:
-        case i960Pinout::PORT_D3:
-        case i960Pinout::PORT_D4:
-        case i960Pinout::PORT_D5:
-        case i960Pinout::PORT_D6:
-        case i960Pinout::PORT_D7:
-            return PortId::PortD;
-#ifdef CHIPSET_TYPE_MEGA
-#define X(letter, index) case i960Pinout:: PORT_ ## letter ## index
-#define Y(letter) X(letter, 0): X(letter, 1): X(letter, 2): X(letter, 3): X(letter, 4): X(letter, 5): X(letter, 6): X(letter, 7)
-            Y(E): return PortId::PortE;
-            Y(F): return PortId::PortF;
-            Y(H): return PortId::PortH;
-            Y(J): return PortId::PortJ;
-            Y(K): return PortId::PortK;
-            Y(L): return PortId::PortL;
-#undef Y
-#undef X
-        case i960Pinout::PORT_G0:
-        case i960Pinout::PORT_G1:
-        case i960Pinout::PORT_G2:
-        case i960Pinout::PORT_G3:
-        case i960Pinout::PORT_G4:
-        case i960Pinout::PORT_G5:
-            return PortId::PortG;
+#define Entry(name)
+#define PIN(name, port) case i960Pinout:: name : return PortId :: Port ## port ;
+#define PORT(name, size)
+#ifdef __AVR_ATmega1284P__
+#include "1284pPinout.def"
+#elif defined(__AVR_ATmega2560__)
+                #include "Mega2560PinoutFull.def"
+#else
+#error "No port map defined!"
 #endif
-
+#undef PIN
+#undef PORT
+#undef Entry
         default:
             return PortId::None;
     }
