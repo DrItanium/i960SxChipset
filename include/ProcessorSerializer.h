@@ -288,7 +288,8 @@ public:
     [[nodiscard]] static auto getStyle() noexcept {
 #ifdef CHIPSET_TYPE_MEGA
         /// @todo properly implement
-        return static_cast<LoadStoreStyle>(getCTL0().bits.byteEnable);
+        //return static_cast<LoadStoreStyle>(getCTL0().bits.byteEnable);
+        return LoadStoreStyle::Full16;
 #else
         static constexpr auto Mask = pinToPortBit<i960Pinout::BE0>() | pinToPortBit<i960Pinout::BE1>();
         /// @todo figure out how to auto compute the shift amount
@@ -625,10 +626,10 @@ private:
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
 #else
-
-        AddressRegister contents(getAddressRegister().full);
-        address_.wholeValue_ = (contents.full & 0xFFFF'FFFE);
-        isReadOperation_ = contents.wr_ == 0;
+        /// @todo implement
+        //AddressRegister contents(getAddressRegister().full);
+        //address_.wholeValue_ = (contents.full & 0xFFFF'FFFE);
+        //isReadOperation_ = contents.wr_ == 0;
 #endif
 
     }
