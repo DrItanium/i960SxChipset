@@ -545,23 +545,32 @@ struct BackingDigitalPin {
 private:
     static inline decltype(INPUT) direction_ = defaultDirection;
 };
-template<i960Pinout pin, decltype(HIGH) asserted, decltype(HIGH) deasserted, decltype(OUTPUT) expectedDirection>
+template<i960Pinout pin, decltype(INPUT) defaultDirection, byte index>
+struct BackingIOExpanderPin {
+    BackingIOExpanderPin() = delete;
+    ~BackingIOExpanderPin() = delete;
+    BackingIOExpanderPin(const BackingIOExpanderPin&)  = delete;
+    BackingIOExpanderPin& operator=(const BackingIOExpanderPin&)  = delete;
+    BackingIOExpanderPin(BackingIOExpanderPin&&)  = delete;
+    BackingIOExpanderPin& operator=(BackingIOExpanderPin&&)  = delete;
+};
+template<typename T>
 struct DigitalPin2 {
-    using BackingThing = BackingDigitalPin<pin, expectedDirection>;
+    using BackingThing = T::BackingImplementation;
     DigitalPin2() = delete;
     ~DigitalPin2() = delete;
     DigitalPin2(const DigitalPin2&) = delete;
     DigitalPin2(DigitalPin2&&) = delete;
     DigitalPin2& operator=(const DigitalPin2&) = delete;
     DigitalPin2& operator=(DigitalPin2&&) = delete;
-    static void setup(decltype(OUTPUT) direction = expectedDirection) noexcept { BackingThing::configure(direction); }
+    static void setup(decltype(OUTPUT) direction = T::Direction) noexcept { BackingThing::configure(direction); }
     static constexpr auto isInputPin() noexcept { return BackingThing::isInputPin(); }
     static constexpr auto isOutputPin() noexcept { return BackingThing::isOutputPin(); }
     static constexpr auto getPin() noexcept { return BackingThing ::getPin(); }
     static constexpr auto getDirection() noexcept { return BackingThing::mode(); }
-    static constexpr auto getAssertionState() noexcept { return asserted; }
-    static constexpr auto getDeassertionState() noexcept { return deasserted; }
-    static constexpr auto getExpectedDirection() noexcept { return expectedDirection; }
+    static constexpr auto getAssertionState() noexcept { return T::Assert; }
+    static constexpr auto getDeassertionState() noexcept { return T::Deassert; }
+    static constexpr auto getExpectedDirection() noexcept { return T::Direction; }
     static constexpr auto valid() noexcept { return BackingThing::valid(); }
     [[gnu::always_inline]] inline static void assertPin() noexcept { BackingThing::template write<getAssertionState()>(); }
     [[gnu::always_inline]] inline static void deassertPin() noexcept { BackingThing::template write<getDeassertionState()>(); }
@@ -582,9 +591,10 @@ struct DigitalPinDescription {
     DigitalPinDescription(DigitalPinDescription&&) = delete;
     DigitalPinDescription& operator=(const DigitalPinDescription&) = delete;
     DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;
+    static constexpr auto Pin = pinout;
 };
 template<i960Pinout pin>
-using DigitalPin = DigitalPin2<pin, DigitalPinDescription<pin>::Assert, DigitalPinDescription<pin>::Deassert, DigitalPinDescription<pin>::Direction>;
+using DigitalPin = DigitalPin2<DigitalPinDescription<pin>>;
 #define DefInputPin(pin, asserted, deasserted) \
 template<> struct DigitalPinDescription <pin> {   \
     DigitalPinDescription() = delete;           \
@@ -596,6 +606,8 @@ template<> struct DigitalPinDescription <pin> {   \
     static constexpr auto Assert = asserted;    \
     static constexpr auto Deassert = deasserted;\
     static constexpr auto Direction = INPUT;   \
+    static constexpr auto Pin = pin;           \
+    using BackingImplementation = BackingDigitalPin<Pin, Direction>;                                            \
     }
 #define DefOutputPin(pin, asserted, deasserted) \
     template<> struct DigitalPinDescription <pin> {   \
@@ -608,9 +620,9 @@ template<> struct DigitalPinDescription <pin> {   \
     static constexpr auto Assert = asserted;    \
     static constexpr auto Deassert = deasserted;\
     static constexpr auto Direction = OUTPUT;   \
+    static constexpr auto Pin = pin; \
+    using BackingImplementation = BackingDigitalPin<Pin, Direction>;                                            \
     }
-
-
 
 
 #define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
