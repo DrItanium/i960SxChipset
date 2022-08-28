@@ -165,33 +165,19 @@ template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedOutputPort() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-#define X(id, number) case i960Pinout:: PORT_ ## id ## number
-#define Y(id) \
-    X(id, 0): \
-    X(id, 1): \
-    X(id, 2): \
-    X(id, 3): \
-    X(id, 4): \
-    X(id, 5): \
-    X(id, 6): \
-    X(id, 7)
-        Y(A): return PORTA;
-        Y(C): return PORTC;
-        Y(D): return PORTD;
-        Y(B): return PORTB;
-#ifdef CHIPSET_TYPE_MEGA
-        Y(E): return PORTE;
-        Y(F): return PORTF;
-        //Y(G): return PORTG;
-        Y(H): return PORTH;
-        Y(J): return PORTJ;
-        Y(K): return PORTK;
-        Y(L): return PORTL;
-        X(G, 0): X(G, 1): X(G, 2): X(G, 3): X(G, 4): X(G, 5): return PORTG;
+#define Entry(name)
+#define PIN(name, port, offset) case i960Pinout:: name : return PORT ## port ;
+#define PORT(name, size)
+#ifdef __AVR_ATmega1284P__
+#include "1284pPinout.def"
+#elif defined(__AVR_ATmega2560__)
+        #include "Mega2560PinoutFull.def"
+#else
+#error "No port map defined!"
 #endif
-#undef Y
-#undef X
-
+#undef PIN
+#undef PORT
+#undef Entry
         default:
             return PORTA;
     }
@@ -207,32 +193,19 @@ template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedDirectionPort() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-#define X(id, number) case i960Pinout:: PORT_ ## id ## number
-#define Y(id) \
-    X(id, 0): \
-    X(id, 1): \
-    X(id, 2): \
-    X(id, 3): \
-    X(id, 4): \
-    X(id, 5): \
-    X(id, 6): \
-    X(id, 7)
-        Y(A): return DDRA;
-        Y(C): return DDRC;
-        Y(D): return DDRD;
-        Y(B): return DDRB;
-#ifdef CHIPSET_TYPE_MEGA
-        Y(E): return DDRE;
-        Y(F): return DDRF;
-        Y(H): return DDRH;
-        Y(J): return DDRJ;
-        Y(K): return DDRK;
-        Y(L): return DDRL;
-        X(G, 0): X(G, 1): X(G, 2): X(G, 3): X(G, 4): X(G, 5): return DDRG;
+#define Entry(name)
+#define PIN(name, port, offset) case i960Pinout:: name : return DDR ## port ;
+#define PORT(name, size)
+#ifdef __AVR_ATmega1284P__
+#include "1284pPinout.def"
+#elif defined(__AVR_ATmega2560__)
+        #include "Mega2560PinoutFull.def"
+#else
+#error "No port map defined!"
 #endif
-#undef Y
-#undef X
-
+#undef PIN
+#undef PORT
+#undef Entry
         default:
             return DDRA;
     }
@@ -248,31 +221,19 @@ template<i960Pinout pin>
 [[nodiscard]] inline volatile unsigned char& getAssociatedInputPort() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-#define X(id, number) case i960Pinout:: PORT_ ## id ## number
-#define Y(id) \
-    X(id, 0): \
-    X(id, 1): \
-    X(id, 2): \
-    X(id, 3): \
-    X(id, 4): \
-    X(id, 5): \
-    X(id, 6): \
-    X(id, 7)
-        Y(A): return PINA;
-        Y(C): return PINC;
-        Y(D): return PIND;
-        Y(B): return PINB;
-#ifdef CHIPSET_TYPE_MEGA
-        Y(E): return PINE;
-        Y(F): return PINF;
-        X(G, 0): X(G, 1): X(G, 2): X(G, 3): X(G, 4): X(G, 5): return PING;
-        Y(H): return PINH;
-        Y(J): return PINJ;
-        Y(K): return PINK;
-        Y(L): return PINL;
+#define Entry(name)
+#define PIN(name, port, offset) case i960Pinout:: name : return PIN ## port ;
+#define PORT(name, size)
+#ifdef __AVR_ATmega1284P__
+#include "1284pPinout.def"
+#elif defined(__AVR_ATmega2560__)
+        #include "Mega2560PinoutFull.def"
+#else
+#error "No port map defined!"
 #endif
-#undef Y
-#undef X
+#undef PIN
+#undef PORT
+#undef Entry
         default:
             return PINA;
     }
@@ -287,36 +248,19 @@ template<i960Pinout pin>
 [[nodiscard]] constexpr decltype(auto) getPinMask() noexcept {
     static_assert(isValidPin960_v<pin>, "INVALID PIN PROVIDED");
     switch (pin) {
-#define X(id, number) case i960Pinout:: PORT_ ## id ## number : return _BV ( P ## id ## number )
-#define Y(id) \
-    X(id, 0); \
-    X(id, 1); \
-    X(id, 2); \
-    X(id, 3); \
-    X(id, 4); \
-    X(id, 5); \
-    X(id, 6); \
-    X(id, 7)
-        Y(A);
-        Y(C);
-        Y(D);
-        Y(B);
-#ifdef CHIPSET_TYPE_MEGA
-        Y(E);
-        Y(F);
-        X(G, 0);
-        X(G, 1);
-        X(G, 2);
-        X(G, 3);
-        X(G, 4);
-        X(G, 5);
-        Y(H);
-        Y(J);
-        Y(K);
-        Y(L);
+#define Entry(name)
+#define PIN(name, port, offset) case i960Pinout:: name : return _BV ( P ## port ## offset ) ;
+#define PORT(name, size)
+#ifdef __AVR_ATmega1284P__
+#include "1284pPinout.def"
+#elif defined(__AVR_ATmega2560__)
+        #include "Mega2560PinoutFull.def"
+#else
+#error "No port map defined!"
 #endif
-#undef Y
-#undef X
+#undef PIN
+#undef PORT
+#undef Entry
         default:
             return 0xFF;
     }
