@@ -217,7 +217,8 @@ setupPins() noexcept {
     DigitalPin<i960Pinout::INT960_3_>::setup();
     DigitalPin<i960Pinout::HOLD>::setup();
     DigitalPin<i960Pinout::HLDA>::setup();
-    DigitalPin<i960Pinout::LOCK_>::setup();
+    DigitalPin<i960Pinout::LOCK_>::setup(OUTPUT);
+    DigitalPin<i960Pinout::LOCK_>::deassertPin();
     DigitalPin<i960Pinout::INT960_0_>::deassertPin();
     DigitalPin<i960Pinout::INT960_1>::deassertPin();
     DigitalPin<i960Pinout::INT960_2>::deassertPin();
