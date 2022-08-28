@@ -81,27 +81,11 @@ class ProcessorInterface final {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateReadOpcode(addr);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(opcode);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        auto result = MCP23S17::read8<addr, opcode, DigitalPin<i960Pinout::GPIOSelect>>();
         if constexpr (standalone) {
             SPI.endTransaction();
         }
-        return SPDR;
+        return result;
     }
     /**
      * @brief Write a 16-bit value to a register pair on a target io expander
@@ -112,30 +96,10 @@ class ProcessorInterface final {
      */
     template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
     static void write16(uint16_t value) noexcept {
-        SplitWord16 valueDiv(value);
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateWriteOpcode(addr);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(opcode);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = valueDiv.bytes[0];
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = valueDiv.bytes[1];
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        MCP23S17::write16<addr, opcode, DigitalPin<i960Pinout::GPIOSelect>>(value);
         if constexpr (standalone) {
             SPI.endTransaction();
         }
@@ -152,23 +116,7 @@ class ProcessorInterface final {
         if constexpr (standalone) {
             SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         }
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = generateWriteOpcode(addr);
-        /*
-         * The following NOP introduces a small delay that can prevent the wait
-         * loop form iterating when running at the maximum speed. This gives
-         * about 10% more speed, even if it seems counter-intuitive. At lower
-         * speeds it is unnoticed.
-         */
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = static_cast<byte>(opcode);
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        SPDR = value;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))) ; // wait
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        MCP23S17::write8<addr, opcode, DigitalPin<i960Pinout::GPIOSelect>>(value);
         if constexpr (standalone) {
             SPI.endTransaction();
         }

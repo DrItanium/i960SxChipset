@@ -47,8 +47,8 @@ namespace MCP23S17 {
         DEFVALB,
         INTCONA,
         INTCONB,
-        _IOCONA,
-        _IOCONB,
+        IOCONA_,
+        IOCONB_,
         GPPUA,
         GPPUB,
         INTFA,
@@ -61,7 +61,7 @@ namespace MCP23S17 {
         OLATB,
         OLAT = OLATA,
         GPIO = GPIOA,
-        IOCON = _IOCONA,
+        IOCON = IOCONA_,
         IODIR = IODIRA,
         INTCAP = INTCAPA,
         INTF = INTFA,
@@ -164,23 +164,81 @@ namespace MCP23S17 {
         Pin::deassertPin();
         return output;
     }
-    template<Registers opcode>
-    inline void write8(byte pin, byte index, byte value) noexcept {
+    template<HardwareDeviceAddress addr, Registers opcode>
+    inline void write8(byte pin, byte value) noexcept {
         digitalWrite(pin, LOW);
-        SPI.transfer(generateWriteOpcode(index, true));
-        SPI.transfer(static_cast<uint8_t>(opcode));
-        SPI.transfer(value);
+        SPDR = generateWriteOpcode(addr);
+        /*
+         * The following NOP introduces a small delay that can prevent the wait
+         * loop form iterating when running at the maximum speed. This gives
+         * about 10% more speed, even if it seems counter-intuitive. At lower
+         * speeds it is unnoticed.
+         */
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(opcode);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = value;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
         digitalWrite(pin, HIGH);
     }
-    template<Registers opcode>
-    inline void write16(byte pin, byte index, uint16_t v) noexcept {
-        SplitWord16 value(v);
+    template<HardwareDeviceAddress addr, Registers opcode, typename Pin>
+    inline void write8(byte value) noexcept {
+        Pin::assertPin();
+        SPDR = generateWriteOpcode(addr);
+        /*
+         * The following NOP introduces a small delay that can prevent the wait
+         * loop form iterating when running at the maximum speed. This gives
+         * about 10% more speed, even if it seems counter-intuitive. At lower
+         * speeds it is unnoticed.
+         */
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(opcode);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = value;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        Pin::deassertPin();
+    }
+    template<HardwareDeviceAddress addr, Registers opcode>
+    inline void write16(byte pin, uint16_t v) noexcept {
+        SplitWord16 valueDiv(v);
         digitalWrite(pin, LOW);
-        SPI.transfer(generateReadOpcode(index, true));
-        SPI.transfer(static_cast<uint8_t>(opcode));
-        SPI.transfer(value.bytes[0]);
-        SPI.transfer(value.bytes[1]);
+        SPDR = generateWriteOpcode(addr);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(opcode);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = valueDiv.bytes[0];
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = valueDiv.bytes[1];
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
         digitalWrite(pin, HIGH);
+    }
+    template<HardwareDeviceAddress addr, Registers opcode, typename Pin>
+    inline void write16(uint16_t v) noexcept {
+        SplitWord16 valueDiv(v);
+        Pin::assertPin();
+        SPDR = generateWriteOpcode(addr);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = static_cast<byte>(opcode);
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = valueDiv.bytes[0];
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        SPDR = valueDiv.bytes[1];
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        Pin::deassertPin();
     }
     /**
      * @brief Read all 16 GPIOs of an io expander
@@ -201,8 +259,13 @@ namespace MCP23S17 {
      * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
      * @param value The value to set the gpios to
      */
-    inline void writeGPIO16(byte pin, byte index, uint16_t value) noexcept {
-        write16<Registers::GPIO>(pin, index, value);
+     template<HardwareDeviceAddress addr>
+    inline void writeGPIO16(byte pin, uint16_t value) noexcept {
+        write16<addr, Registers::GPIO>(pin, value);
+    }
+    template<HardwareDeviceAddress addr, typename Pin>
+    inline void writeGPIO16(uint16_t value) noexcept {
+        write16<addr, Registers::GPIO, Pin>(value);
     }
     /**
      * @brief Describe the directions of all 16 pins on a given io expander.
@@ -210,8 +273,13 @@ namespace MCP23S17 {
      * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
      * @param value The 16-bit direction mask to write to the io expander (a 1 means input, a 0 means output)
      */
-    inline void writeDirection(byte pin, byte index, uint16_t value) noexcept {
-        write16<Registers::IODIR>(pin, index, value) ;
+    template<HardwareDeviceAddress addr>
+    inline void writeDirection(byte pin, uint16_t value) noexcept {
+        write16<addr, Registers::IODIR>(pin, value) ;
+    }
+    template<HardwareDeviceAddress addr, typename Pin>
+    inline void writeDirection(uint16_t value) noexcept {
+        write16<addr, Registers::IODIR, Pin>(value) ;
     }
     /**
      * @brief Get all 16 direction bits for the given io expander
