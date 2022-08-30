@@ -112,6 +112,51 @@ private:
                 1, 1,
                 0, 0,
     };
+};
 
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes>
+class FourWayRoundRobinCacheWay {
+public:
+    static constexpr auto NumberOfWays = 4;
+    static constexpr auto WayMask = NumberOfWays - 1;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
+    static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
+public:
+    /**
+     * @brief Fill the cache up ahead of time to start off with given a base address, all entries are reset (invalid or not)
+     * @param baseAddress the base address to use as the cache offset
+     */
+    void
+    precache(TaggedAddress baseAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i)   {
+            // don't even worry if it was populated or not, just make sure we populate it
+            ways_[i].reset(TaggedAddress{i, baseAddress.getTagIndex()});
+        }
+    }
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        // find the inverse of the most recently used
+        for (byte i = 0; i < NumberOfWays; ++i) {
+            if (ways_[i].addressesMatch(theAddress)) {
+                return ways_[i];
+            }
+        }
+        auto index = count_;
+        ways_[index].reset(theAddress);
+        ++count_;
+        return ways_[index];
+    }
+    void clear() noexcept {
+        for (auto& way : ways_) {
+            way.clear();
+        }
+        count_ = 0;
+    }
+    static void begin() noexcept {}
+public:
+    [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
+private:
+    CacheEntry ways_[NumberOfWays];
+    byte count_ : 2 = 0;
 };
 #endif //SXCHIPSET_FOURWAYPSEUDOLRUENTRY_H
