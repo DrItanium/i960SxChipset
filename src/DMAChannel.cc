@@ -26,16 +26,43 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 void
 DMAChannel::claim(uint32_t src, uint32_t dest, uint32_t count, bool advanceSrc, bool advanceDest) noexcept {
-
+    if (free_) {
+        free_ = false;
+        finished_ = false;
+        paused_ = false;
+        advanceSrc_ = advanceSrc;
+        advanceDest_ = advanceDest;
+        srcAddress_ = src;
+        destAddress_ = dest;
+        count_ = count;
+    }
 }
 
 void
 DMAChannel::step() noexcept {
-
+    if (!free_ && !paused_) {
+        // load a byte or word from one area in memory and then store it in
+        // another area.
+        //
+        // In the case of the 1284p, this is done through SPI and various other
+        // shenanigans, thus we will probably need to create a common address
+        // interface instead of what we do now where we treat cached and non
+        // cached memory differently
+        //
+    }
 }
 
 void
 DMAChannel::cancel() noexcept {
+    if (!free_) {
+        free_ = true;
+        finished_ = false;
+        advanceSrc_ = false;
+        advanceDest_ = false;
+        srcAddress_ = 0;
+        destAddress_ = 0;
+        count_ = 0;
+    }
 }
 
 void
