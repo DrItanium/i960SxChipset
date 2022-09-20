@@ -36,6 +36,7 @@ class DMAChannel {
         void cancel() noexcept;
         void pause() noexcept;
         void unpause() noexcept;
+        void begin() noexcept;
         [[nodiscard]] constexpr bool paused() const noexcept { return paused_; }
         [[nodiscard]] constexpr bool finished() const noexcept { return finished_; }
         [[nodiscard]] constexpr auto getSourceAddress() const noexcept { return srcAddress_; }

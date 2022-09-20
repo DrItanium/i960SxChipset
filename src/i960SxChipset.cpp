@@ -45,6 +45,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Adafruit_BluefruitLE_SPI.h>
 #endif
 #include <GD2.h>
+#include "DMAChannel.h"
+
+DMAChannel channels[8];
 
 
 template<bool inDebugMode, bool useInterrupts>
@@ -259,6 +262,15 @@ setupChipset() noexcept {
     }
     BackingMemoryStorage_t::begin();
     installBootImage();
+    if constexpr (DisplayBootupInformation) {
+        Serial.println(F("DMA Bringup..."));
+    }
+    for (auto& a : channels) {
+        a.begin();
+    }
+    if constexpr (DisplayBootupInformation) {
+        Serial.println(F("DMA UP..."));
+    }
     delay(100);
     if constexpr (DisplayBootupInformation) {
         Serial.println(F("i960Sx chipset brought up fully!"));
@@ -353,7 +365,11 @@ void loop() {
     ProcessorInterface::newDataCycle<CompileInAddressDebuggingSupport, UseIOExpanderAddressLineInterrupts>();
 
     } else {
-        // do a DMA transfer step
+        // do a DMA transfer step, transfer a byte or something close to it on
+        // each channel. We want to keep the number of operations small.
+        for (auto& a : channels) {
+            a.step();
+        }
     }
 }
 

@@ -22,39 +22,6 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
-//#ifndef SXCHIPSET_DMACHANNEL_H
-//#define SXCHIPSET_DMACHANNEL_H
-//#include <Arduino.h>
-///**
-// * @brief Provides a DMA transfer channel accessible by the i960
-// */
-//class DMAChannel {
-//    public:
-//        void claim(uint32_t src, uint32_t dest, uint32_t count, bool advanceSrc, bool advanceDest) noexcept;
-//        void step() noexcept;
-//        void cancel() noexcept;
-//        void pause() noexcept;
-//        void unpause() noexcept;
-//        [[nodiscard]] constexpr bool paused() const noexcept { return paused_; }
-//        [[nodiscard]] constexpr bool finished() const noexcept { return finished_; }
-//        [[nodiscard]] constexpr auto getSourceAddress() const noexcept { return srcAddress_; }
-//        [[nodiscard]] constexpr auto getDestinationAddress() const noexcept { return destAddress_; }
-//        [[nodiscard]] constexpr auto getCount() const noexcept { return count_; }
-//        [[nodiscard]] constexpr bool available() const noexcept { return free_; }
-//        [[nodiscard]] constexpr bool incrementSrcOnStep() const noexcept { return advanceSrc_; }
-//        [[nodiscard]] constexpr bool incrementDestOnStep() const noexcept { return advanceSrc_; }
-//    private:
-//        uint32_t srcAddress_ = 0;
-//        uint32_t destAddress_ = 0;
-//        uint32_t count_ = 0;
-//        bool free_ = true;
-//        bool finished_ = false;
-//        bool advanceSrc_ = true;
-//        bool advanceDest_ = true;
-//        bool paused_ = false;
-//};
-//#endif //SXCHIPSET_DMACHANNEL_H
 #include "DMAChannel.h"
 
 void
@@ -77,5 +44,17 @@ DMAChannel::pause() noexcept {
 }
 void
 DMAChannel::unpause() noexcept {
+    paused_ = false;
+}
+
+void
+DMAChannel::begin() noexcept {
+    srcAddress_ = 0;
+    destAddress_ = 0;
+    count_ = 0;
+    free_ = true;
+    finished_ = false;
+    advanceSrc_ = true;
+    advanceDest_ = true;
     paused_ = false;
 }
