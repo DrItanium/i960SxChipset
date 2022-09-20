@@ -50,11 +50,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 DMAChannel channels[8];
 
 
-template<bool inDebugMode, bool useInterrupts>
+template<bool inDebugMode, bool useInterrupts, bool doDMATransfers>
 inline void invocationBody() noexcept {
     // wait until AS goes from low to high
     // then wait until the DEN state is asserted
-    while (DigitalPin<i960Pinout::DEN_>::isDeasserted());
+    while (DigitalPin<i960Pinout::DEN_>::isDeasserted()) {
+        if constexpr (doDMATransfers) {
+            // do a DMA transfer step, transfer a byte or something close to it on
+            // each channel. We want to keep the number of operations small.
+            for (auto& a : channels) {
+                a.step();
+            }
+        }
+    }
     // keep processing data requests until we
     // when we do the transition, record the information we need
     // there are only two parts to this code, either we map into ram or chipset functions
@@ -62,9 +70,9 @@ inline void invocationBody() noexcept {
     // and so we are actually continually mirroring the mapping for the sake of simplicity
     ProcessorInterface::newDataCycle<inDebugMode, useInterrupts>();
 }
-template<bool useInterrupts>
+template<bool useInterrupts, bool doDMATransfers = false>
 [[gnu::always_inline]] inline void doInvocationBody() noexcept {
-    invocationBody<CompileInAddressDebuggingSupport, useInterrupts>();
+    invocationBody<CompileInAddressDebuggingSupport, useInterrupts, doDMATransfers>();
 }
 void installBootImage() noexcept {
     static constexpr auto CacheSize = theCache.getCacheSize();
@@ -350,27 +358,7 @@ setup() {
 // NOTE: Tw may turn out to be synthetic
 
 void loop() {
-    // by default, arduino's main has a boolean check inside of the loop for the serial event run function check
-    // this is expensive and something I don't use. The infinite loop is for this purpose. It shaves off around 0.1usec in the worst case
-    // and doesn't seem to impact performance in burst transactions
-
-    // wait until AS goes from low to high
-    // then wait until the DEN state is asserted
-    if (DigitalPin<i960Pinout::DEN_>::isDeasserted()) {
-    // keep processing data requests until we
-    // when we do the transition, record the information we need
-    // there are only two parts to this code, either we map into ram or chipset functions
-    // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
-    // and so we are actually continually mirroring the mapping for the sake of simplicity
-    ProcessorInterface::newDataCycle<CompileInAddressDebuggingSupport, UseIOExpanderAddressLineInterrupts>();
-
-    } else {
-        // do a DMA transfer step, transfer a byte or something close to it on
-        // each channel. We want to keep the number of operations small.
-        for (auto& a : channels) {
-            a.step();
-        }
-    }
+    doInvocationBody<UseIOExpanderAddressLineInterrupts, true>();
 }
 
 [[noreturn]]
