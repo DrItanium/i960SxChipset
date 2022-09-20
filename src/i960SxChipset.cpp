@@ -342,7 +342,19 @@ void loop() {
     // this is expensive and something I don't use. The infinite loop is for this purpose. It shaves off around 0.1usec in the worst case
     // and doesn't seem to impact performance in burst transactions
 
-        doInvocationBody<UseIOExpanderAddressLineInterrupts>();
+    // wait until AS goes from low to high
+    // then wait until the DEN state is asserted
+    if (DigitalPin<i960Pinout::DEN_>::isDeasserted()) {
+    // keep processing data requests until we
+    // when we do the transition, record the information we need
+    // there are only two parts to this code, either we map into ram or chipset functions
+    // we can just check if we are in ram, otherwise it is considered to be chipset. This means that everything not ram is chipset
+    // and so we are actually continually mirroring the mapping for the sake of simplicity
+    ProcessorInterface::newDataCycle<CompileInAddressDebuggingSupport, UseIOExpanderAddressLineInterrupts>();
+
+    } else {
+        // do a DMA transfer step
+    }
 }
 
 [[noreturn]]
