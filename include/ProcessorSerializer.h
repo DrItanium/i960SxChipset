@@ -151,19 +151,6 @@ public:
 public:
     /**
      * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
-     *        The lowest 512 megabytes is known as the ram area. This function checks to see if the ram space gpio is asserted
-     * @return True if the ram space gpio is asserted.
-     */
-    [[nodiscard]] static inline auto inRAMSpace() noexcept {
-#ifdef CHIPSET_TYPE_MEGA
-        /// @todo implement address lookup operations
-        return false;
-#else
-        return DigitalPin<i960Pinout::RAM_SPACE_>::isAsserted();
-#endif
-    }
-    /**
-     * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
      *        The highest 512 megabytes is known as the io area. This function checks to see if the io space gpio is asserted
      * @return True if the io space gpio is asserted.
      */
@@ -172,15 +159,17 @@ public:
         /// @todo implement
         return false;
 #else
-        return DigitalPin<i960Pinout::IO_SPACE_>::isAsserted();
+        return address_.getMostSignificantByte() >= 0xFE;
 #endif
     }
     /**
      * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
-     *        If the address is not in the lowest or highest sections then it is considered unmapped
-     * @return True if the address is currently in the unmapped space location (neither ram or io spaces asserted)
+     *        The lowest 512 megabytes is known as the ram area. This function checks to see if the ram space gpio is asserted
+     * @return True if the ram space gpio is asserted.
      */
-    [[nodiscard]] static inline auto inUnmappedSpace() noexcept { return !inRAMSpace() && !inIOSpace(); }
+    [[nodiscard]] static inline auto inRAMSpace() noexcept {
+        return !inIOSpace();
+    }
     /**
      * @brief Check the W/~R pin to see if we are dealing with a read transaction.
      * Only needs to be queried once at the beginning of a new transaction
@@ -560,8 +549,8 @@ private:
             }
             thingy.readOperation = (PIND & 0b0001'0000) == 0;
             thingy.currentlyWrite = dataLinesDirection_ != 0;
-            thingy.inRAMSpace = (PIND & 0b0010'0000) == 0;
-            thingy.inIOSpace = (PIND & 0b0100'0000) == 0;
+            thingy.inRAMSpace = ProcessorInterface::inRAMSpace();
+            thingy.inIOSpace = ProcessorInterface::inIOSpace();
             thingy.be0 = (PINA & 0b01) == 0;
             thingy.be1 = (PINA & 0b10) == 0;
             thingy.blast = (PIND & 0b100) == 0;
