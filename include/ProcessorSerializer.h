@@ -476,7 +476,6 @@ private:
                                  bool isIOSpace,
                                  bool be0,
                                  bool be1,
-                                 bool singleWordTransaction,
                                  byte r = 0) : updateKinds(updateKind),
                                  readOperation(isReadOp),
                                  currentlyWrite(dataIsWriting),
@@ -484,29 +483,15 @@ private:
                                  isIOSpace_(isIOSpace),
                                  byteEnable0_(be0),
                                  byteEnable1_(be1),
-                                 singleWordTransaction_(singleWordTransaction),
                                  rest(r) { }
         explicit constexpr DecodeDispatch(uint16_t value) : DecodeDispatch((value & 0b0000'0000'0000'0011),
-                                                                           (value & 0b0000'0000'0000'0100),
-                                                                           (value & 0b0000'0000'0000'1000),
-                                                                           (value & 0b0000'0000'0001'0000),
-                                                                           (value & 0b0000'0000'0010'0000),
-                                                                           (value & 0b0000'0000'0100'0000),
-                                                                           (value & 0b0000'0000'1000'0000),
-                                                                           (value & 0b0000'0001'0000'0000),
-                                                                           value >> 9) { }
-        constexpr DecodeDispatch(byte porta, byte portd, bool dataIsWriting) : DecodeDispatch(
-                (porta >> 6) & 0b11,
-                (portd & 0b0001'0000) == 0,
-                dataIsWriting,
-                (portd & 0b0010'0000) == 0,
-                (portd & 0b0100'0000) == 0,
-                (porta & 0b0000'0001) == 0,
-                (porta & 0b0000'0010) == 0,
-                (portd & 0b0000'0100) == 0,
-                0) {}
-
-
+                                                                           static_cast<bool>(value & 0b0000'0000'0000'0100),
+                                                                           static_cast<bool>(value & 0b0000'0000'0000'1000),
+                                                                           static_cast<bool>(value & 0b0000'0000'0001'0000),
+                                                                           static_cast<bool>(value & 0b0000'0000'0010'0000),
+                                                                           static_cast<bool>(value & 0b0000'0000'0100'0000),
+                                                                           static_cast<bool>(value & 0b0000'0000'1000'0000),
+                                                                           static_cast<uint8_t>(value >> 8)) { }
         uint8_t updateKinds;
         bool readOperation;
         bool currentlyWrite;
@@ -514,7 +499,6 @@ private:
         bool isIOSpace_;
         bool byteEnable0_;
         bool byteEnable1_;
-        bool singleWordTransaction_;
         uint8_t rest;
         [[nodiscard]] constexpr uint8_t getUpdateKinds() const noexcept { return updateKinds; }
         [[nodiscard]] constexpr bool isReadOperation() const noexcept { return readOperation; }
@@ -525,36 +509,27 @@ private:
         [[nodiscard]] constexpr bool inIllegalSpace() const noexcept { return inRAMSpace() && inIOSpace(); }
         [[nodiscard]] constexpr bool isByteEnable0() const noexcept { return byteEnable0_; }
         [[nodiscard]] constexpr bool isByteEnable1() const noexcept { return byteEnable1_; }
-        [[nodiscard]] constexpr bool isSingleWordTransaction() const noexcept { return singleWordTransaction_; }
         template<bool useInterrupts>
-        static uint16_t makeDynamicValue() noexcept {
+        static uint8_t makeDynamicValue() noexcept {
             union {
-                uint16_t value;
+                uint8_t value;
                 struct {
-                    uint16_t updateKinds: 2;
-                    uint16_t readOperation: 1;
-                    uint16_t currentlyWrite: 1;
-                    uint16_t inRAMSpace : 1;
-                    uint16_t inIOSpace : 1;
-                    uint16_t be0 : 1;
-                    uint16_t be1 : 1;
-                    uint16_t blast : 1;
-                    uint16_t rest : 7;
+                    uint8_t updateKinds: 2;
+                    uint8_t readOperation: 1;
+                    uint8_t currentlyWrite: 1;
+                    uint8_t inRAMSpace : 1;
+                    uint8_t inIOSpace : 1;
+                    uint8_t be0 : 1;
+                    uint8_t be1 : 1;
                 };
             } thingy;
-            if constexpr (useInterrupts) {
-                thingy.updateKinds = (PINA >> 6) & 0b11;
-            } else {
-                thingy.updateKinds = 0;
-            }
-            thingy.readOperation = (PIND & 0b0001'0000) == 0;
+            thingy.updateKinds = ProcessorInterface::getUpdateKind<useInterrupts>();
+            thingy.readOperation = ProcessorInterface::isReadOperation();
             thingy.currentlyWrite = dataLinesDirection_ != 0;
             thingy.inRAMSpace = ProcessorInterface::inRAMSpace();
             thingy.inIOSpace = ProcessorInterface::inIOSpace();
-            thingy.be0 = (PINA & 0b01) == 0;
-            thingy.be1 = (PINA & 0b10) == 0;
-            thingy.blast = (PIND & 0b100) == 0;
-            thingy.rest = 0;
+            thingy.be0 = DigitalPin<i960Pinout::BE0>::isAsserted();
+            thingy.be1 = DigitalPin<i960Pinout::BE1>::isAsserted();
             return thingy.value;
         }
     };
@@ -691,12 +666,11 @@ private:
         }
     }
     template<bool inDebugMode>
-    static constexpr BodyFunction DispatchTable_NewDataCycle[512] {
+    static constexpr BodyFunction DispatchTable_NewDataCycle[256] {
 #define X(ind) doDispatch<inDebugMode, DecodeDispatch{ind} >
 #define Y(ind) X((8*(ind)) + 0), X((8*(ind))+1), X((8*(ind))+2), X((8*(ind))+3), X((8*(ind))+4), X((8*(ind))+5), X((8*(ind))+6), X((8*(ind))+7)
 #define Z(ind) Y((8*(ind)) + 0), Y((8*(ind))+1), Y((8*(ind))+2), Y((8*(ind))+3), Y((8*(ind))+4), Y((8*(ind))+5), Y((8*(ind))+6), Y((8*(ind))+7)
-        Z(0), Z(1), Z(2), Z(3), Z(4), Z(5), Z(6), Z(7),
-                //Z(8), Z(9), Z(10), Z(11), Z(12), Z(13), Z(14), Z(15)
+        Z(0), Z(1), Z(2), Z(3),
 #undef Z
 #undef Y
 #undef X
@@ -739,40 +713,35 @@ public:
     template<bool inDebugMode, DecodeDispatch index>
     static inline void performCacheRead(const CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        if constexpr (index.isSingleWordTransaction()) {
-            (void)setDataBits(line.get(getCacheOffsetEntry()));
-            DigitalPin<i960Pinout::Ready>::pulse();
-        } else {
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateWriteOpcode(DataLines);
-            asm volatile ("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            // while we would normally write to OLAT, in this case we want to access gpio from what I can tell
-            SPDR = static_cast<byte>(MCP23x17Registers::OLAT);
-            asm volatile ("nop");
-            while (!(SPSR & _BV(SPIF))) ; // wait
-            for (auto offset = line.getRawData() + getCacheOffsetEntry(); ; ++offset) {
-                bool isLastRead = false;
-                if (auto& a0 = *offset; a0.getWholeValue() != latchedDataOutput.getWholeValue()) {
-                    SPDR = a0.getLowerHalf();
-                    asm volatile ("nop");
-                    isLastRead = isBurstLast();
-                    while (!(SPSR & _BV(SPIF))); // wait
-                    SPDR = a0.getUpperHalf();
-                    asm volatile ("nop");
-                    latchedDataOutput.wholeValue_ = a0.getWholeValue();
-                    while (!(SPSR & _BV(SPIF))); // wait
-                } else {
-                    isLastRead = isBurstLast();
-                }
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLastRead) {
-                    // end the SPI transaction
-                    break;
-                }
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = generateWriteOpcode(DataLines);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        // while we would normally write to OLAT, in this case we want to access gpio from what I can tell
+        SPDR = static_cast<byte>(MCP23x17Registers::OLAT);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))) ; // wait
+        for (auto offset = line.getRawData() + getCacheOffsetEntry(); ; ++offset) {
+            bool isLastRead = false;
+            if (auto& a0 = *offset; a0.getWholeValue() != latchedDataOutput.getWholeValue()) {
+                SPDR = a0.getLowerHalf();
+                asm volatile ("nop");
+                isLastRead = isBurstLast();
+                while (!(SPSR & _BV(SPIF))); // wait
+                SPDR = a0.getUpperHalf();
+                asm volatile ("nop");
+                latchedDataOutput.wholeValue_ = a0.getWholeValue();
+                while (!(SPSR & _BV(SPIF))); // wait
+            } else {
+                isLastRead = isBurstLast();
             }
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLastRead) {
+                // end the SPI transaction
+                break;
+            }
         }
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
 private:
@@ -876,156 +845,38 @@ public:
     template<bool inDebugMode, DecodeDispatch index>
     static inline void performCacheWrite(CacheLine& line) noexcept {
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        if constexpr (index.isSingleWordTransaction()) {
-            auto offset = getCacheOffsetEntry();
-            updateDataInputLatch();
+        byte count = 0;
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = generateReadOpcode(DataLines);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
+        asm volatile ("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        for (;;) {
+            auto& currTransaction = transactions[count++];
+            SPDR = 0;
+            asm volatile ("nop");
+            currTransaction.style = getStyle();
+            bool isLast = isBurstLast();
+            while (!(SPSR & _BV(SPIF))); // wait
+            auto lower = SPDR;
+            SPDR = 0;
+            asm volatile ("nop");
+            latchedDataInput_.bytes[0] = lower;
+            while (!(SPSR & _BV(SPIF))); // wait
+            latchedDataInput_.bytes[1] = SPDR;
+            currTransaction.value = latchedDataInput_;
             DigitalPin<i960Pinout::Ready>::pulse();
-            if constexpr (index.isByteEnable0()) {
-               if constexpr (index.isByteEnable1()) {
-                   line.set<LoadStoreStyle::Full16>(offset, latchedDataInput_);
-               } else {
-                   line.set<LoadStoreStyle::Lower8>(offset, latchedDataInput_);
-               }
-            } else {
-                if constexpr (index.isByteEnable1()) {
-                    line.set<LoadStoreStyle::Upper8>(offset, latchedDataInput_);
-                } else {
-                    line.set<LoadStoreStyle::None>(offset, latchedDataInput_);
+            if (isLast) {
+                // okay then perform the commit since we are done
+                for (byte i = 0, j = getCacheOffsetEntry(); i < count; ++i, ++j) {
+                    transactions[i].set(j, line);
                 }
+                break;
             }
-        } else {
-#if 0
-            for (auto offset = getCacheOffsetEntry();; offset += 8) {
-                auto isLast = getDataBits<0>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLast) {
-                    commitTransactions<1>(line, offset);
-                    break;
-                }
-                isLast = getDataBits<1>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLast) {
-                    commitTransactions<2>(line, offset);
-                    break;
-                }
-                isLast = getDataBits<2>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLast) {
-                    commitTransactions<3>(line, offset);
-                    break;
-                }
-                isLast = getDataBits<3>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLast) {
-                    commitTransactions<4>(line, offset);
-                    break;
-                }
-                isLast = getDataBits<4>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLast) {
-                    commitTransactions<5>(line, offset);
-                    break;
-                }
-                isLast = getDataBits<5>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLast) {
-                    commitTransactions<6>(line, offset);
-                    break;
-                }
-                isLast = getDataBits<6>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLast) {
-                    commitTransactions<7>(line, offset);
-                    break;
-                }
-                isLast = getDataBits<7>();
-                DigitalPin<i960Pinout::Ready>::pulse();
-                // perform the commit at this point
-                commitTransactions<8>(line, offset);
-                if (isLast) {
-                    break;
-                }
-            }
-#else
-#if 0
-            static void fullDataLineGrab() noexcept {
-                digitalWrite<i960Pinout::GPIOSelect, LOW>();
-                SPDR = generateReadOpcode(DataLines);
-                asm volatile ("nop");
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-                asm volatile ("nop");
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = 0;
-                asm volatile ("nop");
-                while (!(SPSR & _BV(SPIF))); // wait
-                auto lower = SPDR;
-                SPDR = 0;
-                {
-                    latchedDataInput_.bytes[0] = lower;
-                }
-                asm volatile ("nop");
-                while (!(SPSR & _BV(SPIF))); // wait
-                latchedDataInput_.bytes[1] = SPDR;
-                digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            }
-            static inline BodyFunction DataLineUpdateFunctions[4] {
-                    fullDataLineGrab, // 0b00
-                    upper8DataGrab, // 0b01
-                    lower8DataGrab, // 0b10
-                    []() noexcept { },
-            };
-            static void updateDataInputLatch() noexcept {
-                DataLineUpdateFunctions[getDataLineInputUpdateKind()]();
-            }
-            [[nodiscard]]
-            static bool getDataBits(CacheWriteRequest& request) noexcept {
-                request.style = getStyle();
-                bool outcome = DigitalPin<i960Pinout::BLAST_>::isAsserted();
-                updateDataInputLatch();
-                request.value = latchedDataInput_;
-                return outcome;
-            }
-            template<byte count>
-            static bool getDataBits() noexcept {
-                static_assert(count < 8, "Can only transmit 8 transactions at a time");
-                return getDataBits(transactions[count]);
-            }
-#endif
-            byte count = 0;
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateReadOpcode(DataLines);
-            asm volatile ("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = static_cast<byte>(MCP23x17Registers::GPIO);
-            asm volatile ("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-            for (;;) {
-                auto& currTransaction = transactions[count++];
-                SPDR = 0;
-                asm volatile ("nop");
-                currTransaction.style = getStyle();
-                bool isLast = isBurstLast();
-                while (!(SPSR & _BV(SPIF))); // wait
-                auto lower = SPDR;
-                SPDR = 0;
-                asm volatile ("nop");
-                latchedDataInput_.bytes[0] = lower;
-                while (!(SPSR & _BV(SPIF))); // wait
-                latchedDataInput_.bytes[1] = SPDR;
-                currTransaction.value = latchedDataInput_;
-                DigitalPin<i960Pinout::Ready>::pulse();
-                if (isLast) {
-                    // okay then perform the commit since we are done
-                    for (byte i = 0, j = getCacheOffsetEntry(); i < count; ++i, ++j) {
-                        transactions[i].set(j, line);
-                    }
-                    break;
-                }
-            }
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-#endif
         }
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
     /**
