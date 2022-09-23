@@ -527,7 +527,7 @@ private:
         [[nodiscard]] constexpr bool isByteEnable1() const noexcept { return byteEnable1_; }
         [[nodiscard]] constexpr bool isSingleWordTransaction() const noexcept { return singleWordTransaction_; }
         template<bool useInterrupts>
-        static uint8_t makeDynamicValue() noexcept {
+        static uint16_t makeDynamicValue() noexcept {
             union {
                 uint16_t value;
                 struct {
