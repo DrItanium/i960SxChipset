@@ -474,31 +474,23 @@ private:
                                  bool dataIsWriting,
                                  bool isRAMSpace,
                                  bool isIOSpace,
-                                 bool be0,
-                                 bool be1,
                                  byte r = 0) : updateKinds(updateKind),
                                  readOperation(isReadOp),
                                  currentlyWrite(dataIsWriting),
                                  isRAMSpace_(isRAMSpace),
                                  isIOSpace_(isIOSpace),
-                                 byteEnable0_(be0),
-                                 byteEnable1_(be1),
                                  rest(r) { }
-        explicit constexpr DecodeDispatch(uint16_t value) : DecodeDispatch((value & 0b0000'0000'0000'0011),
-                                                                           static_cast<bool>(value & 0b0000'0000'0000'0100),
-                                                                           static_cast<bool>(value & 0b0000'0000'0000'1000),
-                                                                           static_cast<bool>(value & 0b0000'0000'0001'0000),
-                                                                           static_cast<bool>(value & 0b0000'0000'0010'0000),
-                                                                           static_cast<bool>(value & 0b0000'0000'0100'0000),
-                                                                           static_cast<bool>(value & 0b0000'0000'1000'0000),
-                                                                           static_cast<uint8_t>(value >> 8)) { }
+        explicit constexpr DecodeDispatch(uint8_t value) : DecodeDispatch((value & 0b0000'0011),
+                                                                           static_cast<bool>(value & 0b0000'0100),
+                                                                           static_cast<bool>(value & 0b0000'1000),
+                                                                           static_cast<bool>(value & 0b0001'0000),
+                                                                           static_cast<bool>(value & 0b0010'0000),
+                                                                          (value >> 6)) { }
         uint8_t updateKinds;
         bool readOperation;
         bool currentlyWrite;
         bool isRAMSpace_;
         bool isIOSpace_;
-        bool byteEnable0_;
-        bool byteEnable1_;
         uint8_t rest;
         [[nodiscard]] constexpr uint8_t getUpdateKinds() const noexcept { return updateKinds; }
         [[nodiscard]] constexpr bool isReadOperation() const noexcept { return readOperation; }
@@ -507,8 +499,6 @@ private:
         [[nodiscard]] constexpr bool inIOSpace() const noexcept { return isIOSpace_; }
         [[nodiscard]] constexpr bool inUnmappedSpace() const noexcept { return !inRAMSpace() && !inIOSpace(); }
         [[nodiscard]] constexpr bool inIllegalSpace() const noexcept { return inRAMSpace() && inIOSpace(); }
-        [[nodiscard]] constexpr bool isByteEnable0() const noexcept { return byteEnable0_; }
-        [[nodiscard]] constexpr bool isByteEnable1() const noexcept { return byteEnable1_; }
         template<bool useInterrupts>
         static uint8_t makeDynamicValue() noexcept {
             union {
@@ -519,8 +509,7 @@ private:
                     uint8_t currentlyWrite: 1;
                     uint8_t inRAMSpace : 1;
                     uint8_t inIOSpace : 1;
-                    uint8_t be0 : 1;
-                    uint8_t be1 : 1;
+                    uint8_t unused : 2;
                 };
             } thingy;
             thingy.updateKinds = ProcessorInterface::getUpdateKind<useInterrupts>();
@@ -528,8 +517,7 @@ private:
             thingy.currentlyWrite = dataLinesDirection_ != 0;
             thingy.inRAMSpace = ProcessorInterface::inRAMSpace();
             thingy.inIOSpace = ProcessorInterface::inIOSpace();
-            thingy.be0 = DigitalPin<i960Pinout::BE0>::isAsserted();
-            thingy.be1 = DigitalPin<i960Pinout::BE1>::isAsserted();
+            thingy.unused = 0;
             return thingy.value;
         }
     };
@@ -666,11 +654,11 @@ private:
         }
     }
     template<bool inDebugMode>
-    static constexpr BodyFunction DispatchTable_NewDataCycle[256] {
+    static constexpr BodyFunction DispatchTable_NewDataCycle[64] {
 #define X(ind) doDispatch<inDebugMode, DecodeDispatch{ind} >
 #define Y(ind) X((8*(ind)) + 0), X((8*(ind))+1), X((8*(ind))+2), X((8*(ind))+3), X((8*(ind))+4), X((8*(ind))+5), X((8*(ind))+6), X((8*(ind))+7)
 #define Z(ind) Y((8*(ind)) + 0), Y((8*(ind))+1), Y((8*(ind))+2), Y((8*(ind))+3), Y((8*(ind))+4), Y((8*(ind))+5), Y((8*(ind))+6), Y((8*(ind))+7)
-        Z(0), Z(1), Z(2), Z(3),
+        Z(0),
 #undef Z
 #undef Y
 #undef X
