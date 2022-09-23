@@ -159,7 +159,7 @@ public:
         /// @todo implement
         return false;
 #else
-        return address_.getMostSignificantByte() >= 0xFE;
+        return inIOSpace_;
 #endif
     }
     /**
@@ -485,7 +485,6 @@ private:
         [[nodiscard]] constexpr bool isCurrentlyWrite() const noexcept { return currentlyWrite; }
         [[nodiscard]] constexpr bool inIOSpace() const noexcept { return isIOSpace_; }
         [[nodiscard]] constexpr bool inRAMSpace() const noexcept { return !inIOSpace(); }
-        [[nodiscard]] constexpr bool inIllegalSpace() const noexcept { return inRAMSpace() && inIOSpace(); }
         static uint8_t makeDynamicValue() noexcept {
             union {
                 uint8_t value;
@@ -507,13 +506,13 @@ private:
      * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
      */
     template<bool inDebugMode>
-    inline static void full32BitUpdate() noexcept {
-#ifdef CHIPSET_TYPE1
+    inline static uint8_t full32BitUpdate() noexcept {
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
         static constexpr auto Lower16Opcode = generateReadOpcode(Lower16Lines);
         static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        uint8_t returnCode = 0;
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -535,45 +534,44 @@ private:
         auto highest = SPDR;
         DigitalPin<i960Pinout::GPIOSelect>::pulse<HIGH>(); // pulse high
         SPDR = Lower16Opcode;
+        asm volatile("nop");
         {
             address_.bytes[3] = highest;
+            inIOSpace_ = address_.getMostSignificantByte() >= 0xFE;
         }
-        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
+        {
+            returnCode = DecodeDispatch::makeDynamicValue();
+        }
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
+        asm volatile("nop");
         {
             // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
             // put scope ticks to force the matter
             cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
             address_.bytes[0] = lowest;
         }
-        asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-#else
-        /// @todo implement
-        //AddressRegister contents(getAddressRegister().full);
-        //address_.wholeValue_ = (contents.full & 0xFFFF'FFFE);
-        //isReadOperation_ = contents.wr_ == 0;
-#endif
-
+        return returnCode;
     }
     /**
      * @brief Only update the lower 16 bits of the current transaction's base address
      */
-    static void lower16Update() noexcept {
+    static uint8_t lower16Update() noexcept {
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
         static constexpr auto Lower16Opcode = generateReadOpcode(Lower16Lines);
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        uint8_t returnCode = 0;
         // read only the lower half
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
@@ -586,6 +584,9 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
+        {
+            returnCode = DecodeDispatch::makeDynamicValue();
+        }
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
@@ -598,9 +599,10 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        return returnCode;
     }
     template<bool inDebugMode, DecodeDispatch index >
-    static void doDispatch() noexcept {
+    inline static void doDispatch() noexcept {
         /// @todo use the new ram_space and io space pins to accelerate decoding
         if constexpr (inDebugMode) {
             Serial.print(F("Target Address: 0x"));
@@ -626,17 +628,6 @@ private:
             }
         }
     }
-    template<bool inDebugMode>
-    static constexpr BodyFunction DispatchTable_NewDataCycle[8] {
-            doDispatch<inDebugMode, DecodeDispatch{0}>,
-            doDispatch<inDebugMode, DecodeDispatch{1}>,
-            doDispatch<inDebugMode, DecodeDispatch{2}>,
-            doDispatch<inDebugMode, DecodeDispatch{3}>,
-            doDispatch<inDebugMode, DecodeDispatch{4}>,
-            doDispatch<inDebugMode, DecodeDispatch{5}>,
-            doDispatch<inDebugMode, DecodeDispatch{6}>,
-            doDispatch<inDebugMode, DecodeDispatch{7}>,
-    };
 public:
     /**
      * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
@@ -645,14 +636,26 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
+        uint8_t dynamicValue{0};
         if (auto op = getUpdateKind<useInterrupts>(); op == 0b00 || op == 0b01) {
-            full32BitUpdate<inDebugMode>();
+            dynamicValue = full32BitUpdate<inDebugMode>();
         } else if (op == 0b10) {
-            lower16Update();
+            dynamicValue = lower16Update();
         } else {
+            dynamicValue = DecodeDispatch::makeDynamicValue();
             // do nothing
         }
-        DispatchTable_NewDataCycle<inDebugMode>[DecodeDispatch::makeDynamicValue()]();
+        switch (dynamicValue) {
+            case 0: doDispatch<inDebugMode, DecodeDispatch{0}>(); break;
+            case 1: doDispatch<inDebugMode, DecodeDispatch{1}>(); break;
+            case 2: doDispatch<inDebugMode, DecodeDispatch{2}>(); break;
+            case 3: doDispatch<inDebugMode, DecodeDispatch{3}>(); break;
+            case 4: doDispatch<inDebugMode, DecodeDispatch{4}>(); break;
+            case 5: doDispatch<inDebugMode, DecodeDispatch{5}>(); break;
+            case 6: doDispatch<inDebugMode, DecodeDispatch{6}>(); break;
+            case 7: doDispatch<inDebugMode, DecodeDispatch{7}>(); break;
+            default: break;
+        }
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
@@ -937,6 +940,7 @@ private:
     static inline bool initialized_ = false;
     static inline SplitWord16 latchedDataInput_ {0};
     static inline bool isReadOperation_ = false;
+    static inline bool inIOSpace_ = false;
 };
 
 #endif //ARDUINO_IOEXPANDERS_H
