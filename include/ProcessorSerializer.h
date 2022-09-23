@@ -562,7 +562,7 @@ private:
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
      * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
      */
-    template<bool inDebugMode, DecodeDispatch index>
+    template<bool inDebugMode>
     inline static void full32BitUpdate() noexcept {
 #ifdef CHIPSET_TYPE1
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
@@ -660,13 +660,6 @@ private:
         if constexpr (index.inIllegalSpace()) {
             signalHaltState(F("ILLEGAL SPACE DEFINED!"));
         } else {
-            if constexpr (index.getUpdateKinds() == 0b00 || index.getUpdateKinds() == 0b01) {
-                full32BitUpdate<inDebugMode, index>();
-            } else if constexpr (index.getUpdateKinds() == 0b10) {
-                lower16Update();
-            } else {
-                // do nothing
-            }
             /// @todo use the new ram_space and io space pins to accelerate decoding
             if constexpr (inDebugMode) {
                 Serial.print(F("Target Address: 0x"));
@@ -716,6 +709,13 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
+        if (auto op = getUpdateKind<useInterrupts>(); op == 0b00 || op == 0b01) {
+            full32BitUpdate<inDebugMode>();
+        } else if (op == 0b10) {
+            lower16Update();
+        } else {
+            // do nothing
+        }
         DispatchTable_NewDataCycle<inDebugMode>[DecodeDispatch::makeDynamicValue<useInterrupts>()]();
     }
     /**
