@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // define the backing memory storage classes via template specialization
 // at this point in time, if no specialization is performed, use SDCard as ram backend
 template<TargetMCU mcu> struct BackingMemoryStorage final {
-    using Type = FallbackMemory<>;
+    using Type = FallbackMemory;
 };
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
     //using ActualType = OnboardPSRAMBlock;

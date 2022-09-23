@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SdFat.h>
 extern SdFat SD;
 class ConfigurationSpace;
-template<typename T, uint32_t numMegabytes = 512>
+template<typename T, uint32_t numMegabytes = 4096-32>
 class SDCardAsRam {
 public:
     static constexpr auto NumMegabytes = numMegabytes;
@@ -60,7 +60,6 @@ public:
 private:
     static inline OpenFileHandle theRam_;
 };
-template<uint32_t numMegabytes = 512>
-using FallbackMemory = SDCardAsRam<ConfigurationSpace, numMegabytes>;
+using FallbackMemory = SDCardAsRam<ConfigurationSpace, 4096-32>;
 
 #endif //SXCHIPSET_SDCARDASRAM_H

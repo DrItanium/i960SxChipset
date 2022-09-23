@@ -38,8 +38,7 @@ public:
 #ifdef CHIPSET_TYPE1
     using PSRAMPool = DualPoolPSRAM;
 #endif
-    using SDPool = FallbackMemory<>;
-    static constexpr auto NumSections = 512 / 16;
+    using SDPool = FallbackMemory;
 public:
     MemoryPool() = delete;
     ~MemoryPool() = delete;
