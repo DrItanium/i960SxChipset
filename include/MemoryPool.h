@@ -51,7 +51,7 @@ public:
         Address base;
         struct {
             Address offset : 23;
-            byte index : 6;
+            Address index : 9;
         };
         byte bytes_[4];
     };
