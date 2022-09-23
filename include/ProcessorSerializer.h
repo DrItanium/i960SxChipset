@@ -509,6 +509,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
+        bool dataLinesAreWriting = dataLinesDirection_ != 0;
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
@@ -522,6 +523,10 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if (dataLinesAreWriting) {
+            invertDataLinesDirection();
+        }
+        performExternalDeviceRead<ConfigurationSpace, inDebugMode>();
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
     inline static void ramReadOperation() {
@@ -531,6 +536,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
+        bool dataLinesAreWriting = dataLinesDirection_ != 0;
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
@@ -544,6 +550,10 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if (dataLinesAreWriting) {
+            invertDataLinesDirection();
+        }
+        performCacheRead<inDebugMode>();
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
     inline static void ioWriteOperation() noexcept {
@@ -553,6 +563,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
+        bool dataLinesAreWriting = dataLinesDirection_ != 0;
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
@@ -566,6 +577,10 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if (!dataLinesAreWriting) {
+            invertDataLinesDirection();
+        }
+        performExternalDeviceWrite<ConfigurationSpace, inDebugMode>();
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
     inline static void ramWriteOperation() noexcept {
@@ -575,6 +590,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
+        bool dataLinesAreWriting = dataLinesDirection_ != 0;
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
         SPDR = 0;
@@ -588,6 +604,10 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if (!dataLinesAreWriting) {
+            invertDataLinesDirection();
+        }
+        performCacheWrite<inDebugMode>();
     }
     template<bool inDebugMode, byte Lower16Opcode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
     inline static void writeOperation() noexcept {
