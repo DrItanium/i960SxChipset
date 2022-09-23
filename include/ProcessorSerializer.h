@@ -469,55 +469,44 @@ public:
 private:
 
     struct DecodeDispatch {
-        constexpr DecodeDispatch(byte updateKind,
-                                 bool isReadOp,
+        constexpr DecodeDispatch(bool isReadOp,
                                  bool dataIsWriting,
-                                 bool isRAMSpace,
                                  bool isIOSpace,
-                                 byte r = 0) : updateKinds(updateKind),
+                                 bool inDebugMode) :
                                  readOperation(isReadOp),
                                  currentlyWrite(dataIsWriting),
-                                 isRAMSpace_(isRAMSpace),
                                  isIOSpace_(isIOSpace),
-                                 rest(r) { }
-        explicit constexpr DecodeDispatch(uint8_t value) : DecodeDispatch((value & 0b0000'0011),
+                                 inDebugMode_(inDebugMode) { }
+        explicit constexpr DecodeDispatch(int value) : DecodeDispatch(static_cast<bool>(value & 0b0000'0001),
+                                                                           static_cast<bool>(value & 0b0000'0010),
                                                                            static_cast<bool>(value & 0b0000'0100),
-                                                                           static_cast<bool>(value & 0b0000'1000),
-                                                                           static_cast<bool>(value & 0b0001'0000),
-                                                                           static_cast<bool>(value & 0b0010'0000),
-                                                                          (value >> 6)) { }
-        uint8_t updateKinds;
+                                                                           static_cast<bool>(value & 0b0000'1000) ) { }
         bool readOperation;
         bool currentlyWrite;
-        bool isRAMSpace_;
         bool isIOSpace_;
-        uint8_t rest;
-        [[nodiscard]] constexpr uint8_t getUpdateKinds() const noexcept { return updateKinds; }
+        bool inDebugMode_;
         [[nodiscard]] constexpr bool isReadOperation() const noexcept { return readOperation; }
         [[nodiscard]] constexpr bool isCurrentlyWrite() const noexcept { return currentlyWrite; }
-        [[nodiscard]] constexpr bool inRAMSpace() const noexcept { return isRAMSpace_; }
         [[nodiscard]] constexpr bool inIOSpace() const noexcept { return isIOSpace_; }
-        [[nodiscard]] constexpr bool inUnmappedSpace() const noexcept { return !inRAMSpace() && !inIOSpace(); }
+        [[nodiscard]] constexpr bool inRAMSpace() const noexcept { return !inIOSpace(); }
         [[nodiscard]] constexpr bool inIllegalSpace() const noexcept { return inRAMSpace() && inIOSpace(); }
-        template<bool useInterrupts>
+        [[nodiscard]] constexpr bool inDebugMode() const noexcept { return inDebugMode_; }
+        template<bool inDebugMode>
         static uint8_t makeDynamicValue() noexcept {
             union {
                 uint8_t value;
                 struct {
-                    uint8_t updateKinds: 2;
                     uint8_t readOperation: 1;
                     uint8_t currentlyWrite: 1;
-                    uint8_t inRAMSpace : 1;
                     uint8_t inIOSpace : 1;
-                    uint8_t unused : 2;
+                    uint8_t dbg : 1;
                 };
             } thingy;
-            thingy.updateKinds = ProcessorInterface::getUpdateKind<useInterrupts>();
+            thingy.value = 0;
             thingy.readOperation = ProcessorInterface::isReadOperation();
             thingy.currentlyWrite = dataLinesDirection_ != 0;
-            thingy.inRAMSpace = ProcessorInterface::inRAMSpace();
             thingy.inIOSpace = ProcessorInterface::inIOSpace();
-            thingy.unused = 0;
+            thingy.dbg = inDebugMode;
             return thingy.value;
         }
     };
@@ -618,50 +607,51 @@ private:
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
-    template<bool inDebugMode, DecodeDispatch index>
+    template<byte idx>
     static void doDispatch() noexcept {
-        if constexpr (index.inIllegalSpace()) {
-            signalHaltState(F("ILLEGAL SPACE DEFINED!"));
-        } else {
-            /// @todo use the new ram_space and io space pins to accelerate decoding
-            if constexpr (inDebugMode) {
-                Serial.print(F("Target Address: 0x"));
-                Serial.println(address_.getWholeValue(), HEX);
+        static constexpr DecodeDispatch index{idx};
+        /// @todo use the new ram_space and io space pins to accelerate decoding
+        if constexpr (index.inDebugMode()) {
+            Serial.print(F("Target Address: 0x"));
+            Serial.println(address_.getWholeValue(), HEX);
+        }
+        if constexpr (index.isReadOperation()) {
+            if constexpr (index.isCurrentlyWrite()) {
+                invertDataLinesDirection();
             }
-            if constexpr (index.isReadOperation()) {
-                if constexpr (index.isCurrentlyWrite()) {
-                    invertDataLinesDirection();
-                }
-                if constexpr (index.inRAMSpace()) {
-                    performCacheRead<inDebugMode, index>();
-                } else if constexpr (index.inIOSpace()) {
-                    performExternalDeviceRead<ConfigurationSpace, inDebugMode>();
-                } else {
-                performFallbackRead();
-            }
+            if constexpr (index.inIOSpace()) {
+                performExternalDeviceRead<ConfigurationSpace, index.inDebugMode()>();
             } else {
-                if constexpr (!index.isCurrentlyWrite()) {
-                    invertDataLinesDirection();
-                }
-                if constexpr (index.inRAMSpace()) {
-                    performCacheWrite<inDebugMode, index>();
-                } else if constexpr (index.inIOSpace()) {
-                    performExternalDeviceWrite<ConfigurationSpace, inDebugMode>();
-                } else {
-                    performFallbackWrite();
-                }
+                performCacheRead<index>();
+            }
+        } else {
+            if constexpr (!index.isCurrentlyWrite()) {
+                invertDataLinesDirection();
+            }
+            if constexpr (index.inIOSpace()) {
+                performExternalDeviceWrite<ConfigurationSpace, index.inDebugMode()>();
+            } else {
+                performCacheWrite<index>();
             }
         }
     }
-    template<bool inDebugMode>
-    static constexpr BodyFunction DispatchTable_NewDataCycle[64] {
-#define X(ind) doDispatch<inDebugMode, DecodeDispatch{ind} >
-#define Y(ind) X((8*(ind)) + 0), X((8*(ind))+1), X((8*(ind))+2), X((8*(ind))+3), X((8*(ind))+4), X((8*(ind))+5), X((8*(ind))+6), X((8*(ind))+7)
-#define Z(ind) Y((8*(ind)) + 0), Y((8*(ind))+1), Y((8*(ind))+2), Y((8*(ind))+3), Y((8*(ind))+4), Y((8*(ind))+5), Y((8*(ind))+6), Y((8*(ind))+7)
-        Z(0),
-#undef Z
-#undef Y
-#undef X
+    static constexpr BodyFunction DispatchTable_NewDataCycle[16] {
+            doDispatch<0>,
+            doDispatch<1>,
+            doDispatch<2>,
+            doDispatch<3>,
+            doDispatch<4>,
+            doDispatch<5>,
+            doDispatch<6>,
+            doDispatch<7>,
+            doDispatch<8>,
+            doDispatch<9>,
+            doDispatch<10>,
+            doDispatch<11>,
+            doDispatch<12>,
+            doDispatch<13>,
+            doDispatch<14>,
+            doDispatch<15>,
     };
 public:
     /**
@@ -678,7 +668,7 @@ public:
         } else {
             // do nothing
         }
-        DispatchTable_NewDataCycle<inDebugMode>[DecodeDispatch::makeDynamicValue<useInterrupts>()]();
+        DispatchTable_NewDataCycle[DecodeDispatch::makeDynamicValue<inDebugMode>()]();
     }
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
@@ -945,14 +935,14 @@ public:
      * @brief Complete the process of setting up the processor interface by seeding the cached function pointers with valid addresses.
      */
 private:
-    template<bool debug, DecodeDispatch index>
+    template<DecodeDispatch index>
     static void performCacheRead() noexcept {
-        performCacheRead<debug, index>(theCache.getLine(address_));
+        performCacheRead<index.inDebugMode(), index>(theCache.getLine(address_));
     }
 
-    template<bool debug, DecodeDispatch index>
+    template<DecodeDispatch index>
     static void performCacheWrite() noexcept {
-        performCacheWrite<debug, index>(theCache.getLine(address_));
+        performCacheWrite<index.inDebugMode(), index>(theCache.getLine(address_));
     }
 
 private:
