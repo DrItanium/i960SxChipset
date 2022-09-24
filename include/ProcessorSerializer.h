@@ -518,11 +518,7 @@ private:
         if constexpr (isIO) {
             performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
         } else {
-            if constexpr (isRead) {
-                performCacheRead<inDebugMode>();
-            } else {
-                performCacheWrite<inDebugMode>();
-            }
+            performCacheOperation<inDebugMode, isRead>();
         }
     }
     template<bool inDebugMode, auto shift, auto mask, bool isRead, bool isIO, bool invertDirection>
@@ -583,6 +579,14 @@ private:
         asm volatile("nop");
         op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, isReadOp>();
     }
+    template<bool inDebugMode>
+    inline static void lower16Update(bool isReadOp) noexcept {
+       if (isReadOp)  {
+           lower16Update<inDebugMode, true>();
+       } else {
+           lower16Update<inDebugMode, false>();
+       }
+    }
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
      * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
@@ -639,29 +643,7 @@ private:
             full32BitUpdate<inDebugMode, false>();
         }
     }
-    template<bool inDebugMode, DecodeDispatch index >
-    inline static void doDispatch() noexcept {
-        /// @todo use the new ram_space and io space pins to accelerate decoding
-        if constexpr (inDebugMode) {
-            Serial.print(F("Target Address: 0x"));
-            Serial.println(address_.getWholeValue(), HEX);
-        }
-        // if we have a read operation and we are currently write then invert (isReadOperation() && isWriteOperation())
-        // if we have a write operation and we are currently read then invert (!isReadOperation() && !isWriteOperation())
-        // thus if isReadOperation() == isWriteOperation() we need to do a direction invert
-        performEffectiveDispatch<inDebugMode, index.isReadOperation(), index.inIOSpace(), index.isReadOperation() == index.isCurrentlyWrite() >();
-    }
-    template<bool inDebugMode>
-    static constexpr BodyFunction DispatchRoutines[8] = {
-            doDispatch<inDebugMode, DecodeDispatch{0}>,
-            doDispatch<inDebugMode, DecodeDispatch{1}>,
-            doDispatch<inDebugMode, DecodeDispatch{2}>,
-            doDispatch<inDebugMode, DecodeDispatch{3}>,
-            doDispatch<inDebugMode, DecodeDispatch{4}>,
-            doDispatch<inDebugMode, DecodeDispatch{5}>,
-            doDispatch<inDebugMode, DecodeDispatch{6}>,
-            doDispatch<inDebugMode, DecodeDispatch{7}>,
-    };
+    static bool isCurrentlyWrite() noexcept { return dataLinesDirection_ != 0; }
 public:
     /**
      * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
@@ -671,16 +653,19 @@ public:
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
         if constexpr (useInterrupts) {
-           if (DigitalPin<i960Pinout::ADDRESS_HI_INT>::isAsserted())  {
-               full32BitUpdate<inDebugMode>(isReadOperation());
+           if (auto isReadOp = isReadOperation(); DigitalPin<i960Pinout::ADDRESS_HI_INT>::isAsserted())  {
+               full32BitUpdate<inDebugMode>(isReadOp);
            } else if (DigitalPin<i960Pinout::ADDRESS_LO_INT>::isAsserted()) {
-               if (isReadOperation()) {
-                   lower16Update<inDebugMode, true>();
-               } else {
-                   lower16Update<inDebugMode, false>();
-               }
+               lower16Update<inDebugMode>(isReadOp);
            } else {
-               DispatchRoutines<inDebugMode>[DecodeDispatch::makeDynamicValue()]();
+               if (isCurrentlyWrite() == isReadOp) {
+                    invertDataLinesDirection();
+               }
+               if (inIOSpace_) {
+                   performExternalDeviceOperation<ConfigurationSpace, inDebugMode>(isReadOp);
+               } else {
+                   performCacheOperation<inDebugMode>(isReadOp);
+               }
            }
         } else {
             full32BitUpdate<inDebugMode>(isReadOperation());
@@ -860,6 +845,14 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
+    template<typename T, bool inDebugMode>
+    static inline void performExternalDeviceOperation(bool isRead) noexcept {
+        if (isRead) {
+            performExternalDeviceOperation<T, inDebugMode, true>();
+        } else {
+            performExternalDeviceOperation<T, inDebugMode, false>();
+        }
+    }
     template<typename T, bool inDebugMode, bool isRead>
     static inline void performExternalDeviceOperation() noexcept {
         // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
@@ -917,6 +910,23 @@ private:
     template<bool inDebugMode>
     static void performCacheWrite() noexcept {
         performCacheWrite<inDebugMode>(theCache.getLine(address_));
+    }
+
+    template<bool inDebugMode>
+    static void performCacheOperation(bool isReadOp) noexcept {
+        if (isReadOp) {
+            performCacheRead<inDebugMode>();
+        } else {
+            performCacheWrite<inDebugMode>();
+        }
+    }
+    template<bool inDebugMode, bool isReadOp>
+    static void performCacheOperation() noexcept {
+        if constexpr (isReadOp) {
+            performCacheRead<inDebugMode>();
+        } else {
+            performCacheWrite<inDebugMode>();
+        }
     }
 
 private:
