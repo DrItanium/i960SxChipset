@@ -861,21 +861,20 @@ public:
     static void newDataCycle() noexcept {
         if (auto op = getUpdateKind<useInterrupts>(); op == 0b00 || op == 0b01) {
             full32BitUpdate<inDebugMode>();
-            return;
         } else if (op == 0b10) {
             lower16Update<inDebugMode>();
-            return;
-        }
-        switch (DecodeDispatch::makeDynamicValue()) {
-            case 0: doDispatch<inDebugMode, DecodeDispatch{0}>(); break;
-            case 1: doDispatch<inDebugMode, DecodeDispatch{1}>(); break;
-            case 2: doDispatch<inDebugMode, DecodeDispatch{2}>(); break;
-            case 3: doDispatch<inDebugMode, DecodeDispatch{3}>(); break;
-            case 4: doDispatch<inDebugMode, DecodeDispatch{4}>(); break;
-            case 5: doDispatch<inDebugMode, DecodeDispatch{5}>(); break;
-            case 6: doDispatch<inDebugMode, DecodeDispatch{6}>(); break;
-            case 7: doDispatch<inDebugMode, DecodeDispatch{7}>(); break;
-            default: break;
+        } else {
+            switch (DecodeDispatch::makeDynamicValue()) {
+                case 0: doDispatch<inDebugMode, DecodeDispatch{0}>(); break;
+                case 1: doDispatch<inDebugMode, DecodeDispatch{1}>(); break;
+                case 2: doDispatch<inDebugMode, DecodeDispatch{2}>(); break;
+                case 3: doDispatch<inDebugMode, DecodeDispatch{3}>(); break;
+                case 4: doDispatch<inDebugMode, DecodeDispatch{4}>(); break;
+                case 5: doDispatch<inDebugMode, DecodeDispatch{5}>(); break;
+                case 6: doDispatch<inDebugMode, DecodeDispatch{6}>(); break;
+                case 7: doDispatch<inDebugMode, DecodeDispatch{7}>(); break;
+                default: break;
+            }
         }
     }
     /**
