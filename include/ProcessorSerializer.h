@@ -513,7 +513,7 @@ private:
         }
     };
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask, typename T>
-    inline static void ioReadOperation() {
+    inline static void ioReadOperation32() {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
@@ -561,7 +561,7 @@ private:
         }
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
-    inline static void ramReadOperation() {
+    inline static void ramReadOperation32() {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
@@ -588,7 +588,7 @@ private:
         performCacheRead<inDebugMode>();
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask, typename T>
-    inline static void ioWriteOperation() noexcept {
+    inline static void ioWriteOperation32() noexcept {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
@@ -637,7 +637,7 @@ private:
         }
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
-    inline static void ramWriteOperation() noexcept {
+    inline static void ramWriteOperation32() noexcept {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
@@ -664,7 +664,7 @@ private:
         performCacheWrite<inDebugMode>();
     }
     template<bool inDebugMode, byte Lower16Opcode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
-    inline static void writeOperation() noexcept {
+    inline static void writeOperation32() noexcept {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
@@ -685,13 +685,13 @@ private:
         address_.bytes[3] = highest;
         inIOSpace_ = highest >= 0xFE;
         if (inIOSpace_) {
-            ioWriteOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, ConfigurationSpace>();
+            ioWriteOperation32<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, ConfigurationSpace>();
         } else {
-            ramWriteOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
+            ramWriteOperation32<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
         }
     }
     template<bool inDebugMode, byte Lower16Opcode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
-    inline static void readOperation() noexcept {
+    inline static void readOperation32() noexcept {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
@@ -712,9 +712,9 @@ private:
         address_.bytes[3] = highest;
         inIOSpace_ = highest >= 0xFE;
         if (inIOSpace_) {
-            ioReadOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, ConfigurationSpace>();
+            ioReadOperation32<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, ConfigurationSpace>();
         } else {
-            ramReadOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
+            ramReadOperation32<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
         }
     }
     /**
@@ -734,9 +734,73 @@ private:
         SPDR = Upper16Opcode;
         asm volatile("nop");
         if (isReadOperation()) {
-            readOperation<inDebugMode, Lower16Opcode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
+            readOperation32<inDebugMode, Lower16Opcode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
         } else {
-            writeOperation<inDebugMode, Lower16Opcode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
+            writeOperation32<inDebugMode, Lower16Opcode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
+        }
+    }
+    template<bool inDebugMode, auto shift, auto mask, bool isRead, bool isIO, bool invertDirection>
+    static void completeOp16() noexcept {
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto lowest = SPDR;
+        SPDR = 0;
+        {
+            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
+            // put scope ticks to force the matter
+            cacheOffsetEntry_ = (lowest >> shift) & mask; // we want to make this quick to increment
+            address_.bytes[0] = lowest;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        address_.bytes[1] = SPDR;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        if constexpr (invertDirection) {
+            invertDataLinesDirection();
+        }
+        if constexpr (isRead) {
+            if constexpr (isIO) {
+                performExternalDeviceRead<ConfigurationSpace, inDebugMode>();
+            } else {
+                performCacheRead<inDebugMode>();
+            }
+        } else {
+            if constexpr (isIO) {
+                performExternalDeviceWrite<ConfigurationSpace, inDebugMode>();
+            } else {
+                performCacheWrite<inDebugMode>();
+            }
+        }
+    }
+    template<bool inDebugMode, auto shift, auto mask, bool isRead, bool isIO>
+    static void opSpace16() noexcept {
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        asm volatile("nop");
+        if constexpr (bool currentlyWrite = dataLinesDirection_ != 0; isRead) {
+            // so we are looking at a read operation
+            if (currentlyWrite) {
+                // we are currently in write mode so we need to do an invert
+                completeOp16<inDebugMode, shift, mask, isRead, isIO, true>();
+            } else {
+                completeOp16<inDebugMode, shift, mask, isRead, isIO, false>();
+            }
+        } else {
+            if (currentlyWrite) {
+                completeOp16<inDebugMode, shift, mask, isRead, isIO, false>();
+            } else {
+                // we are currently in read mode so we need to do an invert
+                completeOp16<inDebugMode, shift, mask, isRead, isIO, true>();
+            }
+        }
+    }
+    template<bool inDebugMode, byte opcode, auto shift, auto mask, bool isRead>
+    static void op16() noexcept {
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = opcode;
+        asm volatile("nop");
+        if (inIOSpace_) {
+            opSpace16<inDebugMode, shift, mask, isRead, true>();
+        } else {
+            opSpace16<inDebugMode, shift, mask, isRead, false>();
         }
     }
     /**
@@ -754,24 +818,11 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
         asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lowest = SPDR;
-        SPDR = 0;
-        {
-            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
-            // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
-            address_.bytes[0] = lowest;
+        if (isReadOperation()) {
+            op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, true>();
+        } else {
+            op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, false>();
         }
-        while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
     template<bool inDebugMode, DecodeDispatch index >
     inline static void doDispatch() noexcept {
@@ -800,7 +851,6 @@ private:
             }
         }
     }
-
 public:
     /**
      * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
@@ -814,6 +864,7 @@ public:
             return;
         } else if (op == 0b10) {
             lower16Update<inDebugMode>();
+            return;
         }
         switch (DecodeDispatch::makeDynamicValue()) {
             case 0: doDispatch<inDebugMode, DecodeDispatch{0}>(); break;
