@@ -656,6 +656,17 @@ private:
         // thus if isReadOperation() == isWriteOperation() we need to do a direction invert
         performEffectiveDispatch<inDebugMode, index.isReadOperation(), index.inIOSpace(), index.isReadOperation() == index.isCurrentlyWrite() >();
     }
+    template<bool inDebugMode>
+    static constexpr BodyFunction DispatchRoutines[8] = {
+            doDispatch<inDebugMode, DecodeDispatch{0}>,
+            doDispatch<inDebugMode, DecodeDispatch{1}>,
+            doDispatch<inDebugMode, DecodeDispatch{2}>,
+            doDispatch<inDebugMode, DecodeDispatch{3}>,
+            doDispatch<inDebugMode, DecodeDispatch{4}>,
+            doDispatch<inDebugMode, DecodeDispatch{5}>,
+            doDispatch<inDebugMode, DecodeDispatch{6}>,
+            doDispatch<inDebugMode, DecodeDispatch{7}>,
+    };
 public:
     /**
      * @brief Starts a new memory transaction. It is responsible for updating the target base address and then invoke the proper read/write function to satisfy the request
@@ -664,28 +675,16 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-        switch (getUpdateKind<useInterrupts>()) {
-            case 0b00:
-            case 0b01:
-                full32BitUpdate<inDebugMode>();
-                break;
-            case 0b10:
-                lower16Update<inDebugMode>();
-                break;
-            default:
-                switch (DecodeDispatch::makeDynamicValue()) {
-                    case 0: doDispatch<inDebugMode, DecodeDispatch{0}>(); break;
-                    case 1: doDispatch<inDebugMode, DecodeDispatch{1}>(); break;
-                    case 2: doDispatch<inDebugMode, DecodeDispatch{2}>(); break;
-                    case 3: doDispatch<inDebugMode, DecodeDispatch{3}>(); break;
-                    case 4: doDispatch<inDebugMode, DecodeDispatch{4}>(); break;
-                    case 5: doDispatch<inDebugMode, DecodeDispatch{5}>(); break;
-                    case 6: doDispatch<inDebugMode, DecodeDispatch{6}>(); break;
-                    case 7: doDispatch<inDebugMode, DecodeDispatch{7}>(); break;
-                    default:
-                        break;
-                }
-                break;
+        if constexpr (useInterrupts) {
+           if (DigitalPin<i960Pinout::ADDRESS_HI_INT>::isAsserted())  {
+               full32BitUpdate<inDebugMode>();
+           } else if (DigitalPin<i960Pinout::ADDRESS_LO_INT>::isAsserted()) {
+               lower16Update<inDebugMode>();
+           } else {
+               DispatchRoutines<inDebugMode>[DecodeDispatch::makeDynamicValue()]();
+           }
+        } else {
+            full32BitUpdate<inDebugMode>();
         }
     }
     /**
