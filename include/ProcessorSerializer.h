@@ -468,6 +468,17 @@ public:
     /// @todo implement HOLD and LOCK functionality
 private:
 
+    /**
+     * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
+     * @return The LSB of the address
+     */
+    [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
+    /**
+     * @brief Return bits 8-15 of the address. Internally this is known as the page index.
+     * @return The page index based off of the current address
+     */
+    [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
+    [[nodiscard]] static bool isBurstLast() noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
     struct DecodeDispatch {
         constexpr DecodeDispatch(bool isReadOp,
                                  bool dataIsWriting,
@@ -501,7 +512,7 @@ private:
             return thingy.value;
         }
     };
-    template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
+    template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask, typename T>
     inline static void ioReadOperation() {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
@@ -526,7 +537,28 @@ private:
         if (dataLinesAreWriting) {
             invertDataLinesDirection();
         }
-        performExternalDeviceRead<ConfigurationSpace, inDebugMode>();
+        // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
+        // next 16-bit word
+        // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
+        auto pageIndex = getPageIndex();
+        for (byte pageOffset = getPageOffset(); ;pageOffset += 2) {
+            auto result = T::read(pageIndex,
+                                  pageOffset,
+                                  getStyle());
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tPage Index: 0x")) ;
+                Serial.println(getPageIndex(), HEX);
+                Serial.print(F("\tPage Offset: 0x")) ;
+                Serial.println(pageOffset, HEX);
+                Serial.print(F("\tRead Value: 0x"));
+                Serial.println(result, HEX);
+            }
+            auto isLast = setDataBits(result);
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLast) {
+                return;
+            }
+        }
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
     inline static void ramReadOperation() {
@@ -658,7 +690,7 @@ private:
         address_.bytes[3] = highest;
         inIOSpace_ = highest >= 0xFE;
         if (inIOSpace_) {
-            ioReadOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
+            ioReadOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, ConfigurationSpace>();
         } else {
             ramReadOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
         }
@@ -772,19 +804,6 @@ public:
             case 7: doDispatch<inDebugMode, DecodeDispatch{7}>(); break;
             default: break;
         }
-    }
-    /**
-     * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
-     * @return The LSB of the address
-     */
-    [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
-    /**
-     * @brief Return bits 8-15 of the address. Internally this is known as the page index.
-     * @return The page index based off of the current address
-     */
-    [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
-    [[nodiscard]] static bool isBurstLast() noexcept {
-        return DigitalPin<i960Pinout::BLAST_>::isAsserted();
     }
     /**
      * @brief loads a cache line based on base transaction address and then bursts up to 16 bytes to the i960
