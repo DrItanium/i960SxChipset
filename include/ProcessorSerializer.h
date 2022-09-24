@@ -681,7 +681,6 @@ public:
         if (auto op = getUpdateKind<useInterrupts>(); op == 0b00 || op == 0b01) {
             full32BitUpdate<inDebugMode>();
         } else if (op == 0b10) {
-            Serial.println(F("LOWER!"));
             lower16Update<inDebugMode>();
         } else {
             switch (DecodeDispatch::makeDynamicValue()) {
