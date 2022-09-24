@@ -774,49 +774,17 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
     static void updateDataInputLatch() noexcept {
-        if (auto kind = getDataLineInputUpdateKind(); kind != 0b11) {
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = generateReadOpcode(DataLines);
-            asm volatile ("nop");
-            auto startRegister = kind == 0b10 ? static_cast<byte>(MCP23x17Registers ::GPIOB) : static_cast<byte>(MCP23x17Registers::GPIOA);
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = startRegister;
-            asm volatile ("nop");
-            if (kind == 0b00) {
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = 0;
-                asm volatile ("nop");
-                while (!(SPSR & _BV(SPIF))); // wait
-                auto lower = SPDR;
-                SPDR = 0;
-                asm volatile ("nop");
-                latchedDataInput_.bytes[0] = lower;
-                while (!(SPSR & _BV(SPIF))); // wait
-                latchedDataInput_.bytes[1] = SPDR;
-            } else {
-                // only a single byte is going through
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = 0;
-                asm volatile ("nop");
-                auto index = kind == 0b10 ? 0 : 1;
-                while (!(SPSR & _BV(SPIF))); // wait
-                latchedDataInput_.bytes[index] = SPDR;
-            }
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        }
-#if 0
         if (DigitalPin<i960Pinout::DATA_HI8_INT>::isAsserted()) {
-           if (DigitalPin<i960Pinout::DATA_LO8_INT>::isAsserted())  {
-               fullDataLineGrab();
-           } else {
-               upper8DataGrab();
-           }
+            if (DigitalPin<i960Pinout::DATA_LO8_INT>::isAsserted())  {
+                fullDataLineGrab();
+            } else {
+                upper8DataGrab();
+            }
         } else {
-           if (DigitalPin<i960Pinout::DATA_LO8_INT>::isAsserted())  {
-               lower8DataGrab();
-           }
+            if (DigitalPin<i960Pinout::DATA_LO8_INT>::isAsserted())  {
+                lower8DataGrab();
+            }
         }
-#endif
     }
     [[nodiscard]]
     static bool getDataBits(CacheWriteRequest& request) noexcept {
