@@ -631,7 +631,14 @@ private:
             opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, isReadOp, false>();
         }
     }
-
+    template<bool inDebugMode>
+    inline static void full32BitUpdate(bool isReadOperation) {
+        if (isReadOperation)  {
+            full32BitUpdate<inDebugMode, true>();
+        } else {
+            full32BitUpdate<inDebugMode, false>();
+        }
+    }
     template<bool inDebugMode, DecodeDispatch index >
     inline static void doDispatch() noexcept {
         /// @todo use the new ram_space and io space pins to accelerate decoding
@@ -665,11 +672,7 @@ public:
     static void newDataCycle() noexcept {
         if constexpr (useInterrupts) {
            if (DigitalPin<i960Pinout::ADDRESS_HI_INT>::isAsserted())  {
-               if (isReadOperation()) {
-                   full32BitUpdate<inDebugMode, true>();
-               } else {
-                   full32BitUpdate<inDebugMode, false>();
-               }
+               full32BitUpdate<inDebugMode>(isReadOperation());
            } else if (DigitalPin<i960Pinout::ADDRESS_LO_INT>::isAsserted()) {
                if (isReadOperation()) {
                    lower16Update<inDebugMode, true>();
@@ -680,11 +683,7 @@ public:
                DispatchRoutines<inDebugMode>[DecodeDispatch::makeDynamicValue()]();
            }
         } else {
-            if (isReadOperation()) {
-                full32BitUpdate<inDebugMode, true>();
-            } else {
-                full32BitUpdate<inDebugMode, false>();
-            }
+            full32BitUpdate<inDebugMode>(isReadOperation());
         }
     }
     /**
