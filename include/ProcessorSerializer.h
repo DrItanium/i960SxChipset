@@ -626,19 +626,16 @@ private:
             asm volatile("nop");
             address_.bytes[3] = highest;
             inIOSpace_ = highest >= 0xFE;
+            while (!(SPSR & _BV(SPIF))); // wait
+            SPDR = GPIOOpcode;
+            asm volatile("nop");
             if (isReadOperation()) {
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = GPIOOpcode;
-                asm volatile("nop");
                 if (inIOSpace_) {
                     opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, true, true>();
                 } else {
                     opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, true, false>();
                 }
             } else {
-                while (!(SPSR & _BV(SPIF))); // wait
-                SPDR = GPIOOpcode;
-                asm volatile("nop");
                 if (inIOSpace_) {
                     opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, false, true>();
                 } else {
