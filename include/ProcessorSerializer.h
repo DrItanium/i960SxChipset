@@ -786,27 +786,6 @@ private:
         }
     }
 
-    /**
-     * @brief Only update the lower 16 bits of the current transaction's base address
-     */
-    template<bool inDebugMode>
-    static void upper16Update() noexcept {
-        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
-        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
-        static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
-        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-        // read only the lower half
-        // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
-        // where we can insert operations to take place that would otherwise be waiting
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Upper16Opcode;
-        asm volatile("nop");
-        if (isReadOperation()) {
-            op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, true>();
-        } else {
-            op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, false>();
-        }
-    }
     template<bool inDebugMode, DecodeDispatch index >
     inline static void doDispatch() noexcept {
         /// @todo use the new ram_space and io space pins to accelerate decoding
@@ -814,25 +793,10 @@ private:
             Serial.print(F("Target Address: 0x"));
             Serial.println(address_.getWholeValue(), HEX);
         }
-        if constexpr (index.isReadOperation()) {
-            if constexpr (index.isCurrentlyWrite()) {
-                invertDataLinesDirection();
-            }
-            if constexpr (index.inIOSpace()) {
-                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, true>();
-            } else {
-                performCacheRead<inDebugMode>();
-            }
-        } else {
-            if constexpr (!index.isCurrentlyWrite()) {
-                invertDataLinesDirection();
-            }
-            if constexpr (index.inIOSpace()) {
-                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, false>();
-            } else {
-                performCacheWrite<inDebugMode>();
-            }
-        }
+        // if we have a read operation and we are currently write then invert (isReadOperation() && isWriteOperation())
+        // if we have a write operation and we are currently read then invert (!isReadOperation() && !isWriteOperation())
+        // thus if isReadOperation() == isWriteOperation() we need to do a direction invert
+        performEffectiveDispatch<inDebugMode, index.isReadOperation(), index.inIOSpace(), index.isReadOperation() == index.isCurrentlyWrite() >();
     }
 public:
     /**
