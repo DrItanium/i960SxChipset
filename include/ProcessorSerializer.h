@@ -570,7 +570,7 @@ private:
      * @brief Only update the lower 16 bits of the current transaction's base address
      */
     template<bool inDebugMode>
-    inline static void lowerAddressLinesUpdate() noexcept {
+    inline static void lower16Update() noexcept {
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
         static constexpr auto Lower16Opcode = generateReadOpcode(Lower16Lines);
@@ -591,68 +591,57 @@ private:
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
      * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
      */
-    template<bool inDebugMode, bool full32Update>
-    inline static void doAddressAndDispatch() noexcept {
-        if constexpr (full32Update) {
-            static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
-            static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-            static constexpr auto Lower16Opcode = generateReadOpcode(Lower16Lines);
-            static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
-            static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
-            // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
-            // where we can insert operations to take place that would otherwise be waiting
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = Upper16Opcode;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = GPIOOpcode;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-
-            SPDR = 0;
-            asm volatile("nop");
-            while (!(SPSR & _BV(SPIF))); // wait
-
-            auto higher = SPDR;
-            SPDR = 0;
-            {
-                address_.bytes[2] = higher;
-            }
-            while (!(SPSR & _BV(SPIF))); // wait
-            auto highest = SPDR;
-            digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-            digitalWrite<i960Pinout::GPIOSelect, LOW>();
-            SPDR = Lower16Opcode;
-            asm volatile("nop");
-            address_.bytes[3] = highest;
-            inIOSpace_ = highest >= 0xFE;
-            while (!(SPSR & _BV(SPIF))); // wait
-            SPDR = GPIOOpcode;
-            asm volatile("nop");
-            if (isReadOperation()) {
-                if (inIOSpace_) {
-                    opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, true, true>();
-                } else {
-                    opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, true, false>();
-                }
-            } else {
-                if (inIOSpace_) {
-                    opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, false, true>();
-                } else {
-                    opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, false, false>();
-                }
-            }
-        } else {
-            lowerAddressLinesUpdate<inDebugMode>();
-        }
-    }
     template<bool inDebugMode>
     inline static void full32BitUpdate() noexcept {
-       return doAddressAndDispatch<inDebugMode, true>();
-    }
-    template<bool inDebugMode>
-    inline static void lower16Update() noexcept {
-        return doAddressAndDispatch<inDebugMode, false>();
+        static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
+        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        static constexpr auto Lower16Opcode = generateReadOpcode(Lower16Lines);
+        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
+        // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
+        // where we can insert operations to take place that would otherwise be waiting
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = Upper16Opcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = GPIOOpcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+
+        auto higher = SPDR;
+        SPDR = 0;
+        {
+            address_.bytes[2] = higher;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto highest = SPDR;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = Lower16Opcode;
+        asm volatile("nop");
+        address_.bytes[3] = highest;
+        inIOSpace_ = highest >= 0xFE;
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = GPIOOpcode;
+        asm volatile("nop");
+        if (isReadOperation()) {
+            if (inIOSpace_) {
+                opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, true, true>();
+            } else {
+                opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, true, false>();
+            }
+        } else {
+            if (inIOSpace_) {
+                opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, false, true>();
+            } else {
+                opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, false, false>();
+            }
+        }
     }
 
     template<bool inDebugMode, DecodeDispatch index >
@@ -675,22 +664,28 @@ public:
      */
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
-        if (auto op = getUpdateKind<useInterrupts>(); op == 0b00 || op == 0b01) {
-            full32BitUpdate<inDebugMode>();
-        } else if (op == 0b10) {
-            lower16Update<inDebugMode>();
-        } else {
-            switch (DecodeDispatch::makeDynamicValue()) {
-                case 0: doDispatch<inDebugMode, DecodeDispatch{0}>(); break;
-                case 1: doDispatch<inDebugMode, DecodeDispatch{1}>(); break;
-                case 2: doDispatch<inDebugMode, DecodeDispatch{2}>(); break;
-                case 3: doDispatch<inDebugMode, DecodeDispatch{3}>(); break;
-                case 4: doDispatch<inDebugMode, DecodeDispatch{4}>(); break;
-                case 5: doDispatch<inDebugMode, DecodeDispatch{5}>(); break;
-                case 6: doDispatch<inDebugMode, DecodeDispatch{6}>(); break;
-                case 7: doDispatch<inDebugMode, DecodeDispatch{7}>(); break;
-                default: break;
-            }
+        switch (getUpdateKind<useInterrupts>()) {
+            case 0b00:
+            case 0b01:
+                full32BitUpdate<inDebugMode>();
+                break;
+            case 0b10:
+                lower16Update<inDebugMode>();
+                break;
+            default:
+                switch (DecodeDispatch::makeDynamicValue()) {
+                    case 0: doDispatch<inDebugMode, DecodeDispatch{0}>(); break;
+                    case 1: doDispatch<inDebugMode, DecodeDispatch{1}>(); break;
+                    case 2: doDispatch<inDebugMode, DecodeDispatch{2}>(); break;
+                    case 3: doDispatch<inDebugMode, DecodeDispatch{3}>(); break;
+                    case 4: doDispatch<inDebugMode, DecodeDispatch{4}>(); break;
+                    case 5: doDispatch<inDebugMode, DecodeDispatch{5}>(); break;
+                    case 6: doDispatch<inDebugMode, DecodeDispatch{6}>(); break;
+                    case 7: doDispatch<inDebugMode, DecodeDispatch{7}>(); break;
+                    default:
+                        break;
+                }
+                break;
         }
     }
     /**
