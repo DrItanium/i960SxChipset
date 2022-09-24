@@ -28,27 +28,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ProcessorSerializer.h"
 
-void
-ProcessorInterface::performFallbackRead() noexcept {
-    do {
-        auto isLast = setDataBits(0);
-        DigitalPin<i960Pinout::Ready>::pulse();
-        // need to introduce some delay
-        if (isLast) {
-            break;
-        }
-    } while (true);
-}
-void
-ProcessorInterface::performFallbackWrite() noexcept {
-    do {
-        // put four cycles worth of delay into this to make damn sure we are ready with the i960
-        auto isLast = ProcessorInterface::isBurstLast();
-        __builtin_avr_nops(4);
-        DigitalPin<i960Pinout::Ready>::pulse();
-        // need to introduce some delay
-        if (isLast) {
-            break;
-        }
-    } while (true);
-}

@@ -234,7 +234,7 @@ public:
      * @param value The value to set the GPIO register pair to
      * @return True if this is the last word of a burst transaction
      */
-    static bool setDataBits(uint16_t value) noexcept {
+    static void setDataBits(uint16_t value) noexcept {
         // the latch is preserved in between data line changes
         // okay we are still pointing as output values
         // check the latch and see if the output value is the same as what is latched
@@ -268,7 +268,6 @@ public:
             while (!(SPSR & _BV(SPIF))) ; // wait
             digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         }
-        return isBurstLast();
     }
     /**
      * @brief Query the ~BE0 and ~BE1 pins provided by the i960 to denote how the chipset should treat the current word in the transaction
@@ -533,32 +532,11 @@ private:
         }
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
-        auto pageIndex = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (dataLinesAreWriting) {
             invertDataLinesDirection();
         }
-        // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
-        // next 16-bit word
-        // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
-        for (byte pageOffset = getPageOffset(); ;pageOffset += 2) {
-            auto result = T::read(pageIndex,
-                                  pageOffset,
-                                  getStyle());
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x")) ;
-                Serial.println(getPageIndex(), HEX);
-                Serial.print(F("\tPage Offset: 0x")) ;
-                Serial.println(pageOffset, HEX);
-                Serial.print(F("\tRead Value: 0x"));
-                Serial.println(result, HEX);
-            }
-            auto isLast = setDataBits(result);
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                return;
-            }
-        }
+        performExternalDeviceOperation<T, inDebugMode, true>();
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
     inline static void ramReadOperation32() {
@@ -613,28 +591,7 @@ private:
         if (!dataLinesAreWriting) {
             invertDataLinesDirection();
         }
-        for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
-            auto isLast = isBurstLast();
-            LoadStoreStyle currLSS = getStyle();
-            updateDataInputLatch();
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x"));
-                Serial.println(pageIndex, HEX);
-                Serial.print(F("\tPage Offset: 0x"));
-                Serial.println(pageOffset, HEX);
-                Serial.print(F("\tData To Write: 0x"));
-                Serial.println(latchedDataInput_.getWholeValue(), HEX);
-            }
-            T::write(pageIndex,
-                     pageOffset,
-                     currLSS,
-                     latchedDataInput_);
-            // we could actually pulse the cpu and then perform the write, unsure at this point
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                break;
-            }
-        }
+        performExternalDeviceOperation<T, inDebugMode, false>();
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
     inline static void ramWriteOperation32() noexcept {
@@ -758,13 +715,13 @@ private:
         }
         if constexpr (isRead) {
             if constexpr (isIO) {
-                performExternalDeviceRead<ConfigurationSpace, inDebugMode>();
+                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
             } else {
                 performCacheRead<inDebugMode>();
             }
         } else {
             if constexpr (isIO) {
-                performExternalDeviceWrite<ConfigurationSpace, inDebugMode>();
+                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
             } else {
                 performCacheWrite<inDebugMode>();
             }
@@ -836,7 +793,7 @@ private:
                 invertDataLinesDirection();
             }
             if constexpr (index.inIOSpace()) {
-                performExternalDeviceRead<ConfigurationSpace, inDebugMode>();
+                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, true>();
             } else {
                 performCacheRead<inDebugMode>();
             }
@@ -845,7 +802,7 @@ private:
                 invertDataLinesDirection();
             }
             if constexpr (index.inIOSpace()) {
-                performExternalDeviceWrite<ConfigurationSpace, inDebugMode>();
+                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, false>();
             } else {
                 performCacheWrite<inDebugMode>();
             }
@@ -1051,79 +1008,50 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
-    /**
-     * @brief The current transaction is reading from a specific memory mapped device connected to the chipset.
-     * @tparam T The specific device to be read from
-     * @tparam inDebugMode are we in debug mode?
-     */
-    template<typename T, bool inDebugMode>
-    static inline void performExternalDeviceRead() noexcept {
+    template<typename T, bool inDebugMode, bool isRead>
+    static inline void performExternalDeviceOperation() noexcept {
         // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
         // next 16-bit word
         // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
         auto pageIndex = getPageIndex();
         for (byte pageOffset = getPageOffset(); ;pageOffset += 2) {
-            auto result = T::read(pageIndex,
-                                  pageOffset,
-                                  getStyle());
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x")) ;
-                Serial.println(getPageIndex(), HEX);
-                Serial.print(F("\tPage Offset: 0x")) ;
-                Serial.println(pageOffset, HEX);
-                Serial.print(F("\tRead Value: 0x"));
-                Serial.println(result, HEX);
+            if constexpr (isRead) {
+                auto result = T::read(pageIndex,
+                                      pageOffset,
+                                      getStyle());
+                if constexpr (inDebugMode) {
+                    Serial.print(F("\tPage Index: 0x"));
+                    Serial.println(getPageIndex(), HEX);
+                    Serial.print(F("\tPage Offset: 0x"));
+                    Serial.println(pageOffset, HEX);
+                    Serial.print(F("\tRead Value: 0x"));
+                    Serial.println(result, HEX);
+                }
+                setDataBits(result);
+            } else {
+                LoadStoreStyle currLSS = getStyle();
+                updateDataInputLatch();
+                if constexpr (inDebugMode) {
+                    Serial.print(F("\tPage Index: 0x"));
+                    Serial.println(pageIndex, HEX);
+                    Serial.print(F("\tPage Offset: 0x"));
+                    Serial.println(pageOffset, HEX);
+                    Serial.print(F("\tData To Write: 0x"));
+                    Serial.println(latchedDataInput_.getWholeValue(), HEX);
+                }
+                T::write(pageIndex,
+                         pageOffset,
+                         currLSS,
+                         latchedDataInput_);
+                // we could actually pulse the cpu and then perform the write, unsure at this point
             }
-            auto isLast = setDataBits(result);
+            auto isLast = isBurstLast();
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
                 return;
             }
         }
     }
-    /**
-     * @brief The current transaction is writing to a specific memory mapped device connected to the chipset.
-     * @tparam T The specific device to write to
-     * @tparam inDebugMode are we in debug mode?
-     */
-    template<typename T, bool inDebugMode>
-    static inline void performExternalDeviceWrite() noexcept {
-        // be careful of querying i960 state at this point because the chipset runs at twice the frequency of the i960
-        // so you may still be reading the previous i960 cycle state!
-        byte pageIndex = getPageIndex();
-        for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
-            auto isLast = isBurstLast();
-            LoadStoreStyle currLSS = getStyle();
-            updateDataInputLatch();
-            if constexpr (inDebugMode) {
-                Serial.print(F("\tPage Index: 0x"));
-                Serial.println(pageIndex, HEX);
-                Serial.print(F("\tPage Offset: 0x"));
-                Serial.println(pageOffset, HEX);
-                Serial.print(F("\tData To Write: 0x"));
-                Serial.println(latchedDataInput_.getWholeValue(), HEX);
-            }
-            T::write(pageIndex,
-                     pageOffset,
-                     currLSS,
-                     latchedDataInput_);
-            // we could actually pulse the cpu and then perform the write, unsure at this point
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                break;
-            }
-        }
-    }
-    /**
-     * @brief Used when the transaction is reading from unmapped memory in the i960's memory space. Zero will be sent to the i960 for the duration of the transaction
-     * @tparam inDebugMode are we in debug mode?
-     */
-    static void performFallbackRead() noexcept;
-    /**
-     * @brief Used when the transaction is writing to unmapped memory in the i960's memory space. Nothing will be written but an artificial delay will be introduced to be on the safe side.
-     * @tparam inDebugMode are we in debug mode?
-     */
-    static void performFallbackWrite() noexcept;
 public:
     /**
      * @brief Complete the process of setting up the processor interface by seeding the cached function pointers with valid addresses.
