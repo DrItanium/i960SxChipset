@@ -569,7 +569,7 @@ private:
     /**
      * @brief Only update the lower 16 bits of the current transaction's base address
      */
-    template<bool inDebugMode>
+    template<bool inDebugMode, bool isReadOp>
     inline static void lower16Update() noexcept {
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
@@ -581,17 +581,13 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
         asm volatile("nop");
-        if (isReadOperation()) {
-            op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, true>();
-        } else {
-            op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, false>();
-        }
+        op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, isReadOp>();
     }
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
      * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
      */
-    template<bool inDebugMode>
+    template<bool inDebugMode, bool isReadOp>
     inline static void full32BitUpdate() noexcept {
         static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -629,18 +625,10 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
-        if (isReadOperation()) {
-            if (inIOSpace_) {
-                opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, true, true>();
-            } else {
-                opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, true, false>();
-            }
+        if (inIOSpace_) {
+            opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, isReadOp, true>();
         } else {
-            if (inIOSpace_) {
-                opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, false, true>();
-            } else {
-                opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, false, false>();
-            }
+            opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, isReadOp, false>();
         }
     }
 
@@ -677,14 +665,26 @@ public:
     static void newDataCycle() noexcept {
         if constexpr (useInterrupts) {
            if (DigitalPin<i960Pinout::ADDRESS_HI_INT>::isAsserted())  {
-               full32BitUpdate<inDebugMode>();
+               if (isReadOperation()) {
+                   full32BitUpdate<inDebugMode, true>();
+               } else {
+                   full32BitUpdate<inDebugMode, false>();
+               }
            } else if (DigitalPin<i960Pinout::ADDRESS_LO_INT>::isAsserted()) {
-               lower16Update<inDebugMode>();
+               if (isReadOperation()) {
+                   lower16Update<inDebugMode, true>();
+               } else {
+                   lower16Update<inDebugMode, false>();
+               }
            } else {
                DispatchRoutines<inDebugMode>[DecodeDispatch::makeDynamicValue()]();
            }
         } else {
-            full32BitUpdate<inDebugMode>();
+            if (isReadOperation()) {
+                full32BitUpdate<inDebugMode, true>();
+            } else {
+                full32BitUpdate<inDebugMode, false>();
+            }
         }
     }
     /**
