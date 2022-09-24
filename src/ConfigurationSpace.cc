@@ -479,6 +479,11 @@ ConfigurationSpace::begin() noexcept {
         volumeSectorCount_ = SplitWord32(SD.clusterCount() / SD.sectorsPerCluster());
         bytesPerSector_ = SD.bytesPerCluster() / SD.sectorsPerCluster();
         initialized_ = true;
+        primedPage_ = 0;
     }
     //TheRTCInterface::begin();
+}
+void
+ConfigurationSpace::prime(uint8_t targetPage) noexcept {
+    // we need to select the proper page and then let it handle the walk down instead of doing a lookup each time
 }

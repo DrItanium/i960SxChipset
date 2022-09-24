@@ -83,6 +83,7 @@ private:
 public:
     [[nodiscard]] static uint16_t read(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss) noexcept;
     static void write(uint8_t targetPage, uint8_t offset, LoadStoreStyle lss, SplitWord16 value) noexcept;
+    static void prime(uint8_t targetPage) noexcept;
 private:
     // sd file system structures
     static inline bool initialized_ = false;
@@ -95,5 +96,6 @@ private:
     static inline bool makeMissingParentDirectories_ = false;
     static inline uint16_t filePermissions_ = 0;
     static inline bool cardMounted_ = false;
+    static inline uint8_t primedPage_ = 0;
 };
 #endif //I960SXCHIPSET_CORECHIPSETFEATURES_H

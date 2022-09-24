@@ -773,14 +773,18 @@ private:
         latchedDataInput_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
-    static inline BodyFunction DataLineUpdateFunctions[4] {
-            fullDataLineGrab, // 0b00
-            upper8DataGrab, // 0b01
-            lower8DataGrab, // 0b10
-            []() noexcept { },
-    };
     static void updateDataInputLatch() noexcept {
-        DataLineUpdateFunctions[getDataLineInputUpdateKind()]();
+        if (DigitalPin<i960Pinout::DATA_HI8_INT>::isAsserted()) {
+           if (DigitalPin<i960Pinout::DATA_LO8_INT>::isAsserted())  {
+               fullDataLineGrab();
+           } else {
+               upper8DataGrab();
+           }
+        } else {
+           if (DigitalPin<i960Pinout::DATA_LO8_INT>::isAsserted())  {
+               lower8DataGrab();
+           }
+        }
     }
     [[nodiscard]]
     static bool getDataBits(CacheWriteRequest& request) noexcept {
