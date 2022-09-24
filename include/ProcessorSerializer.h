@@ -511,6 +511,25 @@ private:
             return thingy.value;
         }
     };
+    template<bool inDebugMode, bool isRead, bool isIO, bool invertDirection>
+    inline static void performEffectiveDispatch() noexcept {
+        if constexpr (invertDirection) {
+            invertDataLinesDirection();
+        }
+        if constexpr (isRead) {
+            if constexpr (isIO) {
+                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
+            } else {
+                performCacheRead<inDebugMode>();
+            }
+        } else {
+            if constexpr (isIO) {
+                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
+            } else {
+                performCacheWrite<inDebugMode>();
+            }
+        }
+    }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask, typename T>
     inline static void ioReadOperation32() {
         while (!(SPSR & _BV(SPIF))); // wait
@@ -710,22 +729,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        if constexpr (invertDirection) {
-            invertDataLinesDirection();
-        }
-        if constexpr (isRead) {
-            if constexpr (isIO) {
-                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
-            } else {
-                performCacheRead<inDebugMode>();
-            }
-        } else {
-            if constexpr (isIO) {
-                performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
-            } else {
-                performCacheWrite<inDebugMode>();
-            }
-        }
+        performEffectiveDispatch<inDebugMode, isRead, isIO, invertDirection>();
     }
     template<bool inDebugMode, auto shift, auto mask, bool isRead, bool isIO>
     static void opSpace16() noexcept {
@@ -774,6 +778,28 @@ private:
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
+        asm volatile("nop");
+        if (isReadOperation()) {
+            op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, true>();
+        } else {
+            op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, false>();
+        }
+    }
+
+    /**
+     * @brief Only update the lower 16 bits of the current transaction's base address
+     */
+    template<bool inDebugMode>
+    static void upper16Update() noexcept {
+        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
+        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
+        static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
+        static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
+        // read only the lower half
+        // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
+        // where we can insert operations to take place that would otherwise be waiting
+        digitalWrite<i960Pinout::GPIOSelect, LOW>();
+        SPDR = Upper16Opcode;
         asm volatile("nop");
         if (isReadOperation()) {
             op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, true>();
