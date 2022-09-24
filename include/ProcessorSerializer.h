@@ -533,6 +533,7 @@ private:
         }
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
+        auto pageIndex = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (dataLinesAreWriting) {
             invertDataLinesDirection();
@@ -540,7 +541,6 @@ private:
         // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
         // next 16-bit word
         // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
-        auto pageIndex = getPageIndex();
         for (byte pageOffset = getPageOffset(); ;pageOffset += 2) {
             auto result = T::read(pageIndex,
                                   pageOffset,
@@ -587,7 +587,7 @@ private:
         }
         performCacheRead<inDebugMode>();
     }
-    template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
+    template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask, typename T>
     inline static void ioWriteOperation() noexcept {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
@@ -607,12 +607,34 @@ private:
             address_.bytes[0] = lowest;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[1] = SPDR;
+        auto pageIndex = SPDR;
+        address_.bytes[1] = pageIndex;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         if (!dataLinesAreWriting) {
             invertDataLinesDirection();
         }
-        performExternalDeviceWrite<ConfigurationSpace, inDebugMode>();
+        for (byte pageOffset = getPageOffset(); ; pageOffset += 2) {
+            auto isLast = isBurstLast();
+            LoadStoreStyle currLSS = getStyle();
+            updateDataInputLatch();
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tPage Index: 0x"));
+                Serial.println(pageIndex, HEX);
+                Serial.print(F("\tPage Offset: 0x"));
+                Serial.println(pageOffset, HEX);
+                Serial.print(F("\tData To Write: 0x"));
+                Serial.println(latchedDataInput_.getWholeValue(), HEX);
+            }
+            T::write(pageIndex,
+                     pageOffset,
+                     currLSS,
+                     latchedDataInput_);
+            // we could actually pulse the cpu and then perform the write, unsure at this point
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLast) {
+                break;
+            }
+        }
     }
     template<bool inDebugMode, byte GPIOOpcode, auto OffsetShiftAmount, auto OffsetMask>
     inline static void ramWriteOperation() noexcept {
@@ -663,7 +685,7 @@ private:
         address_.bytes[3] = highest;
         inIOSpace_ = highest >= 0xFE;
         if (inIOSpace_) {
-            ioWriteOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
+            ioWriteOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, ConfigurationSpace>();
         } else {
             ramWriteOperation<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
         }
