@@ -152,11 +152,12 @@ public:
         }
         count_ = 0;
     }
-    static void begin() noexcept {}
+    static void begin() noexcept {
+    }
 public:
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     CacheEntry ways_[NumberOfWays];
-    byte count_ : 2 = 0;
+    byte count_ : 2;
 };
 #endif //SXCHIPSET_FOURWAYPSEUDOLRUENTRY_H

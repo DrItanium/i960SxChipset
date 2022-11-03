@@ -45,7 +45,7 @@ namespace EBI
         Bit6,
         Bit7,
     };
-    consteval uint8_t getMask(Register8BitIndex index) {
+    constexpr uint8_t getMask(Register8BitIndex index) noexcept {
         return static_cast<uint8_t>(1u << static_cast<uint8_t>(index));
     }
     union GenericRegister8bit {

@@ -105,8 +105,8 @@ namespace MCP23S17 {
         Pin14,
         Pin15,
     };
-    consteval PinIndex validate(uint8_t index) noexcept { return static_cast<PinIndex>(index & 0b1111); }
-    consteval uint16_t getMask(PinIndex value) noexcept { return 1u << static_cast<uint8_t>(value); }
+    constexpr PinIndex validate(uint8_t index) noexcept { return static_cast<PinIndex>(index & 0b1111); }
+    constexpr uint16_t getMask(PinIndex value) noexcept { return 1u << static_cast<uint8_t>(value); }
     constexpr byte generateReadOpcode(uint8_t address, bool shift) noexcept {
         return 0b0100'0001 | (shift ? (address << 1) : address);
     }

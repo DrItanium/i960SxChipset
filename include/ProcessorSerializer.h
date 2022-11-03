@@ -45,10 +45,10 @@ struct ProcessorInterface final {
     static constexpr auto Upper16Lines = IOExpanderAddress ::Device2;
     static constexpr auto MemoryCommitExtras = IOExpanderAddress ::Device3;
 
-    static consteval byte generateReadOpcode(IOExpanderAddress address) noexcept {
+    static constexpr byte generateReadOpcode(IOExpanderAddress address) noexcept {
         return MCP23S17::generateReadOpcode(static_cast<uint8_t>(address), false);
     }
-    static consteval byte generateWriteOpcode(IOExpanderAddress address) noexcept {
+    static constexpr byte generateWriteOpcode(IOExpanderAddress address) noexcept {
         return MCP23S17::generateWriteOpcode(static_cast<uint8_t>(address), false);
     }
     /**
