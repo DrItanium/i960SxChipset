@@ -29,8 +29,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_I960SXCHIPSET_H
 #define SXCHIPSET_I960SXCHIPSET_H
 
-using BodyFunction = void (*)();
-using DispatchTable = BodyFunction[256];
-
 [[noreturn]] void signalHaltState(const __FlashStringHelper* msg);
 #endif //SXCHIPSET_I960SXCHIPSET_H

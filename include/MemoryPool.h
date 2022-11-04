@@ -52,7 +52,6 @@ public:
             Address offset : 23;
             Address index : 9;
         };
-        byte bytes_[4];
     };
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {

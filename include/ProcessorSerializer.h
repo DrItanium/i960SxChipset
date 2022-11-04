@@ -350,59 +350,6 @@ public:
             invertDataLinesDirection();
         }
     }
-private:
-    /**
-     * @brief Describes how much of the address is the same compared to the previous transaction. This is done via the io expander interrupt lines.
-     * In this case, the iocon's of each io expander are set to mirrored mode to reduce pin count. Thus only two bits are used instead of four bits.
-     * Keep in mind that the burst address pins are _not_ connected to the io expanders so the interrupts will only trigger when the address of a
-     * new transaction is different compared to the previous one. This is designed to reduce transaction latency. With external io devices, this drops
-     * the overall latency from ~14 usec down to 4.5 usec because the addresses are the same.
-     */
-    enum class AddressUpdateKind : byte {
-        /**
-         * @brief Compared to last transaction, all 32-bits have changed so re-read all of them from the io expanders
-         */
-        Full32 = 0,
-#ifdef CHIPSET_TYPE1
-        /**
-         * @brief Only the lower 16-bits of the address have changed so only read that io expander
-         */
-        Lower16 = pinToPortBit<i960Pinout::ADDRESS_HI_INT>() >> 6, // the upper 16 is marked as high
-        /**
-         * @brief Only the upper 16-bits of the address have changed so only read that io expander
-         */
-        Upper16 = pinToPortBit<i960Pinout::ADDRESS_LO_INT>() >> 6, // the lower 16 is marked as high
-        /**
-         * @brief Neither the upper or lower halves of the address have changed. Do not query the SPI bus at all
-         */
-        Neither = (pinToPortBit<i960Pinout::ADDRESS_HI_INT>() | pinToPortBit<i960Pinout::ADDRESS_LO_INT>()) >> 6, // both are marked high
-#else
-    Upper16 = 0b01,
-    Lower16 = 0b10,
-    Neither = 0b11,
-#endif
-    };
-    static_assert(static_cast<byte>(AddressUpdateKind::Lower16) == 0b10);
-    static_assert(static_cast<byte>(AddressUpdateKind::Upper16) == 0b01);
-    static_assert(static_cast<byte>(AddressUpdateKind::Neither) == 0b11);
-    /**
-     * @brief Query the MCP23S17 interrupt pins to figure out which ports on the address lines had actually changed since the last transaction
-     * @tparam useInterrupts When true, query the interrupt lines to generate a difference mask. When false, 0 is returned which means all have changed
-     * @return A four bit code where each bit corresponds to a block of 8-bits and if they have changed since the last transaction or not.
-     * Each zero found in the code signifies that that 8-bit quantity must be updated. If useInterrupts is off then zero is returned which
-     * means the whole address must be updated.
-     */
-    template<bool useInterrupts>
-    static byte getUpdateKind() noexcept {
-#ifdef CHIPSET_TYPE1
-        if constexpr (useInterrupts) {
-            if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-                return (getAssociatedInputPort<i960Pinout::ADDRESS_LO_INT>() >> 6) & 0b11;
-            }
-        }
-#endif
-        return 0;
-    }
 public:
     /**
      * @brief Trigger the ~INT0 pin on the i960
@@ -439,46 +386,7 @@ public:
     }
     /// @todo implement HOLD and LOCK functionality
 private:
-    /**
-     * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
-     * @return The LSB of the address
-     */
-    [[nodiscard]] static auto getPageOffset() noexcept { return address_.bytes[0]; }
-    /**
-     * @brief Return bits 8-15 of the address. Internally this is known as the page index.
-     * @return The page index based off of the current address
-     */
-    [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
     [[nodiscard]] static bool isBurstLast() noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
-    template<bool inDebugMode, auto shift, auto mask>
-    inline static void completeOp16() noexcept {
-        while (!(SPSR & _BV(SPIF))); // wait
-        auto lowest = SPDR;
-        SPDR = 0;
-        {
-            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
-            // put scope ticks to force the matter
-            cacheOffsetEntry_ = (lowest >> shift) & mask; // we want to make this quick to increment
-            address_.bytes[0] = lowest;
-        }
-        while (!(SPSR & _BV(SPIF))); // wait
-        address_.bytes[1] = SPDR;
-        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-    }
-    template<bool inDebugMode, auto shift, auto mask>
-    inline static void opSpace16() noexcept {
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = 0;
-        asm volatile("nop");
-        completeOp16<inDebugMode, shift, mask>();
-    }
-    template<bool inDebugMode, byte opcode, auto shift, auto mask>
-    inline static void op16() noexcept {
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = opcode;
-        asm volatile("nop");
-        opSpace16<inDebugMode, shift, mask>();
-    }
     /**
      * @brief Only update the lower 16 bits of the current transaction's base address
      */
@@ -494,7 +402,26 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
         asm volatile("nop");
-        op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
+        // recompute this everytime since this function is also called by full32BitUpdate()
+        inIOSpace_ = address_.requiresInterpretation();
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = GPIOOpcode;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        SPDR = 0;
+        asm volatile("nop");
+        while (!(SPSR & _BV(SPIF))); // wait
+        auto lowest = SPDR;
+        SPDR = 0;
+        {
+            // inside of here we have access to 12 cycles to play with, so let's actually do some operations while we wait
+            // put scope ticks to force the matter
+            cacheOffsetEntry_ = (lowest >> OffsetShiftAmount) & OffsetMask; // we want to make this quick to increment
+            address_.bytes[0] = lowest;
+        }
+        while (!(SPSR & _BV(SPIF))); // wait
+        address_.bytes[1] = SPDR;
+        digitalWrite<i960Pinout::GPIOSelect, HIGH>();
     }
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
@@ -504,9 +431,6 @@ private:
     inline static void full32BitUpdate() noexcept {
         static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
-        static constexpr auto Lower16Opcode = generateReadOpcode(Lower16Lines);
-        static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
-        static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
         // we want to overlay actions as much as possible during spi transfers, there are blocks of waiting for a transfer to take place
         // where we can insert operations to take place that would otherwise be waiting
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -516,29 +440,18 @@ private:
         SPDR = GPIOOpcode;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
-
         SPDR = 0;
         asm volatile("nop");
         while (!(SPSR & _BV(SPIF))); // wait
-
         auto higher = SPDR;
         SPDR = 0;
         {
             address_.bytes[2] = higher;
         }
         while (!(SPSR & _BV(SPIF))); // wait
-        auto highest = SPDR;
+        address_.bytes[3] = SPDR; // can't interleave this because we call lower16Update... oh well :/
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-
-        digitalWrite<i960Pinout::GPIOSelect, LOW>();
-        SPDR = Lower16Opcode;
-        asm volatile("nop");
-        address_.bytes[3] = highest;
-        inIOSpace_ = highest >= 0xF0;
-        while (!(SPSR & _BV(SPIF))); // wait
-        SPDR = GPIOOpcode;
-        asm volatile("nop");
-        opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask>();
+        lower16Update<inDebugMode>();
     }
     static bool isCurrentlyWrite() noexcept { return dataLinesDirection_ != 0; }
 public:
@@ -577,7 +490,8 @@ public:
      * @param line The cache line which we will be using for this transaction
      */
     template<bool inDebugMode>
-    static inline void performCacheRead(const CacheLine& line) noexcept {
+    static inline void performCacheRead() noexcept {
+        const auto& line = theCache.getLine(address_);
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = generateWriteOpcode(DataLines);
@@ -588,18 +502,15 @@ public:
         asm volatile ("nop");
         while (!(SPSR & _BV(SPIF))) ; // wait
         for (auto offset = line.getRawData() + getCacheOffsetEntry(); ; ++offset) {
-            bool isLastRead = false;
+            bool isLastRead = isBurstLast();
             if (auto& a0 = *offset; a0.getWholeValue() != latchedDataOutput.getWholeValue()) {
                 SPDR = a0.getLowerHalf();
                 asm volatile ("nop");
-                isLastRead = isBurstLast();
                 while (!(SPSR & _BV(SPIF))); // wait
                 SPDR = a0.getUpperHalf();
                 asm volatile ("nop");
                 latchedDataOutput.wholeValue_ = a0.getWholeValue();
                 while (!(SPSR & _BV(SPIF))); // wait
-            } else {
-                isLastRead = isBurstLast();
             }
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
@@ -686,34 +597,14 @@ private:
             }
         }
     }
-    [[nodiscard]]
-    static bool getDataBits(CacheWriteRequest& request) noexcept {
-        request.style = getStyle();
-        bool outcome = isBurstLast();
-        updateDataInputLatch();
-        request.value = latchedDataInput_;
-        return outcome;
-    }
-    template<byte count>
-    static bool getDataBits() noexcept {
-        static_assert(count < 8, "Can only transmit 8 transactions at a time");
-        return getDataBits(transactions[count]);
-    }
-    template<byte count>
-    static inline void commitTransactions(CacheLine& line, byte offset) noexcept {
-        static_assert(count <= 8, "Can only transmit 8 transactions at a time");
-        for (byte i = 0, j = offset; i < count; ++i, ++j) {
-            transactions[i].set(j, line);
-        }
-    }
-public:
     /**
      * @brief commit up to 16-bytes of data from the i960 to a specified cache line
      * @tparam inDebugMode are we in debug mode?
      * @param line The cache line to write to.
      */
     template<bool inDebugMode>
-    static inline void performCacheWrite(CacheLine& line) noexcept {
+    static inline void performCacheWrite() noexcept {
+        auto& line = theCache.getLine(address_);
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         byte count = 0;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -873,84 +764,9 @@ public:
                 executeAndDispatchOpcode<false>();
             }
     }
-    template<typename T, bool inDebugMode>
-    static inline void performExternalDeviceOperation(bool isRead) noexcept {
-        if (isRead) {
-            performExternalDeviceOperation<T, inDebugMode, true>();
-        } else {
-            performExternalDeviceOperation<T, inDebugMode, false>();
-        }
-    }
-    template<typename T, bool inDebugMode, bool isRead>
-    static inline void performExternalDeviceOperation() noexcept {
-        // this is a subset of actions, we just need to read the byte enable bits continuously and advance the address by two to get to the
-        // next 16-bit word
-        // don't increment everything just the lowest byte since we will never actually span 16 byte segments in a single burst transaction
-        auto pageIndex = getPageIndex();
-        for (byte pageOffset = getPageOffset(); ;pageOffset += 2) {
-            if constexpr (isRead) {
-                auto result = T::read(pageIndex,
-                                      pageOffset,
-                                      getStyle());
-                if constexpr (inDebugMode) {
-                    Serial.print(F("\tPage Index: 0x"));
-                    Serial.println(getPageIndex(), HEX);
-                    Serial.print(F("\tPage Offset: 0x"));
-                    Serial.println(pageOffset, HEX);
-                    Serial.print(F("\tRead Value: 0x"));
-                    Serial.println(result, HEX);
-                }
-                setDataBits(result);
-            } else {
-                LoadStoreStyle currLSS = getStyle();
-                updateDataInputLatch();
-                if constexpr (inDebugMode) {
-                    Serial.print(F("\tPage Index: 0x"));
-                    Serial.println(pageIndex, HEX);
-                    Serial.print(F("\tPage Offset: 0x"));
-                    Serial.println(pageOffset, HEX);
-                    Serial.print(F("\tData To Write: 0x"));
-                    Serial.println(latchedDataInput_.getWholeValue(), HEX);
-                }
-                T::write(pageIndex,
-                         pageOffset,
-                         currLSS,
-                         latchedDataInput_);
-                // we could actually pulse the cpu and then perform the write, unsure at this point
-            }
-            auto isLast = isBurstLast();
-            DigitalPin<i960Pinout::Ready>::pulse();
-            if (isLast) {
-                return;
-            }
-        }
-    }
-public:
-    /**
-     * @brief Complete the process of setting up the processor interface by seeding the cached function pointers with valid addresses.
-     */
-private:
-    template<bool inDebugMode>
-    static void performCacheRead() noexcept {
-        performCacheRead<inDebugMode>(theCache.getLine(address_));
-    }
-
-    template<bool inDebugMode>
-    static void performCacheWrite() noexcept {
-        performCacheWrite<inDebugMode>(theCache.getLine(address_));
-    }
-
     template<bool inDebugMode>
     static void performCacheOperation(bool isReadOp) noexcept {
         if (isReadOp) {
-            performCacheRead<inDebugMode>();
-        } else {
-            performCacheWrite<inDebugMode>();
-        }
-    }
-    template<bool inDebugMode, bool isReadOp>
-    static void performCacheOperation() noexcept {
-        if constexpr (isReadOp) {
             performCacheRead<inDebugMode>();
         } else {
             performCacheWrite<inDebugMode>();
