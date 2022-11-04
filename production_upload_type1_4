@@ -1,2 +1,0 @@
-#!/bin/bash
-platformio run -e 1284p_type1_4 -t upload

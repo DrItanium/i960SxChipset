@@ -1,2 +1,0 @@
-The boot configuration json file is found on an attached sd card. The SDCard is not found on the SPIBus itself. Instead it
-has it's own SPI Enable Pin, Same thing with a corresponding display as well.

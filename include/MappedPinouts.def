@@ -25,8 +25,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef CHIPSET_TYPE1
 #include "Type1Pinout.def"
-#elif defined(CHIPSET_TYPE_MEGA)
-#include "TypeMegaPinout.def"
 #else
 #error "No table defined!"
 #endif
