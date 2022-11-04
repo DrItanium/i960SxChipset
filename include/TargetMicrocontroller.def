@@ -24,8 +24,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #ifdef __AVR_ATmega1284P__
 #include "1284pPinout.def"
-#elif defined(__AVR_ATmega2560__)
-#include "Mega2560PinoutFull.def"
 #else
 #error "Target Chipset Hardware has no pinout defined"
 #endif
