@@ -123,6 +123,5 @@ private:
         TagType tagIndex : NumTagBits;
         RestType rest : NumRestBits;
     };
-    byte bytes_[sizeof(Address)];
 };
 #endif //SXCHIPSET_TAGGEDCACHEADDRESS_H

@@ -372,7 +372,6 @@ union SplitWord32 {
     byte bytes[sizeof(uint32_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     SplitWord16 words_[sizeof(uint32_t) / sizeof(SplitWord16)];
-    float floatingPointRepresentation_;
     struct {
        uint32_t subminor : 16;
        uint32_t code : 8;

@@ -42,7 +42,6 @@ public:
 public:
     MemoryPool() = delete;
     ~MemoryPool() = delete;
-#ifdef CHIPSET_TYPE1
     union PSRAMBlockAddress {
         constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
         constexpr auto getAddress() const noexcept { return base; }
@@ -55,36 +54,25 @@ public:
         };
         byte bytes_[4];
     };
-#endif
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-#ifdef CHIPSET_TYPE1
         if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
             return PSRAMPool::write(address, buf, capacity);
         } else {
             return SDPool::write(address, buf, capacity);
         }
-#else
-        return SDPool::write(address, buf, capacity);
-#endif
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-#ifdef CHIPSET_TYPE1
         if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
             return PSRAMPool::read(address, buf, capacity);
         } else {
             return SDPool::read(address, buf, capacity);
         }
-#else
-        return SDPool::read(address, buf, capacity);
-#endif
     }
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
-#ifdef CHIPSET_TYPE1
             PSRAMPool::begin();
-#endif
             SDPool::begin();
         }
     }
