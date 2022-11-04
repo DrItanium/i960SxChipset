@@ -383,13 +383,14 @@ public:
             Serial.print(F("TRANSACTION TARGET ADDRESS: 0x"));
             Serial.println(address_.getWholeValue(), HEX);
         }
-        if (isCurrentlyWrite() == isReadOperation()) {
+        bool readOp = isReadOperation();
+        if (isCurrentlyWrite() == readOp) {
             invertDataLinesDirection();
         }
         if (inIOSpace_) {
-            executeAndDispatchOpcode(isReadOperation());
+            executeAndDispatchOpcode(readOp);
         } else {
-            performCacheOperation<inDebugMode>(isReadOperation());
+            performCacheOperation<inDebugMode>(readOp);
         }
     }
 private:
