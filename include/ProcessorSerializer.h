@@ -457,8 +457,7 @@ private:
             invertDataLinesDirection();
         }
         if constexpr (isIO) {
-            executeAndDispatchOpcode<inDebugMode, isRead>();
-            //performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
+            executeAndDispatchOpcode<isRead>();
         } else {
             performCacheOperation<inDebugMode, isRead>();
         }
@@ -604,8 +603,7 @@ public:
                     invertDataLinesDirection();
                }
                if (inIOSpace_) {
-                   executeAndDispatchOpcode<inDebugMode>(isReadOp);
-                   //performExternalDeviceOperation<ConfigurationSpace, inDebugMode>(isReadOp);
+                   executeAndDispatchOpcode(isReadOp);
                } else {
                    performCacheOperation<inDebugMode>(isReadOp);
                }
@@ -792,17 +790,128 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
-    template<bool inDebugMode, bool isRead>
+    using ReadFunction = uint16_t(*)();
+    using WriteFunction = void(*)(SplitWord16, LoadStoreStyle);
+    template<bool isRead>
+    static inline void handleOpcodeExecution() noexcept {
+        do {
+            if constexpr (isRead) {
+                setDataBits(0);
+            } else {
+                // put in some cycle delays to be on the safe side
+                asm volatile ("nop");
+                asm volatile ("nop");
+                asm volatile ("nop");
+                asm volatile ("nop");
+            }
+            auto isLast = isBurstLast();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLast) {
+                return;
+            }
+        } while (true);
+    }
+    static inline void handleOpcodeExecution(WriteFunction wr) noexcept {
+        do {
+            updateDataInputLatch();
+            wr(latchedDataInput_, getStyle());
+            auto isLast = isBurstLast();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLast) {
+                return;
+            }
+        } while (true);
+    }
+
+    static inline void handleOpcodeExecution(ReadFunction rd) noexcept {
+        do {
+            setDataBits(rd());
+            auto isLast = isBurstLast();
+            DigitalPin<i960Pinout::Ready>::pulse();
+            if (isLast) {
+                return;
+            }
+        } while (true);
+    }
+    static uint16_t fallbackRead() noexcept { return 0; }
+    static void fallbackWrite(SplitWord16, LoadStoreStyle) noexcept { }
+    static uint16_t serialRead() noexcept { return Serial.read(); }
+    static uint16_t serialRead_Multi() noexcept {
+        uint16_t storage = 0xFFFF;
+        (void)Serial.readBytes(reinterpret_cast<byte*>(&storage), sizeof(storage));
+        return storage;
+    }
+    static uint16_t serialFlushRead() noexcept {
+        Serial.flush();
+        return 0;
+    }
+    static void serialFlushWrite(SplitWord16, LoadStoreStyle) noexcept { Serial.flush(); }
+    static void serialWrite(SplitWord16 value, LoadStoreStyle) noexcept {
+        Serial.write(static_cast<uint8_t>(value.getWholeValue()));
+    }
+    static void serialWrite_Multi(SplitWord16 value, LoadStoreStyle style) noexcept {
+        switch (style) {
+            case LoadStoreStyle::Upper8:
+                Serial.write(value.bytes[1]);
+                break;
+            case LoadStoreStyle::Lower8:
+                Serial.write(value.bytes[0]);
+                break;
+            default:
+                Serial.write(value.bytes, sizeof(uint16_t));
+                break;
+        }
+    }
+
+    template<bool isRead>
+    static inline void handleSerialOpcodes() noexcept {
+        if constexpr (isRead) {
+            ReadFunction rdFn = fallbackRead;
+            switch (address_.getCode()) {
+                case 0: //
+                    rdFn = serialRead;
+                    break;
+                case 1:
+                    rdFn = serialRead_Multi;
+                    break;
+                case 2:
+                    rdFn = serialFlushRead;
+                    break;
+            }
+            handleOpcodeExecution(rdFn);
+        } else {
+            WriteFunction wrFn = fallbackWrite;
+            switch (address_.getCode()) {
+                case 0: //
+                    wrFn = serialWrite;
+                    break;
+                case 1:
+                    wrFn = serialWrite_Multi;
+                    break;
+                case 2:
+                    wrFn = serialFlushWrite;
+                    break;
+            }
+            handleOpcodeExecution(wrFn);
+        }
+    }
+    template<bool isRead>
     static inline void executeAndDispatchOpcode() noexcept {
         // okay so we need to take a look at the current instruction
-
+        switch (address_.getGroup()) {
+            case OpcodeGroup::Serial:
+                handleSerialOpcodes<isRead>();
+                break;
+            default:
+                handleOpcodeExecution<isRead>();
+                break;
+        }
     }
-    template<bool inDebugMode>
     static inline void executeAndDispatchOpcode(bool isRead) noexcept {
             if (isRead)  {
-                executeAndDispatchOpcode<inDebugMode, true>();
+                executeAndDispatchOpcode<true>();
             } else {
-                executeAndDispatchOpcode<inDebugMode, false>();
+                executeAndDispatchOpcode<false>();
             }
     }
     template<typename T, bool inDebugMode>

@@ -273,7 +273,24 @@ union SplitWord16 {
     uint16_t wholeValue_ = 0;
     uint8_t bytes[sizeof(uint16_t) / sizeof(uint8_t)];
 };
-
+enum class OpcodeGroup : byte{
+    Serial,
+    Group1,
+    Group2,
+    Group3,
+    Group4,
+    Group5,
+    Group6,
+    Group7,
+    Group8,
+    Group9,
+    Group10,
+    Group11,
+    Group12,
+    Group13,
+    Group14,
+    Group15,
+};
 /**
  * @brief A view of a 32-bit number which can be broken up into different components transparently
  */
@@ -364,7 +381,7 @@ union SplitWord32 {
     } opcode;
 
     [[nodiscard]] constexpr auto requiresInterpretation() const noexcept { return opcode.id == 0xF; }
-    [[nodiscard]] constexpr uint8_t getGroup() const noexcept { return opcode.group; }
+    [[nodiscard]] constexpr auto getGroup() const noexcept { return static_cast<OpcodeGroup>(opcode.group); }
     [[nodiscard]] constexpr uint8_t getCode() const noexcept { return opcode.code; }
     [[nodiscard]] constexpr uint16_t getSubminor() const noexcept { return opcode.subminor; }
 };
