@@ -451,18 +451,7 @@ private:
      */
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
     [[nodiscard]] static bool isBurstLast() noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
-    template<bool inDebugMode, bool isRead, bool isIO, bool invertDirection>
-    inline static void performEffectiveDispatch() noexcept {
-        if constexpr (invertDirection) {
-            invertDataLinesDirection();
-        }
-        if constexpr (isIO) {
-            executeAndDispatchOpcode<isRead>();
-        } else {
-            performCacheOperation<inDebugMode, isRead>();
-        }
-    }
-    template<bool inDebugMode, auto shift, auto mask, bool isRead, bool isIO, bool invertDirection>
+    template<bool inDebugMode, auto shift, auto mask>
     inline static void completeOp16() noexcept {
         while (!(SPSR & _BV(SPIF))); // wait
         auto lowest = SPDR;
@@ -476,37 +465,25 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         address_.bytes[1] = SPDR;
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
-        performEffectiveDispatch<inDebugMode, isRead, isIO, invertDirection>();
     }
-    template<bool inDebugMode, auto shift, auto mask, bool isRead, bool isIO>
+    template<bool inDebugMode, auto shift, auto mask>
     inline static void opSpace16() noexcept {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = 0;
         asm volatile("nop");
-        // if they are both true or both false then we need to do an invert
-        if (isRead == (dataLinesDirection_ != 0)) {
-            // need to perform the invert
-            completeOp16<inDebugMode, shift, mask, isRead, isIO, true>();
-        } else {
-            // they are not the same so we are good
-            completeOp16<inDebugMode, shift, mask, isRead, isIO, false>();
-        }
+        completeOp16<inDebugMode, shift, mask>();
     }
-    template<bool inDebugMode, byte opcode, auto shift, auto mask, bool isRead>
+    template<bool inDebugMode, byte opcode, auto shift, auto mask>
     inline static void op16() noexcept {
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = opcode;
         asm volatile("nop");
-        if (inIOSpace_) {
-            opSpace16<inDebugMode, shift, mask, isRead, true>();
-        } else {
-            opSpace16<inDebugMode, shift, mask, isRead, false>();
-        }
+        opSpace16<inDebugMode, shift, mask>();
     }
     /**
      * @brief Only update the lower 16 bits of the current transaction's base address
      */
-    template<bool inDebugMode, bool isReadOp>
+    template<bool inDebugMode>
     inline static void lower16Update() noexcept {
         static constexpr auto OffsetMask = CacheLine::CacheEntryMask;
         static constexpr auto OffsetShiftAmount = CacheLine::CacheEntryShiftAmount;
@@ -518,21 +495,13 @@ private:
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
         SPDR = Lower16Opcode;
         asm volatile("nop");
-        op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask, isReadOp>();
-    }
-    template<bool inDebugMode>
-    inline static void lower16Update(bool isReadOp) noexcept {
-       if (isReadOp)  {
-           lower16Update<inDebugMode, true>();
-       } else {
-           lower16Update<inDebugMode, false>();
-       }
+        op16<inDebugMode, GPIOOpcode, OffsetShiftAmount, OffsetMask>();
     }
     /**
      * @brief Pull an entire 32-bit address from the upper and lower address io expanders. Updates the function to execute to satisfy the request
      * @tparam inDebugMode When true, any extra debugging code becomes active. Will be propagated to any child methods which take in the parameter
      */
-    template<bool inDebugMode, bool isReadOp>
+    template<bool inDebugMode>
     inline static void full32BitUpdate() noexcept {
         static constexpr auto Upper16Opcode = generateReadOpcode(Upper16Lines);
         static constexpr auto GPIOOpcode = static_cast<byte>(MCP23x17Registers::GPIO);
@@ -570,19 +539,7 @@ private:
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
-        if (inIOSpace_) {
-            opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, isReadOp, true>();
-        } else {
-            opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask, isReadOp, false>();
-        }
-    }
-    template<bool inDebugMode>
-    inline static void full32BitUpdate(bool isReadOperation) {
-        if (isReadOperation)  {
-            full32BitUpdate<inDebugMode, true>();
-        } else {
-            full32BitUpdate<inDebugMode, false>();
-        }
+        opSpace16<inDebugMode, OffsetShiftAmount, OffsetMask>();
     }
     static bool isCurrentlyWrite() noexcept { return dataLinesDirection_ != 0; }
 public:
@@ -594,22 +551,21 @@ public:
     template<bool inDebugMode, bool useInterrupts = true>
     static void newDataCycle() noexcept {
         if constexpr (useInterrupts) {
-           if (auto isReadOp = isReadOperation(); DigitalPin<i960Pinout::ADDRESS_HI_INT>::isAsserted())  {
-               full32BitUpdate<inDebugMode>(isReadOp);
-           } else if (DigitalPin<i960Pinout::ADDRESS_LO_INT>::isAsserted()) {
-               lower16Update<inDebugMode>(isReadOp);
-           } else {
-               if (isCurrentlyWrite() == isReadOp) {
-                    invertDataLinesDirection();
-               }
-               if (inIOSpace_) {
-                   executeAndDispatchOpcode(isReadOp);
-               } else {
-                   performCacheOperation<inDebugMode>(isReadOp);
-               }
-           }
+            if (DigitalPin<i960Pinout::ADDRESS_HI_INT>::isAsserted())  {
+                full32BitUpdate<inDebugMode>();
+            } else if (DigitalPin<i960Pinout::ADDRESS_LO_INT>::isAsserted()) {
+                lower16Update<inDebugMode>();
+            }
         } else {
-            full32BitUpdate<inDebugMode>(isReadOperation());
+            full32BitUpdate<inDebugMode>();
+        }
+        if (isCurrentlyWrite() == isReadOperation()) {
+            invertDataLinesDirection();
+        }
+        if (inIOSpace_) {
+            executeAndDispatchOpcode(isReadOperation());
+        } else {
+            performCacheOperation<inDebugMode>(isReadOperation());
         }
     }
     /**
@@ -631,6 +587,7 @@ public:
         for (auto offset = line.getRawData() + getCacheOffsetEntry(); ; ++offset) {
             bool isLastRead = false;
             if (auto& a0 = *offset; a0.getWholeValue() != latchedDataOutput.getWholeValue()) {
+                Serial.println(a0.getWholeValue(), HEX);
                 SPDR = a0.getLowerHalf();
                 asm volatile ("nop");
                 isLastRead = isBurstLast();
