@@ -478,38 +478,6 @@ private:
      */
     [[nodiscard]] static auto getPageIndex() noexcept { return address_.bytes[1]; }
     [[nodiscard]] static bool isBurstLast() noexcept { return DigitalPin<i960Pinout::BLAST_>::isAsserted(); }
-    struct DecodeDispatch {
-        constexpr DecodeDispatch(bool isReadOp,
-                                 bool dataIsWriting,
-                                 bool isIOSpace) :
-                                 readOperation(isReadOp),
-                                 currentlyWrite(dataIsWriting),
-                                 isIOSpace_(isIOSpace) { }
-        explicit constexpr DecodeDispatch(uint8_t value) : DecodeDispatch(static_cast<bool>(value & 0b0000'0001),
-                                                                          static_cast<bool>(value & 0b0000'0010),
-                                                                          static_cast<bool>(value & 0b0000'0100)) { }
-        bool readOperation;
-        bool currentlyWrite;
-        bool isIOSpace_;
-        [[nodiscard]] constexpr bool isReadOperation() const noexcept { return readOperation; }
-        [[nodiscard]] constexpr bool isCurrentlyWrite() const noexcept { return currentlyWrite; }
-        [[nodiscard]] constexpr bool inIOSpace() const noexcept { return isIOSpace_; }
-        static uint8_t makeDynamicValue() noexcept {
-            union {
-                uint8_t value;
-                struct {
-                    uint8_t readOperation: 1;
-                    uint8_t currentlyWrite: 1;
-                    uint8_t inIOSpace : 1;
-                };
-            } thingy;
-            thingy.value = 0;
-            thingy.readOperation = ProcessorInterface::isReadOperation();
-            thingy.currentlyWrite = dataLinesDirection_ != 0;
-            thingy.inIOSpace = ProcessorInterface::inIOSpace();
-            return thingy.value;
-        }
-    };
     template<bool inDebugMode, bool isRead, bool isIO, bool invertDirection>
     inline static void performEffectiveDispatch() noexcept {
         if constexpr (invertDirection) {
@@ -625,7 +593,7 @@ private:
         SPDR = Lower16Opcode;
         asm volatile("nop");
         address_.bytes[3] = highest;
-        inIOSpace_ = highest >= 0xFE;
+        inIOSpace_ = highest >= 0xF0;
         while (!(SPSR & _BV(SPIF))); // wait
         SPDR = GPIOOpcode;
         asm volatile("nop");
