@@ -356,6 +356,17 @@ union SplitWord32 {
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
     SplitWord16 words_[sizeof(uint32_t) / sizeof(SplitWord16)];
     float floatingPointRepresentation_;
+    struct {
+       uint32_t subminor : 16;
+       uint32_t code : 8;
+       uint32_t group : 4;
+       uint32_t id : 4;
+    } opcode;
+
+    [[nodiscard]] constexpr auto requiresInterpretation() const noexcept { return opcode.id == 0xF; }
+    [[nodiscard]] constexpr uint8_t getGroup() const noexcept { return opcode.group; }
+    [[nodiscard]] constexpr uint8_t getCode() const noexcept { return opcode.code; }
+    [[nodiscard]] constexpr uint16_t getSubminor() const noexcept { return opcode.subminor; }
 };
 template<typename T>
 inline volatile T & memory(const uint16_t address) noexcept { return *reinterpret_cast<T *>(address); }

@@ -150,38 +150,12 @@ public:
     ProcessorInterface& operator=(ProcessorInterface&&) = delete;
 public:
     /**
-     * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
-     *        The highest 512 megabytes is known as the io area. This function checks to see if the io space gpio is asserted
-     * @return True if the io space gpio is asserted.
-     */
-    [[nodiscard]] static inline auto inIOSpace() noexcept {
-#ifdef CHIPSET_TYPE_MEGA
-        /// @todo implement
-        return false;
-#else
-        return inIOSpace_;
-#endif
-    }
-    /**
-     * @brief On board the type 1.01 boards, there is an AHC138 which divides the memory space into eight 512 megabyte sections;
-     *        The lowest 512 megabytes is known as the ram area. This function checks to see if the ram space gpio is asserted
-     * @return True if the ram space gpio is asserted.
-     */
-    [[nodiscard]] static inline auto inRAMSpace() noexcept {
-        return !inIOSpace();
-    }
-    /**
      * @brief Check the W/~R pin to see if we are dealing with a read transaction.
      * Only needs to be queried once at the beginning of a new transaction
      * @return If true, then the current transaction is a read operation. If false, then the current transaction is a write operation.
      */
     [[nodiscard]] static bool isReadOperation() noexcept {
-#ifdef CHIPSET_TYPE_MEGA
-        /// @todo implement
-        return isReadOperation_;
-#else
         return DigitalPin<i960Pinout::W_R_>::isAsserted();
-#endif
     }
     /**
      * @brief Retrieve the computed cache offset entry start. This is the word index that the current transaction will start at within a
@@ -466,7 +440,6 @@ public:
     }
     /// @todo implement HOLD and LOCK functionality
 private:
-
     /**
      * @brief Return the least significant byte of the address, useful for CoreChipsetFeatures
      * @return The LSB of the address
@@ -484,7 +457,8 @@ private:
             invertDataLinesDirection();
         }
         if constexpr (isIO) {
-            performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
+            executeAndDispatchOpcode<inDebugMode, isRead>();
+            //performExternalDeviceOperation<ConfigurationSpace, inDebugMode, isRead>();
         } else {
             performCacheOperation<inDebugMode, isRead>();
         }
@@ -630,7 +604,8 @@ public:
                     invertDataLinesDirection();
                }
                if (inIOSpace_) {
-                   performExternalDeviceOperation<ConfigurationSpace, inDebugMode>(isReadOp);
+                   executeAndDispatchOpcode<inDebugMode>(isReadOp);
+                   //performExternalDeviceOperation<ConfigurationSpace, inDebugMode>(isReadOp);
                } else {
                    performCacheOperation<inDebugMode>(isReadOp);
                }
@@ -816,6 +791,19 @@ public:
         }
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
+    }
+    template<bool inDebugMode, bool isRead>
+    static inline void executeAndDispatchOpcode() noexcept {
+        // okay so we need to take a look at the current instruction
+
+    }
+    template<bool inDebugMode>
+    static inline void executeAndDispatchOpcode(bool isRead) noexcept {
+            if (isRead)  {
+                executeAndDispatchOpcode<inDebugMode, true>();
+            } else {
+                executeAndDispatchOpcode<inDebugMode, false>();
+            }
     }
     template<typename T, bool inDebugMode>
     static inline void performExternalDeviceOperation(bool isRead) noexcept {
