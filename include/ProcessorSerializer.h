@@ -559,6 +559,10 @@ public:
         } else {
             full32BitUpdate<inDebugMode>();
         }
+        if constexpr (inDebugMode) {
+            Serial.print(F("TRANSACTION TARGET ADDRESS: 0x"));
+            Serial.println(address_.getWholeValue(), HEX);
+        }
         if (isCurrentlyWrite() == isReadOperation()) {
             invertDataLinesDirection();
         }
@@ -587,7 +591,6 @@ public:
         for (auto offset = line.getRawData() + getCacheOffsetEntry(); ; ++offset) {
             bool isLastRead = false;
             if (auto& a0 = *offset; a0.getWholeValue() != latchedDataOutput.getWholeValue()) {
-                Serial.println(a0.getWholeValue(), HEX);
                 SPDR = a0.getLowerHalf();
                 asm volatile ("nop");
                 isLastRead = isBurstLast();
