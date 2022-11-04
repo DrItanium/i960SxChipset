@@ -51,24 +51,6 @@ struct ProcessorInterface final {
         return MCP23S17::generateWriteOpcode(static_cast<uint8_t>(address), false);
     }
     /**
-     * @brief Read a 16-bit value from a given io expander register
-     * @tparam addr The io expander to read from
-     * @tparam opcode The register pair to read from
-     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
-     * @return The 16-bit value pulled from the io expander
-     */
-    template<IOExpanderAddress addr, MCP23x17Registers opcode, bool standalone = true>
-    static SplitWord16 read16() noexcept {
-        if constexpr (standalone) {
-            SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-        }
-        auto output = MCP23S17::read16<addr, opcode, DigitalPin<i960Pinout::GPIOSelect>>();
-        if constexpr (standalone) {
-            SPI.endTransaction();
-        }
-        return output;
-    }
-    /**
      * @brief Read a 8-bit value from a given io expander register
      * @tparam addr The io expander to read from
      * @tparam opcode The register pair to read from
@@ -121,16 +103,6 @@ struct ProcessorInterface final {
         }
     }
     /**
-     * @brief Set all 16 GPIOs of an io expander
-     * @tparam addr The io expander to write to
-     * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
-     * @param value The value to set the gpios to
-     */
-    template<IOExpanderAddress addr, bool standalone = true>
-    static inline void writeGPIO16(uint16_t value) noexcept {
-        write16<addr, MCP23x17Registers::GPIO, standalone>(value);
-    }
-    /**
      * @brief Describe the directions of all 16 pins on a given io expander.
      * @tparam addr The io expander to update
      * @tparam standalone When true, wrap the call in a begin/endTransaction call. When false omit them because you are doing many spi operations back to back and the begin/end is handled manually (default true)
@@ -166,41 +138,27 @@ public:
      * @brief Setup the processor interface on chipset startup.
      */
     static void begin() noexcept {
-        if (!initialized_) {
-            initialized_ = true;
-            if constexpr (TargetBoard::onAtmega1284p_Type1()) {
-                SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
-                // immediately pull the i960 into reset as soon as possible
-                // now all devices tied to this ~CS pin have separate addresses
-                // make each of these inputs
-                writeDirection<Lower16Lines, false>(0xFFFF);
-                writeDirection<Upper16Lines, false>(0xFFFF);
-                // enable pin change interrupts on address lines
-                write16<Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
-                write16<Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000);
-                write16<Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
-                write16<Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000);
-                // setup the direction pins in the
-                writeDirection<DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
-                // configure INTCON to be compare against previous value
-                write16<DataLines, MCP23x17Registers::INTCON, false>(0);
-                write16<DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
-                // write the default value out to the latch to start with
-                write16<DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
-                // enable interrupts for accelerating write operations in the future
-                SPI.endTransaction();
-            } else if (TargetBoard::onAtmega2560_TypeMega()) {
-                // setup the data lines
-                getAssociatedDirectionPort<i960Pinout::Data0>() = 0xFF;
-                getAssociatedDirectionPort<i960Pinout::Data8>() = 0xFF;
-            }
-        }
+        SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
+        // immediately pull the i960 into reset as soon as possible
+        // now all devices tied to this ~CS pin have separate addresses
+        // make each of these inputs
+        writeDirection<Lower16Lines, false>(0xFFFF);
+        writeDirection<Upper16Lines, false>(0xFFFF);
+        // enable pin change interrupts on address lines
+        write16<Lower16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
+        write16<Lower16Lines, MCP23x17Registers::INTCON, false>(0x0000);
+        write16<Upper16Lines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
+        write16<Upper16Lines, MCP23x17Registers::INTCON, false>(0x0000);
+        // setup the direction pins in the
+        writeDirection<DataLines, false>(dataLinesDirection_ == 0xFF ? 0xFFFF : 0x0000);
+        // configure INTCON to be compare against previous value
+        write16<DataLines, MCP23x17Registers::INTCON, false>(0);
+        write16<DataLines, MCP23x17Registers::GPINTEN, false>(0xFFFF);
+        // write the default value out to the latch to start with
+        write16<DataLines, MCP23x17Registers::OLAT, false>(latchedDataOutput.getWholeValue());
+        // enable interrupts for accelerating write operations in the future
+        SPI.endTransaction();
     }
-    /**
-     * @brief Get the address for the current transaction
-     * @return The full 32-bit address for the current transaction
-     */
-    [[nodiscard]] static constexpr Address getAddress() noexcept { return address_.getWholeValue(); }
     /**
      * @brief Update the contents of the GPIO register pair on the data lines io expander (the i960 wants to read from memory). Also check to
      * see if this is the last word transmitted in the given transaction.
@@ -247,16 +205,10 @@ public:
      * @return The LoadStoreStyle derived from the ~BE0 and ~BE1 pins.
      */
     [[nodiscard]] static auto getStyle() noexcept {
-#ifdef CHIPSET_TYPE_MEGA
-        /// @todo properly implement
-        //return static_cast<LoadStoreStyle>(getCTL0().bits.byteEnable);
-        return LoadStoreStyle::Full16;
-#else
         static constexpr auto Mask = pinToPortBit<i960Pinout::BE0>() | pinToPortBit<i960Pinout::BE1>();
         /// @todo figure out how to auto compute the shift amount
         //auto contents = TargetInputPort;
         return static_cast<LoadStoreStyle>((getAssociatedInputPort<i960Pinout::BE0>()& Mask));
-#endif
     }
 private:
     /**
@@ -293,7 +245,6 @@ private:
          * @brief Both the upper and lower halves of the data lines have changed compared to last time.
          */
         Full16 = 0,
-#ifdef CHIPSET_TYPE1
         /**
          * @brief Only the upper eight bits are different compared to last time
          */
@@ -306,50 +257,7 @@ private:
          * @brief Neither the upper or lower eight bits are different compared to last time. This means there is no need to read from the data lines at all.
          */
         Neither = pinToPortBit<i960Pinout::DATA_LO8_INT>() | pinToPortBit<i960Pinout::DATA_HI8_INT>(),
-#else
-        /**
-         * @brief Only the upper eight bits are different compared to last time
-         */
-        Upper8 = 0b01,
-        /**
-         * @brief Only the lower eight bits are different compared to last time
-         */
-        Lower8 = 0b10,
-        /**
-         * @brief Neither the upper or lower eight bits are different compared to last time. This means there is no need to read from the data lines at all.
-         */
-        Neither = 0b11,
-#endif
     };
-    /**
-     * @brief Query the interrupt lines tied to the data lines io expander
-     * @return An expression of how the data lines have changed compared to last write operation
-     */
-    static inline byte getDataLineInputUpdateKind() noexcept {
-#ifdef CHIPSET_TYPE1
-        return (getAssociatedInputPort<i960Pinout::DATA_LO8_INT>() >> 4) & 0b11;
-#else
-        // update everything every single time
-        return 0;
-#endif
-    }
-public:
-    /**
-     * @brief Change the data lines io expander port direction from output to input (if applicable)
-     */
-    inline static void setupDataLinesForWrite() noexcept {
-        if (!dataLinesDirection_) {
-            invertDataLinesDirection();
-        }
-    }
-    /**
-     * @brief Change the data lines io expander port direction from input to output (if applicable)
-     */
-    inline static void setupDataLinesForRead() noexcept {
-        if (dataLinesDirection_) {
-            invertDataLinesDirection();
-        }
-    }
 public:
     /**
      * @brief Trigger the ~INT0 pin on the i960
@@ -776,9 +684,7 @@ private:
     static inline SplitWord16 latchedDataOutput {0};
     static inline byte dataLinesDirection_ = 0;
     static inline byte cacheOffsetEntry_ = 0;
-    static inline bool initialized_ = false;
     static inline SplitWord16 latchedDataInput_ {0};
-    static inline bool isReadOperation_ = false;
     static inline bool inIOSpace_ = false;
 };
 
