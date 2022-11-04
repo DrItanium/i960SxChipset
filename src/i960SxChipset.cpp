@@ -62,79 +62,64 @@ template<bool useInterrupts>
 void installBootImage() noexcept {
     static constexpr auto CacheSize = theCache.getCacheSize();
     auto *storage = theCache.viewAsStorage();
-    if constexpr (is_same_v<BootImageSource, ConfigurationSpace>) {
-        // okay now we need to actually open boot.system and copy it into the ramBlock
-        if (!SD.exists(const_cast<char *>("boot.sys"))) {
-            // delete the file and start a new
-            signalHaltState(F("Could not find file \"boot.sys\"!"));
-        }
-        if (auto theFile = SD.open("boot.sys", FILE_READ); !theFile) {
-            signalHaltState(F("Could not open \"boot.sys\"! SD CARD may be corrupt?"));
-        } else {
-            // okay we were successful in opening the file, now copy the image into psram
-            Address size = theFile.size();
-            Serial.println(F("TRANSFERRING BOOT.SYS TO RAM FROM SDCARD"));
-            if constexpr (ValidateTransferDuringInstall) {
-                static constexpr auto RealCacheSize = CacheSize / 2;
-                byte *storage0 = storage;
-                byte *storage1 = storage + (RealCacheSize);
-                for (Address addr = 0; addr < size; addr += RealCacheSize) {
-                    // do a linear read from the start to the end of storage
-                    // wait around to make sure we don't run afoul of the sdcard itself
-                    while (theFile.isBusy());
-                    auto numRead = theFile.read(storage0, RealCacheSize);
-                    if (numRead < 0) {
-                        // something wen't wrong so halt at this point
-                        SD.errorHalt();
+    // okay now we need to actually open boot.system and copy it into the ramBlock
+    if (!SD.exists(const_cast<char *>("boot.sys"))) {
+        // delete the file and start a new
+        signalHaltState(F("Could not find file \"boot.sys\"!"));
+    }
+    if (auto theFile = SD.open("boot.sys", FILE_READ); !theFile) {
+        signalHaltState(F("Could not open \"boot.sys\"! SD CARD may be corrupt?"));
+    } else {
+        // okay we were successful in opening the file, now copy the image into psram
+        Address size = theFile.size();
+        Serial.println(F("TRANSFERRING BOOT.SYS TO RAM FROM SDCARD"));
+        if constexpr (ValidateTransferDuringInstall) {
+            static constexpr auto RealCacheSize = CacheSize / 2;
+            byte *storage0 = storage;
+            byte *storage1 = storage + (RealCacheSize);
+            for (Address addr = 0; addr < size; addr += RealCacheSize) {
+                // do a linear read from the start to the end of storage
+                // wait around to make sure we don't run afoul of the sdcard itself
+                while (theFile.isBusy());
+                auto numRead = theFile.read(storage0, RealCacheSize);
+                if (numRead < 0) {
+                    // something wen't wrong so halt at this point
+                    SD.errorHalt();
+                }
+                (void) BackingMemoryStorage_t::write(addr, storage0, numRead);
+                (void) BackingMemoryStorage_t::read(addr, storage1, numRead);
+                // now read back the contents into the second buffer
+                for (auto i = 0; i < numRead; ++i) {
+                    auto a = storage0[i];
+                    auto b = storage1[i];
+                    if (a != b) {
+                        Serial.print(F("MISMATCH WANTED 0x"));
+                        Serial.print(a, HEX);
+                        Serial.print(F(" BUT GOT 0x"));
+                        Serial.println(b, HEX);
                     }
-                    (void) BackingMemoryStorage_t::write(addr, storage0, numRead);
-                    (void) BackingMemoryStorage_t::read(addr, storage1, numRead);
-                    // now read back the contents into the second buffer
-                    for (auto i = 0; i < numRead; ++i) {
-                        auto a = storage0[i];
-                        auto b = storage1[i];
-                        if (a != b) {
-                            Serial.print(F("MISMATCH WANTED 0x"));
-                            Serial.print(a, HEX);
-                            Serial.print(F(" BUT GOT 0x"));
-                            Serial.println(b, HEX);
-                        }
-                    }
+                }
 
-                    Serial.print(F("."));
-                }
-            } else {
-                // use the cache as a buffer since it won't be in use at this point in time
-                for (Address addr = 0; addr < size; addr += CacheSize) {
-                    // do a linear read from the start to the end of storage
-                    // wait around to make sure we don't run afoul of the sdcard itself
-                    while (theFile.isBusy());
-                    auto numRead = theFile.read(storage, CacheSize);
-                    if (numRead < 0) {
-                        // something wen't wrong so halt at this point
-                        SD.errorHalt();
-                    }
-                    (void) BackingMemoryStorage_t::write(addr, storage, numRead);
-                    // now read back the contents into the upper half
-                    Serial.print(F("."));
-                }
+                Serial.print(F("."));
             }
-            // make sure we close the file before destruction
-            theFile.close();
+        } else {
+            // use the cache as a buffer since it won't be in use at this point in time
+            for (Address addr = 0; addr < size; addr += CacheSize) {
+                // do a linear read from the start to the end of storage
+                // wait around to make sure we don't run afoul of the sdcard itself
+                while (theFile.isBusy());
+                auto numRead = theFile.read(storage, CacheSize);
+                if (numRead < 0) {
+                    // something wen't wrong so halt at this point
+                    SD.errorHalt();
+                }
+                (void) BackingMemoryStorage_t::write(addr, storage, numRead);
+                // now read back the contents into the upper half
+                Serial.print(F("."));
+            }
         }
-    }
-#ifdef CHIPSET_TYPE1
-    else if constexpr (is_same_v<BootImageSource, FlashInterface>) {
-        Serial.println(F("TRANSFERRING BOOT.SYS TO RAM FROM FLASH"));
-        for (Address addr = 0; addr < FlashInterface::length(); addr += CacheSize) {
-            auto numRead = FlashInterface::read(addr, storage, CacheSize);
-            (void) BackingMemoryStorage_t::write(addr, storage, numRead);
-            Serial.print(F("."));
-        }
-    }
-#endif
-    else {
-        signalHaltState(F("Unknown upload source defined!"));
+        // make sure we close the file before destruction
+        theFile.close();
     }
     Serial.println();
     Serial.println(F("Transfer complete!"));
@@ -245,11 +230,17 @@ setupChipset() noexcept {
     /// @todo pull the i960 into reset at this point
     //pinMode(i960Pinout::MISO, INPUT_PULLUP);
     theCache.begin();
+#if 0
 #ifdef CHIPSET_TYPE1
     FlashInterface::begin();
 #endif
+#endif
+    while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
+        Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
+        delay(1000);
+    }
     // purge the cache pages
-    ConfigurationSpace::begin();
+    //ConfigurationSpace::begin();
     if constexpr (DisplayBootupInformation) {
         Serial.println(F("i960Sx chipset bringup"));
     }

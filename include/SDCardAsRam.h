@@ -28,36 +28,30 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef SXCHIPSET_SDCARDASRAM_H
 #define SXCHIPSET_SDCARDASRAM_H
-#include "CoreChipsetFeatures.h"
-#include "OpenFileHandle.h"
 #include <SdFat.h>
-extern SdFat SD;
-class ConfigurationSpace;
-template<typename T>
 class SDCardAsRam {
 public:
-    using SDInterface = T;
     SDCardAsRam() = delete;
     ~SDCardAsRam() = delete;
     static void begin() noexcept {
-        SDInterface::begin();
-        if (!theRam_.open("ram.bin", FILE_WRITE)) {
+        // assume that the SD interface is already up and running at this point
+        if (!theRam2_.open("ram.bin", FILE_WRITE)) {
             signalHaltState(F("COULD NOT OPEN RAM.BIN FOR READ/WRITE"));
         }
-        theRam_.seekToBeginning();
+        theRam2_.seekSet(0);
     }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        theRam_.setAbsolutePosition(address);
-        return theRam_.write(buf, capacity);
+        theRam2_.seekSet(address);
+        return theRam2_.write(buf, capacity);
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        theRam_.setAbsolutePosition(address);
-        return theRam_.read(buf, capacity);
+        theRam2_.seekSet(address);
+        return theRam2_.read(buf, capacity);
     }
 private:
-    static inline OpenFileHandle theRam_;
+    static inline File theRam2_;
 };
-using FallbackMemory = SDCardAsRam<ConfigurationSpace>;
+using FallbackMemory = SDCardAsRam;
 
 #endif //SXCHIPSET_SDCARDASRAM_H
