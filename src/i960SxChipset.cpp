@@ -33,15 +33,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <SdFat.h>
 #include "Pinout.h"
 
-#include "SystemDescription.h"
 #include "ProcessorSerializer.h"
 #include "CacheDescription.h"
 #include "i960SxChipset.h"
-#include "type_traits.h"
-#include "23LC1024.h"
-#include "SRAMDataContainer.h"
-#include <SoftwareSerial.h>
-
+extern SdFat SD;
 
 template<bool inDebugMode, bool useInterrupts>
 inline void invocationBody() noexcept {

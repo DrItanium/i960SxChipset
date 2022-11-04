@@ -31,7 +31,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ConfigurationFlags.h"
 #include "CacheDescription.h"
 #include "i960SxChipset.h"
-#include "CoreChipsetFeatures.h"
 #include "MCP23S17.h"
 
 /**
