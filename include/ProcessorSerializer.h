@@ -484,10 +484,10 @@ public:
             performCacheOperation<inDebugMode>(isReadOperation());
         }
     }
+private:
     /**
      * @brief loads a cache line based on base transaction address and then bursts up to 16 bytes to the i960
      * @tparam inDebugMode Are we in debug mode?
-     * @param line The cache line which we will be using for this transaction
      */
     template<bool inDebugMode>
     static inline void performCacheRead() noexcept {
@@ -521,7 +521,6 @@ public:
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
         SPI.endTransaction();
     }
-private:
     /**
      * @brief Describes a write into the data cache meant to accelerate burst writes from the i960. Allows the chipset to pull values
      * from the i960 much faster.
@@ -600,7 +599,6 @@ private:
     /**
      * @brief commit up to 16-bytes of data from the i960 to a specified cache line
      * @tparam inDebugMode are we in debug mode?
-     * @param line The cache line to write to.
      */
     template<bool inDebugMode>
     static inline void performCacheWrite() noexcept {
