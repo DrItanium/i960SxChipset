@@ -32,13 +32,6 @@ constexpr auto ValidateTransferDuringInstall = false;
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
 constexpr auto UseIOExpanderAddressLineInterrupts = true;
-/**
- * @brief When set to true, the ram and io space pins will be queried when getting the function associated with a given address block. This will
- * allow a reduction in sram usage at the cost of some latency (128 total entries [256 with debug active]). When false, more ram will be used
- * to store a separate function for each 16 megabyte section of the space. It will be slightly faster too. However, most of the sram used by the
- * lookup table will go to waste.
- */
-constexpr auto UseSpacePins = true;
 
 /**
  * @brief Set to true (if safe) to allow bitfields to be the exact width needed instead of the integral type. This is safe on AVR and nowhere els
@@ -48,19 +41,6 @@ constexpr auto UseSpecificTypesForDifferentAddressComponents = true;
  * @brief When false, all chipset boot information over serial console (except for the ram upload) will be suppressed
  */
 constexpr auto DisplayBootupInformation  = true;
-/**
- * @brief If true, then the onboard flash chips are selected to load boot.sys from, otherwise the sdcard is used
- */
-constexpr auto UploadBootImageFromFlash = false;
-/**
- * @brief Maximum number of concurrently open files allowed, increasing this number will increase sram usage
- */
-constexpr auto MaximumNumberOfOpenFiles = 8;
-
-constexpr auto RTCBaseAddress = 0xFA00'0000;
-constexpr auto Serial0BaseAddress = 0xFB00'0000;
-constexpr auto DisplayBaseAddress = 0xFC00'0000;
-constexpr auto SDBaseAddress = 0xFD00'0000;
 
 // Cache configuration fields
 /**
