@@ -26,9 +26,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_CONFIGURATIONFLAGS_H
 #define SXCHIPSET_CONFIGURATIONFLAGS_H
 
-constexpr auto CompileInAddressDebuggingSupport = true;
+constexpr auto CompileInAddressDebuggingSupport = false;
 constexpr auto ValidateTransferDuringInstall = false;
-constexpr auto EnablePSRAM = false;
+constexpr auto EnablePSRAM = true;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
