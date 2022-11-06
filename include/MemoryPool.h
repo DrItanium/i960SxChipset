@@ -33,11 +33,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**
  * @brief Wrapper over pools 1 and 2. Pool 2 is mapped first followed by pool 1
  */
+template<bool enablePSRAM>
 class MemoryPool {
 public:
-#ifdef CHIPSET_TYPE1
     using PSRAMPool = DualPoolPSRAM;
-#endif
     using SDPool = FallbackMemory;
 public:
     MemoryPool() = delete;
@@ -54,15 +53,23 @@ public:
         };
     };
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
-            return PSRAMPool::write(address, buf, capacity);
+        if constexpr (enablePSRAM) {
+            if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
+                return PSRAMPool::write(address, buf, capacity);
+            } else {
+                return SDPool::write(address, buf, capacity);
+            }
         } else {
             return SDPool::write(address, buf, capacity);
         }
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
-            return PSRAMPool::read(address, buf, capacity);
+        if constexpr (enablePSRAM) {
+            if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
+                return PSRAMPool::read(address, buf, capacity);
+            } else {
+                return SDPool::read(address, buf, capacity);
+            }
         } else {
             return SDPool::read(address, buf, capacity);
         }
@@ -71,10 +78,13 @@ public:
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
-            PSRAMPool::begin();
+            if constexpr (enablePSRAM) {
+                PSRAMPool::begin();
+            }
             SDPool::begin();
         }
     }
 };
-using CombinedMemoryPool = MemoryPool;
+template<bool enablePSRAM>
+using CombinedMemoryPool = MemoryPool<enablePSRAM>;
 #endif //SXCHIPSET_MEMORYPOOL_H

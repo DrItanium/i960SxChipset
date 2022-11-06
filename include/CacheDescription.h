@@ -52,12 +52,7 @@ template<TargetMCU mcu> struct BackingMemoryStorage final {
     using Type = FallbackMemory;
 };
 template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
-    //using ActualType = OnboardPSRAMBlock;
-    //using Type = SRAMDataContainer<ActualType>;
-    //using Type = OnboardPSRAMBlock;
-    //using Type = OnboardPSRAMBlock_Pool2;
-    //using Type = DualPoolMemoryBlock;
-    using Type = CombinedMemoryPool;
+    using Type = CombinedMemoryPool<EnablePSRAM>;
 };
 
 using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;

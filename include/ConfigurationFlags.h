@@ -28,6 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 constexpr auto CompileInAddressDebuggingSupport = true;
 constexpr auto ValidateTransferDuringInstall = false;
+constexpr auto EnablePSRAM = false;
 /**
  * @brief When set to true, the interrupt lines the mcp23s17 provides are used to determine which bytes to read
  */
