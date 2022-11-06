@@ -380,10 +380,18 @@ public:
             full32BitUpdate<inDebugMode>();
         }
         if constexpr (inDebugMode) {
-            Serial.print(F("TRANSACTION TARGET ADDRESS: 0x"));
+            Serial.print(F("Target address: 0x"));
             Serial.println(address_.getWholeValue(), HEX);
         }
         bool readOp = isReadOperation();
+        if constexpr (inDebugMode) {
+            Serial.print(F("Operation: "));
+            if (readOp) {
+                Serial.println(F("READ!"));
+            } else {
+                Serial.println(F("WRITE!"));
+            }
+        }
         if (isCurrentlyWrite() == readOp) {
             invertDataLinesDirection();
         }
@@ -421,6 +429,10 @@ private:
                 latchedDataOutput.wholeValue_ = a0.getWholeValue();
                 while (!(SPSR & _BV(SPIF))); // wait
             }
+            if constexpr (inDebugMode) {
+                Serial.print(F("\tRead Value: 0x"));
+                Serial.println(latchedDataOutput.wholeValue_, HEX);
+            }
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLastRead) {
                 // end the SPI transaction
@@ -444,6 +456,23 @@ private:
          */
         inline void set(byte offset, CacheLine& line) const noexcept {
             line.set(offset, style, value);
+        }
+
+        void print() const noexcept {
+            Serial.print(F("\tWrite Value 0x"));
+            switch (style) {
+                case LoadStoreStyle::Upper8:
+                    Serial.print(value.bytes[1], HEX);
+                    Serial.println(F("--"));
+                    break;
+                case LoadStoreStyle::Lower8:
+                    Serial.print(F("--"));
+                    Serial.println(value.bytes[0], HEX);
+                    break;
+                default:
+                    Serial.println(value.getWholeValue(), HEX);
+                    break;
+            }
         }
     };
     /**
@@ -540,6 +569,9 @@ private:
                 // okay then perform the commit since we are done
                 for (byte i = 0, j = getCacheOffsetEntry(); i < count; ++i, ++j) {
                     transactions[i].set(j, line);
+                    if constexpr (inDebugMode) {
+                        transactions[i].print();
+                    }
                 }
                 break;
             }
