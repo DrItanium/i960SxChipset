@@ -29,57 +29,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_ROUNDROBINCACHESET_H
 #define SXCHIPSET_ROUNDROBINCACHESET_H
 #include <Arduino.h>
-
-template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes>
-class FourWayRoundRobinCacheWay {
-public:
-    static constexpr auto NumberOfWays = 4;
-    static constexpr auto WayMask = NumberOfWays - 1;
-    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes>;
-    using TaggedAddress = typename CacheEntry::TaggedAddress;
-    static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
-public:
-    /**
-     * @brief Fill the cache up ahead of time to start off with given a base address, all entries are reset (invalid or not)
-     * @param baseAddress the base address to use as the cache offset
-     */
-    void
-    precache(TaggedAddress baseAddress) noexcept {
-        for (byte i = 0; i < NumberOfWays; ++i)   {
-            // don't even worry if it was populated or not, just make sure we populate it
-            ways_[i].reset(TaggedAddress{i, baseAddress.getTagIndex()});
-        }
-    }
-    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
-        // find the inverse of the most recently used
-        for (byte i = 0; i < NumberOfWays; ++i) {
-            if (ways_[i].addressesMatch(theAddress)) {
-                return ways_[i];
-            }
-        }
-        auto index = count_;
-        ways_[index].reset(theAddress);
-        ++count_;
-        return ways_[index];
-    }
-    void clear() noexcept {
-        for (auto& way : ways_) {
-            way.clear();
-        }
-        count_ = 0;
-    }
-    static void begin() noexcept {
-    }
-public:
-    [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
-private:
-    CacheEntry ways_[NumberOfWays];
-    byte count_ : 2;
-};
 template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes, byte numberOfWays>
 class RoundRobinCacheWay {
 public:
     static constexpr auto NumberOfWays = numberOfWays;
+    static constexpr auto PotentialNumberOfBitsForCount = numberOfBitsForCount(NumberOfWays);
+    static constexpr auto HaveFixedNumberOfBitsForCount = PotentialNumberOfBitsForCount != 0;
+    static constexpr auto NumberOfBitsForCount = HaveFixedNumberOfBitsForCount ? PotentialNumberOfBitsForCount : 8;
     using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes>;
     using TaggedAddress = typename CacheEntry::TaggedAddress;
     static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
@@ -105,8 +61,10 @@ public:
         auto index = count_;
         ways_[index].reset(theAddress);
         ++count_;
-        if (count_ == NumberOfWays) {
-            count_ = 0;
+        if constexpr (!HaveFixedNumberOfBitsForCount) {
+            if (count_ == NumberOfWays) {
+                count_ = 0;
+            }
         }
         return ways_[index];
     }
@@ -122,8 +80,10 @@ public:
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     CacheEntry ways_[NumberOfWays];
-    byte count_;
+    byte count_ : NumberOfBitsForCount;
 };
 template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes>
 using FiveWayRoundRobinCacheWay = RoundRobinCacheWay<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes, 5>;
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes>
+using FourWayRoundRobinCacheWay = RoundRobinCacheWay<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes, 4>;
 #endif //SXCHIPSET_ROUNDROBINCACHESET_H
