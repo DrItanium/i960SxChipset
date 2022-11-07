@@ -1,6 +1,6 @@
 /*
 i960SxChipset
-Copyright (c) 2020-2021, Joshua Scoggins
+Copyright (c) 2020-2022, Joshua Scoggins
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -23,18 +23,15 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 //
-// Created by jwscoggins on 11/19/21.
+// Created by jwscoggins on 11/7/22.
 //
 
-#ifndef SXCHIPSET_FOURWAYPSEUDOLRUENTRY_H
-#define SXCHIPSET_FOURWAYPSEUDOLRUENTRY_H
-#include "MCUPlatform.h"
-#include "Pinout.h"
-#include "TaggedCacheAddress.h"
-#include "CacheEntry.h"
+#ifndef SXCHIPSET_ROUNDROBINCACHESET_H
+#define SXCHIPSET_ROUNDROBINCACHESET_H
+#include <Arduino.h>
 
 template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes>
-class FourWayLRUCacheWay {
+class FourWayRoundRobinCacheWay {
 public:
     static constexpr auto NumberOfWays = 4;
     static constexpr auto WayMask = NumberOfWays - 1;
@@ -50,7 +47,6 @@ public:
     precache(TaggedAddress baseAddress) noexcept {
         for (byte i = 0; i < NumberOfWays; ++i)   {
             // don't even worry if it was populated or not, just make sure we populate it
-            updateFlags(i);
             ways_[i].reset(TaggedAddress{i, baseAddress.getTagIndex()});
         }
     }
@@ -58,59 +54,76 @@ public:
         // find the inverse of the most recently used
         for (byte i = 0; i < NumberOfWays; ++i) {
             if (ways_[i].addressesMatch(theAddress)) {
-                updateFlags(i);
                 return ways_[i];
             }
         }
-        auto index = getLeastRecentlyUsed();
-        updateFlags(index);
+        auto index = count_;
         ways_[index].reset(theAddress);
+        ++count_;
         return ways_[index];
     }
     void clear() noexcept {
         for (auto& way : ways_) {
             way.clear();
         }
-        flags_ = 0;
+        count_ = 0;
     }
-    static void begin() noexcept {}
-private:
-    void updateFlags(byte index) noexcept {
-        flags_ = lruMaskTable[flags_][index];
-    }
-    [[nodiscard]] constexpr byte getLeastRecentlyUsed() const noexcept {
-        return LRUTable[flags_];
+    static void begin() noexcept {
     }
 public:
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
 private:
     CacheEntry ways_[NumberOfWays];
-    byte flags_ = 0;
-    static constexpr uint8_t lruMaskTable[16][4] {
-        // computed by oring (1 << index) to flags, if flags then is 0xF or greater then flags is equal to 1 << index.
-            {0x1, 0x2, 0x4, 0x8, },
-            {0x1, 0x3, 0x5, 0x9, },
-            {0x3, 0x2, 0x6, 0xa, },
-            {0x3, 0x3, 0x7, 0xb, },
-            {0x5, 0x6, 0x4, 0xc, },
-            {0x5, 0x7, 0x5, 0xd, },
-            {0x7, 0x6, 0x6, 0xe, },
-            {0x7, 0x7, 0x7, 0x8, },
-            {0x9, 0xa, 0xc, 0x8, },
-            {0x9, 0xb, 0xd, 0x9, },
-            {0xb, 0xa, 0xe, 0xa, },
-            {0xb, 0xb, 0x4, 0xb, },
-            {0xd, 0xe, 0xc, 0xc, },
-            {0xd, 0x2, 0xd, 0xd, },
-            {0x1, 0xe, 0xe, 0xe, },
-            {0x1, 0x2, 0x4, 0x8, },
-    };
-
-    static constexpr byte LRUTable[16] {
-        3, 3, 3, 3, 3, 3, 3, 3,
-                2, 2, 2, 2,
-                1, 1,
-                0, 0,
-    };
+    byte count_ : 2;
 };
-#endif //SXCHIPSET_FOURWAYPSEUDOLRUENTRY_H
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes, byte numberOfWays>
+class RoundRobinCacheWay {
+public:
+    static constexpr auto NumberOfWays = numberOfWays;
+    using CacheEntry = ::CacheEntry<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes>;
+    using TaggedAddress = typename CacheEntry::TaggedAddress;
+    static constexpr auto NumBytesCached = CacheEntry::NumBytesCached;
+public:
+    /**
+     * @brief Fill the cache up ahead of time to start off with given a base address, all entries are reset (invalid or not)
+     * @param baseAddress the base address to use as the cache offset
+     */
+    void
+    precache(TaggedAddress baseAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i)   {
+            // don't even worry if it was populated or not, just make sure we populate it
+            ways_[i].reset(TaggedAddress{i, baseAddress.getTagIndex()});
+        }
+    }
+    CacheEntry& getLine(TaggedAddress theAddress) noexcept {
+        // find the inverse of the most recently used
+        for (byte i = 0; i < NumberOfWays; ++i) {
+            if (ways_[i].addressesMatch(theAddress)) {
+                return ways_[i];
+            }
+        }
+        auto index = count_;
+        ways_[index].reset(theAddress);
+        ++count_;
+        if (count_ == NumberOfWays) {
+            count_ = 0;
+        }
+        return ways_[index];
+    }
+    void clear() noexcept {
+        for (auto& way : ways_) {
+            way.clear();
+        }
+        count_ = 0;
+    }
+    static void begin() noexcept {
+    }
+public:
+    [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
+private:
+    CacheEntry ways_[NumberOfWays];
+    byte count_;
+};
+template<byte numTagBits, byte totalBitCount, byte numLowestBits, typename T, bool useSpecificTypeSizes>
+using FiveWayRoundRobinCacheWay = RoundRobinCacheWay<numTagBits, totalBitCount, numLowestBits, T, useSpecificTypeSizes, 5>;
+#endif //SXCHIPSET_ROUNDROBINCACHESET_H
