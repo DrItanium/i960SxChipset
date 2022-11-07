@@ -77,6 +77,24 @@ public:
         bits_ = 0;
     }
     [[nodiscard]] constexpr size_t size() const noexcept { return NumberOfWays; }
+    void
+    precache(TaggedAddress baseAddress) noexcept {
+        for (byte i = 0; i < NumberOfWays; ++i)   {
+            // don't even worry if it was populated or not, just make sure we populate it
+            updateFlags(i);
+            ways_[i].reset(TaggedAddress{i, baseAddress.getTagIndex()});
+        }
+    }
+    static void
+    begin() noexcept {
+        if (!randomTableInitialized_) {
+            randomTableInitialized_ = true;
+            counter_ = 0;
+            for (auto& v : randomTable_) {
+                v = random(0, NumberOfGroups);
+            }
+        }
+    }
 private:
     static constexpr auto NumberOfGroups = 5;
     void

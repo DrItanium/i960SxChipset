@@ -61,8 +61,6 @@ using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>
 //using Cache1Config = CacheInstance_t<FourWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 using Cache1Config = CacheInstance_t<FourWayRoundRobinCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 // unlike normal caches, we have to tune the number of entries based on available ram
-constexpr auto NumberCache2Entries = 16;
-using Cache2Config = Cache2Instance_t<TenWayRandPLRUCacheSet, NumberCache2Entries, NumAddressBits, CacheLineSize, BackingMemoryStorage_t>;
 using L1Cache = Cache1Config;
 using CacheLine = L1Cache::CacheEntry;
 extern L1Cache theCache;

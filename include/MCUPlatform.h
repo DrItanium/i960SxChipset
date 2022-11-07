@@ -109,7 +109,6 @@ enum class TargetMCU {
      * @brief Type 1.01 redesign
      */
     ATmega1284p_Type1,
-    ATmega2560_TypeMega,
     Unknown,
 };
 /**
@@ -123,28 +122,19 @@ public:
      * @param ioExpanderSpeedCap What is the maximum SPI bus speed we can run MCP23S17s at in Hz. If over 10MHz then 10MHz is used!
      * @param psramSpeedCap What is the maximum SPI bus speed we can run the PSRAM64H array at? If over 33MHz then 33MHz is selected
      */
-    constexpr MCUConfiguration(uint32_t sramSize,
-                               uint32_t ioExpanderSpeedCap,
+    constexpr MCUConfiguration(uint32_t ioExpanderSpeedCap,
                                uint32_t psramSpeedCap,
-                               uint32_t flashSpeedCap,
                                uint32_t psramPool2SpeedCap
-    ) noexcept : sramAmount_(sramSize),
-                 ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
+    ) noexcept : ioExpanderPeripheralSpeed_(ioExpanderSpeedCap > 10_MHz ? 10_MHz : ioExpanderSpeedCap),
                  psramSpeedCap_(psramSpeedCap > 33_MHz ? 33_MHz : psramSpeedCap),
-                 flashSpeedCap_(flashSpeedCap),
                  psramPool2SpeedCap_(psramPool2SpeedCap > 33_MHz ? 33_MHz : psramPool2SpeedCap) {
     }
-    constexpr MCUConfiguration(uint32_t sramSize, uint32_t ioExpanderSpeedCap, uint32_t psramSpeedCap) : MCUConfiguration(sramSize, ioExpanderSpeedCap, psramSpeedCap, psramSpeedCap, psramSpeedCap) {}
-    [[nodiscard]] constexpr uint32_t getSramAmount() const noexcept { return sramAmount_; }
     [[nodiscard]] constexpr auto runIOExpanderSPIInterfaceAt() const noexcept  { return ioExpanderPeripheralSpeed_; }
     [[nodiscard]] constexpr auto runPSRAMAt() const noexcept { return psramSpeedCap_; }
-    [[nodiscard]] constexpr auto runFlashAt() const noexcept { return flashSpeedCap_; }
     [[nodiscard]] constexpr auto runPSRAM2At() const noexcept { return psramPool2SpeedCap_; }
 private:
-    uint32_t sramAmount_;
     uint32_t ioExpanderPeripheralSpeed_;
     uint32_t psramSpeedCap_;
-    uint32_t flashSpeedCap_;
     uint32_t psramPool2SpeedCap_;
 };
 /**
@@ -153,27 +143,9 @@ private:
  */
 template<TargetMCU mcu>
 constexpr MCUConfiguration BoardDescription = {
-        0,
-        10_MHz,
-        8_MHz
-};
-
-template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega1284p_Type1> = {
-        16_KB,
         10_MHz,
         5_MHz, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
-        10_MHz, // the addin card allows 10MHz 3.3v operation on flash
-        10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
-};
-
-template<>
-constexpr MCUConfiguration BoardDescription<TargetMCU::ATmega2560_TypeMega> = {
-        8_KB,
-        10_MHz,
-        5_MHz, // due to the current design, we have to run the old primary psram pool at 5 Mhz,
-        10_MHz, // the addin card allows 10MHz 3.3v operation on flash
-        10_MHz, // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
+        10_MHz // the addin card allows 10MHz 3.3v operation on PSRAM pool 2
 };
 
 /**
@@ -193,8 +165,6 @@ public:
     [[nodiscard]] static constexpr TargetMCU getMCUTarget() noexcept {
 #ifdef CHIPSET_TYPE1
         return TargetMCU::ATmega1284p_Type1;
-#elif defined(CHIPSET_TYPE_MEGA)
-        return TargetMCU::ATmega2560_TypeMega;
 #else
         return TargetMCU::Unknown;
 #endif
@@ -216,27 +186,15 @@ public:
         return (targetMCUIs<rest>() || ...);
     }
     /**
-     * @brief Are we running on an atmega1284p in a type 1 board configuration?
-     * @return True if we are running on a 1284p in a type1 config
-     */
-    [[nodiscard]] static constexpr auto onAtmega1284p_Type1() noexcept { return targetMCUIs<TargetMCU::ATmega1284p_Type1>(); }
-    /**
      * @brief Regardless of configuration are we running on a atmega1284p?
      * @return True if the microcontroller is an atmega1284p
      */
     [[nodiscard]] static constexpr auto onAtmega1284p() noexcept { return targetMCUIsOneOfThese<TargetMCU::ATmega1284p_Type1>(); }
-    [[nodiscard]] static constexpr auto onAtmega2560_TypeMega() noexcept { return targetMCUIs<TargetMCU::ATmega2560_TypeMega>(); }
-    [[nodiscard]] static constexpr auto onAtmega2560() noexcept { return targetMCUIsOneOfThese<TargetMCU::ATmega2560_TypeMega>(); }
     /**
      * @brief Are we on an undeclared microcontroller target?
      * @return True if we were unable to determine the microcontroller target
      */
     [[nodiscard]] static constexpr auto onUnknownTarget() noexcept { return targetMCUIs<TargetMCU::Unknown>(); }
-    /**
-     * @brief How much sram does this MCU have for us to maximally play with?
-     * @return The amount of sram available to us in bytes
-     */
-    [[nodiscard]] static constexpr auto getSRAMAmountInBytes() noexcept { return BoardDescription<getMCUTarget()>.getSramAmount(); }
     /**
      * @brief What fastest speed can we run the MCP23S17s at?
      * @return The highest clock speed (in hz) that this target's SPI bus can run the io expanders at
@@ -248,7 +206,6 @@ public:
      */
     [[nodiscard]] static constexpr auto runPSRAMAt() noexcept { return BoardDescription<getMCUTarget()>.runPSRAMAt(); }
     [[nodiscard]] static constexpr auto runPSRAM2At() noexcept { return BoardDescription<getMCUTarget()>.runPSRAM2At(); }
-    [[nodiscard]] static constexpr auto runFlashAt() noexcept { return BoardDescription<getMCUTarget()>.runFlashAt(); }
 public:
     TargetBoard() = delete;
     ~TargetBoard() = delete;
@@ -266,7 +223,6 @@ static_assert(!TargetBoard::onUnknownTarget(), "ERROR: Target Board has not been
  */
 union SplitWord16 {
     explicit constexpr SplitWord16(uint16_t value = 0) noexcept : wholeValue_(value) { }
-    constexpr SplitWord16(uint8_t lower, uint8_t upper) noexcept : bytes{lower, upper} { }
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
     [[nodiscard]] constexpr auto getLowerHalf() const noexcept { return bytes[0]; }
     [[nodiscard]] constexpr auto getUpperHalf() const noexcept { return bytes[1]; }
@@ -312,31 +268,10 @@ union SplitWord32 {
      */
     constexpr SplitWord32(uint8_t lowest, uint8_t lower, uint8_t higher, uint8_t highest) noexcept : bytes{lowest, lower, higher, highest} {}
     /**
-     * @brief Build a SplitWord32 from two SplitWord16s
-     * @param lower The lower half of the number
-     * @param upper The upper half of the number
-     */
-    constexpr SplitWord32(const SplitWord16& lower, const SplitWord16& upper) noexcept : words_{lower, upper} { }
-    /**
      * @brief Get the backing 32-bit value
      * @return The backing store 32-bit value as is
      */
     [[nodiscard]] constexpr auto getWholeValue() const noexcept { return wholeValue_; }
-    /**
-     * @brief View this value as a 32-bit signed number
-     * @return The backing store as a 32-bit signed number
-     */
-    [[nodiscard]] constexpr auto getSignedRepresentation() const noexcept { return signedRepresentation_; }
-    /**
-     * @brief Constexpr method meant to get the target page byte (which is made up of bits 8-15)
-     * @return The target page as an 8-bit value
-     */
-    [[nodiscard]] constexpr auto getTargetPage() const noexcept { return static_cast<byte>(wholeValue_ >> 8); }
-    /**
-     * @brief Constexpr method meant to allow one to get the most significant byte.
-     * @return The most significant byte
-     */
-    [[nodiscard]] constexpr auto getMostSignificantByte() const noexcept { return static_cast<byte>(wholeValue_ >> 24); }
     /**
      * @brief Get the lower 16-bits as a raw 16-bit number
      * @return The lower half as a plain 16-bit number
@@ -347,31 +282,9 @@ union SplitWord32 {
      * @return The upper half as a plain 16-bit number
      */
     [[nodiscard]] constexpr auto getUpperHalf() const noexcept { return halves[1]; }
-    /**
-     * @brief Set the lower 16-bits of the backing store through the use of a SplitWord16
-     * @param value The new lower half value
-     */
-    void setLowerHalf(SplitWord16 value) noexcept { words_[0] = value; }
-    /**
-     * @brief Set the upper 16-bits of the backing store through the use of a SplitWord16
-     * @param value The new upper half value
-     */
-    void setUpperHalf(SplitWord16 value) noexcept { words_[1] = value; }
-    /**
-     * @brief View the lower half of this number as a SplitWord16
-     * @return The lower half of this number as a SplitWord16
-     */
-    [[nodiscard]] constexpr auto getLowerWord() const noexcept { return words_[0]; }
-    /**
-     * @brief View the upper half of this number as a SplitWord16
-     * @return The upper half of this number as a SplitWord16
-     */
-    [[nodiscard]] constexpr auto getUpperWord() const noexcept { return words_[1]; }
     uint32_t wholeValue_ = 0;
-    int32_t signedRepresentation_;
     byte bytes[sizeof(uint32_t)];
     uint16_t halves[sizeof(uint32_t) / sizeof(uint16_t)];
-    SplitWord16 words_[sizeof(uint32_t) / sizeof(SplitWord16)];
     struct {
        uint32_t subminor : 16;
        uint32_t code : 8;
