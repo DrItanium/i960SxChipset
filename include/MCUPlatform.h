@@ -378,11 +378,22 @@ union SplitWord32 {
        uint32_t group : 4;
        uint32_t id : 4;
     } opcode;
-
+    struct {
+        uint24_t offset : 23;
+        byte index : 1;
+    } pool2PSRAM;
+    struct {
+        uint24_t offset : 23;
+        uint8_t index : 3;
+    } pool1PSRAM;
     [[nodiscard]] constexpr auto requiresInterpretation() const noexcept { return opcode.id == 0xF; }
     [[nodiscard]] constexpr auto getGroup() const noexcept { return static_cast<OpcodeGroup>(opcode.group); }
     [[nodiscard]] constexpr uint8_t getCode() const noexcept { return opcode.code; }
     [[nodiscard]] constexpr uint16_t getSubminor() const noexcept { return opcode.subminor; }
+    [[nodiscard]] constexpr auto getPool2Offset() const noexcept { return pool2PSRAM.offset; }
+    [[nodiscard]] constexpr auto getPool2Index() const noexcept { return pool2PSRAM.index; }
+    [[nodiscard]] constexpr auto getPool1Offset() const noexcept { return pool1PSRAM.offset; }
+    [[nodiscard]] constexpr auto getPool1Index() const noexcept { return pool1PSRAM.index; }
 };
 template<typename T>
 inline volatile T & memory(const uint16_t address) noexcept { return *reinterpret_cast<T *>(address); }

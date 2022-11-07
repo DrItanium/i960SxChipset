@@ -52,18 +52,7 @@ public:
 public:
     MemoryBlock_Pool2() = delete;
     ~MemoryBlock_Pool2() = delete;
-    union PSRAMBlockAddress {
-        constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
-        constexpr auto getAddress() const noexcept { return base; }
-        constexpr auto getOffset() const noexcept { return offset; }
-        constexpr auto getIndex() const noexcept { return index; }
-        Address base;
-        struct {
-            Address offset : 23;
-            byte index : 1;
-        };
-        byte bytes_[4];
-    };
+    using PSRAMBlockAddress = SplitWord32;
 private:
     [[gnu::always_inline]] static inline void transmitByte(byte value) noexcept {
         SPDR = value;
@@ -92,26 +81,26 @@ private:
         bool localToASingleChip, spansMultipleChips;
         byte tmp;
         PSRAMBlockAddress curr(address);
-        setChipId(curr.getIndex());
+        setChipId(curr.getPool2Index());
         SPI.beginTransaction(SPISettings(TargetBoard::runPSRAM2At(), MSBFIRST, SPI_MODE0));
         digitalWrite<EnablePin, LOW>();
         SPDR = opcode;
         {
             end = PSRAMBlockAddress(address + capacity);
-            numBytesToSecondChip = end.getOffset();
-            tmp = curr.bytes_[2];
+            numBytesToSecondChip = end.getPool2Offset();
+            tmp = curr.bytes[2];
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = tmp;
         {
-            localToASingleChip = curr.getIndex() == end.getIndex();
-            tmp = curr.bytes_[1];
+            localToASingleChip = curr.getPool2Index() == end.getPool2Index();
+            tmp = curr.bytes[1];
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = tmp;
         {
             numBytesToFirstChip = localToASingleChip ? capacity : (capacity - numBytesToSecondChip);
-            tmp = curr.bytes_[0];
+            tmp = curr.bytes[0];
         }
         while (!(SPSR & _BV(SPIF))) ; // wait
         SPDR = tmp;
@@ -136,7 +125,7 @@ private:
             // since size_t is 16-bits on AVR we can safely reduce the largest buffer size 64k, thus we can only ever span two psram chips at a time
             // thus we can actually convert this work into two separate spi transactions
             // start writing at the start of the next chip the remaining number of bytes
-            setChipId(end.getIndex());
+            setChipId(end.getPool2Index());
             // we start at address zero on this new chip always
             digitalWrite<EnablePin, LOW>();
             SPDR = opcode;
