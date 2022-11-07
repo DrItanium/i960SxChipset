@@ -23,9 +23,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 // Name, PinIndex, Direction, Asserted, Deasserted, Address,
-//#define X(name, pin_index, direction, assert, deassert, EBIAddress, Index, Offset)
 //#define GPIO(name, pin_index, direction, assert, deassert) X(name, pinindex, direction, assert, deassert, 0, 0, 0)
-//#define EBI(name, pin_index, direction, assert, deassert, address, offset) X(name, pinindex, direction, assert, deassert, address, 0, offset)
 //#define IOEXP(name, pin_index, direction, assert, deassert, index, offset) X(name, pinindex, direction, assert, deassert, 0, index, offset)
 GPIO(FAIL, PORT_B0, INPUT, HIGH, LOW)
 SINK(CLOCK_OUT, PORT_B1, OUTPUT, HIGH, LOW)

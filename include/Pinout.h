@@ -28,7 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Arduino.h>
 #include "MCUPlatform.h"
 #include "MCP23S17.h"
-#include "EBI.h"
 
 using Address = uint32_t;
 /**
@@ -44,13 +43,11 @@ enum class i960Pinout : int {
 #undef Entry
 #define X(name, pin, direction, assert, deassert, addr, haddr, offset) name = pin,
 #define GPIO(name, pin, direction, assert, deassert) X(name, pin, direction, assert, deassert, 0, 0, 0)
-#define EBI(name, pin, direction, assert, deassert, address, offset) X(name, pin, direction, assert, deassert, address, 0, offset)
 #define IOEXP(name, pin, direction, assert, deassert, index, offset) X(name, pin, direction, assert, deassert, 0, index, offset)
 #define SINK(name, pin, direction, assert, deassert) X(name, pin, direction, assert, deassert, 0, 0, 0)
 #define ALIAS(name, pin) X(name, pin, INPUT, LOW, HIGH, 0, 0, 0)
 #include "MappedPinouts.def"
 #undef GPIO
-#undef EBI
 #undef IOEXP
 #undef SINK
 #undef ALIAS
@@ -221,22 +218,6 @@ static_assert(getPinMask<i960Pinout::PORT_A6>() == 0b0100'0000);
 static_assert(getPinMask<i960Pinout::PORT_A7>() == 0b1000'0000);
 
 /**
- * @brief RAII class which turns off interrupts during construction and restores them on destruction
- */
-class InterruptDisabler final {
-public:
-    InterruptDisabler() noexcept {
-        storage_ = SREG;
-        cli();
-    }
-    ~InterruptDisabler() noexcept {
-        SREG = storage_;
-    }
-private:
-    uint8_t storage_ = 0;
-};
-
-/**
  * @brief Condense digitalWrite calls down into a single instruction. Use this method if the value of a pin will be known at compile time.
  * @tparam pin the pin to modify
  * @tparam value the value to set the pin to
@@ -381,23 +362,6 @@ template<i960Pinout pin>
 using DigitalPin = DigitalPin2<DigitalPinDescription<pin>>;
 #define ALIAS(name, pin_index)
 #define SINK(name, pin_index, direction, assert, deassert)
-#define EBI(name, pin_index, direction, assert, deassert, address, offset) \
-template<> \
-struct DigitalPinDescription< i960Pinout:: name > { \
-        DigitalPinDescription() = delete; \
-        ~DigitalPinDescription() = delete; \
-        DigitalPinDescription(const DigitalPinDescription&) = delete; \
-        DigitalPinDescription(DigitalPinDescription&&) = delete; \
-        DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
-        DigitalPinDescription& operator=(DigitalPinDescription&&) = delete; \
-    static constexpr auto Assert = assert; \
-    static constexpr auto Deassert = deassert;\
-    static constexpr auto Direction = direction;\
-    static constexpr auto Pin =  i960Pinout:: name ; \
-    static constexpr auto Index = EBI::Register8BitIndex::Bit ## offset ;        \
-    static constexpr size_t Address = address; \
-    using BackingImplementation = EBI::BackingDigitalPin<Pin, Address, Index>;\
-};
 
 #define GPIO(name, pin_index, direction, assert, deassert) \
 template<> struct DigitalPinDescription < i960Pinout:: name > {          \
@@ -437,179 +401,9 @@ struct DigitalPinDescription < i960Pinout:: name > {\
 #undef GPIO
 #undef SINK
 #undef ALIAS
-#undef EBI
 #undef IOEXP
 
 
-#if 0
-#define DefInputPin(pin, asserted, deasserted) \
-template<> struct DigitalPinDescription <pin> {   \
-    DigitalPinDescription() = delete;           \
-    ~DigitalPinDescription() = delete;          \
-    DigitalPinDescription(const DigitalPinDescription&) = delete; \
-    DigitalPinDescription(DigitalPinDescription&&) = delete;      \
-    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
-    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;      \
-    static constexpr auto Assert = asserted;    \
-    static constexpr auto Deassert = deasserted;\
-    static constexpr auto Direction = INPUT;   \
-    static constexpr auto Pin = pin;           \
-    using BackingImplementation = BackingDigitalPin<Pin, Direction>;                                            \
-    }
-#define DefOutputPin(pin, asserted, deasserted) \
-    template<> struct DigitalPinDescription <pin> {   \
-    DigitalPinDescription() = delete;           \
-    ~DigitalPinDescription() = delete;          \
-    DigitalPinDescription(const DigitalPinDescription&) = delete; \
-    DigitalPinDescription(DigitalPinDescription&&) = delete;      \
-    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
-    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete;      \
-    static constexpr auto Assert = asserted;    \
-    static constexpr auto Deassert = deasserted;\
-    static constexpr auto Direction = OUTPUT;   \
-    static constexpr auto Pin = pin; \
-    using BackingImplementation = BackingDigitalPin<Pin, Direction>;                                            \
-    }
-
-
-#define DefSPICSPin(pin) DefOutputPin(pin, LOW, HIGH)
-
-
-
-DefSPICSPin(i960Pinout::GPIOSelect);
-DefSPICSPin(i960Pinout::SD_EN);
-DefInputPin(i960Pinout::DEN_, LOW, HIGH);
-DefOutputPin(i960Pinout::Ready, LOW, HIGH);
-
-#define DefIOExpanderPin(pin, assert, deassert, direction, device, index) \
-template<> \
-struct DigitalPinDescription < i960Pinout:: pin> {\
-    DigitalPinDescription() = delete; \
-    ~DigitalPinDescription() = delete; \
-    DigitalPinDescription(const DigitalPinDescription&) = delete;\
-    DigitalPinDescription(DigitalPinDescription&&) = delete;\
-    DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
-    DigitalPinDescription& operator=(DigitalPinDescription&&) = delete; \
-    static constexpr auto Assert = assert; \
-    static constexpr auto Deassert = deassert;\
-    static constexpr auto Direction = direction;\
-    static constexpr auto Pin =  i960Pinout:: pin;                                      \
-    static constexpr auto DeviceID  = MCP23S17::HardwareDeviceAddress::Device ## device ; \
-    static constexpr auto Offset = MCP23S17::PinIndex::Pin ## index; \
-    using CSPin = DigitalPin<i960Pinout::GPIOSelect>;                     \
-    using BackingImplementation = MCP23S17::BackingPin<Pin, DeviceID, Offset, Direction, CSPin>;\
-}
-
-DefIOExpanderPin(RESET960, LOW, HIGH, OUTPUT, 3, 0);
-DefIOExpanderPin(HOLD, HIGH, LOW, OUTPUT, 3, 5);
-DefIOExpanderPin(HLDA, HIGH, LOW, INPUT, 3, 6);
-DefIOExpanderPin(LOCK_, LOW, HIGH, INPUT, 3, 7);
-
-#ifdef CHIPSET_TYPE_MEGA
-DefInputPin(i960Pinout::INT960_0_, LOW, HIGH);
-DefInputPin(i960Pinout::INT960_1, HIGH, LOW);
-DefInputPin(i960Pinout::INT960_2, HIGH, LOW);
-DefInputPin(i960Pinout::INT960_3_, LOW, HIGH);
-union CTL0Register {
-    static constexpr size_t Address = 0xA104;
-    byte reg;
-    struct {
-       byte byteEnable : 2;
-       byte blast : 1;
-       byte fail : 1;
-       byte den : 1;
-       byte burstAddress : 3;
-    } bits;
-};
-union CTL1Register {
-    static constexpr size_t Address = 0xA105;
-    byte reg;
-    struct {
-        byte inRamSpace : 1;
-        byte inIOSpace : 1;
-        byte unused : 6;
-    } bits;
-};
-static_assert (sizeof(CTL0Register) == sizeof(byte));
-union AddressRegister {
-    static constexpr size_t Address = 0xA100;
-    explicit AddressRegister(uint32_t f) : full(f) { }
-    explicit AddressRegister(bool wr, uint32_t addr) : wr_(wr), address(addr) { }
-    AddressRegister(const AddressRegister& other) : full(other.full) { }
-    uint32_t full;
-    struct {
-        uint32_t wr_ : 1;
-        uint32_t address : 31;
-    };
-    struct {
-        uint32_t offset : (32 - 3);
-        uint32_t space : 3;
-    } space;
-};
-static_assert(sizeof (AddressRegister) == sizeof(uint32_t));
-template<typename T>
-inline volatile T& getRegister() noexcept {
-    return memory<T>(T::Address);
-}
-inline volatile CTL0Register& getCTL0() noexcept { return getRegister<CTL0Register>(); }
-inline volatile AddressRegister& getAddressRegister() noexcept { return getRegister<AddressRegister>(); }
-#define DefEBIPin(pin, address, offset, assert, deassert, direction) \
-template<> \
-struct DigitalPinDescription< pin > { \
-        DigitalPinDescription() = delete; \
-        ~DigitalPinDescription() = delete; \
-        DigitalPinDescription(const DigitalPinDescription&) = delete; \
-        DigitalPinDescription(DigitalPinDescription&&) = delete; \
-        DigitalPinDescription& operator=(const DigitalPinDescription&) = delete; \
-        DigitalPinDescription& operator=(DigitalPinDescription&&) = delete; \
-    static constexpr auto Assert = assert; \
-    static constexpr auto Deassert = deassert;\
-    static constexpr auto Direction = direction;\
-    static constexpr auto Pin =  pin;                                \
-    static constexpr auto Index = EBI::Register8BitIndex::Bit ## offset ;        \
-    static constexpr size_t Address = address; \
-    using BackingImplementation = EBI::BackingDigitalPin<Pin, Address, Index>;\
-}
-
-DefEBIPin(i960Pinout::BE0, CTL0Register::Address, 0, LOW, HIGH, INPUT);
-DefEBIPin(i960Pinout::BE1, CTL0Register::Address, 1, LOW, HIGH, INPUT);
-DefEBIPin(i960Pinout::BLAST_, CTL0Register::Address, 2, LOW, HIGH, INPUT);
-DefEBIPin(i960Pinout::FAIL, CTL0Register::Address, 3, HIGH, LOW, INPUT);
-DefEBIPin(i960Pinout::RAM_SPACE_, CTL1Register::Address, 0, LOW, HIGH, INPUT);
-DefEBIPin(i960Pinout::IO_SPACE_, CTL1Register::Address, 1, LOW, HIGH, INPUT);
-DefEBIPin(i960Pinout::W_R_, AddressRegister::Address, 0, LOW, HIGH, INPUT);
-#else
-DefInputPin(i960Pinout::RAM_SPACE_, LOW, HIGH);
-DefInputPin(i960Pinout::IO_SPACE_, LOW, HIGH);
-DefInputPin(i960Pinout::FAIL, HIGH, LOW);
-DefInputPin(i960Pinout::BLAST_, LOW, HIGH);
-DefInputPin(i960Pinout::W_R_, LOW, HIGH);
-DefInputPin(i960Pinout::BE0, LOW, HIGH);
-DefInputPin(i960Pinout::BE1, LOW, HIGH);
-DefSPICSPin(i960Pinout::PSRAM_EN);
-DefSPICSPin(i960Pinout::MEMBLK0_);
-DefSPICSPin(i960Pinout::TFT_CS);
-
-
-DefOutputPin(i960Pinout::SPI_OFFSET0, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_OFFSET1, LOW, HIGH);
-DefOutputPin(i960Pinout::SPI_OFFSET2, LOW, HIGH);
-DefOutputPin(i960Pinout::MEMBLK0_A0, LOW, HIGH);
-DefOutputPin(i960Pinout::MEMBLK0_A1, LOW, HIGH);
-DefOutputPin(i960Pinout::TFT_DC, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT0, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT1, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT2, LOW, HIGH);
-DefInputPin(i960Pinout::IOEXP_INT3, LOW, HIGH);
-DefIOExpanderPin(INT960_0_, LOW, HIGH, OUTPUT, 3, 1);
-DefIOExpanderPin(INT960_1, HIGH, LOW, OUTPUT, 3, 2);
-DefIOExpanderPin(INT960_2, HIGH, LOW, OUTPUT, 3, 3);
-DefIOExpanderPin(INT960_3_, LOW, HIGH, OUTPUT, 3, 4);
-#endif
-#undef DefSPICSPin
-#undef DefInputPin
-#undef DefOutputPin
-#endif
 /**
  * @brief Template parameter pack version of pinMode which sets a block of pins to a given direction.
  * This is designed to cut down on typing as much as possible
@@ -623,34 +417,12 @@ inline void setupPins(decltype(OUTPUT) direction, Pins ... pins) {
     (pinMode(pins, direction), ...);
 }
 
-
-/**
- * @brief RAII-class which asserts a pin (direction defined by the DigitalPin class for a given pin) on construction.
- * It deasserts the pin on destruction. Very useful with scopes to make sure that you never forget to assert and deassert a pin.
- * Cleans up SPI transactions significantly. The compiler generally inlines the bodies of this class when used.
- * @tparam pinId The pin to affect for the lifetime of the object
- */
-template<i960Pinout pinId>
-class PinAsserter final {
-public:
-    static_assert(DigitalPin<pinId>::isOutputPin());
-    PinAsserter() { DigitalPin<pinId>::assertPin(); }
-    ~PinAsserter() { DigitalPin<pinId>::deassertPin(); }
-};
 enum class LoadStoreStyle : uint8_t {
     // based off of BE0,BE1 pins
     Full16 = 0,
-#ifdef CHIPSET_TYPE1
     Upper8 = pinToPortBit<i960Pinout::BE0>(),
     Lower8 = pinToPortBit<i960Pinout::BE1>(),
     None = pinToPortBit<i960Pinout::BE0>() | pinToPortBit<i960Pinout::BE1>(),
-#else
-    Upper8 = 0b01,
-    Lower8 = 0b10,
-    None = 0b11,
-#endif
 };
-
-
 
 #endif //ARDUINO_PINOUT_H
