@@ -41,11 +41,14 @@ public:
 public:
     MemoryPool() = delete;
     ~MemoryPool() = delete;
+    MemoryPool(MemoryPool&&) = delete;
+    MemoryPool(const MemoryPool&) = delete;
+    MemoryPool& operator=(const MemoryPool&) = delete;
+    MemoryPool& operator=(MemoryPool&&) = delete;
     union PSRAMBlockAddress {
         constexpr explicit PSRAMBlockAddress(Address value = 0) : base(value) { }
-        constexpr auto getAddress() const noexcept { return base; }
-        constexpr auto getOffset() const noexcept { return offset; }
         constexpr auto getIndex() const noexcept { return index; }
+    private:
         Address base;
         struct {
             Address offset : 23;
