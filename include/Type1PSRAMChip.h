@@ -183,28 +183,10 @@ public:
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-    static constexpr byte computePortLookup(byte value) noexcept {
-        return (value & 0b111) << 2;
-    }
     static void setChipId(byte index) noexcept {
-        //static volatile unsigned char& TargetSelectPort = getAssociatedOutputPort<Select0>();
-        static constexpr byte theItemMask = SelectMask;
-        static constexpr byte theInvertedMask = static_cast<byte>(~theItemMask);
-        static constexpr byte LookupTable[8]{
-                0,
-                pinToPortBit<Select0>(),
-                pinToPortBit<Select1>(),
-                pinToPortBit<Select0>() | pinToPortBit<Select1>(),
-                pinToPortBit<Select2>(),
-                pinToPortBit<Select0>() | pinToPortBit<Select2>(),
-                pinToPortBit<Select1>() | pinToPortBit<Select2>(),
-                pinToPortBit<Select0>() | pinToPortBit<Select1>() | pinToPortBit<Select2>(),
-        };
-        // since this is specific to type 1 we should speed this up significantly
-        byte contents = getAssociatedOutputPort<Select0>();
-        contents &= theInvertedMask;
-        contents |= LookupTable[index & 0b111];
-        getAssociatedOutputPort<Select0>() = contents;
+        digitalWrite<Select0>(index & 0b001);
+        digitalWrite<Select1>(index & 0b010);
+        digitalWrite<Select2>(index & 0b100);
     }
 public:
     static void begin() noexcept {
