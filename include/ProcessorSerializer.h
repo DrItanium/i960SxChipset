@@ -540,7 +540,6 @@ private:
      */
     template<bool inDebugMode>
     static inline void performCacheWrite() noexcept {
-        auto& line = theCache.getLine(address_);
         SPI.beginTransaction(SPISettings(TargetBoard::runIOExpanderSPIInterfaceAt(), MSBFIRST, SPI_MODE0));
         byte count = 0;
         digitalWrite<i960Pinout::GPIOSelect, LOW>();
@@ -566,17 +565,20 @@ private:
             currTransaction.value = latchedDataInput_;
             DigitalPin<i960Pinout::Ready>::pulse();
             if (isLast) {
-                // okay then perform the commit since we are done
-                for (byte i = 0, j = getCacheOffsetEntry(); i < count; ++i, ++j) {
-                    transactions[i].set(j, line);
-                    if constexpr (inDebugMode) {
-                        transactions[i].print();
-                    }
-                }
+                // get out of here as fast as possible
                 break;
             }
         }
         digitalWrite<i960Pinout::GPIOSelect, HIGH>();
+        // okay then perform the commit since we are done
+        // at this point, it is safe to find the cache line to commit on
+        auto& line = theCache.getLine(address_);
+        for (byte i = 0, j = getCacheOffsetEntry(); i < count; ++i, ++j) {
+            transactions[i].set(j, line);
+            if constexpr (inDebugMode) {
+                transactions[i].print();
+            }
+        }
         SPI.endTransaction();
     }
     using ReadFunction = uint16_t(*)();
