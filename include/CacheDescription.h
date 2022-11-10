@@ -44,10 +44,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SinglePoolCache.h"
 #include "PSRAMChip.h"
 #include "DualPSRAMPool.h"
-#include "MemoryPool.h"
 
 
-using BackingMemoryStorage_t = CombinedMemoryPool;
+using BackingMemoryStorage_t = DualPoolPSRAM;
 
 //using Cache1Config = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 //using Cache1Config = CacheInstance_t<FourWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;

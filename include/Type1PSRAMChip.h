@@ -77,7 +77,7 @@ private:
     };
 
     template<byte opcode, OperationKind kind>
-    inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
+    [[gnu::always_inline]] inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         static_assert(kind == OperationKind::Read || kind == OperationKind::Write, "Must be a valid OperationKind type");
         if (capacity == 0) {
             return 0;
@@ -165,14 +165,14 @@ private:
         return capacity;
     }
 public:
-    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+    [[gnu::always_inline]] inline static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
     }
-    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+    [[gnu::always_inline]] inline static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-    static void setChipId(byte index) noexcept {
+    [[gnu::always_inline]] inline static void setChipId(byte index) noexcept {
         digitalWrite<Select0>(index & 0b001);
         digitalWrite<Select1>(index & 0b010);
         digitalWrite<Select2>(index & 0b100);

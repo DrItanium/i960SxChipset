@@ -70,7 +70,7 @@ private:
     };
 
     template<byte opcode, OperationKind kind>
-    inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
+    [[gnu::always_inline]] inline static size_t genericReadWriteOperation(uint32_t address, byte* buf, size_t capacity) noexcept {
         static_assert(kind == OperationKind::Read || kind == OperationKind::Write, "Must be a valid OperationKind type");
         if (capacity == 0) {
             return 0;
@@ -165,18 +165,18 @@ public:
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-    static void setFirstChip() noexcept {
+    [[gnu::always_inline]] inline static void setFirstChip() noexcept {
         // with MEMBLK0 0b01 is PSRAM0
         digitalWrite<Select0, HIGH>();
         digitalWrite<Select1, LOW>();
     }
-    static void setSecondChip() noexcept {
+    [[gnu::always_inline]] inline static void setSecondChip() noexcept {
         // with memblk0 0b11 is PSRAM1
         digitalWrite<Select0, HIGH>();
         digitalWrite<Select1, HIGH>();
 
     }
-    static void setChipId(byte index) noexcept {
+    [[gnu::always_inline]] inline static void setChipId(byte index) noexcept {
         // do not attempt to cache anything since we could eventually want to directly reference the flash text chip at some point
         if ((index & 1) == 0) {
             setFirstChip();

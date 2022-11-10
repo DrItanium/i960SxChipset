@@ -50,9 +50,8 @@ public:
             Address offset : 23;
             byte index : 4;
         };
-        byte bytes_[4];
     };
-    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+    [[gnu::always_inline]] inline static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         if (PSRAMBlockAddress addr(address); addr.getIndex() < 2) {
             return Pool2::write(address, buf, capacity);
         } else if (addr.getIndex() < 10) {
@@ -61,7 +60,7 @@ public:
             return 0;
         }
     }
-    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+    [[gnu::always_inline]] inline static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         if (PSRAMBlockAddress addr(address); addr.getIndex() < 2) {
             return Pool2::read(address, buf, capacity);
         } else if (addr.getIndex() < 10) {
