@@ -299,21 +299,21 @@ struct BackingDigitalPin {
     BackingDigitalPin(BackingDigitalPin&&) = delete;
     BackingDigitalPin& operator=(const BackingDigitalPin&) = delete;
     BackingDigitalPin& operator=(BackingDigitalPin&&) = delete;
-    static decltype(HIGH) read() noexcept { return digitalRead<pin>(); }
-    static void write(decltype(HIGH) value) noexcept { digitalWrite<pin>(value); }
+    [[gnu::always_inline]] inline static decltype(HIGH) read() noexcept { return digitalRead<pin>(); }
+    [[gnu::always_inline]] inline static void write(decltype(HIGH) value) noexcept { digitalWrite<pin>(value); }
     template<decltype(HIGH) value>
-    static void write() noexcept  { digitalWrite<pin, value>(); }
-    static void configure(decltype(INPUT) mode = defaultDirection) {
+    [[gnu::always_inline]] inline static void write() noexcept  { digitalWrite<pin, value>(); }
+    [[gnu::always_inline]] inline static void configure(decltype(INPUT) mode = defaultDirection) {
         direction_ = mode;
         pinMode(pin, direction_);
     }
-    static constexpr bool isInputPin() noexcept { return direction_ == INPUT || direction_ == INPUT_PULLUP; }
-    static constexpr bool isOutputPin() noexcept { return direction_ == OUTPUT; }
-    static constexpr decltype(INPUT) mode() noexcept { return direction_; }
-    static constexpr auto getPin() noexcept { return pin; }
-    static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }
+    inline static constexpr bool isInputPin() noexcept { return direction_ == INPUT || direction_ == INPUT_PULLUP; }
+    inline static constexpr bool isOutputPin() noexcept { return direction_ == OUTPUT; }
+    inline static constexpr decltype(INPUT) mode() noexcept { return direction_; }
+    inline static constexpr auto getPin() noexcept { return pin; }
+    inline static constexpr auto valid() noexcept { return isValidPin960_v<pin>; }
     template<decltype(HIGH) to = LOW>
-    [[gnu::always_inline]] static void pulse() {
+    [[gnu::always_inline]] inline static void pulse() {
         ::pulse<pin, to>();
     }
 private:
@@ -329,14 +329,14 @@ struct DigitalPin2 {
     DigitalPin2& operator=(const DigitalPin2&) = delete;
     DigitalPin2& operator=(DigitalPin2&&) = delete;
     static void setup(decltype(OUTPUT) direction = T::Direction) noexcept { BackingThing::configure(direction); }
-    static constexpr auto isInputPin() noexcept { return BackingThing::isInputPin(); }
-    static constexpr auto isOutputPin() noexcept { return BackingThing::isOutputPin(); }
-    static constexpr auto getPin() noexcept { return BackingThing ::getPin(); }
-    static constexpr auto getDirection() noexcept { return BackingThing::mode(); }
-    static constexpr auto getAssertionState() noexcept { return T::Assert; }
-    static constexpr auto getDeassertionState() noexcept { return T::Deassert; }
-    static constexpr auto getExpectedDirection() noexcept { return T::Direction; }
-    static constexpr auto valid() noexcept { return BackingThing::valid(); }
+    inline static constexpr auto isInputPin() noexcept { return BackingThing::isInputPin(); }
+    inline static constexpr auto isOutputPin() noexcept { return BackingThing::isOutputPin(); }
+    inline static constexpr auto getPin() noexcept { return BackingThing ::getPin(); }
+    inline static constexpr auto getDirection() noexcept { return BackingThing::mode(); }
+    inline static constexpr auto getAssertionState() noexcept { return T::Assert; }
+    inline static constexpr auto getDeassertionState() noexcept { return T::Deassert; }
+    inline static constexpr auto getExpectedDirection() noexcept { return T::Direction; }
+    inline static constexpr auto valid() noexcept { return BackingThing::valid(); }
     [[gnu::always_inline]] inline static void assertPin() noexcept { BackingThing::template write<getAssertionState()>(); }
     [[gnu::always_inline]] inline static void deassertPin() noexcept { BackingThing::template write<getDeassertionState()>(); }
     [[gnu::always_inline]] inline static void write(decltype(LOW) value) noexcept { BackingThing::write(value); }

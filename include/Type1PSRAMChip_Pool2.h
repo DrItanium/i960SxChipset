@@ -158,10 +158,10 @@ private:
         return capacity;
     }
 public:
-    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+    [[gnu::always_inline]] inline static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
     }
-    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+    [[gnu::always_inline]] inline static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
