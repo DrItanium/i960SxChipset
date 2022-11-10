@@ -158,25 +158,25 @@ private:
         return capacity;
     }
 public:
-    [[gnu::always_inline]] inline static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
+    static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
     }
-    [[gnu::always_inline]] inline static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
+    static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
         return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
     }
 private:
-    [[gnu::always_inline]] inline static void setFirstChip() noexcept {
+    static void setFirstChip() noexcept {
         // with MEMBLK0 0b01 is PSRAM0
         digitalWrite<Select0, HIGH>();
         digitalWrite<Select1, LOW>();
     }
-    [[gnu::always_inline]] inline static void setSecondChip() noexcept {
+    static void setSecondChip() noexcept {
         // with memblk0 0b11 is PSRAM1
         digitalWrite<Select0, HIGH>();
         digitalWrite<Select1, HIGH>();
 
     }
-    [[gnu::always_inline]] inline static void setChipId(byte index) noexcept {
+    static void setChipId(byte index) noexcept {
         // do not attempt to cache anything since we could eventually want to directly reference the flash text chip at some point
         if ((index & 1) == 0) {
             setFirstChip();

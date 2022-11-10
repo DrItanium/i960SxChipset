@@ -369,7 +369,7 @@ public:
      * @tparam useInterrupts If true, then query the directly connected interrupt pins to get a proper update mask
      */
     template<bool inDebugMode, bool useInterrupts = true>
-    [[gnu::always_inline]] inline static void newDataCycle() noexcept {
+    static void newDataCycle() noexcept {
         if constexpr (useInterrupts) {
             if (DigitalPin<i960Pinout::ADDRESS_HI_INT>::isAsserted())  {
                 full32BitUpdate<inDebugMode>();
