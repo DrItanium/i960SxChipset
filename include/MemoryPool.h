@@ -29,15 +29,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SXCHIPSET_MEMORYPOOL_H
 #define SXCHIPSET_MEMORYPOOL_H
 #include "DualPSRAMPool.h"
-#include "SDCardAsRam.h"
 /**
  * @brief Wrapper over pools 1 and 2. Pool 2 is mapped first followed by pool 1
  */
-template<bool enablePSRAM>
 class MemoryPool {
 public:
     using PSRAMPool = DualPoolPSRAM;
-    using SDPool = FallbackMemory;
 public:
     MemoryPool() = delete;
     ~MemoryPool() = delete;
@@ -56,38 +53,29 @@ public:
         };
     };
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        if constexpr (enablePSRAM) {
-            if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
-                return PSRAMPool::write(address, buf, capacity);
-            } else {
-                return SDPool::write(address, buf, capacity);
-            }
+        if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
+            return PSRAMPool::write(address, buf, capacity);
         } else {
-            return SDPool::write(address, buf, capacity);
+            return 0;
         }
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        if constexpr (enablePSRAM) {
-            if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
-                return PSRAMPool::read(address, buf, capacity);
-            } else {
-                return SDPool::read(address, buf, capacity);
-            }
+        if (PSRAMBlockAddress addr(address); addr.getIndex() < 10) {
+            return PSRAMPool::read(address, buf, capacity);
         } else {
-            return SDPool::read(address, buf, capacity);
+            for (size_t i = 0;i < capacity; ++i ) {
+                buf[i] = 0;
+            }
+            return capacity;
         }
     }
     static void begin() noexcept {
         static bool initialized_ = false;
         if (!initialized_) {
             initialized_ = true;
-            if constexpr (enablePSRAM) {
-                PSRAMPool::begin();
-            }
-            SDPool::begin();
+            PSRAMPool::begin();
         }
     }
 };
-template<bool enablePSRAM>
-using CombinedMemoryPool = MemoryPool<enablePSRAM>;
+using CombinedMemoryPool = MemoryPool;
 #endif //SXCHIPSET_MEMORYPOOL_H

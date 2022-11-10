@@ -42,21 +42,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FourteenWayRandPLRUEntry.h"
 #include "RoundRobinCacheSet.h"
 #include "SinglePoolCache.h"
-#include "SDCardAsRam.h"
 #include "PSRAMChip.h"
 #include "DualPSRAMPool.h"
 #include "MemoryPool.h"
 
-// define the backing memory storage classes via template specialization
-// at this point in time, if no specialization is performed, use SDCard as ram backend
-template<TargetMCU mcu> struct BackingMemoryStorage final {
-    using Type = FallbackMemory;
-};
-template<> struct BackingMemoryStorage<TargetMCU::ATmega1284p_Type1> final {
-    using Type = CombinedMemoryPool<EnablePSRAM>;
-};
 
-using BackingMemoryStorage_t = BackingMemoryStorage<TargetBoard::getMCUTarget()>::Type;
+using BackingMemoryStorage_t = CombinedMemoryPool;
 
 //using Cache1Config = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 //using Cache1Config = CacheInstance_t<FourWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
