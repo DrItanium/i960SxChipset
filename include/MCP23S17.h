@@ -120,6 +120,7 @@ namespace MCP23S17 {
         return generateWriteOpcode(static_cast<uint8_t>(address), false);
     }
     template<HardwareDeviceAddress address, Registers opcode>
+    [[gnu::always_inline]]
     inline uint8_t read8(byte pin) noexcept {
         digitalWrite(pin, LOW);
         SPI.transfer(generateReadOpcode(address));
@@ -129,6 +130,7 @@ namespace MCP23S17 {
         return result;
     }
     template<HardwareDeviceAddress address, Registers opcode, typename Pin>
+    [[gnu::always_inline]]
     inline uint8_t read8() noexcept {
         Pin::assertPin();
         SPI.transfer(generateReadOpcode(address));
@@ -138,6 +140,7 @@ namespace MCP23S17 {
         return result;
     }
     template<HardwareDeviceAddress address, Registers opcode>
+    [[gnu::always_inline]]
     inline SplitWord16 read16(byte pin) noexcept {
         SplitWord16 output(0);
         digitalWrite(pin, LOW);
@@ -162,6 +165,7 @@ namespace MCP23S17 {
         return output;
     }
     template<HardwareDeviceAddress address, Registers opcode, typename Pin>
+    [[gnu::always_inline]]
     inline SplitWord16 read16() noexcept {
         SplitWord16 output(0);
         Pin::assertPin();
@@ -186,6 +190,7 @@ namespace MCP23S17 {
         return output;
     }
     template<HardwareDeviceAddress addr, Registers opcode>
+    [[gnu::always_inline]]
     inline void write8(byte pin, byte value) noexcept {
         digitalWrite(pin, LOW);
         SPDR = generateWriteOpcode(addr);
@@ -206,6 +211,7 @@ namespace MCP23S17 {
         digitalWrite(pin, HIGH);
     }
     template<HardwareDeviceAddress addr, Registers opcode, typename Pin>
+    [[gnu::always_inline]]
     inline void write8(byte value) noexcept {
         Pin::assertPin();
         SPDR = generateWriteOpcode(addr);
@@ -226,6 +232,7 @@ namespace MCP23S17 {
         Pin::deassertPin();
     }
     template<HardwareDeviceAddress addr, Registers opcode>
+    [[gnu::always_inline]]
     inline void write16(byte pin, uint16_t v) noexcept {
         SplitWord16 valueDiv(v);
         digitalWrite(pin, LOW);
@@ -244,6 +251,7 @@ namespace MCP23S17 {
         digitalWrite(pin, HIGH);
     }
     template<HardwareDeviceAddress addr, Registers opcode, typename Pin>
+    [[gnu::always_inline]]
     inline void write16(uint16_t v) noexcept {
         SplitWord16 valueDiv(v);
         Pin::assertPin();
@@ -271,6 +279,7 @@ namespace MCP23S17 {
         return read16<addr, Registers::GPIO>(pin);
     }
     template<HardwareDeviceAddress addr, typename Pin>
+    [[gnu::always_inline]]
     inline SplitWord16 readGPIO16() noexcept {
         return read16<addr, Registers::GPIO, Pin>();
     }
@@ -281,10 +290,12 @@ namespace MCP23S17 {
      * @param value The value to set the gpios to
      */
      template<HardwareDeviceAddress addr>
+    [[gnu::always_inline]]
     inline void writeGPIO16(byte pin, uint16_t value) noexcept {
         write16<addr, Registers::GPIO>(pin, value);
     }
     template<HardwareDeviceAddress addr, typename Pin>
+    [[gnu::always_inline]]
     inline void writeGPIO16(uint16_t value) noexcept {
         write16<addr, Registers::GPIO, Pin>(value);
     }
@@ -295,10 +306,12 @@ namespace MCP23S17 {
      * @param value The 16-bit direction mask to write to the io expander (a 1 means input, a 0 means output)
      */
     template<HardwareDeviceAddress addr>
+    [[gnu::always_inline]]
     inline void writeDirection(byte pin, uint16_t value) noexcept {
         write16<addr, Registers::IODIR>(pin, value) ;
     }
     template<HardwareDeviceAddress addr, typename Pin>
+    [[gnu::always_inline]]
     inline void writeDirection(uint16_t value) noexcept {
         write16<addr, Registers::IODIR, Pin>(value) ;
     }
@@ -309,10 +322,12 @@ namespace MCP23S17 {
      * @return The 16-bits of direction information for the target io expander
      */
     template<HardwareDeviceAddress addr>
+    [[gnu::always_inline]]
     inline SplitWord16 readDirection(byte pin) noexcept {
         return read16<addr, Registers::IODIR>(pin);
     }
     template<HardwareDeviceAddress addr, typename Pin>
+    [[gnu::always_inline]]
     inline SplitWord16 readDirection() noexcept {
         return read16<addr, Registers::IODIR, Pin>();
     }
