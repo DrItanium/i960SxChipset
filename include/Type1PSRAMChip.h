@@ -54,7 +54,6 @@ public:
     static_assert (((static_cast<int>(Select0) + 1) == static_cast<int>(Select1)) && (static_cast<int>(Select1) + 1) == static_cast<int>(Select2), "All Select Bits must be a contiguous mask");
     static_assert ((EnablePin != Select0) && (EnablePin != Select1) && (EnablePin != Select2), "The enable pin must be different from all select pins");
     static_assert ((Select0 != Select1) && (Select0 != Select2) && (Select1 != Select2), "All three select pins must point to a different physical pin");
-    static constexpr auto SelectMask = pinToPortBit<Select0>() | pinToPortBit<Select1>() | pinToPortBit<Select2>();
 
 public:
     MemoryBlock() = delete;

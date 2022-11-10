@@ -222,14 +222,7 @@ setupChipset() noexcept {
     // pull the i960 into a reset state, it will remain this for the entire
     // duration of the setup function
     // get SPI setup ahead of time
-    /// @todo pull the i960 into reset at this point
-    //pinMode(i960Pinout::MISO, INPUT_PULLUP);
     theCache.begin();
-#if 0
-#ifdef CHIPSET_TYPE1
-    FlashInterface::begin();
-#endif
-#endif
     while (!SD.begin(static_cast<int>(i960Pinout::SD_EN))) {
         Serial.println(F("SD CARD INIT FAILED...WILL RETRY SOON"));
         delay(1000);
