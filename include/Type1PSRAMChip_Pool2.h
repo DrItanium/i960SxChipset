@@ -159,10 +159,22 @@ private:
     }
 public:
     static size_t write(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
+        if (PSRAMBlockAddress addr(address); addr.getPool2Index() < 2) {
+            return genericReadWriteOperation<0x02, OperationKind::Write>(address, buf, capacity);
+        } else {
+            return 0;
+        }
     }
     static size_t read(uint32_t address, byte *buf, size_t capacity) noexcept {
-        return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
+        if (PSRAMBlockAddress addr(address); addr.getPool2Index() < 2) {
+            return genericReadWriteOperation<0x03, OperationKind::Read>(address, buf, capacity);
+        } else {
+            // zero out the memory
+            for (size_t i = 0; i < capacity; ++i) {
+                buf[i] = 0;
+            }
+            return 0;
+        }
     }
 private:
     static void setFirstChip() noexcept {

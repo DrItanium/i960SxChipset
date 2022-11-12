@@ -46,7 +46,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "DualPSRAMPool.h"
 
 
-using BackingMemoryStorage_t = DualPoolPSRAM;
+//using BackingMemoryStorage_t = DualPoolPSRAM;
+using BackingMemoryStorage_t = OnboardPSRAMBlock_Pool2;
 
 //using Cache1Config = CacheInstance_t<EightWayRandPLRUCacheSet, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
 //using Cache1Config = CacheInstance_t<FourWayLRUCacheWay, CacheSize, NumAddressBits, CacheLineSize, BackingMemoryStorage_t, UseSpecificTypesForDifferentAddressComponents>;
